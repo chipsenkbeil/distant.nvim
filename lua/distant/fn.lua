@@ -1,5 +1,4 @@
 local g = require('distant.globals')
-local settings = require('distant.settings')
 local u = require('distant.utils')
 
 local fn = {}
@@ -13,8 +12,8 @@ local fn = {}
 --- @return true if succeeded, otherwise false
 fn.copy = function(src, dst, timeout, interval)
     local channel = u.oneshot_channel(
-        timeout or settings.max_timeout,
-        interval or settings.timeout_interval
+        timeout or g.settings.max_timeout,
+        interval or g.settings.timeout_interval
     )
 
     fn.async.copy(src, dst, function(res) channel.tx(res) end)
@@ -33,8 +32,8 @@ end
 ---         or nil if unsuccessful
 fn.dir_list = function(path, all, timeout, interval)
     local channel = u.oneshot_channel(
-        timeout or settings.max_timeout,
-        interval or settings.timeout_interval
+        timeout or g.settings.max_timeout,
+        interval or g.settings.timeout_interval
     )
 
     fn.async.dir_list(path, all, function(res) channel.tx(res) end)
@@ -50,8 +49,8 @@ end
 --- @return true if succeeded, otherwise false
 fn.mkdir = function(path, all, timeout, interval)
     local channel = u.oneshot_channel(
-        timeout or settings.max_timeout,
-        interval or settings.timeout_interval
+        timeout or g.settings.max_timeout,
+        interval or g.settings.timeout_interval
     )
 
     fn.async.mkdir(path, all, function(res) channel.tx(res) end)
@@ -66,8 +65,8 @@ end
 --- @return String containing file's text, or nil if fails
 fn.read_file_text = function(path, timeout, interval)
     local channel = u.oneshot_channel(
-        timeout or settings.max_timeout,
-        interval or settings.timeout_interval
+        timeout or g.settings.max_timeout,
+        interval or g.settings.timeout_interval
     )
 
     fn.async.read_file_text(path, function(res) channel.tx(res) end)
@@ -83,8 +82,8 @@ end
 --- @return true if succeeded, otherwise false
 fn.remove = function(path, force, timeout, interval)
     local channel = u.oneshot_channel(
-        timeout or settings.max_timeout,
-        interval or settings.timeout_interval
+        timeout or g.settings.max_timeout,
+        interval or g.settings.timeout_interval
     )
 
     fn.async.remove(path, force, function(res) channel.tx(res) end)
@@ -101,8 +100,8 @@ end
 ---         are lists of individual lines of output, or returns nil if timeout
 fn.run = function(cmd, args, timeout, interval)
     local channel = u.oneshot_channel(
-        timeout or settings.max_timeout,
-        interval or settings.timeout_interval
+        timeout or g.settings.max_timeout,
+        interval or g.settings.timeout_interval
     )
 
     fn.async.run(cmd, args, function(res) channel.tx(res) end)
@@ -116,8 +115,8 @@ end
 --- @return true if succeeded, otherwise false
 fn.write_file_text = function(path, text)
     local channel = u.oneshot_channel(
-        timeout or settings.max_timeout,
-        interval or settings.timeout_interval
+        timeout or g.settings.max_timeout,
+        interval or g.settings.timeout_interval
     )
 
     fn.async.write_file_text(path, text, function(res) channel.tx(res) end)

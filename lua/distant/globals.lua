@@ -1,4 +1,3 @@
-local client = require('distant.client')
 local c = require('distant.constants')
 local u = require('distant.utils')
 
@@ -21,6 +20,7 @@ end
 
 --- Retrieves the client, optionally initializing it if needed
 globals.client = function()
+    local client = require('distant.client')
     if not state.client then
         state.client = client:new()
 
@@ -38,18 +38,41 @@ globals.client = function()
 
     -- If our client died, try to restart it
     if not state.client:is_running() then
-        state.client:start({
-            verbose = 3;
-            log_file = "/tmp/client.log";
+        state.client:start(u.merge(globals.settings.client, {
             on_exit = function(code)
                 if code ~= 0 then
                     u.log_err('client failed to start! Error code ' .. code)
                 end
             end;
-        })
+        }))
     end
 
     return state.client
 end
+
+--- Settings for use around the plugin
+globals.settings = {
+    binary_name = c.BINARY_NAME;
+    max_timeout = c.MAX_TIMEOUT;
+    timeout_interval = c.TIMEOUT_INTERVAL;
+
+    -- All of these launch settings are unset by default
+    launch = {
+        bind_server = nil;
+        extra_server_args = nil;
+        identity_file = nil;
+        log_file = nil;
+        port = nil;
+        remote_program = nil;
+        ssh_program = nil;
+        username = nil;
+    };
+
+    -- All of these settings are for starting a client
+    client = {
+        log_file = nil;
+        verbose = 0;
+    };
+}
 
 return globals

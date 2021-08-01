@@ -254,6 +254,85 @@ utils.autocmd = function(name, pattern, cmd)
     vim.cmd('autocmd ' .. name .. ' ' .. pattern .. ' ' .. cmd)
 end
 
+--- Merges N tables together into a new table
+utils.merge = function(...)
+    local dst = {}
+
+    -- For each vararg, process it and merge items if it is a table;
+    -- otherwise, skip it
+    for _, tbl in ipairs({...}) do
+        if type(tbl) == 'table' then
+            -- For each item in the table, we merge in one of three ways:
+            -- 1. If the dst does not have a matching key, we assign the current
+            --    table's value to it
+            -- 2. If the types of dst and current table are both table, we
+            --    recursively apply a merge
+            -- 3. Otherwise, we assign the current table's value to dst's key
+            for k, v in pairs(tbl) do
+                if dst[k] == nil or type(dst[k]) ~= 'table' or type(v) ~= 'table' then
+                    dst[k] = utils.deepcopy(v)
+                else 
+                    dst[k] = utils.merge(dst[k], v)
+                end
+            end
+        end
+    end
+
+    return dst
+end
+
+--- Performs a deep copy of some data
+--- From http://lua-users.org/wiki/CopyTable
+---
+--- @param orig any The data to deeply copy
+--- @param copies table Internal parameter used for recursion (do not use externally)
+--- @return any data The newly-copied instance
+utils.deepcopy = function(orig, copies)
+    copies = copies or {}
+    local orig_type = type(orig)
+    local copy
+    if orig_type == 'table' then
+        if copies[orig] then
+            copy = copies[orig]
+        else
+            copy = {}
+            copies[orig] = copy
+            for orig_key, orig_value in next, orig, nil do
+                copy[utils.deepcopy(orig_key, copies)] = utils.deepcopy(orig_value, copies)
+            end
+            setmetatable(copy, utils.deepcopy(getmetatable(orig), copies))
+        end
+    else -- number, string, boolean, etc
+        copy = orig
+    end
+    return copy
+end
+
+--- Checks if string begins with start string
+--- From http://lua-users.org/wiki/StringRecipes
+---
+--- @param str string The string whose content to check
+--- @param start string The expected beginning
+--- @return boolean result True if a match, otherwise false
+utils.starts_with = function(str, start)
+   return str:sub(1, #start) == start
+end
+
+--- Produces a table of N lines all with the same text
+---
+--- @param n number The total number of lines to produce
+--- @param line string The line to replicate
+--- @return table lines The table of lines {'line', 'line', ...}
+utils.make_n_lines = function(n, line)
+    local lines = {}
+
+    for i = 1, n do
+        table.insert(lines, line)
+    end
+
+    return lines
+end
+
 --- Produces a send/receive pair in the form of {tx, rx} where
 --- tx is a function that sends a message and rx is a function that
 --- waits for the message

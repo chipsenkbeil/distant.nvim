@@ -1,10 +1,7 @@
-local settings = require('distant.settings')
+local g = require('distant.globals')
+local u = require('distant.utils')
 
 return function(opts)
     opts = opts or {}
-
-    -- Override global settings with options
-    for k, v in pairs(opts) do
-        settings[k] = v
-    end
+    g.settings = u.merge(g.settings, opts)
 end
