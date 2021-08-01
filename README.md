@@ -10,7 +10,7 @@ Supports the following features against remote machines:
 - Copying files & directories
 - Renaming files & directories
 - Running [LSPs](https://neovim.io/doc/lsp/) remotely and getting live results locally
-- Optional [lir.nvim](https://github.com/tamago324/lir.nvim integration) integration
+- Optional [lir.nvim](https://github.com/tamago324/lir.nvim) integration
 - Optional [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) integration
 
 **Requires neovim 0.5+**
