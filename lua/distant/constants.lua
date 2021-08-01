@@ -12,6 +12,6 @@ constants.TIMEOUT_INTERVAL = 200
 
 --- Represents the minimum support version of the binary
 --- {major, minor, patch}
-constants.MIN_SUPPORTED_VERSION = {0, 2, 3}
+constants.MIN_SUPPORTED_VERSION = {0, 3, 0}
 
 return constants

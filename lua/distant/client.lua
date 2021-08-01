@@ -72,7 +72,7 @@ function client:start(opts)
     if type(opts.verbose) == 'number' and opts.verbose > 0 then
         args = vim.trim(args .. ' -' .. string.rep('v', opts.verbose))
     end
-    local cmd = vim.trim(g.settings.binary_name .. ' send --interactive --mode json ' .. args)
+    local cmd = vim.trim(g.settings.binary_name .. ' action --interactive --mode json ' .. args)
     local handle = u.job_start(cmd, {
         on_success = function()
             if type(opts.on_exit) == 'function' then
