@@ -4,13 +4,13 @@ local u = require('distant.utils')
 
 local fn = {}
 
--- Copies a remote file or directory to a new location
---
--- @param src Path to the input file/directory to copy
--- @param dst Path to the output file/directory
--- @param timeout Maximum time to wait for a response
--- @param interval Time in milliseconds to wait between checks for a response
--- @return true if succeeded, otherwise false
+--- Copies a remote file or directory to a new location
+---
+--- @param src Path to the input file/directory to copy
+--- @param dst Path to the output file/directory
+--- @param timeout Maximum time to wait for a response
+--- @param interval Time in milliseconds to wait between checks for a response
+--- @return true if succeeded, otherwise false
 fn.copy = function(src, dst, timeout, interval)
     local channel = u.oneshot_channel(
         timeout or c.MAX_TIMEOUT,
@@ -21,32 +21,16 @@ fn.copy = function(src, dst, timeout, interval)
     return channel.rx()
 end
 
--- Reads a remote file as text
---
--- @param path Path to the file to read
--- @param timeout Maximum time to wait for a response
--- @param interval Time in milliseconds to wait between checks for a response
--- @return String containing file's text, or nil if fails
-fn.read_file_text = function(path, timeout, interval)
-    local channel = u.oneshot_channel(
-        timeout or c.MAX_TIMEOUT,
-        interval or c.TIMEOUT_INTERVAL
-    )
-
-    fn.async.read_file_text(path, function(res) channel.tx(res) end)
-    return channel.rx()
-end
-
--- Retrieves a list of contents within a remote directory
---
--- @param path Path to the directory whose contents to list
--- @param all If true, will recursively retrieve all contents, otherwise only
---            retrieves contents directly within the path
--- @param timeout Maximum time to wait for a response
--- @param interval Time in milliseconds to wait between checks for a response
--- @return A list of entries in the form of
---         {'path' = ..., 'file_type' = ..., 'depth' = ...}
---         or nil if unsuccessful
+--- Retrieves a list of contents within a remote directory
+---
+--- @param path Path to the directory whose contents to list
+--- @param all If true, will recursively retrieve all contents, otherwise only
+---            retrieves contents directly within the path
+--- @param timeout Maximum time to wait for a response
+--- @param interval Time in milliseconds to wait between checks for a response
+--- @return A list of entries in the form of
+---         {'path' = ..., 'file_type' = ..., 'depth' = ...}
+---         or nil if unsuccessful
 fn.dir_list = function(path, all, timeout, interval)
     local channel = u.oneshot_channel(
         timeout or c.MAX_TIMEOUT,
@@ -57,14 +41,58 @@ fn.dir_list = function(path, all, timeout, interval)
     return channel.rx()
 end
 
+--- Launches a new instance of the distance binary on the remote machine and sets
+--- up a session so clients are able to communicate with it
+---
+--- @param host The host to connect to (e.g. example.com)
+--- @param args Table of arguments to append to the launch command, where all
+---             keys with _ are replaced with - (e.g. my_key -> --my-key)
+--- @param timeout Maximum time to wait for a response
+--- @param interval Time in milliseconds to wait between checks for a response
+--- @return Exit code once launch has completed, or nil if times out
+fn.launch = function(host, args)
+    assert(type(host) == 'string', 'Missing or invalid host argument')
+    args = args or {}
 
--- Creates a remote directory
---
--- @param path Path to the directory to create
--- @param all If true, will recursively all components of path to directory
--- @param timeout Maximum time to wait for a response
--- @param interval Time in milliseconds to wait between checks for a response
--- @return true if succeeded, otherwise false
+    local buf_h = vim.api.nvim_create_buf(false, true)
+    assert(buf_h ~= 0, 'Failed to create buffer for launch')
+
+    local ui = vim.api.nvim_list_uis()[1]
+    local width = 80
+    local height = 8
+    local win = vim.api.nvim_open_win(buf_h, 1, {
+        relative = 'editor';
+        width = width;
+        height = height;
+        col = (ui.width / 2) - (width / 2);
+        row = (ui.height / 2) - (height / 2);
+        anchor = 'NW';
+        style = 'minimal';
+        border = 'single';
+        noautocmd = true;
+    })
+
+    -- Format is launch {host} [args..]
+    local cmd_args = u.build_arg_str(args)
+    vim.fn.termopen(
+        c.BINARY_NAME .. ' launch ' .. host .. ' ' .. cmd_args,
+        {
+            on_exit = function(_, code, _)
+                if code == 0 then
+                    vim.api.nvim_win_close(win, false)
+                end
+            end
+        }
+    )
+end
+
+--- Creates a remote directory
+---
+--- @param path Path to the directory to create
+--- @param all If true, will recursively all components of path to directory
+--- @param timeout Maximum time to wait for a response
+--- @param interval Time in milliseconds to wait between checks for a response
+--- @return true if succeeded, otherwise false
 fn.mkdir = function(path, all, timeout, interval)
     local channel = u.oneshot_channel(
         timeout or c.MAX_TIMEOUT,
@@ -75,13 +103,29 @@ fn.mkdir = function(path, all, timeout, interval)
     return channel.rx()
 end
 
--- Removes a remote file or directory
---
--- @param path Path to the file or directory to create
--- @param force If true, will remove directories that are non-empty
--- @param timeout Maximum time to wait for a response
--- @param interval Time in milliseconds to wait between checks for a response
--- @return true if succeeded, otherwise false
+--- Reads a remote file as text
+---
+--- @param path Path to the file to read
+--- @param timeout Maximum time to wait for a response
+--- @param interval Time in milliseconds to wait between checks for a response
+--- @return String containing file's text, or nil if fails
+fn.read_file_text = function(path, timeout, interval)
+    local channel = u.oneshot_channel(
+        timeout or c.MAX_TIMEOUT,
+        interval or c.TIMEOUT_INTERVAL
+    )
+
+    fn.async.read_file_text(path, function(res) channel.tx(res) end)
+    return channel.rx()
+end
+
+--- Removes a remote file or directory
+---
+--- @param path Path to the file or directory to create
+--- @param force If true, will remove directories that are non-empty
+--- @param timeout Maximum time to wait for a response
+--- @param interval Time in milliseconds to wait between checks for a response
+--- @return true if succeeded, otherwise false
 fn.remove = function(path, force, timeout, interval)
     local channel = u.oneshot_channel(
         timeout or c.MAX_TIMEOUT,
@@ -92,14 +136,14 @@ fn.remove = function(path, force, timeout, interval)
     return channel.rx()
 end
 
--- Executes a remote program
---
--- @param cmd Name of the command to run
--- @param args Array of arguments to append to the command
--- @param timeout Maximum time to wait for the program to finish
--- @param interval Time in milliseconds to wait between checks for program to finish
--- @return Table with exit_code, stdout, and stderr fields where stdout and stderr
---         are lists of individual lines of output, or returns nil if timeout
+--- Executes a remote program
+---
+--- @param cmd Name of the command to run
+--- @param args Array of arguments to append to the command
+--- @param timeout Maximum time to wait for the program to finish
+--- @param interval Time in milliseconds to wait between checks for program to finish
+--- @return Table with exit_code, stdout, and stderr fields where stdout and stderr
+---         are lists of individual lines of output, or returns nil if timeout
 fn.run = function(cmd, args, timeout, interval)
     local channel = u.oneshot_channel(
         timeout or c.MAX_TIMEOUT,
@@ -110,13 +154,29 @@ fn.run = function(cmd, args, timeout, interval)
     return channel.rx()
 end
 
+--- Writes to a remote file
+---
+--- @param path Path to the file to write
+--- @param text Text to write in the file
+--- @return true if succeeded, otherwise false
+fn.write_file_text = function(path, text)
+    local channel = u.oneshot_channel(
+        timeout or c.MAX_TIMEOUT,
+        interval or c.TIMEOUT_INTERVAL
+    )
+
+    fn.async.write_file_text(path, text, function(res) channel.tx(res) end)
+    return channel.rx()
+end
+
+--- Contains async functions
 fn.async = {}
 
--- Copies a remote file or directory to a new location
---
--- @param src Path to the input file/directory to copy
--- @param dst Path to the output file/directory
--- @param cb Function that is passed true if successful or false if failed
+--- Copies a remote file or directory to a new location
+---
+--- @param src Path to the input file/directory to copy
+--- @param dst Path to the output file/directory
+--- @param cb Function that is passed true if successful or false if failed
 fn.async.copy = function(src, dst, cb)
     assert(type(src) == 'string', 'src must be a string')
     assert(type(dst) == 'string', 'dst must be a string')
@@ -132,35 +192,14 @@ fn.async.copy = function(src, dst, cb)
     end)
 end
 
-
--- Reads a remote file as text
---
--- @param path Path to the file to read
--- @param cb Function that is passed file's text or nil if failed
-fn.async.read_file_text = function(path, cb)
-    assert(type(path) == 'string', 'path must be a string')
-
-    g.client():send({
-        type = 'file_read_text';
-        data = { path = path };
-    }, function(res)
-        if res ~= nil and res.type == 'text' then
-            cb(res.data.data)
-        else
-            cb(nil)
-        end
-    end)
-
-end
-
--- Retrieves a list of contents within a remote directory
---
--- @param path Path to the directory whose contents to list
--- @param all If true, will recursively retrieve all contents, otherwise only
---            retrieves contents directly within the path
--- @param cb Function that is passed a list of entries in the form of
---           {'path' = ..., 'file_type' = ..., 'depth' = ...}
---           or nil if unsuccessful
+--- Retrieves a list of contents within a remote directory
+---
+--- @param path Path to the directory whose contents to list
+--- @param all If true, will recursively retrieve all contents, otherwise only
+---            retrieves contents directly within the path
+--- @param cb Function that is passed a list of entries in the form of
+---           {'path' = ..., 'file_type' = ..., 'depth' = ...}
+---           or nil if unsuccessful
 fn.async.dir_list = function(path, all, cb)
     assert(type(path) == 'string', 'path must be a string')
     all = not (not all)
@@ -180,11 +219,11 @@ fn.async.dir_list = function(path, all, cb)
     end)
 end
 
--- Creates a remote directory
---
--- @param path Path to the directory to create
--- @param all If true, will recursively all components of path to directory
--- @param cb Function that is passed true if successful or false if failed
+--- Creates a remote directory
+---
+--- @param path Path to the directory to create
+--- @param all If true, will recursively all components of path to directory
+--- @param cb Function that is passed true if successful or false if failed
 fn.async.mkdir = function(path, all, cb)
     assert(type(path) == 'string', 'path must be a string')
     all = not (not all)
@@ -200,11 +239,30 @@ fn.async.mkdir = function(path, all, cb)
     end)
 end
 
--- Removes a remote file or directory
---
--- @param path Path to the file or directory to create
--- @param force If true, will remove directories that are non-empty
--- @param cb Function that is passed true if successful or false if failed
+--- Reads a remote file as text
+---
+--- @param path Path to the file to read
+--- @param cb Function that is passed file's text or nil if failed
+fn.async.read_file_text = function(path, cb)
+    assert(type(path) == 'string', 'path must be a string')
+
+    g.client():send({
+        type = 'file_read_text';
+        data = { path = path };
+    }, function(res)
+        if res ~= nil and res.type == 'text' then
+            cb(res.data.data)
+        else
+            cb(nil)
+        end
+    end)
+end
+
+--- Removes a remote file or directory
+---
+--- @param path Path to the file or directory to create
+--- @param force If true, will remove directories that are non-empty
+--- @param cb Function that is passed true if successful or false if failed
 fn.async.remove = function(path, force, cb)
     assert(type(path) == 'string', 'path must be a string')
     force = not (not force)
@@ -221,13 +279,13 @@ fn.async.remove = function(path, force, cb)
 end
 
 
--- Executes a remote program
---
--- @param cmd Name of the command to run
--- @param args Array of arguments to append to the command
--- @param cb Function that is passed table with exit_code, stdout, and stderr fields
---           where stdout and stderr are lists of individual lines of output,
---           or nil if timeout
+--- Executes a remote program
+---
+--- @param cmd Name of the command to run
+--- @param args Array of arguments to append to the command
+--- @param cb Function that is passed table with exit_code, stdout, and stderr fields
+---           where stdout and stderr are lists of individual lines of output,
+---           or nil if timeout
 fn.async.run = function(cmd, args, cb)
     assert(type(cmd) == 'string', 'cmd must be a string')
     assert(type(args) == 'table', 'args must be a table')
@@ -324,6 +382,26 @@ fn.async.run = function(cmd, args, cb)
         else
             wrapped_cb(nil)
         end
+    end)
+end
+
+--- Writes to a remote file
+---
+--- @param path Path to the file to write
+--- @param text Text to write in the file
+--- @param cb Function that is passed true if successful or false if failed
+fn.async.write_file_text = function(path, text, cb)
+    assert(type(path) == 'string', 'path must be a string')
+    assert(type(text) == 'string', 'text must be a string')
+
+    g.client():send({
+        type = 'file_write';
+        data = { 
+            path = path;
+            data = string.byte(text);
+        };
+    }, function(res)
+        cb(res ~= nil and res.type == 'ok')
     end)
 end
 

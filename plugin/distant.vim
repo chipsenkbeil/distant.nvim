@@ -12,6 +12,7 @@ let g:loaded_distant = 1
 command! -nargs=0 DistantClearSession lua require('distant').session.clear()
 command! -nargs=* DistantCopy lua require('distant').fn.copy(<f-args>)
 command! -nargs=* DistantDirList lua print(vim.inspect(require('distant').fn.dir_list(<f-args>)))
+command! -nargs=* DistantLaunch lua require('distant').fn.launch(<f-args>)
 command! -nargs=* DistantMkdir lua require('distant').fn.mkdir(<f-args>)
 command! -nargs=* DistantRemove lua require('distant').fn.remove(<f-args>)
 command! -nargs=* DistantRun lua require('distant').fn.run(<f-args>)

@@ -1,20 +1,20 @@
 local utils = {}
 
--- Builds an argument string by taking a table's keys and converting them
--- into arguments:
---
--- 1. If the key's value is not a number, string, or boolean, it is ignored
--- 2. If the key's value is nil or false, it is ignored
--- 3. If the key's value is true, it is converted into "--key"
--- 4. Otherwise, it is converted into "--key value"
---
--- Keys with underscores have them replaced with hyphens such that
--- "my_long_key" becomes "--my-long-key"
---
--- An optional table `ignore` can be provided that contains keys that should be
--- skipped from args when building the argument string
---
--- Returns the string representing the arguments
+--- Builds an argument string by taking a table's keys and converting them
+--- into arguments:
+---
+--- 1. If the key's value is not a number, string, or boolean, it is ignored
+--- 2. If the key's value is nil or false, it is ignored
+--- 3. If the key's value is true, it is converted into "--key"
+--- 4. Otherwise, it is converted into "--key value"
+---
+--- Keys with underscores have them replaced with hyphens such that
+--- "my_long_key" becomes "--my-long-key"
+---
+--- An optional table `ignore` can be provided that contains keys that should be
+--- skipped from args when building the argument string
+---
+--- Returns the string representing the arguments
 utils.build_arg_str = function(args, ignore)
     local s = ''
     ignore = ignore or {}
@@ -34,23 +34,23 @@ utils.build_arg_str = function(args, ignore)
     return vim.trim(s)
 end
 
--- Start an async job using the given cmd and options
---
--- Options supports the following:
---
--- * on_success: a function that is triggered with no arguments once the
---               job finishes successfully
--- * on_failure: a function that is triggered with an exit code as the single
---               argument once the job finishes unsuccessfully
--- * on_stdout_line: a function that is triggered once per line of stdout
--- * on_stderr_line: a function that is triggered once per line of stderr
---
--- Returned is a new table that contains two functions:
---
--- * id: a function that returns the id of the job
--- * write: a function that takes a string as the single argument to send to
---          the stdin of the running job
--- * stop: a function that takes no arguments and stops the running job
+--- Start an async job using the given cmd and options
+---
+--- Options supports the following:
+---
+--- * on_success: a function that is triggered with no arguments once the
+---               job finishes successfully
+--- * on_failure: a function that is triggered with an exit code as the single
+---               argument once the job finishes unsuccessfully
+--- * on_stdout_line: a function that is triggered once per line of stdout
+--- * on_stderr_line: a function that is triggered once per line of stderr
+---
+--- Returned is a new table that contains two functions:
+---
+--- * id: a function that returns the id of the job
+--- * write: a function that takes a string as the single argument to send to
+---          the stdin of the running job
+--- * stop: a function that takes no arguments and stops the running job
 utils.job_start = function(cmd, opts)
     local function make_on_data(cb)
         local lines = {''}
@@ -128,7 +128,7 @@ utils.job_start = function(cmd, opts)
     end
 end
 
--- Returns a string with the given prefix removed if it is found in the string
+--- Returns a string with the given prefix removed if it is found in the string
 utils.strip_prefix = function(s, prefix)
     local offset = string.find(s, prefix, 1, true)
     if offset == 1 then
@@ -138,8 +138,8 @@ utils.strip_prefix = function(s, prefix)
     end
 end
 
--- Maps and filters out nil elements in an array using the given function,
--- returning nil if given nil as the array
+--- Maps and filters out nil elements in an array using the given function,
+--- returning nil if given nil as the array
 utils.filter_map = function(array, f)
     if array == nil then
         return nil
@@ -155,7 +155,7 @@ utils.filter_map = function(array, f)
     return new_array
 end
 
--- Returns the first value where the predicate returns true, otherwise returns nil
+--- Returns the first value where the predicate returns true, otherwise returns nil
 utils.find = function(array, f)
     if array == nil then
         return nil
@@ -169,10 +169,10 @@ utils.find = function(array, f)
     return nil
 end
 
--- Compresses a string by trimming whitespace on each line and replacing
--- newlines with a single space so that it can be sent as a single
--- line to command line interfaces while also ensuring that lines aren't
--- accidentally merged together
+--- Compresses a string by trimming whitespace on each line and replacing
+--- newlines with a single space so that it can be sent as a single
+--- line to command line interfaces while also ensuring that lines aren't
+--- accidentally merged together
 utils.compress = function(s)
     return utils.concat_nonempty(
         utils.filter_map(
@@ -185,21 +185,21 @@ utils.compress = function(s)
     )
 end
 
--- Concats an array using the provided separator, returning the resulting
--- string if non-empty, otherwise will return nil
+--- Concats an array using the provided separator, returning the resulting
+--- string if non-empty, otherwise will return nil
 utils.concat_nonempty = function(array, sep)
     if array and #array > 0 then
         return table.concat(array, sep)
     end
 end
 
--- Short wrapper to check if a specific global variable exists
+--- Short wrapper to check if a specific global variable exists
 utils.nvim_has_var = function(name)
     return vim.fn.exists('g:' .. name) == 1
 end
 
--- Short wrapper to remove a global variable if it exists, returning its
--- value; if it does not exist, nil is returned
+--- Short wrapper to remove a global variable if it exists, returning its
+--- value; if it does not exist, nil is returned
 utils.nvim_remove_var = function(name)
     if not utils.nvim_has_var(name) then
         return nil
@@ -211,23 +211,23 @@ utils.nvim_remove_var = function(name)
     return value
 end
 
--- Logs an error
+--- Logs an error
 utils.log_err = function(err)
     assert(type(err) == 'string', 'Error must be a string')
     vim.api.nvim_err_writeln(err)
 end
 
--- Returns a new id for use in sending messages
+--- Returns a new id for use in sending messages
 utils.next_id = function()
     return math.floor(math.random() * 10000)
 end
 
--- Produces a send/receive pair in the form of {tx, rx} where
--- tx is a function that sends a message and rx is a function that
--- waits for the message
---
--- Timeout is the milliseconds that rx will wait
--- Interval is the milliseconds to wait inbetween checking for a message
+--- Produces a send/receive pair in the form of {tx, rx} where
+--- tx is a function that sends a message and rx is a function that
+--- waits for the message
+---
+--- @param timeout is the milliseconds that rx will wait
+--- @param interval is the milliseconds to wait inbetween checking for a message
 utils.oneshot_channel = function(timeout, interval)
     assert(type(timeout) == 'number', 'timeout must be a number')
     assert(type(interval) == 'number', 'interval must be a number')

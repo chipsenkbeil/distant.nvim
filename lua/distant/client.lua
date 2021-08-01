@@ -1,11 +1,11 @@
 local c = require('distant.constants')
 local u = require('distant.utils')
 
--- Represents a client connected to a remote machine
+--- Represents a client connected to a remote machine
 local client = {}
 client.__index = client
 
--- Creates a new instance of our client that is not yet connected
+--- Creates a new instance of our client that is not yet connected
 function client:new()
     local instance = {}
     setmetatable(instance, client)
@@ -17,19 +17,19 @@ function client:new()
     return instance
 end
 
--- Returns true if the client is actively running
+--- Returns true if the client is actively running
 function client:is_running()
     return not (not self.__state.handle)
 end
 
--- Retrieves the current version of the binary, returning it in the form
--- of {major, minor, patch, pre-release, pre-release-ver} or nil if not available.
---
--- Note that pre-release and pre-release ver are optional
+--- Retrieves the current version of the binary, returning it in the form
+--- of {major, minor, patch, pre-release, pre-release-ver} or nil if not available.
+---
+--- Note that pre-release and pre-release ver are optional
 function client:version()
     local raw_version = vim.fn.system(c.BINARY_NAME .. ' --version')
     if not raw_version then
-            return nil
+        return nil
     end
 
     local version_string = vim.trim(u.strip_prefix(vim.trim(raw_version), c.BINARY_NAME))
@@ -53,11 +53,12 @@ function client:version()
     end))
 end
 
--- Starts an instance of the client if not already running
---
--- Takes an optional set of options to define special handlers:
---
--- * on_exit: a function that is invoked when the client exits
+--- Starts an instance of the client if not already running
+---
+--- Takes an optional set of options to define special handlers:
+---
+--- * on_exit: a function that is invoked when the client exits
+--- * verbose: level of verbosity to apply to the client when spawned
 function client:start(opts)
     assert(not self:is_running(), 'client is already running!')
     opts = opts or {}
@@ -67,8 +68,11 @@ function client:start(opts)
         return
     end
 
-    local args = u.build_arg_str(opts, {'on_exit'})
-    local cmd = vim.trim(c.BINARY_NAME .. ' send --interactive --mode json -vvv ' .. args)
+    local args = u.build_arg_str(opts, {'on_exit', 'verbose'})
+    if args.verbose > 0 then
+        args = vim.trim(args .. ' -' .. string.rep('v', args.verbose))
+    end
+    local cmd = vim.trim(c.BINARY_NAME .. ' send --interactive --mode json ' .. args)
     local handle = u.job_start(cmd, {
         on_success = function()
             if type(opts.on_exit) == 'function' then
@@ -100,8 +104,8 @@ function client:start(opts)
     }
 end
 
--- Starts an instance of vimwiki-server if running by killing the process
--- and resetting state
+--- Starts an instance of vimwiki-server if running by killing the process
+--- and resetting state
 function client:stop()
     assert(self:is_running(), 'client is not running!')
 
@@ -110,8 +114,8 @@ function client:stop()
     self.__state.callbacks = {}
 end
 
--- Send a message to the remote machine, invoking the provided callback with the
--- response once it is received
+--- Send a message to the remote machine, invoking the provided callback with the
+--- response once it is received
 function client:send(msg, cb)
     assert(self:is_running(), 'client is not running!')
 
@@ -127,9 +131,9 @@ function client:send(msg, cb)
     self.__state.handle.write(u.compress(vim.fn.json_encode(full_msg)) .. '\n')
 end
 
--- Send a message to the remote machine and wait synchronously for the result
--- up to `timeout` milliseconds, checking every `interval` milliseconds for
--- a result (default timeout = 1000, interval = 200)
+--- Send a message to the remote machine and wait synchronously for the result
+--- up to `timeout` milliseconds, checking every `interval` milliseconds for
+--- a result (default timeout = 1000, interval = 200)
 function client:send_wait(msg, timeout, interval)
     local channel = u.oneshot_channel(
         timeout or c.MAX_TIMEOUT,
@@ -143,9 +147,9 @@ function client:send_wait(msg, timeout, interval)
     return channel.rx()
 end
 
--- Send a message to the remote machine, wait synchronously for the result up
--- to `timeout` milliseconds, checking every `interval` milliseconds for a
--- result (default timeout = 1000, interval = 200), and report an error if not okay
+--- Send a message to the remote machine, wait synchronously for the result up
+--- to `timeout` milliseconds, checking every `interval` milliseconds for a
+--- result (default timeout = 1000, interval = 200), and report an error if not okay
 function client:send_wait_ok(msg, timeout, interval)
     timeout = timeout or c.MAX_TIMEOUT
     interval = interval or c.TIMEOUT_INTERVAL
@@ -159,24 +163,24 @@ function client:send_wait_ok(msg, timeout, interval)
     end
 end
 
--- Register a callback to be invoked when a message is received without an origin
---
--- Also takes a second argument that is a function that, when called, unregisters
--- the callback
---
--- Returns an id tied to the registered callback
+--- Register a callback to be invoked when a message is received without an origin
+---
+--- Also takes a second argument that is a function that, when called, unregisters
+--- the callback
+---
+--- Returns an id tied to the registered callback
 function client:register_broadcast(cb)
     local id = u.next_id()
     self.__state.registered['cb_' .. id] = cb
     return id
 end
 
--- Unregisters a broadcast callback with the specified id
+--- Unregisters a broadcast callback with the specified id
 function client:unregister_broadcast(id)
     self.__state.registered['cb_' .. id] = nil
 end
 
--- Primary event handler, routing received events to the corresponding callbacks
+--- Primary event handler, routing received events to the corresponding callbacks
 function client:__handler(msg)
     assert(type(msg) == 'table', 'msg must be a table')
 
