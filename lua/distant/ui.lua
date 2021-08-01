@@ -111,6 +111,7 @@ end
 --- @param ty string The type of window to show ('msg', 'err')
 --- @param width number width of the window (optional)
 --- @param height number height of the window (optional)
+--- @return number handle returns the handle of the buffer containing the message
 ui.show_msg = function(msg, ty, width, height, closing_keys)
     local buf_h = vim.api.nvim_create_buf(false, true)
     assert(buf_h ~= 0, 'Failed to create buffer for session info')
@@ -176,6 +177,8 @@ ui.show_msg = function(msg, ty, width, height, closing_keys)
     if ty == 'err' then
         vim.api.nvim_win_set_option(win, 'winhl', 'Normal:Error')
     end
+
+    return buf_h
 end
 
 return ui

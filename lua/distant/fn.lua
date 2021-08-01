@@ -5,29 +5,29 @@ local fn = {}
 
 --- Copies a remote file or directory to a new location
 ---
---- @param src Path to the input file/directory to copy
---- @param dst Path to the output file/directory
---- @param timeout Maximum time to wait for a response
---- @param interval Time in milliseconds to wait between checks for a response
---- @return true if succeeded, otherwise false
+--- @param src string Path to the input file/directory to copy
+--- @param dst string Path to the output file/directory
+--- @param timeout number Maximum time to wait for a response
+--- @param interval number Time in milliseconds to wait between checks for a response
+--- @return boolean result true if succeeded, otherwise false
 fn.copy = function(src, dst, timeout, interval)
     local channel = u.oneshot_channel(
         timeout or g.settings.max_timeout,
         interval or g.settings.timeout_interval
     )
 
-    fn.async.copy(src, dst, function(res) channel.tx(res) end)
+    fn.async.copy(src, dst, channel.tx)
     return channel.rx()
 end
 
 --- Retrieves a list of contents within a remote directory
 ---
---- @param path Path to the directory whose contents to list
---- @param all If true, will recursively retrieve all contents, otherwise only
----            retrieves contents directly within the path
---- @param timeout Maximum time to wait for a response
---- @param interval Time in milliseconds to wait between checks for a response
---- @return A list of entries in the form of
+--- @param path string Path to the directory whose contents to list
+--- @param all boolean If true, will recursively retrieve all contents, 
+---            otherwise only retrieves contents directly within the path
+--- @param timeout number Maximum time to wait for a response
+--- @param interval number Time in milliseconds to wait between checks for a response
+--- @return table entries A list of entries in the form of
 ---         {'path' = ..., 'file_type' = ..., 'depth' = ...}
 ---         or nil if unsuccessful
 fn.dir_list = function(path, all, timeout, interval)
@@ -36,90 +36,108 @@ fn.dir_list = function(path, all, timeout, interval)
         interval or g.settings.timeout_interval
     )
 
-    fn.async.dir_list(path, all, function(res) channel.tx(res) end)
+    fn.async.dir_list(path, all, channel.tx)
     return channel.rx()
 end
 
 --- Creates a remote directory
 ---
---- @param path Path to the directory to create
---- @param all If true, will recursively all components of path to directory
---- @param timeout Maximum time to wait for a response
---- @param interval Time in milliseconds to wait between checks for a response
---- @return true if succeeded, otherwise false
+--- @param path string Path to the directory to create
+--- @param all boolean If true, will recursively all components of path to directory
+--- @param timeout number Maximum time to wait for a response
+--- @param interval number Time in milliseconds to wait between checks for a response
+--- @return boolean result true if succeeded, otherwise false
 fn.mkdir = function(path, all, timeout, interval)
     local channel = u.oneshot_channel(
         timeout or g.settings.max_timeout,
         interval or g.settings.timeout_interval
     )
 
-    fn.async.mkdir(path, all, function(res) channel.tx(res) end)
+    fn.async.mkdir(path, all, channel.tx)
     return channel.rx()
 end
 
 --- Reads a remote file as text
 ---
---- @param path Path to the file to read
---- @param timeout Maximum time to wait for a response
---- @param interval Time in milliseconds to wait between checks for a response
---- @return String containing file's text, or nil if fails
+--- @param path string Path to the file to read
+--- @param timeout number Maximum time to wait for a response
+--- @param interval number Time in milliseconds to wait between checks for a response
+--- @return string text file's text, or nil if fails
 fn.read_file_text = function(path, timeout, interval)
     local channel = u.oneshot_channel(
         timeout or g.settings.max_timeout,
         interval or g.settings.timeout_interval
     )
 
-    fn.async.read_file_text(path, function(res) channel.tx(res) end)
+    fn.async.read_file_text(path, channel.tx)
     return channel.rx()
 end
 
 --- Removes a remote file or directory
 ---
---- @param path Path to the file or directory to create
---- @param force If true, will remove directories that are non-empty
---- @param timeout Maximum time to wait for a response
---- @param interval Time in milliseconds to wait between checks for a response
---- @return true if succeeded, otherwise false
+--- @param path string Path to the file or directory to create
+--- @param force boolean If true, will remove directories that are non-empty
+--- @param timeout number Maximum time to wait for a response
+--- @param interval number Time in milliseconds to wait between checks for a response
+--- @return boolean result true if succeeded, otherwise false
 fn.remove = function(path, force, timeout, interval)
     local channel = u.oneshot_channel(
         timeout or g.settings.max_timeout,
         interval or g.settings.timeout_interval
     )
 
-    fn.async.remove(path, force, function(res) channel.tx(res) end)
+    fn.async.remove(path, force, channel.tx)
+    return channel.rx()
+end
+
+--- Renames a remote file or directory
+---
+--- @param src string Path to the file or directory to rename
+--- @param dst string Path to the new file or directory
+--- @param timeout number Maximum time to wait for a response
+--- @param interval number Time in milliseconds to wait between checks for a response
+--- @return boolean result true if succeeded, otherwise false
+fn.rename = function(src, dst, timeout, interval)
+    local channel = u.oneshot_channel(
+        timeout or g.settings.max_timeout,
+        interval or g.settings.timeout_interval
+    )
+
+    fn.async.rename(src, dst, channel.tx)
     return channel.rx()
 end
 
 --- Executes a remote program
 ---
---- @param cmd Name of the command to run
---- @param args Array of arguments to append to the command
---- @param timeout Maximum time to wait for the program to finish
---- @param interval Time in milliseconds to wait between checks for program to finish
---- @return Table with exit_code, stdout, and stderr fields where stdout and stderr
----         are lists of individual lines of output, or returns nil if timeout
+--- @param cmd string Name of the command to run
+--- @param args list Array of arguments to append to the command
+--- @param timeout number Maximum time to wait for the program to finish
+--- @param interval number Time in milliseconds to wait between checks for program to finish
+--- @return table output Table with exit_code, stdout, and stderr fields where 
+---         stdout and stderr are lists of individual lines of output, or
+---         returns nil if timeout
 fn.run = function(cmd, args, timeout, interval)
     local channel = u.oneshot_channel(
         timeout or g.settings.max_timeout,
         interval or g.settings.timeout_interval
     )
 
-    fn.async.run(cmd, args, function(res) channel.tx(res) end)
+    fn.async.run(cmd, args, channel.tx)
     return channel.rx()
 end
 
 --- Writes to a remote file
 ---
---- @param path Path to the file to write
---- @param text Text to write in the file
---- @return true if succeeded, otherwise false
+--- @param path string Path to the file to write
+--- @param text string Text to write in the file
+--- @return boolean result true if succeeded, otherwise false
 fn.write_file_text = function(path, text)
     local channel = u.oneshot_channel(
         timeout or g.settings.max_timeout,
         interval or g.settings.timeout_interval
     )
 
-    fn.async.write_file_text(path, text, function(res) channel.tx(res) end)
+    fn.async.write_file_text(path, text, channel.tx)
     return channel.rx()
 end
 
@@ -128,9 +146,9 @@ fn.async = {}
 
 --- Copies a remote file or directory to a new location
 ---
---- @param src Path to the input file/directory to copy
---- @param dst Path to the output file/directory
---- @param cb Function that is passed true if successful or false if failed
+--- @param src string Path to the input file/directory to copy
+--- @param dst string Path to the output file/directory
+--- @param cb function Function that is passed true if successful or false if failed
 fn.async.copy = function(src, dst, cb)
     assert(type(src) == 'string', 'src must be a string')
     assert(type(dst) == 'string', 'dst must be a string')
@@ -148,10 +166,10 @@ end
 
 --- Retrieves a list of contents within a remote directory
 ---
---- @param path Path to the directory whose contents to list
---- @param all If true, will recursively retrieve all contents, otherwise only
+--- @param path string Path to the directory whose contents to list
+--- @param all boolean If true, will recursively retrieve all contents, otherwise only
 ---            retrieves contents directly within the path
---- @param cb Function that is passed a list of entries in the form of
+--- @param cb function Function that is passed a list of entries in the form of
 ---           {'path' = ..., 'file_type' = ..., 'depth' = ...}
 ---           or nil if unsuccessful
 fn.async.dir_list = function(path, all, cb)
@@ -175,9 +193,9 @@ end
 
 --- Creates a remote directory
 ---
---- @param path Path to the directory to create
---- @param all If true, will recursively all components of path to directory
---- @param cb Function that is passed true if successful or false if failed
+--- @param path string Path to the directory to create
+--- @param all boolean If true, will recursively all components of path to directory
+--- @param cb function Function that is passed true if successful or false if failed
 fn.async.mkdir = function(path, all, cb)
     assert(type(path) == 'string', 'path must be a string')
     all = not (not all)
@@ -195,8 +213,8 @@ end
 
 --- Reads a remote file as text
 ---
---- @param path Path to the file to read
---- @param cb Function that is passed file's text or nil if failed
+--- @param path string Path to the file to read
+--- @param cb function Function that is passed file's text or nil if failed
 fn.async.read_file_text = function(path, cb)
     assert(type(path) == 'string', 'path must be a string')
 
@@ -214,9 +232,9 @@ end
 
 --- Removes a remote file or directory
 ---
---- @param path Path to the file or directory to create
---- @param force If true, will remove directories that are non-empty
---- @param cb Function that is passed true if successful or false if failed
+--- @param path string Path to the file or directory to create
+--- @param force boolean If true, will remove directories that are non-empty
+--- @param cb function Function that is passed true if successful or false if failed
 fn.async.remove = function(path, force, cb)
     assert(type(path) == 'string', 'path must be a string')
     force = not (not force)
@@ -232,14 +250,33 @@ fn.async.remove = function(path, force, cb)
     end)
 end
 
+--- Renames a remote file or directory
+---
+--- @param src string Path to the file or directory to rename
+--- @param dst string Path to the new file or directory
+--- @param cb function Function that is passed true if successful or false if failed
+fn.async.rename = function(src, dst, cb)
+    assert(type(src) == 'string', 'src must be a string')
+    assert(type(dst) == 'string', 'dst must be a string')
+
+    g.client():send({
+        type = 'rename';
+        data = {
+            src = src;
+            dst = dst;
+        };
+    }, function(res)
+        cb(res ~= nil and res.type == 'ok')
+    end)
+end
 
 --- Executes a remote program
 ---
---- @param cmd Name of the command to run
---- @param args Array of arguments to append to the command
---- @param cb Function that is passed table with exit_code, stdout, and stderr fields
----           where stdout and stderr are lists of individual lines of output,
----           or nil if timeout
+--- @param cmd string Name of the command to run
+--- @param args list Array of arguments to append to the command
+--- @param cb function Function that is passed table with exit_code, stdout,
+---        and stderr fields where stdout and stderr are lists of individual
+---        lines of output, or nil if timeout
 fn.async.run = function(cmd, args, cb)
     assert(type(cmd) == 'string', 'cmd must be a string')
     assert(type(args) == 'table', 'args must be a table')
@@ -341,9 +378,9 @@ end
 
 --- Writes to a remote file
 ---
---- @param path Path to the file to write
---- @param text Text to write in the file
---- @param cb Function that is passed true if successful or false if failed
+--- @param path string Path to the file to write
+--- @param text string Text to write in the file
+--- @param cb function Function that is passed true if successful or false if failed
 fn.async.write_file_text = function(path, text, cb)
     assert(type(path) == 'string', 'path must be a string')
     assert(type(text) == 'string', 'text must be a string')
