@@ -1,4 +1,4 @@
-local c = require('distant.constants')
+local settings = require('distant.settings')
 local u = require('distant.utils')
 
 --- Represents a client connected to a remote machine
@@ -27,12 +27,12 @@ end
 ---
 --- Note that pre-release and pre-release ver are optional
 function client:version()
-    local raw_version = vim.fn.system(c.BINARY_NAME .. ' --version')
+    local raw_version = vim.fn.system(settings.binary_name .. ' --version')
     if not raw_version then
         return nil
     end
 
-    local version_string = vim.trim(u.strip_prefix(vim.trim(raw_version), c.BINARY_NAME))
+    local version_string = vim.trim(u.strip_prefix(vim.trim(raw_version), settings.binary_name))
     if not version_string then
         return nil
     end
@@ -63,27 +63,29 @@ function client:start(opts)
     assert(not self:is_running(), 'client is already running!')
     opts = opts or {}
 
-    if vim.fn.executable(c.BINARY_NAME) ~= 1 then
-        u.log_err('Executable ' .. c.BINARY_NAME .. ' is not on path')
+    if vim.fn.executable(settings.binary_name) ~= 1 then
+        u.log_err('Executable ' .. settings.binary_name .. ' is not on path')
         return
     end
 
     local args = u.build_arg_str(opts, {'on_exit', 'verbose'})
-    if args.verbose > 0 then
-        args = vim.trim(args .. ' -' .. string.rep('v', args.verbose))
+    if type(opts.verbose) == 'number' and opts.verbose > 0 then
+        args = vim.trim(args .. ' -' .. string.rep('v', opts.verbose))
     end
-    local cmd = vim.trim(c.BINARY_NAME .. ' send --interactive --mode json ' .. args)
+    local cmd = vim.trim(settings.binary_name .. ' send --interactive --mode json ' .. args)
     local handle = u.job_start(cmd, {
         on_success = function()
             if type(opts.on_exit) == 'function' then
                 opts.on_exit(0)
             end
+            self:stop()
         end;
         on_failure = function(code)
             u.log_err('client failed with exit code ' .. code)
             if type(opts.on_exit) == 'function' then
                 opts.on_exit(code)
             end
+            self:stop()
         end;
         on_stdout_line = function(line)
             if line ~= nil and line ~= "" then
@@ -104,11 +106,9 @@ function client:start(opts)
     }
 end
 
---- Starts an instance of vimwiki-server if running by killing the process
+--- Stops an instance of distant if running by killing the process
 --- and resetting state
 function client:stop()
-    assert(self:is_running(), 'client is not running!')
-
     self.__state.handle.stop()
     self.__state.handle = nil
     self.__state.callbacks = {}
@@ -136,8 +136,8 @@ end
 --- a result (default timeout = 1000, interval = 200)
 function client:send_wait(msg, timeout, interval)
     local channel = u.oneshot_channel(
-        timeout or c.MAX_TIMEOUT,
-        interval or c.TIMEOUT_INTERVAL
+        timeout or settings.max_timeout,
+        interval or settings.timeout_interval
     )
 
     self:send(msg, function(data)
@@ -151,8 +151,8 @@ end
 --- to `timeout` milliseconds, checking every `interval` milliseconds for a
 --- result (default timeout = 1000, interval = 200), and report an error if not okay
 function client:send_wait_ok(msg, timeout, interval)
-    timeout = timeout or c.MAX_TIMEOUT
-    interval = interval or c.TIMEOUT_INTERVAL
+    timeout = timeout or settings.max_timeout
+    interval = interval or settings.timeout_interval
     local result = self:send_wait(msg, timeout, interval)
     if result == nil then
         u.log_err('Max timeout ('..tostring(timeout)..') reached waiting for result')

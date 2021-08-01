@@ -23,6 +23,14 @@ end
 globals.client = function()
     if not state.client then
         state.client = client:new()
+
+        -- Define augroup that will stop client when exiting neovim
+        u.augroup('distant_client', function()
+            u.autocmd('VimLeave', '*', function()
+                -- TODO: This is not working right now
+                state.client:stop()
+            end)
+        end)
     end
 
     -- Validate that the version we support is available

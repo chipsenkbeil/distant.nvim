@@ -21,7 +21,7 @@ utils.build_arg_str = function(args, ignore)
 
     for k, v in pairs(args) do
         -- Skip positional arguments and nil/false values
-        if not ignore[k] and v then
+        if not utils.contains(ignore, k) and v then
             local name = k:gsub('_', '-')
             if type(v) == 'boolean' then
                 s = s .. ' --' .. name
@@ -193,6 +193,17 @@ utils.concat_nonempty = function(array, sep)
     end
 end
 
+--- Returns true if the provided table contains the given value
+utils.contains = function(tbl, value)
+    for _, v in pairs(tbl) do
+        if v == value then
+            return true
+        end
+    end
+
+    return false
+end
+
 --- Short wrapper to check if a specific global variable exists
 utils.nvim_has_var = function(name)
     return vim.fn.exists('g:' .. name) == 1
@@ -220,6 +231,27 @@ end
 --- Returns a new id for use in sending messages
 utils.next_id = function()
     return math.floor(math.random() * 10000)
+end
+
+--- Defines an augroup
+utils.augroup = function(name, cb)
+    vim.cmd('augroup ' .. name)
+    vim.cmd('autocmd!')
+    cb()
+    vim.cmd('augroup END')
+end
+
+--- Defines an autocmd (use within augroup)
+utils.autocmd = function(name, pattern, cmd)
+    local cmd_type = type(cmd)
+    if cmd_type == 'function' then
+        local key = '__distant_autocmd_callback_' .. utils.next_id() .. '__'
+        senkwich.g[key] = cmd
+        cmd = 'lua distant.g["' .. key .. '"]()'
+    elseif cmd_type ~= 'string' then
+        error('autocmd(): unsupported cmd type: ' .. cmd_type)
+    end
+    vim.cmd('autocmd ' .. name .. ' ' .. pattern .. ' ' .. cmd)
 end
 
 --- Produces a send/receive pair in the form of {tx, rx} where

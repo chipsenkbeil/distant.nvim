@@ -1,5 +1,5 @@
-local c = require('distant.constants')
 local g = require('distant.globals')
+local settings = require('distant.settings')
 local u = require('distant.utils')
 
 local fn = {}
@@ -13,8 +13,8 @@ local fn = {}
 --- @return true if succeeded, otherwise false
 fn.copy = function(src, dst, timeout, interval)
     local channel = u.oneshot_channel(
-        timeout or c.MAX_TIMEOUT,
-        interval or c.TIMEOUT_INTERVAL
+        timeout or settings.max_timeout,
+        interval or settings.timeout_interval
     )
 
     fn.async.copy(src, dst, function(res) channel.tx(res) end)
@@ -33,57 +33,12 @@ end
 ---         or nil if unsuccessful
 fn.dir_list = function(path, all, timeout, interval)
     local channel = u.oneshot_channel(
-        timeout or c.MAX_TIMEOUT,
-        interval or c.TIMEOUT_INTERVAL
+        timeout or settings.max_timeout,
+        interval or settings.timeout_interval
     )
 
     fn.async.dir_list(path, all, function(res) channel.tx(res) end)
     return channel.rx()
-end
-
---- Launches a new instance of the distance binary on the remote machine and sets
---- up a session so clients are able to communicate with it
----
---- @param host The host to connect to (e.g. example.com)
---- @param args Table of arguments to append to the launch command, where all
----             keys with _ are replaced with - (e.g. my_key -> --my-key)
---- @param timeout Maximum time to wait for a response
---- @param interval Time in milliseconds to wait between checks for a response
---- @return Exit code once launch has completed, or nil if times out
-fn.launch = function(host, args)
-    assert(type(host) == 'string', 'Missing or invalid host argument')
-    args = args or {}
-
-    local buf_h = vim.api.nvim_create_buf(false, true)
-    assert(buf_h ~= 0, 'Failed to create buffer for launch')
-
-    local ui = vim.api.nvim_list_uis()[1]
-    local width = 80
-    local height = 8
-    local win = vim.api.nvim_open_win(buf_h, 1, {
-        relative = 'editor';
-        width = width;
-        height = height;
-        col = (ui.width / 2) - (width / 2);
-        row = (ui.height / 2) - (height / 2);
-        anchor = 'NW';
-        style = 'minimal';
-        border = 'single';
-        noautocmd = true;
-    })
-
-    -- Format is launch {host} [args..]
-    local cmd_args = u.build_arg_str(args)
-    vim.fn.termopen(
-        c.BINARY_NAME .. ' launch ' .. host .. ' ' .. cmd_args,
-        {
-            on_exit = function(_, code, _)
-                if code == 0 then
-                    vim.api.nvim_win_close(win, false)
-                end
-            end
-        }
-    )
 end
 
 --- Creates a remote directory
@@ -95,8 +50,8 @@ end
 --- @return true if succeeded, otherwise false
 fn.mkdir = function(path, all, timeout, interval)
     local channel = u.oneshot_channel(
-        timeout or c.MAX_TIMEOUT,
-        interval or c.TIMEOUT_INTERVAL
+        timeout or settings.max_timeout,
+        interval or settings.timeout_interval
     )
 
     fn.async.mkdir(path, all, function(res) channel.tx(res) end)
@@ -111,8 +66,8 @@ end
 --- @return String containing file's text, or nil if fails
 fn.read_file_text = function(path, timeout, interval)
     local channel = u.oneshot_channel(
-        timeout or c.MAX_TIMEOUT,
-        interval or c.TIMEOUT_INTERVAL
+        timeout or settings.max_timeout,
+        interval or settings.timeout_interval
     )
 
     fn.async.read_file_text(path, function(res) channel.tx(res) end)
@@ -128,8 +83,8 @@ end
 --- @return true if succeeded, otherwise false
 fn.remove = function(path, force, timeout, interval)
     local channel = u.oneshot_channel(
-        timeout or c.MAX_TIMEOUT,
-        interval or c.TIMEOUT_INTERVAL
+        timeout or settings.max_timeout,
+        interval or settings.timeout_interval
     )
 
     fn.async.remove(path, force, function(res) channel.tx(res) end)
@@ -146,8 +101,8 @@ end
 ---         are lists of individual lines of output, or returns nil if timeout
 fn.run = function(cmd, args, timeout, interval)
     local channel = u.oneshot_channel(
-        timeout or c.MAX_TIMEOUT,
-        interval or c.TIMEOUT_INTERVAL
+        timeout or settings.max_timeout,
+        interval or settings.timeout_interval
     )
 
     fn.async.run(cmd, args, function(res) channel.tx(res) end)
@@ -161,8 +116,8 @@ end
 --- @return true if succeeded, otherwise false
 fn.write_file_text = function(path, text)
     local channel = u.oneshot_channel(
-        timeout or c.MAX_TIMEOUT,
-        interval or c.TIMEOUT_INTERVAL
+        timeout or settings.max_timeout,
+        interval or settings.timeout_interval
     )
 
     fn.async.write_file_text(path, text, function(res) channel.tx(res) end)
