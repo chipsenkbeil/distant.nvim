@@ -17,6 +17,8 @@ Supports the following features against remote machines:
 
 ## Installation
 
+> Not ready for usage yet! Features are still being developed!
+
 Using [packer.nvim](https://github.com/wbthomason/packer.nvim)
 
 ```lua
