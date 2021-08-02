@@ -3,6 +3,7 @@ local g = require('distant.internal.globals')
 local session = require('distant.session')
 local ui = require('distant.internal.ui')
 local u = require('distant.internal.utils')
+local v = require('distant.internal.vars')
 
 local action = {}
 
@@ -119,19 +120,34 @@ action.open = function(path, opts)
         local lines = vim.split(text, '\n', true)
         vim.api.nvim_buf_set_lines(buf, 0, 1, false, lines)
 
-        -- Set buffer name and options to mark it as remote;
-        -- writing is handled by an autocmd for the filetype
+        -- Set the buffer name to include a schema, which will trigger our
+        -- autocmd for writing to the remote destination
+        --
+        -- Mark the buftype as acwrite as you can still write to it, but we
+        -- control where it is going
+        --
+        -- Mark as not yet modified as the content we placed into our
+        -- buffer matches that of the remote file
         vim.api.nvim_buf_set_name(buf, 'distant://' .. path)
         vim.api.nvim_buf_set_option(buf, 'buftype', 'acwrite')
         vim.api.nvim_buf_set_option(buf, 'modified', false)
 
         -- Add stateful information to the buffer, helping keep track of it
-        vim.api.nvim_buf_set_var(buf, 'remote_path', path)
+        v.buf.set_remote_path(buf, path)
 
         -- Display the buffer in the specified window, defaulting to current
         vim.api.nvim_win_set_buf(opts.win or 0, buf)
 
         -- Set our filetype to whatever the contents actually are (or file extension is)
+        -- TODO: This makes me feel uncomfortable as I do not yet understand why detecting
+        --       the filetype as the real type does not trigger neovim's LSP. At the
+        --       moment, it does not happen but we still get syntax highlighting, which
+        --       is perfect. In the future, we may need to switch this to something similar
+        --       to what telescope.nvim does with plenary.nvim's syntax functions.
+        --
+        -- TODO: Does this work if the above window is not the current one? Would prefer
+        --       an explicit function as opposed to the command we're using as don't
+        --       have control
         vim.cmd([[ filetype detect ]])
     else
         vim.api.nvim_err_writeln('Filetype ' .. metadata.file_type .. ' is unsupported')

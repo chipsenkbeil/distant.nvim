@@ -1,6 +1,7 @@
 local g = require('distant.internal.globals')
 local fn = require('distant.fn')
 local u = require('distant.internal.utils')
+local v = require('distant.internal.vars')
 
 return function(opts)
     opts = opts or {}
@@ -22,7 +23,7 @@ return function(opts)
             local buf = tonumber(vim.fn.expand('<abuf>'))
 
             -- Load the remote path from the buffer being saved
-            local path = vim.api.nvim_buf_get_var(buf, 'remote_path')
+            local path = v.buf.remote_path(buf)
 
             -- Load the contents of the buffer
             -- TODO: This only works if the buffer is not hidden, but is

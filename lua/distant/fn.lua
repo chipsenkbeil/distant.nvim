@@ -342,7 +342,7 @@ end
 ---        lines of output, or nil if timeout
 fn.async.run = function(cmd, args, cb)
     assert(type(cmd) == 'string', 'cmd must be a string')
-    assert(type(args) == 'table', 'args must be a table')
+    args = args or {}
 
     -- Make callback that can only be run once
     local has_called = false
