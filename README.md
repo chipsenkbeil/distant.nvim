@@ -5,13 +5,17 @@ enables users to edit remote files from the comfort of their local environment.
 
 Supports the following features against remote machines:
 
-- Retrieving a list of available files & directories
-- Creating and deleting files & directories
-- Copying files & directories
-- Renaming files & directories
-- Running [LSPs](https://neovim.io/doc/lsp/) remotely and getting live results locally
-- Optional [lir.nvim](https://github.com/tamago324/lir.nvim) integration
-- Optional [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) integration
+- [X] Retrieving a list of available files & directories
+- [X] Editing remote files
+- [X] Creating and deleting files & directories
+- [X] Copying files & directories
+- [X] Renaming files & directories
+
+Support is coming up for these features:
+
+- [ ] Running [LSPs](https://neovim.io/doc/lsp/) remotely and getting live results locally
+- [ ] Optional [lir.nvim](https://github.com/tamago324/lir.nvim) integration
+- [ ] Optional [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) integration
 
 **Requires neovim 0.5+**
 

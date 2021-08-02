@@ -378,6 +378,10 @@ utils.oneshot_channel = function(timeout, interval)
             result = vim.fn.json_decode(result)
         end
 
+        if result == vim.NIL then
+            result = nil
+        end
+
         return result
     end
 
