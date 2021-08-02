@@ -81,7 +81,7 @@ utils.job_start = function(cmd, opts)
             -- Otherwise, we want to report all of our lines except the last one
             -- which may be partial
             else
-                for i, v in ipairs(data) do
+                for i, v in ipairs(lines) do
                     if i < #data then
                         send_back(v)
                     end
