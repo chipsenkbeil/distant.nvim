@@ -71,7 +71,7 @@ by default and start an instance of [`distant`](https://github.com/chipsenkbeil/
 
 Once started, all remote operations will be sent to that machine! You can try
 out something simple like displaying a list of files, directories, and symlinks
-by running `:DistantDirList /some/dir`, which will open a dialog that displays
+by running `:DistantOpen /some/dir`, which will open a dialog that displays
 all of the contents of the specified directory.
 
 ## Functions
@@ -87,6 +87,7 @@ more details, check out the doc comments for the individual functions.
 |-----------------------|-------------------------------------------------------------------------------|
 | `fn.copy`             | Copies a remote file or directory to another remote location                  |
 | `fn.dir_list`         | Lists remote files & directories for the given path on the remote machine     |
+| `fn.metadata`         | Retrieves metadata about a remote file, directory, or symlink                 |
 | `fn.mkdir`            | Creates a new directory remotely                                              |
 | `fn.read_file_text`   | Reads a remote file, returning its content as text                            |
 | `fn.remove`           | Removes a remote file or directory                                            |
@@ -105,6 +106,7 @@ for the individual functions.
 |-------------------------------|-----------------------------------------------------------|
 | `fn.async.copy`               | Async variant of `fn.copy` using callbacks                |
 | `fn.async.dir_list`           | Async variant of `fn.dir_list` using callbacks            |
+| `fn.async.metadata`           | Async variant of `fn.metadata` using callbacks            |
 | `fn.async.mkdir`              | Async variant of `fn.mkdir` using callbacks               |
 | `fn.async.read_file_text`     | Async variant of `fn.read_file_text` using callbacks      |
 | `fn.async.remove`             | Async variant of `fn.remove` using callbacks              |
