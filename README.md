@@ -3,6 +3,20 @@
 A wrapper around [`distant`](https://github.com/chipsenkbeil/distant) that
 enables users to edit remote files from the comfort of their local environment.
 
+- **Requires neovim 0.5+**
+- **Requires distant 0.3.2+**
+
+## Installation
+
+Using [packer.nvim](https://github.com/wbthomason/packer.nvim)
+
+```lua
+-- With no optional plugins
+use 'chipsenkbeil/distant.nvim'
+```
+
+## Features
+
 Supports the following features against remote machines:
 
 - [X] Retrieving a list of available files & directories
@@ -16,56 +30,6 @@ Support is coming up for these features:
 - [ ] Running [LSPs](https://neovim.io/doc/lsp/) remotely and getting live results locally
 - [ ] Optional [lir.nvim](https://github.com/tamago324/lir.nvim) integration
 - [ ] Optional [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) integration
-
-**Requires neovim 0.5+**
-
-## Installation
-
-> Not ready for usage yet! Features are still being developed!
-
-Using [packer.nvim](https://github.com/wbthomason/packer.nvim)
-
-```lua
--- With no optional plugins
-use 'chipsenkbeil/distant.nvim'
-```
-
-```lua
--- With lir plugin
-use {
-  'chipsenkbeil/distant.nvim',
-  requires = {
-    {'nvim-lua/plenary.nvim'},
-    {'tamago324/lir.nvim'},
-  },
-  config = function()
-    local actions = require('lir.distant.actions')
-    require('lir.distant').setup {
-      mappings = {
-        ['l']     = actions.edit,
-        ['<C-s>'] = actions.split,
-        ['<C-v>'] = actions.vsplit,
-        ['<C-t>'] = actions.tabedit,
-      }
-    }
-  end,
-}
-```
-
-```lua
--- With telescope plugin
-use {
-  'chipsenkbeil/distant.nvim',
-  requires = {
-    {'nvim-lua/plenary.nvim'},
-    {'nvim-lua/popup.nvim'},
-    {'nvim-telescope/telescope.nvim'},
-  },
-  config = function()
-    require('telescope').load_extension('distant')
-  end,
-}
-```
 
 ## Getting Started
 
