@@ -20,8 +20,7 @@ ui.show_msg = function(msg, ty, width, height, closing_keys)
         msg = table.concat(msg, '\n')
     end
     local lines = u.filter_map(vim.split(msg, '\n', true), function(line)
-        line = vim.trim(line)
-        if line ~= nil and line ~= '' then
+        if line ~= nil then
             return line
         end
     end)

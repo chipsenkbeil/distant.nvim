@@ -176,10 +176,24 @@ end
 
 --- Opens a new window to display session info
 action.info = function()
+    local indent = '    '
     local info = session.info()
+    local distant_buf_names = u.filter_map(vim.api.nvim_list_bufs(), function(buf)
+        local name = vim.api.nvim_buf_get_name(buf)
+        if u.starts_with(name, 'distant://') then
+            return indent .. '* ' .. string.sub(name, string.len('distant://') + 1)
+        end
+    end)
+
     ui.show_msg({
-        'Host: ' .. info.host;
-        'Port: ' .. info.port;
+        '= Session =';
+        '';
+        indent .. '* Host = "' .. info.host .. '"';
+        indent .. '* Port = "' .. info.port .. '"';
+        '';
+        '= Remote Files =';
+        '';
+        unpack(distant_buf_names);
     })
 end
 
