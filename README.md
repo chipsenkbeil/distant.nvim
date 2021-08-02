@@ -28,7 +28,9 @@ Using [packer.nvim](https://github.com/wbthomason/packer.nvim)
 ```lua
 -- With no optional plugins
 use 'chipsenkbeil/distant.nvim'
+```
 
+```lua
 -- With lir plugin
 use {
   'chipsenkbeil/distant.nvim',
@@ -48,7 +50,9 @@ use {
     }
   end,
 }
+```
 
+```lua
 -- With telescope plugin
 use {
   'chipsenkbeil/distant.nvim',
