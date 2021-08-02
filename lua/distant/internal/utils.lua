@@ -229,11 +229,16 @@ utils.log_err = function(err)
 end
 
 --- Returns a new id for use in sending messages
+--- @return number id Randomly generated id
 utils.next_id = function()
     return math.floor(math.random() * 10000)
 end
 
 --- Defines an augroup
+--- From https://github.com/wincent/wincent
+---
+--- @param name string The name of the augroup
+--- @param cb function The callback to invoke within the augroup definition
 utils.augroup = function(name, cb)
     vim.cmd('augroup ' .. name)
     vim.cmd('autocmd!')
@@ -242,12 +247,20 @@ utils.augroup = function(name, cb)
 end
 
 --- Defines an autocmd (use within augroup)
+--- From https://github.com/wincent/wincent
+---
+--- @param name string Name of the autocmd
+--- @param pattern string Pattern for the autocmd
+--- @param cmd function|string Either a callback to be triggered or a string 
+---        representing a vim expression
 utils.autocmd = function(name, pattern, cmd)
+    -- NOTE: Inlined here to avoid loop from circular dependencies
+    local g = require('distant.internal.globals')
+
     local cmd_type = type(cmd)
     if cmd_type == 'function' then
-        local key = '__distant_autocmd_callback_' .. utils.next_id() .. '__'
-        senkwich.g[key] = cmd
-        cmd = 'lua distant.g["' .. key .. '"]()'
+        local id = g.set_callback(cmd)
+        cmd = 'lua require("distant.internal.globals").callback("' .. id .. '")()'
     elseif cmd_type ~= 'string' then
         error('autocmd(): unsupported cmd type: ' .. cmd_type)
     end
@@ -315,7 +328,7 @@ end
 --- @param start string The expected beginning
 --- @return boolean result True if a match, otherwise false
 utils.starts_with = function(str, start)
-   return str:sub(1, #start) == start
+    return str:sub(1, #start) == start
 end
 
 --- Produces a table of N lines all with the same text

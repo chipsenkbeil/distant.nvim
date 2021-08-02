@@ -118,17 +118,31 @@ Alongside functions, this plugin also provides vim commands that can be used to
 initiate different tasks remotely. It also includes specialized commands such
 as `DistantLaunch` that is used to start a remote session.
 
-| Commands              | Description                                            |
-|-----------------------------|--------------------------------------------------|
-| `DistantClearSession` | Alias to `lua require('distant').session.clear`        |
-| `DistantCopy`         | Alias to `lua require('distant').fn.copy`              |
-| `DistantLaunch`       | Alias to `lua require('distant').ui.launch`            |
-| `DistantDirList`      | Alias to `lua require('distant').fn.dir_list`          |
-| `DistantMkdir`        | Alias to `lua require('distant').fn.mkdir`             |
-| `DistantRemove`       | Alias to `lua require('distant').fn.remove`            |
-| `DistantRename`       | Alias to `lua require('distant').fn.rename`            |
-| `DistantRun`          | Alias to `lua require('distant').fn.run`               |
-| `DistantSessionInfo`  | Alias to `lua require('distant').ui.show_session_info` |
+### Specialized Commands
+
+These commands are geared towards performing actions that expose some dialogs
+or other user interfaces within neovim.
+
+| Commands          | Description                                               |
+|-------------------|-----------------------------------------------------------|
+| `DistantOpen`     | Opens a file for editing or a directory for navigation    |
+| `DistantLaunch`   | Opens a dialog to launch `distant` on a remote machine    |
+| `DistantMetadata` | Presents information about some path on a remote machine  |
+| `DistantInfo`     | Presents information related to the remote connection     |
+
+### Function Commands
+
+These commands are purely wrappers around existing functions that accept those
+function's arguments as input.
+
+| Commands              | Description                                       |
+|-----------------------|---------------------------------------------------|
+| `DistantClearSession` | Alias to `lua require('distant').session.clear`   |
+| `DistantCopy`         | Alias to `lua require('distant').fn.copy`         |
+| `DistantMkdir`        | Alias to `lua require('distant').fn.mkdir`        |
+| `DistantRemove`       | Alias to `lua require('distant').fn.remove`       |
+| `DistantRename`       | Alias to `lua require('distant').fn.rename`       |
+| `DistantRun`          | Alias to `lua require('distant').fn.run`          |
 
 ## lir Integration
 

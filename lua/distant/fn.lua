@@ -1,5 +1,5 @@
-local g = require('distant.globals')
-local u = require('distant.utils')
+local g = require('distant.internal.globals')
+local u = require('distant.internal.utils')
 
 local fn = {}
 
@@ -37,6 +37,35 @@ fn.dir_list = function(path, all, timeout, interval)
     )
 
     fn.async.dir_list(path, all, channel.tx)
+    return channel.rx()
+end
+
+--- Retrieves filesystem metadata about a remote file, directory, or symlink
+---
+--- @param path string Path to the file, directory, or symlink
+--- @param timeout number Maximum time to wait for a response
+--- @param interval number Time in milliseconds to wait between checks for a response
+--- @return table metadata Table in the following format where `accessed`, `created`, 
+---         and `modified` are optional and may be missing from the table
+--
+---         { 
+---             file_type = "dir|file|sym_link"; 
+---             len = 1234; 
+---             readonly = true;
+---             accessed = 1234;
+---             created = 1234;
+---             modified = 1234;
+---         }
+---
+---         `len` is total bytes of file. `accessed`, `created`, and `modified` are
+---         all in terms in milliseconds since UNIX epoch.
+fn.metadata = function(path, timeout, interval)
+    local channel = u.oneshot_channel(
+        timeout or g.settings.max_timeout,
+        interval or g.settings.timeout_interval
+    )
+
+    fn.async.metadata(path, channel.tx)
     return channel.rx()
 end
 
@@ -185,6 +214,40 @@ fn.async.dir_list = function(path, all, cb)
     }, function(res)
         if res ~= nil and res.type == 'dir_entries' then
             cb(res.data.entries)
+        else
+            cb(nil)
+        end
+    end)
+end
+
+--- Retrieves filesystem metadata about a remote file, directory, or symlink
+---
+--- @param path string Path to the file, directory, or symlink
+--- @param cb function Function that is passed a table in the following format
+---        where `accessed`, `created`, and `modified` are optional and may be
+---        missing from the table
+--
+---         { 
+---             file_type = "dir|file|sym_link"; 
+---             len = 1234; 
+---             readonly = true;
+---             accessed = 1234;
+---             created = 1234;
+---             modified = 1234;
+---         }
+---
+---        `len` is total bytes of file. `accessed`, `created`, and `modified` are
+---        all in terms in milliseconds since UNIX epoch. If failed, nil will be
+---        passed instead.
+fn.async.metadata = function(path, cb)
+    assert(type(path) == 'string', 'path must be a string')
+
+    g.client():send({
+        type = 'metadata';
+        data = { path = path };
+    }, function(res)
+        if res ~= nil and res.type == 'metadata' then
+            cb(res.data.data)
         else
             cb(nil)
         end
@@ -386,10 +449,10 @@ fn.async.write_file_text = function(path, text, cb)
     assert(type(text) == 'string', 'text must be a string')
 
     g.client():send({
-        type = 'file_write';
+        type = 'file_write_text';
         data = { 
             path = path;
-            data = string.byte(text);
+            text = text;
         };
     }, function(res)
         cb(res ~= nil and res.type == 'ok')

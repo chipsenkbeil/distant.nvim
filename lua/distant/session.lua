@@ -1,4 +1,4 @@
-local g = require('distant.globals')
+local g = require('distant.internal.globals')
 
 local session = {}
 

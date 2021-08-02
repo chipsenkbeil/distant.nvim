@@ -1,5 +1,5 @@
-local g = require('distant.globals')
-local u = require('distant.utils')
+local g = require('distant.internal.globals')
+local u = require('distant.internal.utils')
 
 --- Represents a client connected to a remote machine
 local client = {}
@@ -109,7 +109,9 @@ end
 --- Stops an instance of distant if running by killing the process
 --- and resetting state
 function client:stop()
-    self.__state.handle.stop()
+    if self.__state.handle ~= nil then
+        self.__state.handle.stop()
+    end
     self.__state.handle = nil
     self.__state.callbacks = {}
 end
@@ -127,8 +129,9 @@ function client:send(msg, cb)
         payload = msg;
     }
 
+    local json = u.compress(vim.fn.json_encode(full_msg)) .. '\n'
     self.__state.callbacks[full_msg.id] = cb
-    self.__state.handle.write(u.compress(vim.fn.json_encode(full_msg)) .. '\n')
+    self.__state.handle.write(json)
 end
 
 --- Send a message to the remote machine and wait synchronously for the result

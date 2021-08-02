@@ -10,8 +10,8 @@ constants.MAX_TIMEOUT = 10000
 --- has been returned
 constants.TIMEOUT_INTERVAL = 200
 
---- Represents the minimum support version of the binary
---- {major, minor, patch}
-constants.MIN_SUPPORTED_VERSION = {0, 3, 0}
+--- Represents the minimum support version of the binary that this plugin requires
+--- Format is {major, minor, patch}
+constants.MIN_SUPPORTED_VERSION = {0, 3, 2}
 
 return constants
