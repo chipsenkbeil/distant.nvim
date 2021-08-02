@@ -69,7 +69,7 @@ globals.client = function()
     if not state.client:is_running() then
         state.client:start(u.merge(globals.settings.client, {
             on_exit = function(code)
-                if code ~= 0 then
+                if code ~= 0 and state.client:is_running() then
                     u.log_err('client failed to start! Error code ' .. code)
                 end
             end;

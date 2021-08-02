@@ -81,7 +81,6 @@ function client:start(opts)
             self:stop()
         end;
         on_failure = function(code)
-            u.log_err('client failed with exit code ' .. code)
             if type(opts.on_exit) == 'function' then
                 opts.on_exit(code)
             end
