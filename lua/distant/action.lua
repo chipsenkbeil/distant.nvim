@@ -36,6 +36,9 @@ action.launch = function(host, args)
         noautocmd = true;
     })
 
+    -- Clear any pre-existing session
+    g.set_session(nil)
+
     -- Format is launch {host} [args..]
     -- NOTE: Because this runs in a pty, all output goes to stdout by default;
     --       so, in order to distinguish errors, we write to a temporary file
@@ -45,11 +48,37 @@ action.launch = function(host, args)
     local cmd_args = u.build_arg_str(u.merge(
         g.settings.launch,
         args,
-        {log_file = err_log}
+        {log_file = err_log; session = 'pipe'}
     ))
     vim.fn.termopen(
         g.settings.binary_name .. ' launch ' .. host .. ' ' .. cmd_args,
         {
+            stdout_buffered = true;
+            on_stdout = function(_, data, _)
+                for _, line in pairs(data) do
+                    line = vim.trim(line)
+                    if u.starts_with(line, 'DISTANT DATA') then
+                        local tokens = vim.split(line, ' ', true)
+                        local session = {
+                            host = tokens[3];
+                            port = tonumber(tokens[4]);
+                            auth_key = tokens[5];
+                        }
+                        if session.host == nil then
+                            u.log_err('Session missing host')
+                        end
+                        if session.port == nil then
+                            u.log_err('Session missing port')
+                        end
+                        if session.auth_key == nil then
+                            u.log_err('Session missing auth key')
+                        end
+                        if session.host and session.port and session.auth_key then
+                            g.set_session(session)
+                        end
+                    end
+                end
+            end;
             on_exit = function(_, code, _)
                 vim.api.nvim_win_close(win, false)
                 if code ~= 0 then
@@ -73,7 +102,11 @@ action.launch = function(host, args)
 
                     ui.show_msg(lines, 'err')
                 end
-            end
+
+                if g.session() == nil then
+                    ui.show_msg('Failed to acquire session!', 'err')
+                end
+            end;
         }
     )
 end
@@ -201,16 +234,29 @@ action.info = function()
         end
     end)
 
-    ui.show_msg({
+    local session_info = {'Disconnected'}
+    if info ~= nil then
+        session_info = {
+            indent .. '* Host = "' .. info.host .. '"';
+            indent .. '* Port = "' .. info.port .. '"';
+            indent .. '* Auth = "' .. info.auth_key .. '"';
+        }
+    end
+
+    local msg = {}
+    vim.list_extend(msg, {
         '= Session =';
         '';
-        indent .. '* Host = "' .. info.host .. '"';
-        indent .. '* Port = "' .. info.port .. '"';
+    })
+    vim.list_extend(msg, session_info)
+    vim.list_extend(msg, {
         '';
         '= Remote Files =';
         '';
-        unpack(distant_buf_names);
     })
+    vim.list_extend(msg, distant_buf_names)
+
+    ui.show_msg(msg)
 end
 
 return action

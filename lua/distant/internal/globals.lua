@@ -5,6 +5,7 @@ local globals = {}
 local state = {
     client = nil;
     callbacks = {};
+    session = nil;
 }
 
 local function check_version(version)
@@ -103,5 +104,17 @@ globals.settings = {
         verbose = 0;
     };
 }
+
+--- Sets the globally-available session
+--- @param session table|nil the session in the form of {host, port, auth key}
+globals.set_session = function(session)
+    state.session = session
+end
+
+--- Returns the current session, or nil if unavailable
+--- @return table|nil #the session in the form of {host, port, auth key}
+globals.session = function()
+    return state.session
+end
 
 return globals

@@ -68,12 +68,28 @@ function client:start(opts)
         return
     end
 
-    local args = u.build_arg_str(opts, {'on_exit', 'verbose'})
+    local session = g.session()
+    local env = nil
+    if session ~= nil then
+        env = {
+            ['DISTANT_HOST'] = session.host;
+            ['DISTANT_PORT'] = session.port;
+            ['DISTANT_AUTH_KEY'] = session.auth_key;
+        }
+    end
+
+    local args = u.build_arg_str(u.merge(opts, {
+        interactive = true;
+        mode = 'json';
+        session = 'environment';
+    }), {'on_exit', 'verbose'})
     if type(opts.verbose) == 'number' and opts.verbose > 0 then
         args = vim.trim(args .. ' -' .. string.rep('v', opts.verbose))
     end
-    local cmd = vim.trim(g.settings.binary_name .. ' action --interactive --mode json ' .. args)
+
+    local cmd = vim.trim(g.settings.binary_name .. ' action ' .. args)
     local handle = u.job_start(cmd, {
+        env = env;
         on_success = function()
             if type(opts.on_exit) == 'function' then
                 opts.on_exit(0)

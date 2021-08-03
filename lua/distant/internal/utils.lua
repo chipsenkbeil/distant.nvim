@@ -38,6 +38,7 @@ end
 ---
 --- Options supports the following:
 ---
+--- * env: table of process environment variables
 --- * on_success: a function that is triggered with no arguments once the
 ---               job finishes successfully
 --- * on_failure: a function that is triggered with an exit code as the single
@@ -94,6 +95,7 @@ utils.job_start = function(cmd, opts)
     end
 
     local job_id =  vim.fn.jobstart(cmd, {
+        env = opts.env;
         on_stdout = make_on_data(opts.on_stdout_line);
         on_stderr = make_on_data(opts.on_stderr_line);
         on_exit = function(_, exit_code)
