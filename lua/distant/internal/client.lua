@@ -10,6 +10,7 @@ function client:new()
     local instance = {}
     setmetatable(instance, client)
     instance.__state = {
+        tenant = nil;
         handle = nil;
         callbacks = {};
         registered = {};
@@ -115,6 +116,7 @@ function client:start(opts)
     })
 
     self.__state = {
+        tenant = 'nvim_tenant_' .. u.next_id();
         handle = handle;
         callbacks = {};
         registered = self.__state.registered;
@@ -127,6 +129,7 @@ function client:stop()
     if self.__state.handle ~= nil then
         self.__state.handle.stop()
     end
+    self.__state.tenant = nil
     self.__state.handle = nil
     self.__state.callbacks = {}
 end
@@ -140,6 +143,7 @@ function client:send(msg, cb)
     -- includes an id that our client uses when relaying a response for the
     -- callback to process
     local full_msg = {
+        tenant = self.__state.tenant;
         id = u.next_id();
         payload = msg;
     }
