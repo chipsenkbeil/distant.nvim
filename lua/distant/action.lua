@@ -50,7 +50,7 @@ action.launch = function(host, args)
         args,
         {log_file = err_log; session = 'pipe'}
     ))
-    vim.fn.termopen(
+    local code = vim.fn.termopen(
         g.settings.binary_name .. ' launch ' .. host .. ' ' .. cmd_args,
         {
             stdout_buffered = true;
@@ -109,6 +109,13 @@ action.launch = function(host, args)
             end;
         }
     )
+
+    -- If our program failed, report why
+    if code == 0 then
+        ui.show_msg('Invalid arguments for launch!', 'err')
+    elseif code == -1 then
+        ui.show_msg(g.settings.binary_name .. ' is not executable!', 'err')
+    end
 end
 
 --- Opens the provided path in one of two ways:
@@ -129,62 +136,60 @@ action.open = function(path, opts)
         return
     end
 
-    -- Second, if the path points to a directory, display a dialog with its contents
+    local lines = nil
+
+    -- Second, if the path points to a directory, load the entries as lines
     if metadata.file_type == 'dir' then
         local entries = fn.dir_list(path, not (not opts.all), timeout, interval)
-        local lines = u.filter_map(entries, function(entry)
+        lines = u.filter_map(entries, function(entry)
             return entry.path
         end)
 
-        if lines ~= nil then
-            ui.show_msg(lines)
-        end
-
-    -- Third, if path points to a file, establish a buffer with its contents
+    -- Third, if path points to a file, load its contents as lines
     elseif metadata.file_type == 'file' then
-        -- Load a remote file as text
         local text = fn.read_file_text(path, timeout, interval)
-
-        -- Create a buffer to house the text
-        local buf = vim.api.nvim_create_buf(true, false)
-        assert(buf ~= 0, 'Failed to create buffer for for remote editing')
-
-        -- Set the content of the buffer to the remote file
-        local lines = vim.split(text, '\n', true)
-        vim.api.nvim_buf_set_lines(buf, 0, 1, false, lines)
-
-        -- Set the buffer name to include a schema, which will trigger our
-        -- autocmd for writing to the remote destination
-        --
-        -- Mark the buftype as acwrite as you can still write to it, but we
-        -- control where it is going
-        --
-        -- Mark as not yet modified as the content we placed into our
-        -- buffer matches that of the remote file
-        vim.api.nvim_buf_set_name(buf, 'distant://' .. path)
-        vim.api.nvim_buf_set_option(buf, 'buftype', 'acwrite')
-        vim.api.nvim_buf_set_option(buf, 'modified', false)
-
-        -- Add stateful information to the buffer, helping keep track of it
-        v.buf.set_remote_path(buf, path)
-
-        -- Display the buffer in the specified window, defaulting to current
-        vim.api.nvim_win_set_buf(opts.win or 0, buf)
-
-        -- Set our filetype to whatever the contents actually are (or file extension is)
-        -- TODO: This makes me feel uncomfortable as I do not yet understand why detecting
-        --       the filetype as the real type does not trigger neovim's LSP. At the
-        --       moment, it does not happen but we still get syntax highlighting, which
-        --       is perfect. In the future, we may need to switch this to something similar
-        --       to what telescope.nvim does with plenary.nvim's syntax functions.
-        --
-        -- TODO: Does this work if the above window is not the current one? Would prefer
-        --       an explicit function as opposed to the command we're using as don't
-        --       have control
-        vim.cmd([[ filetype detect ]])
+        lines = vim.split(text, '\n', true)
     else
         vim.api.nvim_err_writeln('Filetype ' .. metadata.file_type .. ' is unsupported')
+        return
     end
+
+    -- Create a buffer to house the text
+    local buf = vim.api.nvim_create_buf(true, false)
+    assert(buf ~= 0, 'Failed to create buffer for for remote editing')
+
+    -- Set the content of the buffer to the remote file
+    vim.api.nvim_buf_set_lines(buf, 0, 1, false, lines)
+
+    -- Set the buffer name to include a schema, which will trigger our
+    -- autocmd for writing to the remote destination
+    --
+    -- Mark the buftype as acwrite as you can still write to it, but we
+    -- control where it is going
+    --
+    -- Mark as not yet modified as the content we placed into our
+    -- buffer matches that of the remote file
+    vim.api.nvim_buf_set_name(buf, 'distant://' .. path)
+    vim.api.nvim_buf_set_option(buf, 'buftype', 'acwrite')
+    vim.api.nvim_buf_set_option(buf, 'modified', false)
+
+    -- Add stateful information to the buffer, helping keep track of it
+    v.buf.set_remote_path(buf, path)
+
+    -- Display the buffer in the specified window, defaulting to current
+    vim.api.nvim_win_set_buf(opts.win or 0, buf)
+
+    -- Set our filetype to whatever the contents actually are (or file extension is)
+    -- TODO: This makes me feel uncomfortable as I do not yet understand why detecting
+    --       the filetype as the real type does not trigger neovim's LSP. At the
+    --       moment, it does not happen but we still get syntax highlighting, which
+    --       is perfect. In the future, we may need to switch this to something similar
+    --       to what telescope.nvim does with plenary.nvim's syntax functions.
+    --
+    -- TODO: Does this work if the above window is not the current one? Would prefer
+    --       an explicit function as opposed to the command we're using as don't
+    --       have control
+    vim.cmd([[ filetype detect ]])
 end
 
 --- Opens a new window to show metadata for some path
