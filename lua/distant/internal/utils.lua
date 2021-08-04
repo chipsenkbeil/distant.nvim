@@ -348,6 +348,50 @@ utils.make_n_lines = function(n, line)
     return lines
 end
 
+--- Reads all lines from a file
+---
+--- @param path string Path to the file
+--- @return list|nil #List of lines split by newline, or nil if failed to read
+utils.read_lines = function(path)
+    local f = io.open(path, "rb")
+    local contents = nil
+    if f then
+        f:read(_VERSION <= "Lua 5.2" and "*a" or "a")
+        f:close()
+    end
+    if contents ~= nil then
+        return vim.split(contents, '\n', true)
+    end
+end
+
+--- Reads all lines from a file and then removes the file
+---
+--- @param path string Path to the file
+--- @return list|nil #List of lines split by newline, or nil if failed to read
+utils.read_lines_and_remove = function(path)
+    local lines = utils.read_lines(path)
+    os.remove(path)
+    return lines
+end
+
+--- Strips a string of ANSI escape sequences and carriage returns
+---
+--- @param text string The text to clean
+--- @return string #The cleaned text
+utils.clean_term_line = function(text)
+    local function strip_seq(text, p)
+        text = string.gsub(text, '%c%[' .. p .. 'm', '')
+        text = string.gsub(text, '%c%[' .. p .. 'K', '')
+        return text
+    end
+
+    text = strip_seq(text, '%d%d?')
+    text = strip_seq(text, '%d%d?;%d%d?')
+    text = strip_seq(text, '%d%d?;%d%d?;%d%d?')
+    text = string.gsub(text, '\r', '')
+    return text
+end
+
 --- Produces a send/receive pair in the form of {tx, rx} where
 --- tx is a function that sends a message and rx is a function that
 --- waits for the message

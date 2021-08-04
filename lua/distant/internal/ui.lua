@@ -69,6 +69,9 @@ ui.show_msg = function(msg, ty, width, height, closing_keys)
         noautocmd = true;
     })
 
+    -- Ensure numbers are not displayed
+    vim.api.nvim_win_set_option(win, 'number', false)
+
     -- Set color for window
     if ty == 'err' then
         vim.api.nvim_win_set_option(win, 'winhl', 'Normal:Error')

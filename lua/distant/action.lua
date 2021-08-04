@@ -45,6 +45,7 @@ action.launch = function(host, args)
     --       when launching so we can read the errors and display a msg
     --       if the launch fails
     local err_log = vim.fn.tempname()
+    local raw_data = nil
     local cmd_args = u.build_arg_str(u.merge(
         g.settings.launch,
         args,
@@ -55,6 +56,7 @@ action.launch = function(host, args)
         {
             stdout_buffered = true;
             on_stdout = function(_, data, _)
+                raw_data = data
                 for _, line in pairs(data) do
                     line = vim.trim(line)
                     if u.starts_with(line, 'DISTANT DATA') then
@@ -82,25 +84,38 @@ action.launch = function(host, args)
             on_exit = function(_, code, _)
                 vim.api.nvim_win_close(win, false)
                 if code ~= 0 then
-                    local lines = vim.fn.readfile(err_log)
-                    vim.fn.delete(err_log)
+                    local lines = u.read_lines_and_remove(err_log)
 
-                    -- Strip lines of [date/time] ERROR [src/file] prefix
-                    lines = u.filter_map(lines, function(line)
-                        -- Remove [date/time] and [src/file] parts
-                        line = vim.trim(string.gsub(
-                            line,
-                            '%[[^%]]+%]',
-                            ''
-                        ))
+                    if lines then
+                        -- Strip lines of [date/time] ERROR [src/file] prefix
+                        local err_lines = u.filter_map(lines, function(line)
+                            -- Remove [date/time] and [src/file] parts
+                            line = vim.trim(string.gsub(
+                                line,
+                                '%[[^%]]+%]',
+                                ''
+                            ))
 
-                        -- Only keep error lines and remove the ERROR prefix
-                        if u.starts_with(line, 'ERROR') then
-                            return vim.trim(string.sub(line, 6))
+                            -- Only keep error lines and remove the ERROR prefix
+                            if u.starts_with(line, 'ERROR') then
+                                return vim.trim(string.sub(line, 6))
+                            end
+                        end)
+
+                        -- If we have ERROR lines, report just those
+                        if #err_lines > 0 then
+                            ui.show_msg(err_lines, 'err')
+
+                        -- Otherwise, just report all of our log output
+                        else
+                            ui.show_msg(lines, 'err')
                         end
-                    end)
-
-                    ui.show_msg(lines, 'err')
+                    else
+                        local lines = u.filter_map(raw_data, function(line)
+                            return u.clean_term_line(line)
+                        end)
+                        ui.show_msg(lines, 'err')
+                    end
                 end
 
                 if g.session() == nil then
