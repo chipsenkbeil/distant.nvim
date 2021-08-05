@@ -23,20 +23,23 @@ end
 --- Retrieves a list of contents within a remote directory
 ---
 --- @param path string Path to the directory whose contents to list
---- @param all boolean If true, will recursively retrieve all contents, 
----            otherwise only retrieves contents directly within the path
+--- @param depth number Will recursively retrieve all contents up to the specified depth
+---        with 0 indicating that depth limit is unlimited 
+--- @param absolute boolean If true, will return absolute paths instead of relative paths
+--- @param canonicalize boolean If true, will canonicalize paths, meaning following the
+---        symlinks; note that to return absolute paths you must set the other option
 --- @param timeout number Maximum time to wait for a response
 --- @param interval number Time in milliseconds to wait between checks for a response
 --- @return table entries A list of entries in the form of
 ---         {'path' = ..., 'file_type' = ..., 'depth' = ...}
 ---         or nil if unsuccessful
-fn.dir_list = function(path, all, timeout, interval)
+fn.dir_list = function(path, depth, absolute, canonicalize, timeout, interval)
     local channel = u.oneshot_channel(
         timeout or g.settings.max_timeout,
         interval or g.settings.timeout_interval
     )
 
-    fn.async.dir_list(path, all, channel.tx)
+    fn.async.dir_list(path, depth, absolute, canonicalize, channel.tx)
     return channel.rx()
 end
 
@@ -196,20 +199,27 @@ end
 --- Retrieves a list of contents within a remote directory
 ---
 --- @param path string Path to the directory whose contents to list
---- @param all boolean If true, will recursively retrieve all contents, otherwise only
----            retrieves contents directly within the path
+--- @param depth number Will recursively retrieve all contents up to the specified depth
+---        with 0 indicating that depth limit is unlimited 
+--- @param absolute boolean If true, will return absolute paths instead of relative paths
+--- @param canonicalize boolean If true, will canonicalize paths, meaning following the
+---        symlinks; note that to return absolute paths you must set the other option
 --- @param cb function Function that is passed a list of entries in the form of
 ---           {'path' = ..., 'file_type' = ..., 'depth' = ...}
 ---           or nil if unsuccessful
-fn.async.dir_list = function(path, all, cb)
+fn.async.dir_list = function(path, depth, absolute, canonicalize, cb)
     assert(type(path) == 'string', 'path must be a string')
-    all = not (not all)
+    assert(type(depth) == 'number' and depth >= 0, 'depth must be a number >= 0')
+    assert(type(absolute) == 'boolean', 'absolute must be a boolean')
+    assert(type(canonicalize) == 'boolean', 'canonicalize must be a boolean')
 
     g.client():send({
         type = 'dir_read';
         data = {
             path = path;
-            all = all;
+            depth = depth;
+            absolute = absolute;
+            canonicalize = canonicalize;
         };
     }, function(res)
         if res ~= nil and res.type == 'dir_entries' then
@@ -358,12 +368,12 @@ fn.async.run = function(cmd, args, cb)
             exit_code = exit_code;
             stdout = u.filter_map(data, function(item)
                 if item.type == 'proc_stdout' then
-                    return vim.trim(string.char(unpack(item.data.data)))
+                    return item.data.line
                 end
             end);
             stderr = u.filter_map(data, function(item)
                 if item.type == 'proc_stderr' then
-                    return vim.trim(string.char(unpack(item.data.data)))
+                    return item.data.line
                 end
             end);
         }

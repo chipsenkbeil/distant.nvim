@@ -152,16 +152,18 @@ action.open = function(path, opts)
     end
 
     local lines = nil
+    local is_dir = metadata.file_type == 'dir'
+    local is_file = metadata.file_type == 'file'
 
     -- Second, if the path points to a directory, load the entries as lines
-    if metadata.file_type == 'dir' then
-        local entries = fn.dir_list(path, not (not opts.all), timeout, interval)
+    if is_dir then
+        local entries = fn.dir_list(path, 1, false, false, timeout, interval)
         lines = u.filter_map(entries, function(entry)
             return entry.path
         end)
 
     -- Third, if path points to a file, load its contents as lines
-    elseif metadata.file_type == 'file' then
+    elseif is_file then
         local text = fn.read_file_text(path, timeout, interval)
         lines = vim.split(text, '\n', true)
     else
@@ -179,14 +181,22 @@ action.open = function(path, opts)
     -- Set the buffer name to include a schema, which will trigger our
     -- autocmd for writing to the remote destination
     --
-    -- Mark the buftype as acwrite as you can still write to it, but we
-    -- control where it is going
-    --
     -- Mark as not yet modified as the content we placed into our
     -- buffer matches that of the remote file
     vim.api.nvim_buf_set_name(buf, 'distant://' .. path)
-    vim.api.nvim_buf_set_option(buf, 'buftype', 'acwrite')
     vim.api.nvim_buf_set_option(buf, 'modified', false)
+
+    -- Set file/dir specific options
+    if is_file then
+        -- Mark the buftype as acwrite as you can still write to it, but we
+        -- control where it is going
+        vim.api.nvim_buf_set_option(buf, 'buftype', 'acwrite')
+    elseif is_dir then
+        -- Mark the buftype as nofile and not modifiable as you cannot 
+        -- modify it or write it
+        vim.api.nvim_buf_set_option(buf, 'buftype', 'nofile')
+        vim.api.nvim_buf_set_option(buf, 'modifiable', false)
+    end
 
     -- Add stateful information to the buffer, helping keep track of it
     v.buf.set_remote_path(buf, path)
@@ -194,17 +204,19 @@ action.open = function(path, opts)
     -- Display the buffer in the specified window, defaulting to current
     vim.api.nvim_win_set_buf(opts.win or 0, buf)
 
-    -- Set our filetype to whatever the contents actually are (or file extension is)
-    -- TODO: This makes me feel uncomfortable as I do not yet understand why detecting
-    --       the filetype as the real type does not trigger neovim's LSP. At the
-    --       moment, it does not happen but we still get syntax highlighting, which
-    --       is perfect. In the future, we may need to switch this to something similar
-    --       to what telescope.nvim does with plenary.nvim's syntax functions.
-    --
-    -- TODO: Does this work if the above window is not the current one? Would prefer
-    --       an explicit function as opposed to the command we're using as don't
-    --       have control
-    vim.cmd([[ filetype detect ]])
+    if is_file then
+        -- Set our filetype to whatever the contents actually are (or file extension is)
+        -- TODO: This makes me feel uncomfortable as I do not yet understand why detecting
+        --       the filetype as the real type does not trigger neovim's LSP. At the
+        --       moment, it does not happen but we still get syntax highlighting, which
+        --       is perfect. In the future, we may need to switch this to something similar
+        --       to what telescope.nvim does with plenary.nvim's syntax functions.
+        --
+        -- TODO: Does this work if the above window is not the current one? Would prefer
+        --       an explicit function as opposed to the command we're using as don't
+        --       have control
+        vim.cmd([[ filetype detect ]])
+    end
 end
 
 --- Opens a new window to show metadata for some path
