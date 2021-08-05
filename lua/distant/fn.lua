@@ -368,12 +368,12 @@ fn.async.run = function(cmd, args, cb)
             exit_code = exit_code;
             stdout = u.filter_map(data, function(item)
                 if item.type == 'proc_stdout' then
-                    return item.data.line
+                    return item.data.data
                 end
             end);
             stderr = u.filter_map(data, function(item)
                 if item.type == 'proc_stderr' then
-                    return item.data.line
+                    return item.data.data
                 end
             end);
         }
