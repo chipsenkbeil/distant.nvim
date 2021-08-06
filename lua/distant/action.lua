@@ -257,8 +257,31 @@ action.metadata = function(path, opts)
     ui.show_msg(lines)
 end
 
+--- Opens a new window to display system info
+--
+--- @param opts.timeout number Maximum time to wait for a response (optional)
+--- @param opts.interval number Time in milliseconds to wait between checks for a response (optional)
+action.system_info = function(opts)
+    opts = opts or {}
+
+    local indent = '    '
+    local info = fn.system_info(opts)
+    print('GOT INFO :: ' .. vim.inspect(info))
+    if info ~= nil then
+        ui.show_msg({
+            '= System Info =';
+            '';
+            indent .. '* Family      = "' .. info.family .. '"';
+            indent .. '* OS          = "' .. info.os .. '"';
+            indent .. '* Arch        = "' .. info.arch .. '"';
+            indent .. '* Current Dir = "' .. info.current_dir .. '"';
+            indent .. '* Main Sep    = "' .. info.main_separator .. '"';
+        })
+    end
+end
+
 --- Opens a new window to display session info
-action.info = function()
+action.session_info = function()
     local indent = '    '
     local info = session.info()
     local distant_buf_names = u.filter_map(vim.api.nvim_list_bufs(), function(buf)

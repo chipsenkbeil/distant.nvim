@@ -168,6 +168,23 @@ fn.run = function(cmd, args, opts)
     return channel.rx()
 end
 
+--- Requests information about the remote system
+---
+--- @param opts.timeout number Maximum time to wait for the program to finish
+--- @param opts.interval number Time in milliseconds to wait between checks for program to finish
+--- @return table output Table with family, os, arch, current_dir, and main_separator;
+---         or returns nil if timeout
+fn.system_info = function(opts)
+    opts = opts or {}
+    local channel = u.oneshot_channel(
+        opts.timeout or g.settings.max_timeout,
+        opts.interval or g.settings.timeout_interval
+    )
+
+    fn.async.system_info(channel.tx)
+    return channel.rx()
+end
+
 --- Writes to a remote file
 ---
 --- @param path string Path to the file to write
@@ -461,6 +478,23 @@ fn.async.run = function(cmd, args, cb)
             end
         else
             wrapped_cb(nil)
+        end
+    end)
+end
+
+--- Requests information about the remote system
+---
+--- @param cb function Function that is passed a table with family, os, arch, current_dir,
+---        and main_separator; or nil if failed
+fn.async.system_info = function(cb)
+    g.client():send({
+        type = 'system_info';
+        data = {[vim.type_idx] = vim.types.dictionary};
+    }, function(res)
+        if res ~= nil and res.type == 'system_info' then
+            cb(res.data)
+        else
+            cb(nil)
         end
     end)
 end

@@ -12,7 +12,8 @@ let g:loaded_distant = 1
 command! -nargs=* DistantOpen lua require('distant').action.open(<f-args>)
 command! -nargs=* DistantLaunch lua require('distant').action.launch(<f-args>)
 command! -nargs=* DistantMetadata lua require('distant').action.metadata(<f-args>)
-command! -nargs=0 DistantInfo lua require('distant').action.info()
+command! -nargs=0 DistantSessionInfo lua require('distant').action.session_info()
+command! -nargs=0 DistantSystemInfo lua require('distant').action.system_info()
 
 " TODO: Remove me when done
 command! -nargs=0 DistantTest lua require('distant.internal.lsp').test()
