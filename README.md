@@ -65,6 +65,7 @@ more details, check out the doc comments for the individual functions.
 | `fn.remove`           | Removes a remote file or directory                                            |
 | `fn.rename`           | Renames a remote file or directory                                            |
 | `fn.run`              | Runs a remote program to completion, returning stdout, stderr, and exit code  |
+| `fn.system_info`      | Retrieves information about the remote machine such as its os name and arch   |
 | `fn.write_file_text`  | Writes text to a remote file                                                  |
 
 ### Async Functions
@@ -84,6 +85,7 @@ for the individual functions.
 | `fn.async.remove`             | Async variant of `fn.remove` using callbacks              |
 | `fn.async.rename`             | Async variant of `fn.rename` using callbacks              |
 | `fn.async.run`                | Async variant of `fn.run` using callbacks                 |
+| `fn.async.system_info`        | Async variant of `fn.system_info` using callbacks         |
 | `fn.async.write_file_text`    | Async variant of `fn.write_file_text` using callbacks     |
 
 ## Commands
@@ -97,12 +99,13 @@ as `DistantLaunch` that is used to start a remote session.
 These commands are geared towards performing actions that expose some dialogs
 or other user interfaces within neovim.
 
-| Commands          | Description                                               |
-|-------------------|-----------------------------------------------------------|
-| `DistantOpen`     | Opens a file for editing or a directory for navigation    |
-| `DistantLaunch`   | Opens a dialog to launch `distant` on a remote machine    |
-| `DistantMetadata` | Presents information about some path on a remote machine  |
-| `DistantInfo`     | Presents information related to the remote connection     |
+| Commands              | Description                                               |
+|-----------------------|-----------------------------------------------------------|
+| `DistantOpen`         | Opens a file for editing or a directory for navigation    |
+| `DistantLaunch`       | Opens a dialog to launch `distant` on a remote machine    |
+| `DistantMetadata`     | Presents information about some path on a remote machine  |
+| `DistantSessionInfo`  | Presents information related to the remote connection     |
+| `DistantSystemInfo`   | Presents information about remote machine itself          |
 
 ### Function Commands
 
@@ -111,7 +114,6 @@ function's arguments as input.
 
 | Commands              | Description                                       |
 |-----------------------|---------------------------------------------------|
-| `DistantClearSession` | Alias to `lua require('distant').session.clear`   |
 | `DistantCopy`         | Alias to `lua require('distant').fn.copy`         |
 | `DistantMkdir`        | Alias to `lua require('distant').fn.mkdir`        |
 | `DistantRemove`       | Alias to `lua require('distant').fn.remove`       |
