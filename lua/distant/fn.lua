@@ -7,13 +7,14 @@ local fn = {}
 ---
 --- @param src string Path to the input file/directory to copy
 --- @param dst string Path to the output file/directory
---- @param timeout number Maximum time to wait for a response
---- @param interval number Time in milliseconds to wait between checks for a response
+--- @param opts.timeout number Maximum time to wait for a response
+--- @param opts.interval number Time in milliseconds to wait between checks for a response
 --- @return boolean result true if succeeded, otherwise false
-fn.copy = function(src, dst, timeout, interval)
+fn.copy = function(src, dst, opts)
+    opts = opts or {}
     local channel = u.oneshot_channel(
-        timeout or g.settings.max_timeout,
-        interval or g.settings.timeout_interval
+        opts.timeout or g.settings.max_timeout,
+        opts.interval or g.settings.timeout_interval
     )
 
     fn.async.copy(src, dst, channel.tx)
@@ -23,31 +24,34 @@ end
 --- Retrieves a list of contents within a remote directory
 ---
 --- @param path string Path to the directory whose contents to list
---- @param depth number Will recursively retrieve all contents up to the specified depth
+--- @param opts.depth number Will recursively retrieve all contents up to the specified depth
 ---        with 0 indicating that depth limit is unlimited 
---- @param absolute boolean If true, will return absolute paths instead of relative paths
---- @param canonicalize boolean If true, will canonicalize paths, meaning following the
+--- @param opts.absolute boolean If true, will return absolute paths instead of relative paths
+--- @param opts.canonicalize boolean If true, will canonicalize paths, meaning following the
 ---        symlinks; note that to return absolute paths you must set the other option
---- @param timeout number Maximum time to wait for a response
---- @param interval number Time in milliseconds to wait between checks for a response
+--- @param opts.include_root boolean If true, will include the path provided as the root entry
+---        in the response
+--- @param opts.timeout number Maximum time to wait for a response
+--- @param opts.interval number Time in milliseconds to wait between checks for a response
 --- @return table entries A list of entries in the form of
 ---         {'path' = ..., 'file_type' = ..., 'depth' = ...}
 ---         or nil if unsuccessful
-fn.dir_list = function(path, depth, absolute, canonicalize, timeout, interval)
+fn.dir_list = function(path, opts)
+    opts = opts or {}
     local channel = u.oneshot_channel(
-        timeout or g.settings.max_timeout,
-        interval or g.settings.timeout_interval
+        opts.timeout or g.settings.max_timeout,
+        opts.interval or g.settings.timeout_interval
     )
 
-    fn.async.dir_list(path, depth, absolute, canonicalize, channel.tx)
+    fn.async.dir_list(path, opts, channel.tx)
     return channel.rx()
 end
 
 --- Retrieves filesystem metadata about a remote file, directory, or symlink
 ---
 --- @param path string Path to the file, directory, or symlink
---- @param timeout number Maximum time to wait for a response
---- @param interval number Time in milliseconds to wait between checks for a response
+--- @param opts.timeout number Maximum time to wait for a response
+--- @param opts.interval number Time in milliseconds to wait between checks for a response
 --- @return table metadata Table in the following format where `accessed`, `created`, 
 ---         and `modified` are optional and may be missing from the table
 --
@@ -62,10 +66,11 @@ end
 ---
 ---         `len` is total bytes of file. `accessed`, `created`, and `modified` are
 ---         all in terms in milliseconds since UNIX epoch.
-fn.metadata = function(path, timeout, interval)
+fn.metadata = function(path, opts)
+    opts = opts or {}
     local channel = u.oneshot_channel(
-        timeout or g.settings.max_timeout,
-        interval or g.settings.timeout_interval
+        opts.timeout or g.settings.max_timeout,
+        opts.interval or g.settings.timeout_interval
     )
 
     fn.async.metadata(path, channel.tx)
@@ -75,30 +80,32 @@ end
 --- Creates a remote directory
 ---
 --- @param path string Path to the directory to create
---- @param all boolean If true, will recursively all components of path to directory
---- @param timeout number Maximum time to wait for a response
---- @param interval number Time in milliseconds to wait between checks for a response
+--- @param opts.all boolean If true, will recursively all components of path to directory
+--- @param opts.timeout number Maximum time to wait for a response
+--- @param opts.interval number Time in milliseconds to wait between checks for a response
 --- @return boolean result true if succeeded, otherwise false
-fn.mkdir = function(path, all, timeout, interval)
+fn.mkdir = function(path, opts)
+    opts = opts or {}
     local channel = u.oneshot_channel(
-        timeout or g.settings.max_timeout,
-        interval or g.settings.timeout_interval
+        opts.timeout or g.settings.max_timeout,
+        opts.interval or g.settings.timeout_interval
     )
 
-    fn.async.mkdir(path, all, channel.tx)
+    fn.async.mkdir(path, opts, channel.tx)
     return channel.rx()
 end
 
 --- Reads a remote file as text
 ---
 --- @param path string Path to the file to read
---- @param timeout number Maximum time to wait for a response
---- @param interval number Time in milliseconds to wait between checks for a response
+--- @param opts.timeout number Maximum time to wait for a response
+--- @param opts.interval number Time in milliseconds to wait between checks for a response
 --- @return string text file's text, or nil if fails
-fn.read_file_text = function(path, timeout, interval)
+fn.read_file_text = function(path, opts)
+    opts = opts or {}
     local channel = u.oneshot_channel(
-        timeout or g.settings.max_timeout,
-        interval or g.settings.timeout_interval
+        opts.timeout or g.settings.max_timeout,
+        opts.interval or g.settings.timeout_interval
     )
 
     fn.async.read_file_text(path, channel.tx)
@@ -108,17 +115,18 @@ end
 --- Removes a remote file or directory
 ---
 --- @param path string Path to the file or directory to create
---- @param force boolean If true, will remove directories that are non-empty
---- @param timeout number Maximum time to wait for a response
---- @param interval number Time in milliseconds to wait between checks for a response
+--- @param opts.force boolean If true, will remove directories that are non-empty
+--- @param opts.timeout number Maximum time to wait for a response
+--- @param opts.interval number Time in milliseconds to wait between checks for a response
 --- @return boolean result true if succeeded, otherwise false
-fn.remove = function(path, force, timeout, interval)
+fn.remove = function(path, opts)
+    opts = opts or {}
     local channel = u.oneshot_channel(
-        timeout or g.settings.max_timeout,
-        interval or g.settings.timeout_interval
+        opts.timeout or g.settings.max_timeout,
+        opts.interval or g.settings.timeout_interval
     )
 
-    fn.async.remove(path, force, channel.tx)
+    fn.async.remove(path, opts, channel.tx)
     return channel.rx()
 end
 
@@ -126,13 +134,14 @@ end
 ---
 --- @param src string Path to the file or directory to rename
 --- @param dst string Path to the new file or directory
---- @param timeout number Maximum time to wait for a response
---- @param interval number Time in milliseconds to wait between checks for a response
+--- @param opts.timeout number Maximum time to wait for a response
+--- @param opts.interval number Time in milliseconds to wait between checks for a response
 --- @return boolean result true if succeeded, otherwise false
-fn.rename = function(src, dst, timeout, interval)
+fn.rename = function(src, dst, opts)
+    opts = opts or {}
     local channel = u.oneshot_channel(
-        timeout or g.settings.max_timeout,
-        interval or g.settings.timeout_interval
+        opts.timeout or g.settings.max_timeout,
+        opts.interval or g.settings.timeout_interval
     )
 
     fn.async.rename(src, dst, channel.tx)
@@ -143,15 +152,16 @@ end
 ---
 --- @param cmd string Name of the command to run
 --- @param args list Array of arguments to append to the command
---- @param timeout number Maximum time to wait for the program to finish
---- @param interval number Time in milliseconds to wait between checks for program to finish
+--- @param opts.timeout number Maximum time to wait for the program to finish
+--- @param opts.interval number Time in milliseconds to wait between checks for program to finish
 --- @return table output Table with exit_code, stdout, and stderr fields where 
 ---         stdout and stderr are lists of individual lines of output, or
 ---         returns nil if timeout
-fn.run = function(cmd, args, timeout, interval)
+fn.run = function(cmd, args, opts)
+    opts = opts or {}
     local channel = u.oneshot_channel(
-        timeout or g.settings.max_timeout,
-        interval or g.settings.timeout_interval
+        opts.timeout or g.settings.max_timeout,
+        opts.interval or g.settings.timeout_interval
     )
 
     fn.async.run(cmd, args, channel.tx)
@@ -162,11 +172,14 @@ end
 ---
 --- @param path string Path to the file to write
 --- @param text string Text to write in the file
+--- @param opts.timeout number Maximum time to wait for the program to finish
+--- @param opts.interval number Time in milliseconds to wait between checks for program to finish
 --- @return boolean result true if succeeded, otherwise false
-fn.write_file_text = function(path, text)
+fn.write_file_text = function(path, text, opts)
+    opts = opts or {}
     local channel = u.oneshot_channel(
-        timeout or g.settings.max_timeout,
-        interval or g.settings.timeout_interval
+        opts.timeout or g.settings.max_timeout,
+        opts.interval or g.settings.timeout_interval
     )
 
     fn.async.write_file_text(path, text, channel.tx)
@@ -199,27 +212,28 @@ end
 --- Retrieves a list of contents within a remote directory
 ---
 --- @param path string Path to the directory whose contents to list
---- @param depth number Will recursively retrieve all contents up to the specified depth
+--- @param opts.depth number Will recursively retrieve all contents up to the specified depth
 ---        with 0 indicating that depth limit is unlimited 
---- @param absolute boolean If true, will return absolute paths instead of relative paths
---- @param canonicalize boolean If true, will canonicalize paths, meaning following the
+--- @param opts.absolute boolean If true, will return absolute paths instead of relative paths
+--- @param opts.canonicalize boolean If true, will canonicalize paths, meaning following the
 ---        symlinks; note that to return absolute paths you must set the other option
+--- @param opts.include_root boolean If true, will include the path provided as the root entry
+---        in the response
 --- @param cb function Function that is passed a list of entries in the form of
 ---           {'path' = ..., 'file_type' = ..., 'depth' = ...}
 ---           or nil if unsuccessful
-fn.async.dir_list = function(path, depth, absolute, canonicalize, cb)
+fn.async.dir_list = function(path, opts, cb)
     assert(type(path) == 'string', 'path must be a string')
-    assert(type(depth) == 'number' and depth >= 0, 'depth must be a number >= 0')
-    assert(type(absolute) == 'boolean', 'absolute must be a boolean')
-    assert(type(canonicalize) == 'boolean', 'canonicalize must be a boolean')
+    opts = opts or {}
 
     g.client():send({
         type = 'dir_read';
         data = {
             path = path;
-            depth = depth;
-            absolute = absolute;
-            canonicalize = canonicalize;
+            depth = opts.depth or 1;
+            absolute = opts.absolute or false;
+            canonicalize = opts.canonicalize or false;
+            include_root = opts.include_root or false;
         };
     }, function(res)
         if res ~= nil and res.type == 'dir_entries' then
@@ -267,17 +281,18 @@ end
 --- Creates a remote directory
 ---
 --- @param path string Path to the directory to create
---- @param all boolean If true, will recursively all components of path to directory
+--- @param opts.all boolean If true, will recursively all components of path to directory
 --- @param cb function Function that is passed true if successful or false if failed
-fn.async.mkdir = function(path, all, cb)
+fn.async.mkdir = function(path, opts, cb)
     assert(type(path) == 'string', 'path must be a string')
-    all = not (not all)
+    opts = opts or {}
+    opts.all = not (not opts.all)
 
     g.client():send({
         type = 'dir_create';
         data = {
             path = path;
-            all = all;
+            all = opts.all;
         };
     }, function(res)
         cb(res ~= nil and res.type == 'ok')
@@ -306,17 +321,18 @@ end
 --- Removes a remote file or directory
 ---
 --- @param path string Path to the file or directory to create
---- @param force boolean If true, will remove directories that are non-empty
+--- @param opts.force boolean If true, will remove directories that are non-empty
 --- @param cb function Function that is passed true if successful or false if failed
-fn.async.remove = function(path, force, cb)
+fn.async.remove = function(path, opts, cb)
     assert(type(path) == 'string', 'path must be a string')
-    force = not (not force)
+    opts = opts or {}
+    opts.force = not (not opts.force)
 
     g.client():send({
         type = 'remove';
         data = {
             path = path;
-            force = force;
+            force = opts.force;
         };
     }, function(res)
         cb(res ~= nil and res.type == 'ok')

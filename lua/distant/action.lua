@@ -138,15 +138,14 @@ end
 --- 2. If path points to a directory, displays a dialog with the immediate directory contents
 ---
 --- @param path string Path to directory to show
---- @param all boolean If true, will recursively search directories
---- @param timeout number Maximum time to wait for a response (optional)
---- @param interval number Time in milliseconds to wait between checks for a response (optional)
+--- @param opts.timeout number Maximum time to wait for a response (optional)
+--- @param opts.interval number Time in milliseconds to wait between checks for a response (optional)
 action.open = function(path, opts)
     assert(type(path) == 'string', 'path must be a string')
     opts = opts or {}
 
     -- First, we need to figure out if we are working with a file or directory
-    local metadata = fn.metadata(path, timeout, interval)
+    local metadata = fn.metadata(path, opts)
     if metadata == nil then
         return
     end
@@ -157,9 +156,11 @@ action.open = function(path, opts)
 
     -- Second, if the path points to a directory, load the entries as lines
     if is_dir then
-        local entries = fn.dir_list(path, 1, false, false, timeout, interval)
+        local entries = fn.dir_list(path, opts)
         lines = u.filter_map(entries, function(entry)
-            return entry.path
+            if entry.depth > 0 then
+                return entry.path
+            end
         end)
 
     -- Third, if path points to a file, load its contents as lines
@@ -222,12 +223,13 @@ end
 --- Opens a new window to show metadata for some path
 ---
 --- @param path string Path to file/directory/symlink to show
---- @param timeout number Maximum time to wait for a response (optional)
---- @param interval number Time in milliseconds to wait between checks for a response (optional)
-action.metadata = function(path, timeout, interval)
+--- @param opts.timeout number Maximum time to wait for a response (optional)
+--- @param opts.interval number Time in milliseconds to wait between checks for a response (optional)
+action.metadata = function(path, opts)
     assert(type(path) == 'string', 'path must be a string')
+    opts = opts or {}
 
-    local metadata = fn.metadata(path, timeout, interval)
+    local metadata = fn.metadata(path, opts)
     local lines = {}
     table.insert(lines, 'Path: "' .. path .. '"')
     table.insert(lines, 'File Type: ' .. metadata.file_type)
