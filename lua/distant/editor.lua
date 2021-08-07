@@ -124,6 +124,9 @@ editor.launch = function(host, args)
 
                 if g.session() == nil then
                     ui.show_msg('Failed to acquire session!', 'err')
+                else
+                    -- Warm up our client if we were successful
+                    g.client()
                 end
             end;
         }
