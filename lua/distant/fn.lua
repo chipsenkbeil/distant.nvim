@@ -50,12 +50,15 @@ end
 --- Retrieves filesystem metadata about a remote file, directory, or symlink
 ---
 --- @param path string Path to the file, directory, or symlink
+--- @param opts.canonicalize boolean If true, includes a canonicalized version
+---        of the path in the response
 --- @param opts.timeout number Maximum time to wait for a response
 --- @param opts.interval number Time in milliseconds to wait between checks for a response
 --- @return table metadata Table in the following format where `accessed`, `created`, 
 ---         and `modified` are optional and may be missing from the table
 --
 ---         { 
+---             canonicalized_path = "...";
 ---             file_type = "dir|file|sym_link"; 
 ---             len = 1234; 
 ---             readonly = true;
@@ -73,7 +76,7 @@ fn.metadata = function(path, opts)
         opts.interval or g.settings.timeout_interval
     )
 
-    fn.async.metadata(path, channel.tx)
+    fn.async.metadata(path, opts, channel.tx)
     return channel.rx()
 end
 
@@ -264,11 +267,14 @@ end
 --- Retrieves filesystem metadata about a remote file, directory, or symlink
 ---
 --- @param path string Path to the file, directory, or symlink
+--- @param opts.canonicalize boolean If true, includes a canonicalized version
+---        of the path in the response
 --- @param cb function Function that is passed a table in the following format
----        where `accessed`, `created`, and `modified` are optional and may be
----        missing from the table
+---        where `accessed`, `created`, `modified`, and `canonicalized_path` are 
+---        optional and may be missing from the table
 --
 ---         { 
+---             canonicalized_path = "...";
 ---             file_type = "dir|file|sym_link"; 
 ---             len = 1234; 
 ---             readonly = true;
@@ -280,15 +286,23 @@ end
 ---        `len` is total bytes of file. `accessed`, `created`, and `modified` are
 ---        all in terms in milliseconds since UNIX epoch. If failed, nil will be
 ---        passed instead.
-fn.async.metadata = function(path, cb)
+fn.async.metadata = function(path, opts, cb)
     assert(type(path) == 'string', 'path must be a string')
+    opts = opts or {}
 
     g.client():send({
         type = 'metadata';
-        data = { path = path };
+        data = { 
+            path = path;
+            canonicalize = opts.canonicalize or false;
+        };
     }, function(res)
         if res ~= nil and res.type == 'metadata' then
-            cb(res.data.data)
+            local data = res.data
+            if data.canonicalized_path == vim.NIL then
+                data.canonicalized_path = nil
+            end
+            cb(data)
         else
             cb(nil)
         end

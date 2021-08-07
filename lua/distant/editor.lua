@@ -1,11 +1,11 @@
 local fn = require('distant.fn')
 local g = require('distant.internal.globals')
-local session = require('distant.session')
 local ui = require('distant.internal.ui')
 local u = require('distant.internal.utils')
 local v = require('distant.internal.vars')
 
-local action = {}
+--- Provides editor-oriented operations
+local editor = {}
 
 --- Launches a new instance of the distance binary on the remote machine and sets
 --- up a session so clients are able to communicate with it
@@ -14,7 +14,7 @@ local action = {}
 --- @param args table of arguments to append to the launch command, where all
 ---             keys with _ are replaced with - (e.g. my_key -> --my-key)
 --- @return number Exit code once launch has completed, or nil if times out
-action.launch = function(host, args)
+editor.launch = function(host, args)
     assert(type(host) == 'string', 'Missing or invalid host argument')
     args = args or {}
 
@@ -50,7 +50,11 @@ action.launch = function(host, args)
         g.settings.launch,
         args,
         {log_file = err_log; session = 'pipe'}
-    ))
+    ), {'verbose'})
+    if type(args.verbose) == 'number' and args.verbose > 0 then
+        args = vim.trim(args .. ' -' .. string.rep('v', args.verbose))
+    end
+
     local code = vim.fn.termopen(
         g.settings.binary_name .. ' launch ' .. host .. ' ' .. cmd_args,
         {
@@ -111,7 +115,7 @@ action.launch = function(host, args)
                             ui.show_msg(lines, 'err')
                         end
                     else
-                        local lines = u.filter_map(raw_data, function(line)
+                        lines = u.filter_map(raw_data, function(line)
                             return u.clean_term_line(line)
                         end)
                         ui.show_msg(lines, 'err')
@@ -133,59 +137,96 @@ action.launch = function(host, args)
     end
 end
 
---- Opens the provided path in one of two ways:
+--- Opens the provided path in one of three ways:
+---
 --- 1. If path points to a file, creates a new `distant` buffer with the contents
---- 2. If path points to a directory, displays a dialog with the immediate directory contents
+--- 2. If path points to a directory, opens up a navigation interface
+--- 3. If path does not exist, opens a blank buffer that points to the file to be written
 ---
 --- @param path string Path to directory to show
+--- @param opts.reload boolean If true, will reload the buffer even if already open
 --- @param opts.timeout number Maximum time to wait for a response (optional)
 --- @param opts.interval number Time in milliseconds to wait between checks for a response (optional)
-action.open = function(path, opts)
+editor.open = function(path, opts)
     assert(type(path) == 'string', 'path must be a string')
     opts = opts or {}
 
-    -- First, we need to figure out if we are working with a file or directory
-    local metadata = fn.metadata(path, opts)
-    if metadata == nil then
+    -- We need to figure out if we are working with a file or directory
+    local metadata = fn.metadata(path, u.merge(opts, {canonicalize = true}))
+
+    local lines = nil
+    local does_not_exist = metadata == nil
+    local is_dir = not does_not_exist and metadata.file_type == 'dir'
+    local is_file = does_not_exist or metadata.file_type == 'file'
+
+    -- Use canonicalized path if available
+    local full_path = path
+    if not does_not_exist then
+        full_path = metadata.canonicalized_path or path
+    end
+
+    -- Figure out the buffer name, which is just its full path with
+    -- a schema prepended
+    local buf_name = 'distant://' .. full_path
+    local buf = vim.fn.bufnr(buf_name)
+    local buf_exists = buf ~= -1
+
+    -- If we already have a buffer and we are not reloading, just
+    -- switch to it
+    if buf_exists and not opts.reload then
+        vim.api.nvim_win_set_buf(0, buf)
         return
     end
 
-    local lines = nil
-    local is_dir = metadata.file_type == 'dir'
-    local is_file = metadata.file_type == 'file'
-
-    -- Second, if the path points to a directory, load the entries as lines
+    -- If the path points to a directory, load the entries as lines
     if is_dir then
-        local entries = fn.dir_list(path, opts)
+        local entries = fn.dir_list(full_path, opts)
         lines = u.filter_map(entries, function(entry)
             if entry.depth > 0 then
                 return entry.path
             end
         end)
 
-    -- Third, if path points to a file, load its contents as lines
-    elseif is_file then
-        local text = fn.read_file_text(path, timeout, interval)
+    -- If path points to a file, load its contents as lines
+    elseif is_file and not does_not_exist then
+        local text = fn.read_file_text(full_path, opts)
         lines = vim.split(text, '\n', true)
+
+    -- If the path does not exist, we will create a blank buffer
+    elseif does_not_exist then
+        lines = {}
     else
         vim.api.nvim_err_writeln('Filetype ' .. metadata.file_type .. ' is unsupported')
         return
     end
 
-    -- Create a buffer to house the text
-    local buf = vim.api.nvim_create_buf(true, false)
-    assert(buf ~= 0, 'Failed to create buffer for for remote editing')
+    -- Create a buffer to house the text if no buffer exists
+    if not buf_exists then
+        buf = vim.api.nvim_create_buf(true, false)
+        assert(buf ~= 0, 'Failed to create buffer for for remote editing')
+    end
 
     -- Set the content of the buffer to the remote file
+    vim.api.nvim_buf_set_option(buf, 'modifiable', true)
     vim.api.nvim_buf_set_lines(buf, 0, 1, false, lines)
+    if is_dir then
+        vim.api.nvim_buf_set_option(buf, 'modifiable', false)
+    end
+
+    -- Since we modified the buffer by adding in the content for
+    -- a file or directory, we need to reset it here
+    vim.api.nvim_buf_set_option(buf, 'modified', false)
+
+    -- If our buffer already existed, this is all we want to do as everything
+    -- beyond this point is first-time setup
+    if buf_exists then
+        return
+    end
 
     -- Set the buffer name to include a schema, which will trigger our
-    -- autocmd for writing to the remote destination
-    --
-    -- Mark as not yet modified as the content we placed into our
-    -- buffer matches that of the remote file
-    vim.api.nvim_buf_set_name(buf, 'distant://' .. path)
-    vim.api.nvim_buf_set_option(buf, 'modified', false)
+    -- autocmd for writing to the remote destination in the situation
+    -- where we are editing a file
+    vim.api.nvim_buf_set_name(buf, buf_name)
 
     -- Set file/dir specific options
     if is_file then
@@ -193,14 +234,41 @@ action.open = function(path, opts)
         -- control where it is going
         vim.api.nvim_buf_set_option(buf, 'buftype', 'acwrite')
     elseif is_dir then
-        -- Mark the buftype as nofile and not modifiable as you cannot 
-        -- modify it or write it
+        -- Mark the buftype as nofile and not modifiable as you cannot
+        -- modify it or write it; also explicitly set a custom filetype
+        vim.api.nvim_buf_set_option(buf, 'filetype', 'distant-nav')
         vim.api.nvim_buf_set_option(buf, 'buftype', 'nofile')
         vim.api.nvim_buf_set_option(buf, 'modifiable', false)
+
+        -- Take the global mappings specified for navigation and apply them
+        -- TODO: Since these mappings are global, should we set them once
+        --       elsewhere and look them up by key instead?
+        local fn_ids = {}
+        for lhs, rhs in pairs(g.settings.nav.mappings) do
+            local id = g.fn.insert(rhs)
+            table.insert(fn_ids, id)
+            local key_mapping = '<Cmd>' .. g.fn.get_as_key_mapping(id) .. '<CR>'
+            vim.api.nvim_buf_set_keymap(buf, 'n', lhs, key_mapping, {
+                noremap = true,
+                silent = true,
+                nowait = true,
+            })
+        end
+
+        -- When the buffer is detached, we want to clear the global functions
+        if not vim.tbl_isempty(fn_ids) then
+            vim.api.nvim_buf_attach(buf, false, {
+                on_detach = function()
+                    for _, id in ipairs(fn_ids) do
+                        g.fn.remove(id)
+                    end
+                end;
+            })
+        end
     end
 
     -- Add stateful information to the buffer, helping keep track of it
-    v.buf.set_remote_path(buf, path)
+    v.buf.set_remote_path(buf, full_path)
 
     -- Display the buffer in the specified window, defaulting to current
     vim.api.nvim_win_set_buf(opts.win or 0, buf)
@@ -223,33 +291,38 @@ end
 --- Opens a new window to show metadata for some path
 ---
 --- @param path string Path to file/directory/symlink to show
+--- @param opts.canonicalize boolean If true, includes a canonicalized version
+---        of the path in the response
 --- @param opts.timeout number Maximum time to wait for a response (optional)
 --- @param opts.interval number Time in milliseconds to wait between checks for a response (optional)
-action.metadata = function(path, opts)
+editor.show_metadata = function(path, opts)
     assert(type(path) == 'string', 'path must be a string')
     opts = opts or {}
 
     local metadata = fn.metadata(path, opts)
     local lines = {}
     table.insert(lines, 'Path: "' .. path .. '"')
+    if metadata.canonicalized_path then
+        table.insert(lines, 'Canonicalized Path: "' .. metadata.canonicalized_path .. '"')
+    end
     table.insert(lines, 'File Type: ' .. metadata.file_type)
     table.insert(lines, 'Len: ' .. tostring(metadata.len) .. ' bytes')
     table.insert(lines, 'Readonly: ' .. tostring(metadata.readonly))
     if metadata.created ~= nil then
         table.insert(lines, 'Created: ' .. vim.fn.strftime(
-            '%c', 
+            '%c',
             math.floor(metadata.created / 1000.0)
         ))
     end
     if metadata.accessed ~= nil then
         table.insert(lines, 'Last Accessed: ' .. vim.fn.strftime(
-            '%c', 
+            '%c',
             math.floor(metadata.accessed / 1000.0)
         ))
     end
     if metadata.modified ~= nil then
         table.insert(lines, 'Last Modified: ' .. vim.fn.strftime(
-            '%c', 
+            '%c',
             math.floor(metadata.modified / 1000.0)
         ))
     end
@@ -261,12 +334,11 @@ end
 --
 --- @param opts.timeout number Maximum time to wait for a response (optional)
 --- @param opts.interval number Time in milliseconds to wait between checks for a response (optional)
-action.system_info = function(opts)
+editor.show_system_info = function(opts)
     opts = opts or {}
 
     local indent = '    '
     local info = fn.system_info(opts)
-    print('GOT INFO :: ' .. vim.inspect(info))
     if info ~= nil then
         ui.show_msg({
             '= System Info =';
@@ -281,9 +353,9 @@ action.system_info = function(opts)
 end
 
 --- Opens a new window to display session info
-action.session_info = function()
+editor.show_session_info = function()
     local indent = '    '
-    local info = session.info()
+    local session = g.session()
     local distant_buf_names = u.filter_map(vim.api.nvim_list_bufs(), function(buf)
         local name = vim.api.nvim_buf_get_name(buf)
         if u.starts_with(name, 'distant://') then
@@ -292,11 +364,11 @@ action.session_info = function()
     end)
 
     local session_info = {'Disconnected'}
-    if info ~= nil then
+    if session ~= nil then
         session_info = {
-            indent .. '* Host = "' .. info.host .. '"';
-            indent .. '* Port = "' .. info.port .. '"';
-            indent .. '* Auth = "' .. info.auth_key .. '"';
+            indent .. '* Host = "' .. session.host .. '"';
+            indent .. '* Port = "' .. session.port .. '"';
+            indent .. '* Auth = "' .. session.auth_key .. '"';
         }
     end
 
@@ -316,4 +388,4 @@ action.session_info = function()
     ui.show_msg(msg)
 end
 
-return action
+return editor

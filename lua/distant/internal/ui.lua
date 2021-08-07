@@ -10,8 +10,8 @@ local ui = {}
 --- @param height number height of the window (optional)
 --- @return number handle returns the handle of the buffer containing the message
 ui.show_msg = function(msg, ty, width, height, closing_keys)
-    local buf_h = vim.api.nvim_create_buf(false, true)
-    assert(buf_h ~= 0, 'Failed to create buffer for msg')
+    local buf = vim.api.nvim_create_buf(false, true)
+    assert(buf ~= 0, 'Failed to create buffer for msg')
 
     local info = vim.api.nvim_list_uis()[1]
 
@@ -38,17 +38,24 @@ ui.show_msg = function(msg, ty, width, height, closing_keys)
 
     -- Fill buffer such that it covers entire window
     if height - #lines > 0 then
-        vim.api.nvim_buf_set_lines(buf_h, 0, 1, false, u.make_n_lines(height - #lines, ''))
+        vim.api.nvim_buf_set_lines(buf, 0, 1, false, u.make_n_lines(height - #lines, ''))
     end
 
     -- Add the lines to our buffer
-    vim.api.nvim_buf_set_lines(buf_h, 0, 1, false, lines)
+    vim.api.nvim_buf_set_lines(buf, 0, 1, false, lines)
+
+    -- Mark the buftype as nofile and not modifiable as you cannot 
+    -- modify it or write it
+    vim.api.nvim_buf_set_option(buf, 'filetype', 'distant-msg')
+    vim.api.nvim_buf_set_option(buf, 'buftype', 'nofile')
+    vim.api.nvim_buf_set_option(buf, 'modifiable', false)
+    vim.api.nvim_buf_set_option(buf, 'modified', false)
 
     -- Set bindings to exit
     closing_keys = closing_keys or {'<Esc>', '<CR>', '<Leader>'}
     for _, key in ipairs(closing_keys) do
         vim.api.nvim_buf_set_keymap(
-            buf_h,
+            buf,
             'n',
             key,
             ':close<CR>',
@@ -57,7 +64,7 @@ ui.show_msg = function(msg, ty, width, height, closing_keys)
     end
 
     -- Render the window with the message
-    local win = vim.api.nvim_open_win(buf_h, 1, {
+    local win = vim.api.nvim_open_win(buf, 1, {
         relative = 'editor';
         width = width;
         height = height;
@@ -77,7 +84,7 @@ ui.show_msg = function(msg, ty, width, height, closing_keys)
         vim.api.nvim_win_set_option(win, 'winhl', 'Normal:Error')
     end
 
-    return buf_h
+    return buf
 end
 
 return ui

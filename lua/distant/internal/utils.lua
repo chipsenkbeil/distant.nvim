@@ -261,8 +261,8 @@ utils.autocmd = function(name, pattern, cmd)
 
     local cmd_type = type(cmd)
     if cmd_type == 'function' then
-        local id = g.set_callback(cmd)
-        cmd = 'lua require("distant.internal.globals").callback("' .. id .. '")()'
+        local id = g.fn.insert(cmd)
+        cmd = g.fn.get_as_key_mapping(id)
     elseif cmd_type ~= 'string' then
         error('autocmd(): unsupported cmd type: ' .. cmd_type)
     end
@@ -390,6 +390,32 @@ utils.clean_term_line = function(text)
     text = strip_seq(text, '%d%d?;%d%d?;%d%d?')
     text = string.gsub(text, '\r', '')
     return text
+end
+
+--- Returns the parent path of the given path, or nil if there is no parent
+utils.parent_path = function(path)
+    -- Pattern from https://stackoverflow.com/a/12191225/3164172
+    local parent = string.match(path, '(.-)([^\\/]-%.?([^%.\\/]*))$')
+    if parent ~= nil and parent ~= '' then
+        return parent
+    end
+end
+
+--- Join multiple path components together, separating by /
+--- @return string #The path as a string
+utils.join_path = function(...)
+    local path = ''
+
+    for _, component in ipairs({...}) do
+        -- If we already have a partial path, we need to add the separator
+        if path ~= '' and not vim.endswith(path, '/') then
+            path = path .. '/' 
+        end
+
+        path = path .. component
+    end
+
+    return path
 end
 
 --- Produces a send/receive pair in the form of {tx, rx} where

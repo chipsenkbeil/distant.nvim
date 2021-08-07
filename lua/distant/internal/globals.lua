@@ -4,7 +4,7 @@ local u = require('distant.internal.utils')
 local globals = {}
 local state = {
     client = nil;
-    callbacks = {};
+    fns = {};
     session = nil;
 }
 
@@ -22,29 +22,42 @@ local function check_version(version)
     assert(v_num >= m_num, fail_msg)
 end
 
---- Sets a callback to be stored globally, returning an id for future reference
+--- Contains operations to apply against a global collection of functions
+globals.fn = {}
+
+--- Inserts a function into the global storage, returning an id for future reference
 ---
---- @param cb function The callback to store
---- @return string id A unique id associated with the callback
-globals.set_callback = function(cb)
-    local id = 'cb_' .. u.next_id()
-    state.callbacks[id] = cb
+--- @param fn function The function to store
+--- @return string #A unique id associated with the function
+globals.fn.insert = function(fn)
+    local id = 'fn_' .. u.next_id()
+    state.fns[id] = fn
     return id
 end
 
---- Removes the callback with the specified id
+--- Removes the function with the specified id
 ---
---- @param id string The id associated with the callback
-globals.del_callback = function(id)
-    state.callbacks[id] = nil
+--- @param id string The id associated with the function
+globals.fn.remove = function(id)
+    state.fns[id] = nil
 end
 
---- Retrieves a callback by its id
+--- Retrieves a function by its id
 ---
---- @param id string The id associated with the callback
---- @return function|nil #The callback function if found
-globals.callback = function(id)
-    return state.callbacks[id]
+--- @param id string The id associated with the function
+--- @return function? #The function if found
+globals.fn.get = function(id)
+    return state.fns[id]
+end
+
+--- Retrieves a key mapping around a function by the function's id
+---
+--- @param id number The id associated with the function
+--- @param args? string[] #Arguments to feed directly to the function
+--- @return string #The mapping that would invoke the function with the given id
+globals.fn.get_as_key_mapping = function(id, args)
+    args = table.concat(args or {}, ',')
+    return 'lua require("distant.internal.globals").fn.get("' .. id .. '")(' .. args .. ')'
 end
 
 --- Retrieves the client, optionally initializing it if needed
@@ -82,26 +95,61 @@ end
 
 --- Settings for use around the plugin
 globals.settings = {
+    -- Path to the local `distant` binary
     binary_name = c.BINARY_NAME;
+
+    -- Maximum time (in milliseconds) to wait for a request to complete
     max_timeout = c.MAX_TIMEOUT;
+
+    -- Time (in milliseconds) between checks for the timeout to be reached
     timeout_interval = c.TIMEOUT_INTERVAL;
 
-    -- All of these launch settings are unset by default
+    -- Settings that apply when launching the server
     launch = {
+        -- Control the IP address that the server will bind to
         bind_server = nil;
+
+        -- Alternative location for the distant binary on the remote machine
+        distant = nil;
+
+        -- Additional arguments to the server when launched (see listen help)
         extra_server_args = nil;
+
+        -- Identity file to use with ssh
         identity_file = nil;
+
+        -- Log file to use when running the launch command
         log_file = nil;
+
+        -- Alternative port to port 22 for use in SSH
         port = nil;
-        remote_program = nil;
-        ssh_program = nil;
+
+        -- Maximum time (in seconds) for the server to run with no active connections
+        shutdown_after = nil;
+
+        -- Alternative location for the ssh binary on the local machine
+        ssh = nil;
+
+        -- Username to use when logging into the remote machine via SSH
         username = nil;
+
+        -- Verbosity level (1 = info, 2 = debug, 3 = trace) for the launch command
+        verbose = 0;
     };
 
-    -- All of these settings are for starting a client
+    -- Settings that apply to the client that is created to interact with the server
     client = {
+        -- Log file to use with the client
         log_file = nil;
+
+        -- Verbosity level (1 = info, 2 = debug, 3 = trace) for the client
         verbose = 0;
+    };
+
+    -- Settings that apply to the navigation interface
+    nav = {
+        -- Mappings to apply to the navigation interface
+        mappings = {};
     };
 }
 
