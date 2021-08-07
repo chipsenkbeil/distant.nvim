@@ -26,7 +26,7 @@ vars.buf = {}
 
 --- Sets the path that this buffer points to remotely
 ---
---- @param buf number The buffer to assign the variable to, 
+--- @param buf number The buffer to assign the variable to,
 ---        or 0 to use current buffer
 --- @param path string The path on the remote machine
 vars.buf.set_remote_path = function(buf, path)
@@ -35,7 +35,7 @@ end
 
 --- Gets the path that this buffer points to remotely
 ---
---- @param buf number The buffer where the variable is located, 
+--- @param buf number The buffer where the variable is located,
 ---        or 0 to use current buffer
 vars.buf.remote_path = function(buf)
     return buf_var(buf or 0, 'remote_path')

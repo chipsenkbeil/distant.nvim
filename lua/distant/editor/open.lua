@@ -14,9 +14,9 @@ local function apply_mappings(buf, mappings)
     local fn_ids = {}
     for lhs, rhs in pairs(mappings) do
         local prefix = 'buf_' .. buf .. 'key_' .. string.gsub(lhs, '.', string.byte) .. '_'
-        local id = g.fn.insert(rhs, prefix)
+        local id = g.data.insert(rhs, prefix)
         table.insert(fn_ids, id)
-        local key_mapping = '<Cmd>' .. g.fn.get_as_key_mapping(id) .. '<CR>'
+        local key_mapping = '<Cmd>' .. g.data.get_as_key_mapping(id) .. '<CR>'
         vim.api.nvim_buf_set_keymap(buf, 'n', lhs, key_mapping, {
             noremap = true,
             silent = true,
@@ -29,11 +29,41 @@ local function apply_mappings(buf, mappings)
         vim.api.nvim_buf_attach(buf, false, {
             on_detach = function()
                 for _, id in ipairs(fn_ids) do
-                    g.fn.remove(id)
+                    g.data.remove(id)
                 end
             end;
         })
     end
+end
+
+--- Checks a path to see if it exists, returning a table with information
+---
+--- @param path string Path to directory to show
+--- @param opts.timeout number Maximum time to wait for a response (optional)
+--- @param opts.interval number Time in milliseconds to wait between checks for a response (optional)
+--- @return table #Table containing `path`, `is_dir`, `is_file`, `is_symlink`, and `missing` fields
+local function check_path(path, opts)
+    -- We need to figure out if we are working with a file or directory
+    local metadata = fn.metadata(path, u.merge(opts, {canonicalize = true}))
+
+    local missing = metadata == nil
+    local is_dir = not missing and metadata.file_type == 'dir'
+    local is_file = not missing and metadata.file_type == 'file'
+    local is_symlink = not missing and metadata.file_type == 'sym_link'
+
+    -- Use canonicalized path if available
+    local full_path = path
+    if not missing then
+        full_path = metadata.canonicalized_path or path
+    end
+
+    return {
+        path = full_path,
+        is_dir = is_dir,
+        is_file = is_file,
+        is_symlink = is_symlink,
+        missing = missing,
+    }
 end
 
 
@@ -51,23 +81,11 @@ return function(path, opts)
     assert(type(path) == 'string', 'path must be a string')
     opts = opts or {}
 
-    -- We need to figure out if we are working with a file or directory
-    local metadata = fn.metadata(path, u.merge(opts, {canonicalize = true}))
-
-    local lines = nil
-    local does_not_exist = metadata == nil
-    local is_dir = not does_not_exist and metadata.file_type == 'dir'
-    local is_file = does_not_exist or metadata.file_type == 'file'
-
-    -- Use canonicalized path if available
-    local full_path = path
-    if not does_not_exist then
-        full_path = metadata.canonicalized_path or path
-    end
+    local p = check_path(path, opts)
 
     -- Figure out the buffer name, which is just its full path with
     -- a schema prepended
-    local buf_name = 'distant://' .. full_path
+    local buf_name = 'distant://' .. p.path
     local buf = vim.fn.bufnr(buf_name)
     local buf_exists = buf ~= -1
 
@@ -79,37 +97,35 @@ return function(path, opts)
     end
 
     -- If the path points to a directory, load the entries as lines
-    if is_dir then
-        local entries = fn.dir_list(full_path, opts)
+    local lines = nil
+    if p.is_dir then
+        local entries = fn.dir_list(p.path, opts)
         lines = u.filter_map(entries, function(entry)
             if entry.depth > 0 then
                 return entry.path
             end
         end)
 
-    -- If path points to a file, load its contents as lines
-    elseif is_file and not does_not_exist then
-        local text = fn.read_file_text(full_path, opts)
+    -- If path points to a file (or symlink), load its contents as lines
+    elseif p.is_file or p.is_symlink then
+        local text = fn.read_file_text(p.path, opts)
         lines = vim.split(text, '\n', true)
 
-    -- If the path does not exist, we will create a blank buffer
-    elseif does_not_exist then
-        lines = {}
+    -- Otherwise, we set ourselves up to create a new, empty file
     else
-        vim.api.nvim_err_writeln('Filetype ' .. metadata.file_type .. ' is unsupported')
-        return
+        lines = {}
     end
 
     -- Create a buffer to house the text if no buffer exists
     if not buf_exists then
         buf = vim.api.nvim_create_buf(true, false)
-        assert(buf ~= 0, 'Failed to create buffer for for remote editing')
+        assert(buf ~= 0, 'Failed to create buffer for remote editing')
     end
 
     -- Set the content of the buffer to the remote file
     vim.api.nvim_buf_set_option(buf, 'modifiable', true)
     vim.api.nvim_buf_set_lines(buf, 0, 1, false, lines)
-    if is_dir then
+    if p.is_dir then
         vim.api.nvim_buf_set_option(buf, 'modifiable', false)
     end
 
@@ -128,30 +144,32 @@ return function(path, opts)
     -- where we are editing a file
     vim.api.nvim_buf_set_name(buf, buf_name)
 
-    -- Set file/dir specific options
-    if is_file then
+    -- If a directory, we want to mark as such and prevent modifying
+    if p.is_dir then
+        -- Mark the buftype as nofile and not modifiable as you cannot
+        -- modify it or write it; also explicitly set a custom filetype
+        vim.api.nvim_buf_set_option(buf, 'filetype', 'distant-dir')
+        vim.api.nvim_buf_set_option(buf, 'buftype', 'nofile')
+        vim.api.nvim_buf_set_option(buf, 'modifiable', false)
+
+        apply_mappings(buf, g.settings.nav.mappings)
+
+    -- Otherwise, in all other cases we treat this as a remote file
+    else
         -- Mark the buftype as acwrite as you can still write to it, but we
         -- control where it is going
         vim.api.nvim_buf_set_option(buf, 'buftype', 'acwrite')
 
         apply_mappings(buf, g.settings.file.mappings)
-    elseif is_dir then
-        -- Mark the buftype as nofile and not modifiable as you cannot
-        -- modify it or write it; also explicitly set a custom filetype
-        vim.api.nvim_buf_set_option(buf, 'filetype', 'distant-nav')
-        vim.api.nvim_buf_set_option(buf, 'buftype', 'nofile')
-        vim.api.nvim_buf_set_option(buf, 'modifiable', false)
-
-        apply_mappings(buf, g.settings.nav.mappings)
     end
 
     -- Add stateful information to the buffer, helping keep track of it
-    v.buf.set_remote_path(buf, full_path)
+    v.buf.set_remote_path(buf, p.path)
 
     -- Display the buffer in the specified window, defaulting to current
     vim.api.nvim_win_set_buf(opts.win or 0, buf)
 
-    if is_file then
+    if p.is_file then
         -- Set our filetype to whatever the contents actually are (or file extension is)
         -- TODO: This makes me feel uncomfortable as I do not yet understand why detecting
         --       the filetype as the real type does not trigger neovim's LSP. At the

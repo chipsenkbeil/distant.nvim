@@ -253,7 +253,7 @@ end
 ---
 --- @param name string Name of the autocmd
 --- @param pattern string Pattern for the autocmd
---- @param cmd function|string Either a callback to be triggered or a string 
+--- @param cmd function|string Either a callback to be triggered or a string
 ---        representing a vim expression
 utils.autocmd = function(name, pattern, cmd)
     -- NOTE: Inlined here to avoid loop from circular dependencies
@@ -261,8 +261,8 @@ utils.autocmd = function(name, pattern, cmd)
 
     local cmd_type = type(cmd)
     if cmd_type == 'function' then
-        local id = g.fn.insert(cmd)
-        cmd = g.fn.get_as_key_mapping(id)
+        local id = g.data.insert(cmd)
+        cmd = g.data.get_as_key_mapping(id)
     elseif cmd_type ~= 'string' then
         error('autocmd(): unsupported cmd type: ' .. cmd_type)
     end
@@ -286,7 +286,7 @@ utils.merge = function(...)
             for k, v in pairs(tbl) do
                 if dst[k] == nil or type(dst[k]) ~= 'table' or type(v) ~= 'table' then
                     dst[k] = utils.deepcopy(v)
-                else 
+                else
                     dst[k] = utils.merge(dst[k], v)
                 end
             end
@@ -341,7 +341,7 @@ end
 utils.make_n_lines = function(n, line)
     local lines = {}
 
-    for i = 1, n do
+    for _ = 1, n do
         table.insert(lines, line)
     end
 
@@ -379,10 +379,10 @@ end
 --- @param text string The text to clean
 --- @return string #The cleaned text
 utils.clean_term_line = function(text)
-    local function strip_seq(text, p)
-        text = string.gsub(text, '%c%[' .. p .. 'm', '')
-        text = string.gsub(text, '%c%[' .. p .. 'K', '')
-        return text
+    local function strip_seq(s, p)
+        s = string.gsub(s, '%c%[' .. p .. 'm', '')
+        s = string.gsub(s, '%c%[' .. p .. 'K', '')
+        return s
     end
 
     text = strip_seq(text, '%d%d?')
@@ -409,7 +409,7 @@ utils.join_path = function(...)
     for _, component in ipairs({...}) do
         -- If we already have a partial path, we need to add the separator
         if path ~= '' and not vim.endswith(path, '/') then
-            path = path .. '/' 
+            path = path .. '/'
         end
 
         path = path .. component
@@ -422,30 +422,30 @@ end
 --- tx is a function that sends a message and rx is a function that
 --- waits for the message
 ---
---- @param timeout is the milliseconds that rx will wait
---- @param interval is the milliseconds to wait inbetween checking for a message
+--- @param timeout number is the milliseconds that rx will wait
+--- @param interval number is the milliseconds to wait inbetween checking for a message
 utils.oneshot_channel = function(timeout, interval)
     assert(type(timeout) == 'number', 'timeout must be a number')
     assert(type(interval) == 'number', 'interval must be a number')
 
-    local tmp_name = '__oneshot_' .. utils.next_id() .. '__'
-    assert(not utils.nvim_has_var(tmp_name), tmp_name .. ' already exists')
+    local g = require('distant.internal.globals')
+    local id = 'oneshot_' .. utils.next_id()
 
     local tx = function(msg)
         local data_str = vim.fn.json_encode(msg)
-        vim.api.nvim_set_var(tmp_name, data_str)
+        g.data.set(id, data_str)
     end
 
     local rx = function()
         -- Wait for the result to be set, or time out
         vim.fn.wait(
             timeout,
-            function() return utils.nvim_has_var(tmp_name) end,
+            function() return g.data.has(id) end,
             interval
         )
 
         -- Grab and clear our temporary variable if it is set and return it's value
-        local result = utils.nvim_remove_var(tmp_name)
+        local result = g.data.remove(id)
         if result ~= nil and type(result) == 'string' then
             result = vim.fn.json_decode(result)
         end
@@ -458,7 +458,7 @@ utils.oneshot_channel = function(timeout, interval)
     end
 
     return {
-        tx = tx; 
+        tx = tx;
         rx = rx;
     }
 end

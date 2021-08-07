@@ -30,7 +30,7 @@ return function(opts)
             --       this a problem for the write cmd since the buffer
             --       shouldn't be hidden?
             local lines = vim.fn.getbufline(buf, 1, '$')
-            
+
             -- Write the buffer contents
             fn.write_file_text(path, table.concat(lines, '\n'))
 
