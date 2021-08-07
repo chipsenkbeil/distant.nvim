@@ -11,8 +11,8 @@ local state = {
 local function check_version(version)
     local min = c.MIN_SUPPORTED_VERSION
     local fail_msg = (
-        table.concat(version, '.') .. 
-        ' is lower than minimum version ' .. 
+        table.concat(version, '.') ..
+        ' is lower than minimum version ' ..
         table.concat(min, '.')
     )
 
@@ -28,9 +28,11 @@ globals.fn = {}
 --- Inserts a function into the global storage, returning an id for future reference
 ---
 --- @param fn function The function to store
+--- @param prefix? string Optional prefix to add to the id created for the function
 --- @return string #A unique id associated with the function
-globals.fn.insert = function(fn)
-    local id = 'fn_' .. u.next_id()
+globals.fn.insert = function(fn, prefix)
+    prefix = prefix or 'fn_'
+    local id = prefix .. u.next_id()
     state.fns[id] = fn
     return id
 end
@@ -145,6 +147,12 @@ globals.settings = {
 
         -- Verbosity level (1 = info, 2 = debug, 3 = trace) for the client
         verbose = 0;
+    };
+
+    -- Settings that apply when editing a remote file
+    file = {
+        -- Mappings to apply to remote files
+        mappings = {};
     };
 
     -- Settings that apply to the navigation interface

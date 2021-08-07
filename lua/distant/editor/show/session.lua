@@ -1,0 +1,39 @@
+local g = require('distant.internal.globals')
+local ui = require('distant.internal.ui')
+local u = require('distant.internal.utils')
+
+--- Opens a new window to display session info
+return function()
+    local indent = '    '
+    local session = g.session()
+    local distant_buf_names = u.filter_map(vim.api.nvim_list_bufs(), function(buf)
+        local name = vim.api.nvim_buf_get_name(buf)
+        if u.starts_with(name, 'distant://') then
+            return indent .. '* ' .. string.sub(name, string.len('distant://') + 1)
+        end
+    end)
+
+    local session_info = {'Disconnected'}
+    if session ~= nil then
+        session_info = {
+            indent .. '* Host = "' .. session.host .. '"';
+            indent .. '* Port = "' .. session.port .. '"';
+            indent .. '* Auth = "' .. session.auth_key .. '"';
+        }
+    end
+
+    local msg = {}
+    vim.list_extend(msg, {
+        '= Session =';
+        '';
+    })
+    vim.list_extend(msg, session_info)
+    vim.list_extend(msg, {
+        '';
+        '= Remote Files =';
+        '';
+    })
+    vim.list_extend(msg, distant_buf_names)
+
+    ui.show_msg(msg)
+end

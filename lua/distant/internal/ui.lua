@@ -44,7 +44,7 @@ ui.show_msg = function(msg, ty, width, height, closing_keys)
     -- Add the lines to our buffer
     vim.api.nvim_buf_set_lines(buf, 0, 1, false, lines)
 
-    -- Mark the buftype as nofile and not modifiable as you cannot 
+    -- Mark the buftype as nofile and not modifiable as you cannot
     -- modify it or write it
     vim.api.nvim_buf_set_option(buf, 'filetype', 'distant-msg')
     vim.api.nvim_buf_set_option(buf, 'buftype', 'nofile')
