@@ -1,4 +1,4 @@
-local g = require('distant.internal.globals')
+local s = require('distant.internal.state')
 local ui = require('distant.internal.ui')
 local u = require('distant.internal.utils')
 
@@ -20,7 +20,7 @@ return function(host, args)
     local info = vim.api.nvim_list_uis()[1]
 
     -- Clear any pre-existing session
-    g.set_session(nil)
+    s.set_session(nil)
 
     -- Format is launch {host} [args..]
     -- NOTE: Because this runs in a pty, all output goes to stdout by default;
@@ -30,7 +30,7 @@ return function(host, args)
     local err_log = vim.fn.tempname()
     local raw_data = nil
     local cmd_args = u.build_arg_str(u.merge(
-        g.settings.launch,
+        s.settings.launch,
         args,
         {log_file = err_log; session = 'pipe'}
     ), {'verbose'})
@@ -67,7 +67,7 @@ return function(host, args)
     end
 
     local code = run(
-        g.settings.binary_name .. ' launch ' .. host .. ' ' .. cmd_args,
+        s.settings.binary_name .. ' launch ' .. host .. ' ' .. cmd_args,
         {
             stdout_buffered = true;
             on_stdout = function(_, data, _)
@@ -91,7 +91,7 @@ return function(host, args)
                             u.log_err('Session missing auth key')
                         end
                         if session.host and session.port and session.auth_key then
-                            g.set_session(session)
+                            s.set_session(session)
                         end
                     end
                 end
@@ -136,11 +136,11 @@ return function(host, args)
                     end
                 end
 
-                if g.session() == nil then
+                if s.session() == nil then
                     ui.show_msg('Failed to acquire session!', 'err')
                 else
                     -- Warm up our client if we were successful
-                    g.client()
+                    s.client()
                 end
             end;
         }
@@ -150,6 +150,6 @@ return function(host, args)
     if code == 0 then
         ui.show_msg('Invalid arguments for launch!', 'err')
     elseif code == -1 then
-        ui.show_msg(g.settings.binary_name .. ' is not executable!', 'err')
+        ui.show_msg(s.settings.binary_name .. ' is not executable!', 'err')
     end
 end

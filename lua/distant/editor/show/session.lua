@@ -1,11 +1,11 @@
-local g = require('distant.internal.globals')
+local s = require('distant.internal.state')
 local ui = require('distant.internal.ui')
 local u = require('distant.internal.utils')
 
 --- Opens a new window to display session info
 return function()
     local indent = '    '
-    local session = g.session()
+    local session = s.session()
     local distant_buf_names = u.filter_map(vim.api.nvim_list_bufs(), function(buf)
         local name = vim.api.nvim_buf_get_name(buf)
         if u.starts_with(name, 'distant://') then

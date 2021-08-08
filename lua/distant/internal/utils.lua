@@ -257,12 +257,12 @@ end
 ---        representing a vim expression
 utils.autocmd = function(name, pattern, cmd)
     -- NOTE: Inlined here to avoid loop from circular dependencies
-    local g = require('distant.internal.globals')
+    local s = require('distant.internal.state')
 
     local cmd_type = type(cmd)
     if cmd_type == 'function' then
-        local id = g.data.insert(cmd)
-        cmd = g.data.get_as_key_mapping(id)
+        local id = s.data.insert(cmd)
+        cmd = s.data.get_as_key_mapping(id)
     elseif cmd_type ~= 'string' then
         error('autocmd(): unsupported cmd type: ' .. cmd_type)
     end
@@ -428,24 +428,24 @@ utils.oneshot_channel = function(timeout, interval)
     assert(type(timeout) == 'number', 'timeout must be a number')
     assert(type(interval) == 'number', 'interval must be a number')
 
-    local g = require('distant.internal.globals')
+    local s = require('distant.internal.state')
     local id = 'oneshot_' .. utils.next_id()
 
     local tx = function(msg)
         local data_str = vim.fn.json_encode(msg)
-        g.data.set(id, data_str)
+        s.data.set(id, data_str)
     end
 
     local rx = function()
         -- Wait for the result to be set, or time out
         vim.fn.wait(
             timeout,
-            function() return g.data.has(id) end,
+            function() return s.data.has(id) end,
             interval
         )
 
         -- Grab and clear our temporary variable if it is set and return it's value
-        local result = g.data.remove(id)
+        local result = s.data.remove(id)
         if result ~= nil and type(result) == 'string' then
             result = vim.fn.json_decode(result)
         end

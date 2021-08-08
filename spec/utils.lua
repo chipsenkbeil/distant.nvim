@@ -1,6 +1,6 @@
 local c = require('spec.config')
 local editor = require('distant.editor')
-local g = require('distant.internal.globals')
+local s = require('distant.internal.state')
 
 local utils = {}
 
@@ -26,9 +26,9 @@ utils.wait_for_session = function(timeout, interval)
     timeout = timeout or c.timeout
     interval = interval or c.timeout_interval
 
-    local status = vim.fn.wait(timeout, function() return g.session() ~= nil end, interval)
+    local status = vim.fn.wait(timeout, function() return s.session() ~= nil end, interval)
     assert(status == 0, 'Session not received in time')
-    return g.session()
+    return s.session()
 end
 
 return utils

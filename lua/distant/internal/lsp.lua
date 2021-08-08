@@ -1,7 +1,15 @@
-local g = require('distant.internal.globals')
+local s = require('distant.internal.state')
 local u = require('distant.internal.utils')
 
-local lsp = {}
+local lsp = {
+    -- Houses LSP clients in the form of
+    --
+    -- {
+    --     id = "...",
+    --     root_dir = "...",
+    -- }
+    clients = {},
+}
 
 --- Wraps `vim.lsp.start_client`, injecting necessary details to run the
 --- LSP binary on the connected remote machine while acquiring and
@@ -18,7 +26,7 @@ lsp.start_client = function(config, opts)
     assert(config.root_dir, 'root_dir is required')
     opts = opts or {}
 
-    local session = assert(g.session(), 'Session not yet established! Launch first!')
+    local session = assert(s.session(), 'Session not yet established! Launch first!')
 
     -- Build our extra arguments for the distant binary
     local args = u.build_arg_str(opts, {'verbose'})
@@ -30,7 +38,7 @@ lsp.start_client = function(config, opts)
     -- The command needs to be wrapped with a prefix that is our distant binary
     -- as we are running the actual lsp server remotely
     local cmd = {
-        g.settings.binary_name,
+        s.settings.binary_name,
         'action',
         '--mode', 'shell',
         '--session', 'environment',

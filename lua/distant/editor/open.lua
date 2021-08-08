@@ -1,5 +1,5 @@
 local fn = require('distant.fn')
-local g = require('distant.internal.globals')
+local s = require('distant.internal.state')
 local u = require('distant.internal.utils')
 local v = require('distant.internal.vars')
 
@@ -14,9 +14,9 @@ local function apply_mappings(buf, mappings)
     local fn_ids = {}
     for lhs, rhs in pairs(mappings) do
         local prefix = 'buf_' .. buf .. 'key_' .. string.gsub(lhs, '.', string.byte) .. '_'
-        local id = g.data.insert(rhs, prefix)
+        local id = s.data.insert(rhs, prefix)
         table.insert(fn_ids, id)
-        local key_mapping = '<Cmd>' .. g.data.get_as_key_mapping(id) .. '<CR>'
+        local key_mapping = '<Cmd>' .. s.data.get_as_key_mapping(id) .. '<CR>'
         vim.api.nvim_buf_set_keymap(buf, 'n', lhs, key_mapping, {
             noremap = true,
             silent = true,
@@ -29,7 +29,7 @@ local function apply_mappings(buf, mappings)
         vim.api.nvim_buf_attach(buf, false, {
             on_detach = function()
                 for _, id in ipairs(fn_ids) do
-                    g.data.remove(id)
+                    s.data.remove(id)
                 end
             end;
         })
@@ -154,7 +154,7 @@ return function(path, opts)
         vim.api.nvim_buf_set_option(buf, 'buftype', 'nofile')
         vim.api.nvim_buf_set_option(buf, 'modifiable', false)
 
-        apply_mappings(buf, g.settings.nav.mappings)
+        apply_mappings(buf, s.settings.dir.mappings)
 
     -- Otherwise, in all other cases we treat this as a remote file
     else
@@ -162,7 +162,7 @@ return function(path, opts)
         -- control where it is going
         vim.api.nvim_buf_set_option(buf, 'buftype', 'acwrite')
 
-        apply_mappings(buf, g.settings.file.mappings)
+        apply_mappings(buf, s.settings.file.mappings)
     end
 
     -- Add stateful information to the buffer, helping keep track of it

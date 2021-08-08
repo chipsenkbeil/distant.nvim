@@ -1,12 +1,12 @@
 local editor = require('distant.editor')
-local g = require('distant.internal.globals')
+local s = require('distant.internal.state')
 local u = require('distant.internal.utils')
 
 return function(opts)
     opts = opts or {}
 
     -- Update our global settings
-    g.settings = u.merge(g.settings, opts)
+    s.settings = u.merge(s.settings, opts)
 
     -- Assign appropriate handlers for distant filetypes
     u.augroup('distant', function()
