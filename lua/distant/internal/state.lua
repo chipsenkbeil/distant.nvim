@@ -1,4 +1,5 @@
 local c = require('distant.internal.constants')
+local s = require('distant.internal.settings')
 local u = require('distant.internal.utils')
 
 local state = {}
@@ -14,81 +15,15 @@ local inner = {
 -- SETTINGS DEFINITION & OPERATIONS
 -------------------------------------------------------------------------------
 
---- Settings for use around the plugin
-state.settings = {
-    -- Path to the local `distant` binary
-    binary_name = c.BINARY_NAME;
-
-    -- Maximum time (in milliseconds) to wait for a request to complete
-    max_timeout = c.MAX_TIMEOUT;
-
-    -- Time (in milliseconds) between checks for the timeout to be reached
-    timeout_interval = c.TIMEOUT_INTERVAL;
-
-    -- Settings that apply when launching the server
-    launch = {
-        -- Control the IP address that the server will bind to
-        bind_server = nil;
-
-        -- Alternative location for the distant binary on the remote machine
-        distant = nil;
-
-        -- Additional arguments to the server when launched (see listen help)
-        extra_server_args = nil;
-
-        -- Identity file to use with ssh
-        identity_file = nil;
-
-        -- Log file to use when running the launch command
-        log_file = nil;
-
-        -- Alternative port to port 22 for use in SSH
-        port = nil;
-
-        -- Maximum time (in seconds) for the server to run with no active connections
-        shutdown_after = nil;
-
-        -- Alternative location for the ssh binary on the local machine
-        ssh = nil;
-
-        -- Username to use when logging into the remote machine via SSH
-        username = nil;
-
-        -- Verbosity level (1 = info, 2 = debug, 3 = trace) for the launch command
-        verbose = 0;
-    };
-
-    -- Settings that apply to the client that is created to interact with the server
-    client = {
-        -- Log file to use with the client
-        log_file = nil;
-
-        -- Verbosity level (1 = info, 2 = debug, 3 = trace) for the client
-        verbose = 0;
-    };
-
-    -- Settings that apply when editing a remote file
-    file = {
-        -- Mappings to apply to remote files
-        mappings = {};
-    };
-
-    -- Settings that apply to the navigation interface
-    dir = {
-        -- Mappings to apply to the navigation interface
-        mappings = {};
-    };
-}
-
---- Retrieve settings for a specific remote machine defined by a label, also
---- applying any default settings
---- @param label string The label associated with the remote server's settings
---- @return table #The settings associated with the remote machine (or empty table)
-state.settings_by_label = function(label)
-    local specific = state.settings.server[label] or {}
-    local default = state.settings.server['*'] or {}
-    return u.merge(default, specific)
+--- Loads into state the settings appropriate for the remote machine with
+--- the given label
+state.load_settings = function(label)
+    state.settings = s.for_label(label)
 end
+
+-- Set default settings so we don't get nil access errors even when no launch
+-- call has been made yet
+state.settings = s.default()
 
 -------------------------------------------------------------------------------
 -- DATA OPERATIONS

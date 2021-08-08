@@ -1,23 +1,15 @@
 local editor = require('distant.editor')
-local s = require('distant.internal.state')
+local settings = require('distant.internal.settings')
 local u = require('distant.internal.utils')
 
 return function(opts)
     opts = opts or {}
 
     -- Update our global settings
-    s.settings = u.merge(s.settings, opts)
+    settings.merge(opts)
 
     -- Assign appropriate handlers for distant filetypes
     u.augroup('distant', function()
-        u.autocmd('FileWriteCmd', 'distant://*', function()
-            vim.api.nvim_err_writeln('FileWriteCmd unsupported')
-        end)
-
-        u.autocmd('FileAppendCmd', 'distant://*', function()
-            vim.api.nvim_err_writeln('FileAppendCmd unsupported')
-        end)
-
         u.autocmd('BufWriteCmd', 'distant://*', function()
             local buf = tonumber(vim.fn.expand('<abuf>'))
             editor.write(buf)

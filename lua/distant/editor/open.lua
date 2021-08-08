@@ -77,7 +77,7 @@ end
 --- @param opts.reload boolean If true, will reload the buffer even if already open
 --- @param opts.timeout number Maximum time to wait for a response (optional)
 --- @param opts.interval number Time in milliseconds to wait between checks for a response (optional)
---- @return number #The handle of the created buffer for the remote file/directory
+--- @return number|nil #The handle of the created buffer for the remote file/directory, or nil if failed
 return function(path, opts)
     assert(type(path) == 'string', 'path must be a string')
     opts = opts or {}
@@ -111,7 +111,12 @@ return function(path, opts)
     -- If path points to a file (or symlink), load its contents as lines
     elseif p.is_file or p.is_symlink then
         local text = fn.read_file_text(p.path, opts)
-        lines = vim.split(text, '\n', true)
+        if text ~= nil then
+            lines = vim.split(text, '\n', true)
+        else
+            u.log_err('Failed to read file: ' .. p.path)
+            return buf
+        end
 
     -- Otherwise, we set ourselves up to create a new, empty file
     else

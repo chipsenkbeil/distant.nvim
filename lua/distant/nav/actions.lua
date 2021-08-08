@@ -35,7 +35,6 @@ actions.up = function()
     local base_path = v.buf.remote_path()
     if base_path ~= nil then
         local parent = u.parent_path(base_path)
-        print('Moving up to ' .. vim.inspect(parent))
         if parent ~= nil then
             editor.open(parent)
         end

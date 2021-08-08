@@ -19,6 +19,9 @@ return function(host, args)
     -- If we are running headless, info will be nil, which is the case for our tests
     local info = vim.api.nvim_list_uis()[1]
 
+    -- Load settings for the particular host
+    s.load_settings(host)
+
     -- Clear any pre-existing session
     s.set_session(nil)
 
