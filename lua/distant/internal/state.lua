@@ -1,6 +1,7 @@
 local c = require('distant.internal.constants')
 local s = require('distant.internal.settings')
 local u = require('distant.internal.utils')
+local v = require('distant.internal.vars')
 
 local state = {}
 
@@ -9,6 +10,7 @@ local inner = {
     client = nil;
     data = {};
     session = nil;
+    lsp_clients = {};
 }
 
 -------------------------------------------------------------------------------
@@ -24,6 +26,150 @@ end
 -- Set default settings so we don't get nil access errors even when no launch
 -- call has been made yet
 state.settings = s.default()
+
+-------------------------------------------------------------------------------
+-- LSP OPERATIONS
+-------------------------------------------------------------------------------
+
+--- Wraps `vim.lsp.start_client`, injecting necessary details to run the
+--- LSP binary on the connected remote machine while acquiring and
+--- visualizing results on the local machine
+---
+--- @param config table The configuration to use with the LSP client,
+---        mirring that of `vim.lsp.start_client`
+--- @param opts table Additional options to use for the distant binary
+---        acting as a proxy such as `log_file` or `verbose`
+--- @return number #The id of the created client
+local function lsp_start_client(config, opts)
+    assert(type(config) == 'table', 'config must be a table')
+    assert(config.cmd, 'cmd is required')
+    assert(config.root_dir, 'root_dir is required')
+    opts = opts or {}
+
+    -- TODO: If no log file is specified for output, we need to make our process quiet
+    --       otherwise invalid data can be fed to the LSP client somehow; this shouldn't
+    --       be the case as our proxy outputs logs into stderr and not stdout, but
+    --       maybe the client is reading both
+    if not opts.log_file then
+        opts.quiet = true
+    end
+
+    local session = assert(state.session(), 'Session not yet established! Launch first!')
+
+    -- Build our extra arguments for the distant binary
+    local args = u.build_arg_str(opts, {'verbose'})
+    if type(opts.verbose) == 'number' and opts.verbose > 0 then
+        args = vim.trim(args .. ' -' .. string.rep('v', opts.verbose))
+    end
+    args = vim.split(args, ' ', true)
+
+    -- The command needs to be wrapped with a prefix that is our distant binary
+    -- as we are running the actual lsp server remotely
+    local cmd = {
+        state.settings.binary_name,
+        'action',
+        '--mode', 'shell',
+        '--session', 'environment',
+    }
+    cmd = vim.list_extend(cmd, args)
+    cmd = vim.list_extend(cmd, {'proc-run', '--'})
+
+    -- Finally add the config command that we are wrapping, transforming a string
+    -- into a list split by space if needed
+    local config_cmd = config.cmd
+    if type(config_cmd) == 'string' then
+        config_cmd = vim.split(config_cmd, ' ', true)
+    end
+    cmd = vim.list_extend(cmd, config_cmd)
+
+    -- Provide our credentials as part of the environment so our proxy
+    -- knows who to talk to and has access to do so
+    local cmd_env = u.merge(config.cmd_env or {}, {
+        ['DISTANT_HOST'] = session.host;
+        ['DISTANT_PORT'] = session.port;
+        ['DISTANT_AUTH_KEY'] = session.auth_key;
+    })
+
+    -- TODO: Followed this based on nvim-lspconfig, but don't yet understand
+    --       the workspace configuration override
+    local capabilities = config.capabilities or vim.lsp.protocol.make_client_capabilities();
+    capabilities = u.merge(capabilities, {
+        workspace = {
+          configuration = true,
+        }
+    })
+
+    -- Start a client where we fill in cmd_cwd with the root dir unless the
+    -- user has provided an explicit override
+    --
+    -- Additionally, we override the config's cmd, cmd_env, and capabilities
+    -- as we take those existing config fields and alter them to work on
+    -- a remote machine
+    return vim.lsp.start_client(u.merge(
+        { cmd_cwd = config.root_dir },
+        config,
+        {
+            cmd = cmd;
+            cmd_env = cmd_env;
+            capabilities = capabilities;
+        }
+    ))
+end
+
+--- Contains operations to apply against LSP instances on remote machines
+state.lsp = {}
+
+--- Connects relevant LSP clients to the provided buffer, optionally
+--- starting clients if needed
+--- @param buf number Handle of the buffer to attach clients to 
+state.lsp.connect = function(buf)
+    local path = v.buf.remote_path(buf)
+
+    -- Only perform a connection if we have connected
+    -- and have a remote path
+    --
+    -- If that's the case, we want to ensure that we only
+    -- start an LSP client once per session as well as
+    -- attach it to a buffer only once (not on enter)
+    if path ~= nil then
+        for label, config in pairs(state.settings.lsp) do
+            -- Only apply clients with a root directory that contains this file
+            if vim.startswith(path, config.root_dir) then
+                -- Check if this lsp is filtered by filetype, and if so make sure that
+                -- this buffer's filetype matches
+                local filetypes = config.filetypes or {}
+                local buf_ft = vim.api.nvim_buf_get_option(buf, 'filetype')
+                if vim.tbl_isempty(filetypes) or vim.tbl_contains(filetypes, buf_ft) then
+                    -- Start the client if it doesn't exist
+                    if inner.lsp_clients[label] == nil then
+                        -- Wrap the exit so we can clear our id tracker
+                        local _on_exit = config.on_exit
+                        local on_exit = function(code, signal, client_id)
+                            inner.lsp_clients[label] = nil
+
+                            if code ~= 0 then
+                                u.log_err('Client terminated: ' .. vim.lsp.client_errors[client_id])
+                            end
+
+                            if type(_on_exit) == 'function' then
+                                _on_exit(code, signal, client_id)
+                            end
+                        end
+
+                        local id = lsp_start_client(u.merge(config, {on_exit = on_exit}))
+                        inner.lsp_clients[label] = id
+                    end
+
+                    -- Attach to our buffer if it isn't already
+                    local client_id = inner.lsp_clients[label]
+                    if not vim.lsp.buf_is_attached(client_id) then
+                        vim.lsp.buf_attach_client(buf, client_id)
+                    end
+                end
+            end
+        end
+    end
+end
 
 -------------------------------------------------------------------------------
 -- DATA OPERATIONS

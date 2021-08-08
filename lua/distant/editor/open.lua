@@ -188,6 +188,9 @@ return function(path, opts)
         --       an explicit function as opposed to the command we're using as don't
         --       have control
         vim.cmd([[ filetype detect ]])
+
+        -- Launch any associated LSP clients
+        s.lsp.connect(buf)
     end
 
     return buf
