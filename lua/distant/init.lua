@@ -1,6 +1,5 @@
 return {
-    action = require('distant.action');
+    editor = require('distant.editor');
     fn = require('distant.fn');
-    session = require('distant.session');
     setup = require('distant.setup');
 }

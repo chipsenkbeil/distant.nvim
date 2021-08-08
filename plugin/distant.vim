@@ -9,13 +9,16 @@ endif
 let g:loaded_distant = 1
 
 " Define our specialized commands that wrap the lua calls
-command! -nargs=* DistantOpen lua require('distant').action.open(<f-args>)
-command! -nargs=* DistantLaunch lua require('distant').action.launch(<f-args>)
-command! -nargs=* DistantMetadata lua require('distant').action.metadata(<f-args>)
-command! -nargs=0 DistantInfo lua require('distant').action.info()
+command! -nargs=* DistantOpen lua require('distant').editor.open(<f-args>)
+command! -nargs=* DistantLaunch lua require('distant').editor.launch(<f-args>)
+command! -nargs=* DistantMetadata lua require('distant').editor.show_metadata(<f-args>)
+command! -nargs=0 DistantSessionInfo lua require('distant').editor.show_session_info()
+command! -nargs=0 DistantSystemInfo lua require('distant').editor.show_system_info()
+
+" TODO: Remove me when done
+command! -nargs=0 DistantTest lua require('distant.internal.lsp').test()
 
 " Define our purely-functional commands that wrap the lua calls
-command! -nargs=0 DistantClearSession lua require('distant').session.clear()
 command! -nargs=* DistantCopy lua require('distant').fn.copy(<f-args>)
 command! -nargs=* DistantMkdir lua require('distant').fn.mkdir(<f-args>)
 command! -nargs=* DistantRemove lua require('distant').fn.remove(<f-args>)

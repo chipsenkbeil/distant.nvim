@@ -1,4 +1,4 @@
-local g = require('distant.internal.globals')
+local s = require('distant.internal.state')
 local u = require('distant.internal.utils')
 
 local fn = {}
@@ -7,13 +7,14 @@ local fn = {}
 ---
 --- @param src string Path to the input file/directory to copy
 --- @param dst string Path to the output file/directory
---- @param timeout number Maximum time to wait for a response
---- @param interval number Time in milliseconds to wait between checks for a response
+--- @param opts.timeout number Maximum time to wait for a response
+--- @param opts.interval number Time in milliseconds to wait between checks for a response
 --- @return boolean result true if succeeded, otherwise false
-fn.copy = function(src, dst, timeout, interval)
+fn.copy = function(src, dst, opts)
+    opts = opts or {}
     local channel = u.oneshot_channel(
-        timeout or g.settings.max_timeout,
-        interval or g.settings.timeout_interval
+        opts.timeout or s.settings.max_timeout,
+        opts.interval or s.settings.timeout_interval
     )
 
     fn.async.copy(src, dst, channel.tx)
@@ -23,37 +24,43 @@ end
 --- Retrieves a list of contents within a remote directory
 ---
 --- @param path string Path to the directory whose contents to list
---- @param depth number Will recursively retrieve all contents up to the specified depth
----        with 0 indicating that depth limit is unlimited 
---- @param absolute boolean If true, will return absolute paths instead of relative paths
---- @param canonicalize boolean If true, will canonicalize paths, meaning following the
+--- @param opts.depth number Will recursively retrieve all contents up to the specified depth
+---        with 0 indicating that depth limit is unlimited
+--- @param opts.absolute boolean If true, will return absolute paths instead of relative paths
+--- @param opts.canonicalize boolean If true, will canonicalize paths, meaning following the
 ---        symlinks; note that to return absolute paths you must set the other option
---- @param timeout number Maximum time to wait for a response
---- @param interval number Time in milliseconds to wait between checks for a response
+--- @param opts.include_root boolean If true, will include the path provided as the root entry
+---        in the response
+--- @param opts.timeout number Maximum time to wait for a response
+--- @param opts.interval number Time in milliseconds to wait between checks for a response
 --- @return table entries A list of entries in the form of
 ---         {'path' = ..., 'file_type' = ..., 'depth' = ...}
 ---         or nil if unsuccessful
-fn.dir_list = function(path, depth, absolute, canonicalize, timeout, interval)
+fn.dir_list = function(path, opts)
+    opts = opts or {}
     local channel = u.oneshot_channel(
-        timeout or g.settings.max_timeout,
-        interval or g.settings.timeout_interval
+        opts.timeout or s.settings.max_timeout,
+        opts.interval or s.settings.timeout_interval
     )
 
-    fn.async.dir_list(path, depth, absolute, canonicalize, channel.tx)
+    fn.async.dir_list(path, opts, channel.tx)
     return channel.rx()
 end
 
 --- Retrieves filesystem metadata about a remote file, directory, or symlink
 ---
 --- @param path string Path to the file, directory, or symlink
---- @param timeout number Maximum time to wait for a response
---- @param interval number Time in milliseconds to wait between checks for a response
---- @return table metadata Table in the following format where `accessed`, `created`, 
+--- @param opts.canonicalize boolean If true, includes a canonicalized version
+---        of the path in the response
+--- @param opts.timeout number Maximum time to wait for a response
+--- @param opts.interval number Time in milliseconds to wait between checks for a response
+--- @return table metadata Table in the following format where `accessed`, `created`,
 ---         and `modified` are optional and may be missing from the table
 --
----         { 
----             file_type = "dir|file|sym_link"; 
----             len = 1234; 
+---         {
+---             canonicalized_path = "...";
+---             file_type = "dir|file|sym_link";
+---             len = 1234;
 ---             readonly = true;
 ---             accessed = 1234;
 ---             created = 1234;
@@ -62,43 +69,46 @@ end
 ---
 ---         `len` is total bytes of file. `accessed`, `created`, and `modified` are
 ---         all in terms in milliseconds since UNIX epoch.
-fn.metadata = function(path, timeout, interval)
+fn.metadata = function(path, opts)
+    opts = opts or {}
     local channel = u.oneshot_channel(
-        timeout or g.settings.max_timeout,
-        interval or g.settings.timeout_interval
+        opts.timeout or s.settings.max_timeout,
+        opts.interval or s.settings.timeout_interval
     )
 
-    fn.async.metadata(path, channel.tx)
+    fn.async.metadata(path, opts, channel.tx)
     return channel.rx()
 end
 
 --- Creates a remote directory
 ---
 --- @param path string Path to the directory to create
---- @param all boolean If true, will recursively all components of path to directory
---- @param timeout number Maximum time to wait for a response
---- @param interval number Time in milliseconds to wait between checks for a response
+--- @param opts.all boolean If true, will recursively all components of path to directory
+--- @param opts.timeout number Maximum time to wait for a response
+--- @param opts.interval number Time in milliseconds to wait between checks for a response
 --- @return boolean result true if succeeded, otherwise false
-fn.mkdir = function(path, all, timeout, interval)
+fn.mkdir = function(path, opts)
+    opts = opts or {}
     local channel = u.oneshot_channel(
-        timeout or g.settings.max_timeout,
-        interval or g.settings.timeout_interval
+        opts.timeout or s.settings.max_timeout,
+        opts.interval or s.settings.timeout_interval
     )
 
-    fn.async.mkdir(path, all, channel.tx)
+    fn.async.mkdir(path, opts, channel.tx)
     return channel.rx()
 end
 
 --- Reads a remote file as text
 ---
 --- @param path string Path to the file to read
---- @param timeout number Maximum time to wait for a response
---- @param interval number Time in milliseconds to wait between checks for a response
+--- @param opts.timeout number Maximum time to wait for a response
+--- @param opts.interval number Time in milliseconds to wait between checks for a response
 --- @return string text file's text, or nil if fails
-fn.read_file_text = function(path, timeout, interval)
+fn.read_file_text = function(path, opts)
+    opts = opts or {}
     local channel = u.oneshot_channel(
-        timeout or g.settings.max_timeout,
-        interval or g.settings.timeout_interval
+        opts.timeout or s.settings.max_timeout,
+        opts.interval or s.settings.timeout_interval
     )
 
     fn.async.read_file_text(path, channel.tx)
@@ -108,17 +118,18 @@ end
 --- Removes a remote file or directory
 ---
 --- @param path string Path to the file or directory to create
---- @param force boolean If true, will remove directories that are non-empty
---- @param timeout number Maximum time to wait for a response
---- @param interval number Time in milliseconds to wait between checks for a response
+--- @param opts.force boolean If true, will remove directories that are non-empty
+--- @param opts.timeout number Maximum time to wait for a response
+--- @param opts.interval number Time in milliseconds to wait between checks for a response
 --- @return boolean result true if succeeded, otherwise false
-fn.remove = function(path, force, timeout, interval)
+fn.remove = function(path, opts)
+    opts = opts or {}
     local channel = u.oneshot_channel(
-        timeout or g.settings.max_timeout,
-        interval or g.settings.timeout_interval
+        opts.timeout or s.settings.max_timeout,
+        opts.interval or s.settings.timeout_interval
     )
 
-    fn.async.remove(path, force, channel.tx)
+    fn.async.remove(path, opts, channel.tx)
     return channel.rx()
 end
 
@@ -126,13 +137,14 @@ end
 ---
 --- @param src string Path to the file or directory to rename
 --- @param dst string Path to the new file or directory
---- @param timeout number Maximum time to wait for a response
---- @param interval number Time in milliseconds to wait between checks for a response
+--- @param opts.timeout number Maximum time to wait for a response
+--- @param opts.interval number Time in milliseconds to wait between checks for a response
 --- @return boolean result true if succeeded, otherwise false
-fn.rename = function(src, dst, timeout, interval)
+fn.rename = function(src, dst, opts)
+    opts = opts or {}
     local channel = u.oneshot_channel(
-        timeout or g.settings.max_timeout,
-        interval or g.settings.timeout_interval
+        opts.timeout or s.settings.max_timeout,
+        opts.interval or s.settings.timeout_interval
     )
 
     fn.async.rename(src, dst, channel.tx)
@@ -143,18 +155,36 @@ end
 ---
 --- @param cmd string Name of the command to run
 --- @param args list Array of arguments to append to the command
---- @param timeout number Maximum time to wait for the program to finish
---- @param interval number Time in milliseconds to wait between checks for program to finish
---- @return table output Table with exit_code, stdout, and stderr fields where 
+--- @param opts.timeout number Maximum time to wait for the program to finish
+--- @param opts.interval number Time in milliseconds to wait between checks for program to finish
+--- @return table output Table with exit_code, stdout, and stderr fields where
 ---         stdout and stderr are lists of individual lines of output, or
 ---         returns nil if timeout
-fn.run = function(cmd, args, timeout, interval)
+fn.run = function(cmd, args, opts)
+    opts = opts or {}
     local channel = u.oneshot_channel(
-        timeout or g.settings.max_timeout,
-        interval or g.settings.timeout_interval
+        opts.timeout or s.settings.max_timeout,
+        opts.interval or s.settings.timeout_interval
     )
 
     fn.async.run(cmd, args, channel.tx)
+    return channel.rx()
+end
+
+--- Requests information about the remote system
+---
+--- @param opts.timeout number Maximum time to wait for the program to finish
+--- @param opts.interval number Time in milliseconds to wait between checks for program to finish
+--- @return table output Table with family, os, arch, current_dir, and main_separator;
+---         or returns nil if timeout
+fn.system_info = function(opts)
+    opts = opts or {}
+    local channel = u.oneshot_channel(
+        opts.timeout or s.settings.max_timeout,
+        opts.interval or s.settings.timeout_interval
+    )
+
+    fn.async.system_info(channel.tx)
     return channel.rx()
 end
 
@@ -162,11 +192,14 @@ end
 ---
 --- @param path string Path to the file to write
 --- @param text string Text to write in the file
+--- @param opts.timeout number Maximum time to wait for the program to finish
+--- @param opts.interval number Time in milliseconds to wait between checks for program to finish
 --- @return boolean result true if succeeded, otherwise false
-fn.write_file_text = function(path, text)
+fn.write_file_text = function(path, text, opts)
+    opts = opts or {}
     local channel = u.oneshot_channel(
-        timeout or g.settings.max_timeout,
-        interval or g.settings.timeout_interval
+        opts.timeout or s.settings.max_timeout,
+        opts.interval or s.settings.timeout_interval
     )
 
     fn.async.write_file_text(path, text, channel.tx)
@@ -185,7 +218,7 @@ fn.async.copy = function(src, dst, cb)
     assert(type(src) == 'string', 'src must be a string')
     assert(type(dst) == 'string', 'dst must be a string')
 
-    g.client():send({
+    s.client():send({
         type = 'copy';
         data = {
             src = src;
@@ -199,27 +232,28 @@ end
 --- Retrieves a list of contents within a remote directory
 ---
 --- @param path string Path to the directory whose contents to list
---- @param depth number Will recursively retrieve all contents up to the specified depth
----        with 0 indicating that depth limit is unlimited 
---- @param absolute boolean If true, will return absolute paths instead of relative paths
---- @param canonicalize boolean If true, will canonicalize paths, meaning following the
+--- @param opts.depth number Will recursively retrieve all contents up to the specified depth
+---        with 0 indicating that depth limit is unlimited
+--- @param opts.absolute boolean If true, will return absolute paths instead of relative paths
+--- @param opts.canonicalize boolean If true, will canonicalize paths, meaning following the
 ---        symlinks; note that to return absolute paths you must set the other option
+--- @param opts.include_root boolean If true, will include the path provided as the root entry
+---        in the response
 --- @param cb function Function that is passed a list of entries in the form of
 ---           {'path' = ..., 'file_type' = ..., 'depth' = ...}
 ---           or nil if unsuccessful
-fn.async.dir_list = function(path, depth, absolute, canonicalize, cb)
+fn.async.dir_list = function(path, opts, cb)
     assert(type(path) == 'string', 'path must be a string')
-    assert(type(depth) == 'number' and depth >= 0, 'depth must be a number >= 0')
-    assert(type(absolute) == 'boolean', 'absolute must be a boolean')
-    assert(type(canonicalize) == 'boolean', 'canonicalize must be a boolean')
+    opts = opts or {}
 
-    g.client():send({
+    s.client():send({
         type = 'dir_read';
         data = {
             path = path;
-            depth = depth;
-            absolute = absolute;
-            canonicalize = canonicalize;
+            depth = opts.depth or 1;
+            absolute = opts.absolute or false;
+            canonicalize = opts.canonicalize or false;
+            include_root = opts.include_root or false;
         };
     }, function(res)
         if res ~= nil and res.type == 'dir_entries' then
@@ -233,13 +267,16 @@ end
 --- Retrieves filesystem metadata about a remote file, directory, or symlink
 ---
 --- @param path string Path to the file, directory, or symlink
+--- @param opts.canonicalize boolean If true, includes a canonicalized version
+---        of the path in the response
 --- @param cb function Function that is passed a table in the following format
----        where `accessed`, `created`, and `modified` are optional and may be
----        missing from the table
+---        where `accessed`, `created`, `modified`, and `canonicalized_path` are
+---        optional and may be missing from the table
 --
----         { 
----             file_type = "dir|file|sym_link"; 
----             len = 1234; 
+---         {
+---             canonicalized_path = "...";
+---             file_type = "dir|file|sym_link";
+---             len = 1234;
 ---             readonly = true;
 ---             accessed = 1234;
 ---             created = 1234;
@@ -249,15 +286,23 @@ end
 ---        `len` is total bytes of file. `accessed`, `created`, and `modified` are
 ---        all in terms in milliseconds since UNIX epoch. If failed, nil will be
 ---        passed instead.
-fn.async.metadata = function(path, cb)
+fn.async.metadata = function(path, opts, cb)
     assert(type(path) == 'string', 'path must be a string')
+    opts = opts or {}
 
-    g.client():send({
+    s.client():send({
         type = 'metadata';
-        data = { path = path };
+        data = {
+            path = path;
+            canonicalize = opts.canonicalize or false;
+        };
     }, function(res)
         if res ~= nil and res.type == 'metadata' then
-            cb(res.data.data)
+            local data = res.data
+            if data.canonicalized_path == vim.NIL then
+                data.canonicalized_path = nil
+            end
+            cb(data)
         else
             cb(nil)
         end
@@ -267,17 +312,18 @@ end
 --- Creates a remote directory
 ---
 --- @param path string Path to the directory to create
---- @param all boolean If true, will recursively all components of path to directory
+--- @param opts.all boolean If true, will recursively all components of path to directory
 --- @param cb function Function that is passed true if successful or false if failed
-fn.async.mkdir = function(path, all, cb)
+fn.async.mkdir = function(path, opts, cb)
     assert(type(path) == 'string', 'path must be a string')
-    all = not (not all)
+    opts = opts or {}
+    opts.all = not (not opts.all)
 
-    g.client():send({
+    s.client():send({
         type = 'dir_create';
         data = {
             path = path;
-            all = all;
+            all = opts.all;
         };
     }, function(res)
         cb(res ~= nil and res.type == 'ok')
@@ -291,7 +337,7 @@ end
 fn.async.read_file_text = function(path, cb)
     assert(type(path) == 'string', 'path must be a string')
 
-    g.client():send({
+    s.client():send({
         type = 'file_read_text';
         data = { path = path };
     }, function(res)
@@ -306,17 +352,18 @@ end
 --- Removes a remote file or directory
 ---
 --- @param path string Path to the file or directory to create
---- @param force boolean If true, will remove directories that are non-empty
+--- @param opts.force boolean If true, will remove directories that are non-empty
 --- @param cb function Function that is passed true if successful or false if failed
-fn.async.remove = function(path, force, cb)
+fn.async.remove = function(path, opts, cb)
     assert(type(path) == 'string', 'path must be a string')
-    force = not (not force)
+    opts = opts or {}
+    opts.force = not (not opts.force)
 
-    g.client():send({
+    s.client():send({
         type = 'remove';
         data = {
             path = path;
-            force = force;
+            force = opts.force;
         };
     }, function(res)
         cb(res ~= nil and res.type == 'ok')
@@ -332,7 +379,7 @@ fn.async.rename = function(src, dst, cb)
     assert(type(src) == 'string', 'src must be a string')
     assert(type(dst) == 'string', 'dst must be a string')
 
-    g.client():send({
+    s.client():send({
         type = 'rename';
         data = {
             src = src;
@@ -396,7 +443,7 @@ fn.async.run = function(cmd, args, cb)
     -- have to store all messages until we do
     local proc_id = nil
     local tmp = {}
-    local broadcast_id = g.client():register_broadcast(function(msg, unregister)
+    local broadcast_id = s.client():register_broadcast(function(msg, unregister)
         if (
             msg.type == 'proc_done' or
             msg.type == 'proc_stdout' or
@@ -412,7 +459,7 @@ fn.async.run = function(cmd, args, cb)
         end
     end)
 
-    g.client():send({
+    s.client():send({
         type = 'proc_run';
         data = {
             cmd = cmd;
@@ -440,11 +487,28 @@ fn.async.run = function(cmd, args, cb)
 
             -- If we already have the result, stop the broadcast and return it
             if done then
-                g.client():unregister_broadcast(broadcast_id)
+                s.client():unregister_broadcast(broadcast_id)
                 wrapped_cb(make_res(make_exit_code(done), tmp))
             end
         else
             wrapped_cb(nil)
+        end
+    end)
+end
+
+--- Requests information about the remote system
+---
+--- @param cb function Function that is passed a table with family, os, arch, current_dir,
+---        and main_separator; or nil if failed
+fn.async.system_info = function(cb)
+    s.client():send({
+        type = 'system_info';
+        data = {[vim.type_idx] = vim.types.dictionary};
+    }, function(res)
+        if res ~= nil and res.type == 'system_info' then
+            cb(res.data)
+        else
+            cb(nil)
         end
     end)
 end
@@ -458,9 +522,9 @@ fn.async.write_file_text = function(path, text, cb)
     assert(type(path) == 'string', 'path must be a string')
     assert(type(text) == 'string', 'text must be a string')
 
-    g.client():send({
+    s.client():send({
         type = 'file_write_text';
-        data = { 
+        data = {
             path = path;
             text = text;
         };

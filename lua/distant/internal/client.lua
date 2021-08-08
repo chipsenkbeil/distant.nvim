@@ -1,4 +1,4 @@
-local g = require('distant.internal.globals')
+local s = require('distant.internal.state')
 local u = require('distant.internal.utils')
 
 --- Represents a client connected to a remote machine
@@ -28,12 +28,12 @@ end
 ---
 --- Note that pre-release and pre-release ver are optional
 function client:version()
-    local raw_version = vim.fn.system(g.settings.binary_name .. ' --version')
+    local raw_version = vim.fn.system(s.settings.binary_name .. ' --version')
     if not raw_version then
         return nil
     end
 
-    local version_string = vim.trim(u.strip_prefix(vim.trim(raw_version), g.settings.binary_name))
+    local version_string = vim.trim(u.strip_prefix(vim.trim(raw_version), s.settings.binary_name))
     if not version_string then
         return nil
     end
@@ -64,12 +64,12 @@ function client:start(opts)
     assert(not self:is_running(), 'client is already running!')
     opts = opts or {}
 
-    if vim.fn.executable(g.settings.binary_name) ~= 1 then
-        u.log_err('Executable ' .. g.settings.binary_name .. ' is not on path')
+    if vim.fn.executable(s.settings.binary_name) ~= 1 then
+        u.log_err('Executable ' .. s.settings.binary_name .. ' is not on path')
         return
     end
 
-    local session = g.session()
+    local session = s.session()
     local env = nil
     if session ~= nil then
         env = {
@@ -88,7 +88,7 @@ function client:start(opts)
         args = vim.trim(args .. ' -' .. string.rep('v', opts.verbose))
     end
 
-    local cmd = vim.trim(g.settings.binary_name .. ' action ' .. args)
+    local cmd = vim.trim(s.settings.binary_name .. ' action ' .. args)
     local handle = u.job_start(cmd, {
         env = env;
         on_success = function()
@@ -158,8 +158,8 @@ end
 --- a result (default timeout = 1000, interval = 200)
 function client:send_wait(msg, timeout, interval)
     local channel = u.oneshot_channel(
-        timeout or g.settings.max_timeout,
-        interval or g.settings.timeout_interval
+        timeout or s.settings.max_timeout,
+        interval or s.settings.timeout_interval
     )
 
     self:send(msg, function(data)
@@ -173,8 +173,8 @@ end
 --- to `timeout` milliseconds, checking every `interval` milliseconds for a
 --- result (default timeout = 1000, interval = 200), and report an error if not okay
 function client:send_wait_ok(msg, timeout, interval)
-    timeout = timeout or g.settings.max_timeout
-    interval = interval or g.settings.timeout_interval
+    timeout = timeout or s.settings.max_timeout
+    interval = interval or s.settings.timeout_interval
     local result = self:send_wait(msg, timeout, interval)
     if result == nil then
         u.log_err('Max timeout ('..tostring(timeout)..') reached waiting for result')
