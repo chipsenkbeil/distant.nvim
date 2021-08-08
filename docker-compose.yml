@@ -1,0 +1,14 @@
+version: "3.9"
+services:
+  server:
+    build: .
+    command: sudo /usr/sbin/sshd -D -e
+  client:
+    build: .
+    depends_on:
+      - server
+    environment:
+      - DISTANT_HOST=server
+      - DISTANT_PORT=22
+      - DISTANT_BIN=/usr/local/bin/distant
+    command: sh -c "cd app && make test"

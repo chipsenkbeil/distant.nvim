@@ -2,6 +2,9 @@ local g = require('distant.internal.globals')
 local ui = require('distant.internal.ui')
 local u = require('distant.internal.utils')
 
+local DEFAULT_WIDTH = 80
+local DEFAULT_HEIGHT = 8
+
 --- Launches a new instance of the distance binary on the remote machine and sets
 --- up a session so clients are able to communicate with it
 ---
@@ -13,23 +16,8 @@ return function(host, args)
     assert(type(host) == 'string', 'Missing or invalid host argument')
     args = args or {}
 
-    local buf_h = vim.api.nvim_create_buf(false, true)
-    assert(buf_h ~= 0, 'Failed to create buffer for launch')
-
+    -- If we are running headless, info will be nil, which is the case for our tests
     local info = vim.api.nvim_list_uis()[1]
-    local width = 80
-    local height = 8
-    local win = vim.api.nvim_open_win(buf_h, 1, {
-        relative = 'editor';
-        width = width;
-        height = height;
-        col = (info.width / 2) - (width / 2);
-        row = (info.height / 2) - (height / 2);
-        anchor = 'NW';
-        style = 'minimal';
-        border = 'single';
-        noautocmd = true;
-    })
 
     -- Clear any pre-existing session
     g.set_session(nil)
@@ -50,7 +38,35 @@ return function(host, args)
         args = vim.trim(args .. ' -' .. string.rep('v', args.verbose))
     end
 
-    local code = vim.fn.termopen(
+    -- If we have a visual way to present, do so
+    local run = nil
+    local win = nil
+    if info ~= nil then
+        local buf = vim.api.nvim_create_buf(false, true)
+        assert(buf ~= 0, 'Failed to create buffer for launch')
+
+        local width = DEFAULT_WIDTH
+        local height = DEFAULT_HEIGHT
+        win = vim.api.nvim_open_win(buf, 1, {
+            relative = 'editor';
+            width = width;
+            height = height;
+            col = (info.width / 2) - (width / 2);
+            row = (info.height / 2) - (height / 2);
+            anchor = 'NW';
+            style = 'minimal';
+            border = 'single';
+            noautocmd = true;
+        })
+
+        run = vim.fn.termopen
+
+    -- Otherwise, we will run the job in the background, designed for headless mode
+    else
+        run = vim.fn.jobstart
+    end
+
+    local code = run(
         g.settings.binary_name .. ' launch ' .. host .. ' ' .. cmd_args,
         {
             stdout_buffered = true;
@@ -81,7 +97,10 @@ return function(host, args)
                 end
             end;
             on_exit = function(_, code, _)
-                vim.api.nvim_win_close(win, false)
+                if win ~= nil then
+                    vim.api.nvim_win_close(win, false)
+                end
+
                 if code ~= 0 then
                     local lines = u.read_lines_and_remove(err_log)
 
