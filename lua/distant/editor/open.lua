@@ -77,6 +77,7 @@ end
 --- @param opts.reload boolean If true, will reload the buffer even if already open
 --- @param opts.timeout number Maximum time to wait for a response (optional)
 --- @param opts.interval number Time in milliseconds to wait between checks for a response (optional)
+--- @return number #The handle of the created buffer for the remote file/directory
 return function(path, opts)
     assert(type(path) == 'string', 'path must be a string')
     opts = opts or {}
@@ -84,7 +85,8 @@ return function(path, opts)
     local p = check_path(path, opts)
 
     -- Figure out the buffer name, which is just its full path with
-    -- a schema prepended
+    -- a schema prepended; also, determine if we already have a buffer
+    -- with the matching name
     local buf_name = 'distant://' .. p.path
     local buf = vim.fn.bufnr(buf_name)
     local buf_exists = buf ~= -1
@@ -93,7 +95,7 @@ return function(path, opts)
     -- switch to it
     if buf_exists and not opts.reload then
         vim.api.nvim_win_set_buf(0, buf)
-        return
+        return buf
     end
 
     -- If the path points to a directory, load the entries as lines
@@ -136,7 +138,7 @@ return function(path, opts)
     -- If our buffer already existed, this is all we want to do as everything
     -- beyond this point is first-time setup
     if buf_exists then
-        return
+        return buf
     end
 
     -- Set the buffer name to include a schema, which will trigger our
@@ -182,4 +184,6 @@ return function(path, opts)
         --       have control
         vim.cmd([[ filetype detect ]])
     end
+
+    return buf
 end

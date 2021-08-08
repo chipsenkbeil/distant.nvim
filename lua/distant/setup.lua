@@ -1,7 +1,6 @@
+local editor = require('distant.editor')
 local g = require('distant.internal.globals')
-local fn = require('distant.fn')
 local u = require('distant.internal.utils')
-local v = require('distant.internal.vars')
 
 return function(opts)
     opts = opts or {}
@@ -21,21 +20,26 @@ return function(opts)
 
         u.autocmd('BufWriteCmd', 'distant://*', function()
             local buf = tonumber(vim.fn.expand('<abuf>'))
+            editor.write(buf)
+        end)
 
-            -- Load the remote path from the buffer being saved
-            local path = v.buf.remote_path(buf)
+        u.autocmd('BufReadCmd', 'distant://*', function()
+            local fname = vim.fn.expand('<afile>')
+            local path = u.strip_prefix(fname, 'distant://')
+            local buf = editor.open(path, {reload = true})
 
-            -- Load the contents of the buffer
-            -- TODO: This only works if the buffer is not hidden, but is
-            --       this a problem for the write cmd since the buffer
-            --       shouldn't be hidden?
-            local lines = vim.fn.getbufline(buf, 1, '$')
-
-            -- Write the buffer contents
-            fn.write_file_text(path, table.concat(lines, '\n'))
-
-            -- Update buffer as no longer modified
-            vim.api.nvim_buf_set_option(buf, 'modified', false)
+            -- NOTE: editor.open a new buffer or jumps to an existing buffer that
+            --       uses the canonicalized path, so we need to close the any buffer
+            --       that is open with the non-canonicalized name
+            if fname ~= vim.api.nvim_buf_get_name(buf) then
+                buf = vim.fn.bufnr(fname)
+                if buf ~= -1 then
+                    vim.api.nvim_buf_delete(buf, {
+                        force = true,
+                        unload = false,
+                    })
+                end
+            end
         end)
     end)
 end

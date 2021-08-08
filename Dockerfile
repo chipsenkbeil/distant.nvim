@@ -12,8 +12,7 @@ RUN apk add --update --no-cache \
     sudo \
     openssh openrc \
     build-base rustup \
-    git \
-    curl
+    git
 
 # Configure a non-root user with a password that matches its name
 # as we need a user with a password even when we are providing
