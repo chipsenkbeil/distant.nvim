@@ -99,19 +99,45 @@ local function lsp_start_client(config, opts)
         }
     })
 
-    -- Start a client where we fill in cmd_cwd with the root dir unless the
-    -- user has provided an explicit override
-    --
-    -- Additionally, we override the config's cmd, cmd_env, and capabilities
+    -- NOTE: root_dir is enforced as a directory on the local machine, but now that our
+    --       lsp instances are remote, there is no guarantee that the path is a directory
+    --       or exists at all. To that end, we must explicitly remove root_dir AND
+    --       the workspace_folders (if provided) and fill in '/' as the root_dir, swapping
+    --       back in the actual root dir and workspace folders during pre-init
+    --       in the form of `rootPath`, `rootUri`, and `workspaceFolders`
+    local function before_init(params, _config)
+        params.rootPath = config.root_dir
+        params.rootUri = vim.uri_from_fname(config.root_dir)
+
+        if not config.workspace_folders then
+            params.workspaceFolders = {{
+                uri = vim.uri_from_fname(config.root_dir);
+                name = string.format('%s', config.root_dir);
+            }}
+        else
+            params.workspaceFolders = config.workspace_folders
+        end
+
+        if type(config.before_init) == 'function' then
+            config.before_init(params, _config)
+        end
+    end
+
+    -- Override the config's cmd, cmd_env, and capabilities
     -- as we take those existing config fields and alter them to work on
     -- a remote machine
     return vim.lsp.start_client(u.merge(
-        { cmd_cwd = config.root_dir },
         config,
         {
+            before_init = before_init;
             cmd = cmd;
             cmd_env = cmd_env;
             capabilities = capabilities;
+
+            -- Must zero these out to ensure that we pass validation
+            -- TODO: Support Windows local machine
+            root_dir = '/';
+            workspace_folders = nil;
         }
     ))
 end
@@ -121,7 +147,7 @@ state.lsp = {}
 
 --- Connects relevant LSP clients to the provided buffer, optionally
 --- starting clients if needed
---- @param buf number Handle of the buffer to attach clients to 
+--- @param buf number Handle of the buffer where clients will attach
 state.lsp.connect = function(buf)
     local path = v.buf.remote_path(buf)
 
@@ -143,7 +169,6 @@ state.lsp.connect = function(buf)
                     -- Start the client if it doesn't exist
                     if inner.lsp_clients[label] == nil then
                         -- Wrap the exit so we can clear our id tracker
-                        local _on_exit = config.on_exit
                         local on_exit = function(code, signal, client_id)
                             inner.lsp_clients[label] = nil
 
@@ -151,12 +176,14 @@ state.lsp.connect = function(buf)
                                 u.log_err('Client terminated: ' .. vim.lsp.client_errors[client_id])
                             end
 
-                            if type(_on_exit) == 'function' then
-                                _on_exit(code, signal, client_id)
+                            if type(config.on_exit) == 'function' then
+                                config.on_exit(code, signal, client_id)
                             end
                         end
 
-                        local id = lsp_start_client(u.merge(config, {on_exit = on_exit}))
+                        -- Support lsp-specific opts
+                        local opts = config.opts or {}
+                        local id = lsp_start_client(u.merge(config, {on_exit = on_exit}), opts)
                         inner.lsp_clients[label] = id
                     end
 

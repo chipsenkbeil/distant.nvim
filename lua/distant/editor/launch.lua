@@ -140,7 +140,10 @@ return function(host, args)
                 end
 
                 if s.session() == nil then
-                    ui.show_msg('Failed to acquire session!', 'err')
+                    ui.show_msg({
+                        'Failed to acquire session!',
+                        'Errors logged to ' .. err_log,
+                    }, 'err')
                 else
                     -- Warm up our client if we were successful
                     s.client()
