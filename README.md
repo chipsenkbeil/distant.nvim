@@ -6,6 +6,9 @@ enables users to edit remote files from the comfort of their local environment.
 - **Requires neovim 0.5+**
 - **Requires distant 0.9+**
 
+🚧 **(Alpha stage software) This plugin is in rapid development and may
+break or change frequently!** 🚧
+
 ## Installation
 
 Using [packer.nvim](https://github.com/wbthomason/packer.nvim)
