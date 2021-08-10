@@ -134,10 +134,21 @@ function client:stop()
     self.__state.callbacks = {}
 end
 
---- Send a message to the remote machine, invoking the provided callback with the
+--- Send one or more messages to the remote machine, invoking the provided callback with the
 --- response once it is received
-function client:send(msg, cb)
+---
+--- Supports the following options:
+---
+--- * unaltered: when true, the callback will not be wrapped in the situation where there is
+---   a single request payload entry to then return a single response payload entry
+function client:send(msgs, cb, opts)
     assert(self:is_running(), 'client is not running!')
+    opts = opts or {}
+
+    local payload = msgs
+    if not vim.tbl_islist(payload) then
+        payload = {payload}
+    end
 
     -- Build a full message that wraps the provided message as the payload and
     -- includes an id that our client uses when relaying a response for the
@@ -145,37 +156,50 @@ function client:send(msg, cb)
     local full_msg = {
         tenant = self.__state.tenant;
         id = u.next_id();
-        payload = msg;
+        payload = payload;
     }
 
+    -- Store a callback based on our payload length
+    --
+    -- If we send a single message, then we expect a single message back in the
+    -- payload's entry and want to adjust the payload as such
+    --
+    -- Otherwise, we leave as is and get a list as our payload
+    local callback = cb
+    if #payload == 1 and not opts.unaltered then
+        callback = function(entries)
+            cb(entries[1])
+        end
+    end
+    self.__state.callbacks[full_msg.id] = callback
+
     local json = u.compress(vim.fn.json_encode(full_msg)) .. '\n'
-    self.__state.callbacks[full_msg.id] = cb
     self.__state.handle.write(json)
 end
 
---- Send a message to the remote machine and wait synchronously for the result
+--- Send one or more messages to the remote machine and wait synchronously for the result
 --- up to `timeout` milliseconds, checking every `interval` milliseconds for
 --- a result (default timeout = 1000, interval = 200)
-function client:send_wait(msg, timeout, interval)
+function client:send_wait(msgs, opts)
+    opts = opts or {}
     local channel = u.oneshot_channel(
-        timeout or s.settings.max_timeout,
-        interval or s.settings.timeout_interval
+        opts.timeout or s.settings.max_timeout,
+        opts.interval or s.settings.timeout_interval
     )
 
-    self:send(msg, function(data)
+    self:send(msgs, function(data)
         channel.tx(data)
     end)
 
     return channel.rx()
 end
 
---- Send a message to the remote machine, wait synchronously for the result up
+--- Send one or more messages to the remote machine, wait synchronously for the result up
 --- to `timeout` milliseconds, checking every `interval` milliseconds for a
 --- result (default timeout = 1000, interval = 200), and report an error if not okay
-function client:send_wait_ok(msg, timeout, interval)
-    timeout = timeout or s.settings.max_timeout
-    interval = interval or s.settings.timeout_interval
-    local result = self:send_wait(msg, timeout, interval)
+function client:send_wait_ok(msgs, opts)
+    local timeout = opts.timeout or s.settings.max_timeout
+    local result = self:send_wait(msgs, opts)
     if result == nil then
         u.log_err('Max timeout ('..tostring(timeout)..') reached waiting for result')
     elseif result.type == 'error' then
