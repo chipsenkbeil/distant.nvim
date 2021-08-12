@@ -12,9 +12,13 @@ return function(path, opts)
     assert(type(path) == 'string', 'path must be a string')
     opts = opts or {}
 
-    local metadata = fn.metadata(path, opts)
+    local err, metadata = fn.metadata(path, opts)
     if metadata == nil then
-        ui.show_msg(path .. ' does not exist', 'err')
+        local msg = {path .. ' does not exist'}
+        if err then
+            table.insert(msg, err)
+        end
+        ui.show_msg(msg, 'err')
         return
     end
 

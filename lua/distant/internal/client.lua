@@ -182,16 +182,16 @@ end
 --- a result (default timeout = 1000, interval = 200)
 function client:send_wait(msgs, opts)
     opts = opts or {}
-    local channel = u.oneshot_channel(
+    local tx, rx = u.oneshot_channel(
         opts.timeout or s.settings.max_timeout,
         opts.interval or s.settings.timeout_interval
     )
 
     self:send(msgs, function(data)
-        channel.tx(data)
+        tx(data)
     end)
 
-    return channel.rx()
+    return rx()
 end
 
 --- Send one or more messages to the remote machine, wait synchronously for the result up

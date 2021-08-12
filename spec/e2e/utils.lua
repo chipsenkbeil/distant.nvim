@@ -1,4 +1,4 @@
-local c = require('spec.config')
+local c = require('spec.e2e.config')
 local editor = require('distant.editor')
 local s = require('distant.internal.state')
 

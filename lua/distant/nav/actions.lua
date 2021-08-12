@@ -65,10 +65,17 @@ actions.mkdir = function()
         end
 
         local path = u.join_path(base_path, name)
-        if fn.mkdir(path, {all = true}) then
+        local err, success = fn.mkdir(path, {all = true})
+
+        if success then
             editor.open(base_path, {reload = true})
         else
-            u.log_err('Failed to create ' .. path)
+            local msg = 'Failed to create ' .. path
+            if err then
+                msg = msg .. ': ' .. err
+            end
+
+            u.log_err(msg)
         end
     end
 end
@@ -84,10 +91,17 @@ actions.rename = function()
                 return
             end
 
-            if fn.rename(old_path, new_path) then
+            local err, success = fn.rename(old_path, new_path)
+
+            if success then
                 editor.open(base_path, {reload = true})
             else
-                u.log_err('Failed to rename ' .. old_path .. ' to ' .. new_path)
+                local msg = 'Failed to rename ' .. old_path .. ' to ' .. new_path
+                if err then
+                    msg = msg .. ': ' .. err
+                end
+
+                u.log_err(msg)
             end
         end
     end
@@ -108,10 +122,17 @@ actions.remove = function(opts)
                 end
             end
 
-            if fn.remove(path, opts) then
+            local err, success = fn.remove(path, opts)
+
+            if success then
                 editor.open(base_path, {reload = true})
             else
-                u.log_err('Failed to remove ' .. path)
+                local msg = 'Failed to remove ' .. path
+                if err then
+                    msg = msg .. ': ' .. err
+                end
+
+                u.log_err(msg)
             end
         end
     end

@@ -9,7 +9,9 @@ return function(opts)
     opts = opts or {}
 
     local indent = '    '
-    local info = fn.system_info(opts)
+    local err, info = fn.system_info(opts)
+    assert(not err, err)
+
     if info ~= nil then
         ui.show_msg({
             '= System Info =';

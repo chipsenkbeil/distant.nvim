@@ -1,8 +1,6 @@
 local editor = require('distant.editor')
 local settings = require('distant.internal.settings')
-local s = require('distant.internal.state')
 local u = require('distant.internal.utils')
-local v = require('distant.internal.vars')
 
 return function(opts)
     opts = opts or {}

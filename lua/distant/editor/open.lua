@@ -44,7 +44,7 @@ end
 --- @return table #Table containing `path`, `is_dir`, `is_file`, `is_symlink`, and `missing` fields
 local function check_path(path, opts)
     -- We need to figure out if we are working with a file or directory
-    local metadata = fn.metadata(path, u.merge(opts, {canonicalize = true}))
+    local _, metadata = fn.metadata(path, u.merge(opts, {canonicalize = true}))
 
     local missing = metadata == nil
     local is_dir = not missing and metadata.file_type == 'dir'
@@ -93,7 +93,9 @@ local function create_or_populate_buf(buf, lines)
 end
 
 local function load_buf_from_file(path, buf, opts)
-    local text = fn.read_file_text(path, opts)
+    local err, text = fn.read_file_text(path, opts)
+    assert(not err, err)
+
     local lines
     if text ~= nil then
         lines = vim.split(text, '\n', true)
@@ -153,7 +155,9 @@ local function attach_buf_autocmds(buf)
 end
 
 local function load_buf_from_dir(path, buf, opts)
-    local entries = fn.dir_list(path, opts)
+    local err, entries = fn.dir_list(path, opts)
+    assert(not err, err)
+
     local lines = u.filter_map(entries, function(entry)
         if entry.depth > 0 then
             return entry.path

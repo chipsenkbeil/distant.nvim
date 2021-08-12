@@ -12,12 +12,29 @@ help: ## Display help information
 	@printf 'usage: make [target] ...\n\ntargets:\n'
 	@egrep '^(.+)\:\ .*##\ (.+)' ${MAKEFILE_LIST} | sed 's/:.*##/#/' | column -t -c 2 -s '#'
 
-test: vendor ## Runs tests in a headless neovim instance
+test: test-unit test-e2e ## Runs all tests in a headless neovim instance
+
+test-unit: vendor ## Runs unit tests in a headless neovim instance
 	@nvim \
 		--headless \
 		--noplugin \
 		-u spec/spec.vim \
-		-c "PlenaryBustedDirectory spec/ { minimal_init = 'spec/spec.vim' }"
+		-c "PlenaryBustedDirectory spec/unit/ { minimal_init = 'spec/spec.vim' }"
+
+test-e2e: vendor ## Runs e2e tests in a headless neovim instance
+	@nvim \
+		--headless \
+		--noplugin \
+		-u spec/spec.vim \
+		-c "PlenaryBustedDirectory spec/e2e/ { minimal_init = 'spec/spec.vim' }"
+
+test-docker: ## Runs all tests using a pair of docker containers that have shared SSH keys
+	@docker-compose build
+	@docker-compose up -d server
+	@docker-compose run client
+	@docker-compose rm -f client
+	@docker-compose stop server
+	@docker-compose rm -f server
 
 # Pulls in all of our dependencies for tests
 vendor: vendor/plenary.nvim

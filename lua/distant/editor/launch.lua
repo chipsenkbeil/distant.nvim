@@ -77,7 +77,7 @@ return function(host, args)
                 raw_data = data
                 for _, line in pairs(data) do
                     line = vim.trim(line)
-                    if u.starts_with(line, 'DISTANT DATA') then
+                    if vim.startswith(line, 'DISTANT DATA') then
                         local tokens = vim.split(line, ' ', true)
                         local session = {
                             host = tokens[3];
@@ -118,7 +118,7 @@ return function(host, args)
                             ))
 
                             -- Only keep error lines and remove the ERROR prefix
-                            if u.starts_with(line, 'ERROR') then
+                            if vim.startswith(line, 'ERROR') then
                                 return vim.trim(string.sub(line, 6))
                             end
                         end)

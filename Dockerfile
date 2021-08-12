@@ -51,7 +51,7 @@ RUN sudo mkdir -p /var/run/sshd /run/openrc \
 
 # Install distant binary and make sure its in a path for everyone
 RUN source /home/$user/.cargo/env \
-    && cargo install distant \
+    && cargo install --version 0.10.0 distant \
     && sudo mv /home/$user/.cargo/bin/distant /usr/local/bin/distant
 
 # Install our repository within a subdirectory of home

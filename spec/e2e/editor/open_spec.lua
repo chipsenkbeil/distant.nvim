@@ -1,5 +1,5 @@
 local editor = require('distant.editor')
-local u = require('spec.utils')
+local u = require('spec.e2e.utils')
 
 describe('editor.open', function()
    before_each(function()
@@ -8,7 +8,7 @@ describe('editor.open', function()
    end)
 
    it('should open a file and set appropriate configuration', function()
-      editor.open('spec/fixtures/test.txt')
+      editor.open('spec/e2e/fixtures/test.txt')
 
       local buf_lines = vim.fn.getbufline('%', 1, '$')
       assert.are.same({

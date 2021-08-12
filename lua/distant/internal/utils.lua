@@ -16,6 +16,8 @@ local utils = {}
 ---
 --- Returns the string representing the arguments
 utils.build_arg_str = function(args, ignore)
+    assert(type(args) == 'table', 'args must be a table')
+
     local s = ''
     ignore = ignore or {}
 
@@ -25,7 +27,7 @@ utils.build_arg_str = function(args, ignore)
             local name = k:gsub('_', '-')
             if type(v) == 'boolean' then
                 s = s .. ' --' .. name
-            elseif type(v) == 'number' or type(v) == 'string' then
+            elseif type(v) == 'number' or (type(v) == 'string' and string.len(v) > 0) then
                 s = s .. ' --' .. name .. ' ' .. v
             end
         end
@@ -323,16 +325,6 @@ utils.deepcopy = function(orig, copies)
     return copy
 end
 
---- Checks if string begins with start string
---- From http://lua-users.org/wiki/StringRecipes
----
---- @param str string The string whose content to check
---- @param start string The expected beginning
---- @return boolean result True if a match, otherwise false
-utils.starts_with = function(str, start)
-    return str:sub(1, #start) == start
-end
-
 --- Produces a table of N lines all with the same text
 ---
 --- @param n number The total number of lines to produce
@@ -396,7 +388,7 @@ end
 utils.parent_path = function(path)
     -- Pattern from https://stackoverflow.com/a/12191225/3164172
     local parent = string.match(path, '(.-)([^\\/]-%.?([^%.\\/]*))$')
-    if parent ~= nil and parent ~= '' then
+    if parent ~= nil and parent ~= '' and parent ~= path then
         return parent
     end
 end
@@ -424,43 +416,44 @@ end
 ---
 --- @param timeout number is the milliseconds that rx will wait
 --- @param interval number is the milliseconds to wait inbetween checking for a message
+--- @return function tx, function rx #tx sends the value and rx receives the value
 utils.oneshot_channel = function(timeout, interval)
     assert(type(timeout) == 'number', 'timeout must be a number')
     assert(type(interval) == 'number', 'interval must be a number')
 
-    local s = require('distant.internal.state')
-    local id = 'oneshot_' .. utils.next_id()
+    -- Will store our result
+    local data
 
-    local tx = function(msg)
-        local data_str = vim.fn.json_encode(msg)
-        s.data.set(id, data_str)
+    local tx = function(...)
+        data = {...}
     end
 
     local rx = function()
         -- Wait for the result to be set, or time out
         vim.fn.wait(
             timeout,
-            function() return s.data.has(id) end,
+            function() return data ~= nil end,
             interval
         )
 
         -- Grab and clear our temporary variable if it is set and return it's value
-        local result = s.data.remove(id)
-        if result ~= nil and type(result) == 'string' then
-            result = vim.fn.json_decode(result)
+        local result = data
+        data = nil
+
+        -- Add our error to beginning of the result list
+        if not vim.tbl_islist(result) then
+            local err = 'Timeout of ' .. timeout .. ' exceeded!'
+            result = {err, result}
+
+        -- Otherwise, add our error argument to the front
+        else
+            table.insert(result, 1, false)
         end
 
-        if result == vim.NIL then
-            result = nil
-        end
-
-        return result
+        return unpack(result)
     end
 
-    return {
-        tx = tx;
-        rx = rx;
-    }
+    return tx, rx
 end
 
 return utils

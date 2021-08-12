@@ -18,7 +18,8 @@ return function(buf, opts)
         local lines = vim.fn.getbufline(buf, 1, '$')
 
         -- Write the buffer contents
-        fn.write_file_text(path, table.concat(lines, '\n'), opts)
+        local err, _ = fn.write_file_text(path, table.concat(lines, '\n'), opts)
+        assert(not err, err)
 
         -- Update buffer as no longer modified
         vim.api.nvim_buf_set_option(buf, 'modified', false)

@@ -3,6 +3,10 @@ local u = require('distant.internal.utils')
 
 local fn = {}
 
+-------------------------------------------------------------------------------
+-- SYNC FUNCTIONS
+-------------------------------------------------------------------------------
+
 --- Copies a remote file or directory to a new location
 ---
 --- @param src string Path to the input file/directory to copy
@@ -12,13 +16,14 @@ local fn = {}
 --- @return boolean result true if succeeded, otherwise false
 fn.copy = function(src, dst, opts)
     opts = opts or {}
-    local channel = u.oneshot_channel(
+    local tx, rx = u.oneshot_channel(
         opts.timeout or s.settings.max_timeout,
         opts.interval or s.settings.timeout_interval
     )
 
-    fn.async.copy(src, dst, channel.tx)
-    return channel.rx()
+    fn.async.copy(src, dst, tx)
+    local err1, err2, result = rx()
+    return err1 or err2, result
 end
 
 --- Retrieves a list of contents within a remote directory
@@ -38,13 +43,14 @@ end
 ---         or nil if unsuccessful
 fn.dir_list = function(path, opts)
     opts = opts or {}
-    local channel = u.oneshot_channel(
+    local tx, rx = u.oneshot_channel(
         opts.timeout or s.settings.max_timeout,
         opts.interval or s.settings.timeout_interval
     )
 
-    fn.async.dir_list(path, opts, channel.tx)
-    return channel.rx()
+    fn.async.dir_list(path, opts, tx)
+    local err1, err2, result = rx()
+    return err1 or err2, result
 end
 
 --- Retrieves filesystem metadata about a remote file, directory, or symlink
@@ -71,13 +77,14 @@ end
 ---         all in terms in milliseconds since UNIX epoch.
 fn.metadata = function(path, opts)
     opts = opts or {}
-    local channel = u.oneshot_channel(
+    local tx, rx = u.oneshot_channel(
         opts.timeout or s.settings.max_timeout,
         opts.interval or s.settings.timeout_interval
     )
 
-    fn.async.metadata(path, opts, channel.tx)
-    return channel.rx()
+    fn.async.metadata(path, opts, tx)
+    local err1, err2, result = rx()
+    return err1 or err2, result
 end
 
 --- Creates a remote directory
@@ -89,13 +96,14 @@ end
 --- @return boolean result true if succeeded, otherwise false
 fn.mkdir = function(path, opts)
     opts = opts or {}
-    local channel = u.oneshot_channel(
+    local tx, rx = u.oneshot_channel(
         opts.timeout or s.settings.max_timeout,
         opts.interval or s.settings.timeout_interval
     )
 
-    fn.async.mkdir(path, opts, channel.tx)
-    return channel.rx()
+    fn.async.mkdir(path, opts, tx)
+    local err1, err2, result = rx()
+    return err1 or err2, result
 end
 
 --- Reads a remote file as text
@@ -106,13 +114,14 @@ end
 --- @return string text file's text, or nil if fails
 fn.read_file_text = function(path, opts)
     opts = opts or {}
-    local channel = u.oneshot_channel(
+    local tx, rx = u.oneshot_channel(
         opts.timeout or s.settings.max_timeout,
         opts.interval or s.settings.timeout_interval
     )
 
-    fn.async.read_file_text(path, channel.tx)
-    return channel.rx()
+    fn.async.read_file_text(path, tx)
+    local err1, err2, result = rx()
+    return err1 or err2, result
 end
 
 --- Removes a remote file or directory
@@ -124,13 +133,14 @@ end
 --- @return boolean result true if succeeded, otherwise false
 fn.remove = function(path, opts)
     opts = opts or {}
-    local channel = u.oneshot_channel(
+    local tx, rx = u.oneshot_channel(
         opts.timeout or s.settings.max_timeout,
         opts.interval or s.settings.timeout_interval
     )
 
-    fn.async.remove(path, opts, channel.tx)
-    return channel.rx()
+    fn.async.remove(path, opts, tx)
+    local err1, err2, result = rx()
+    return err1 or err2, result
 end
 
 --- Renames a remote file or directory
@@ -142,13 +152,14 @@ end
 --- @return boolean result true if succeeded, otherwise false
 fn.rename = function(src, dst, opts)
     opts = opts or {}
-    local channel = u.oneshot_channel(
+    local tx, rx = u.oneshot_channel(
         opts.timeout or s.settings.max_timeout,
         opts.interval or s.settings.timeout_interval
     )
 
-    fn.async.rename(src, dst, channel.tx)
-    return channel.rx()
+    fn.async.rename(src, dst, tx)
+    local err1, err2, result = rx()
+    return err1 or err2, result
 end
 
 --- Executes a remote program
@@ -162,13 +173,14 @@ end
 ---         returns nil if timeout
 fn.run = function(cmd, args, opts)
     opts = opts or {}
-    local channel = u.oneshot_channel(
+    local tx, rx = u.oneshot_channel(
         opts.timeout or s.settings.max_timeout,
         opts.interval or s.settings.timeout_interval
     )
 
-    fn.async.run(cmd, args, channel.tx)
-    return channel.rx()
+    fn.async.run(cmd, args, tx)
+    local err1, err2, result = rx()
+    return err1 or err2, result
 end
 
 --- Requests information about the remote system
@@ -179,13 +191,14 @@ end
 ---         or returns nil if timeout
 fn.system_info = function(opts)
     opts = opts or {}
-    local channel = u.oneshot_channel(
+    local tx, rx = u.oneshot_channel(
         opts.timeout or s.settings.max_timeout,
         opts.interval or s.settings.timeout_interval
     )
 
-    fn.async.system_info(channel.tx)
-    return channel.rx()
+    fn.async.system_info(tx)
+    local err1, err2, result = rx()
+    return err1 or err2, result
 end
 
 --- Writes to a remote file
@@ -197,13 +210,56 @@ end
 --- @return boolean result true if succeeded, otherwise false
 fn.write_file_text = function(path, text, opts)
     opts = opts or {}
-    local channel = u.oneshot_channel(
+    local tx, rx = u.oneshot_channel(
         opts.timeout or s.settings.max_timeout,
         opts.interval or s.settings.timeout_interval
     )
 
-    fn.async.write_file_text(path, text, channel.tx)
-    return channel.rx()
+    fn.async.write_file_text(path, text, tx)
+    local err1, err2, result = rx()
+    return err1 or err2, result
+end
+
+-------------------------------------------------------------------------------
+-- ASYNC FUNCTIONS
+-------------------------------------------------------------------------------
+
+--- Creates a table in the form of {err, data} when given a response with
+--- a singular payload entry
+---
+--- @param res? table The result in the form of {type = '...', data = {...}}
+--- @param type_name string The type expected for the response
+--- @param map? function A function that takes the data from a matching result
+---        and returns a table in the form of {err, data}
+--- @return table #The arguments to provide to a callback in form of {err, data}
+local function make_args(res, type_name, map)
+    assert(res == nil or type(res) == 'table')
+    assert(type(type_name) == 'string')
+    assert(map == nil or type(map) == 'function')
+    map = map or function(data) return data end
+
+    -- If we got a nil response for some reason, report it
+    if res == nil then
+        return 'Nil response received', nil
+    -- If just expecting an ok type, we just return true
+    elseif res.type == type_name and type_name == 'ok' then
+        return false, map(true)
+    -- For all other expected types, we return the payload data
+    elseif res.type == type_name then
+        return false, map(res.data)
+    -- If we get an error type, return its description if it has one
+    elseif res.type == 'error' and res.data and res.data.description then
+        return res.data.description, nil
+    -- Otherwise, if the error is returned but without a description, report it
+    elseif res.type == 'error' and res.data then
+        return 'Error response received without description', nil
+    -- Otherwise, if the error is returned but without a payload, report it
+    elseif res.type == 'error' then
+        return 'Error response received without data payload', nil
+    -- Otherwise, if we got an unexpected type, report it
+    else
+        return 'Received invalid response of type ' .. res.type, nil
+    end
 end
 
 --- Contains async functions
@@ -225,7 +281,7 @@ fn.async.copy = function(src, dst, cb)
             dst = dst;
         };
     }, function(res)
-        cb(res ~= nil and res.type == 'ok')
+        cb(make_args(res, 'ok'))
     end)
 end
 
@@ -256,11 +312,9 @@ fn.async.dir_list = function(path, opts, cb)
             include_root = opts.include_root or false;
         };
     }, function(res)
-        if res ~= nil and res.type == 'dir_entries' then
-            cb(res.data.entries)
-        else
-            cb(nil)
-        end
+        cb(make_args(res, 'dir_entries', function(data)
+            return data.entries
+        end))
     end)
 end
 
@@ -297,15 +351,12 @@ fn.async.metadata = function(path, opts, cb)
             canonicalize = opts.canonicalize or false;
         };
     }, function(res)
-        if res ~= nil and res.type == 'metadata' then
-            local data = res.data
+        cb(make_args(res, 'metadata', function(data)
             if data.canonicalized_path == vim.NIL then
                 data.canonicalized_path = nil
             end
-            cb(data)
-        else
-            cb(nil)
-        end
+            return data
+        end))
     end)
 end
 
@@ -326,7 +377,7 @@ fn.async.mkdir = function(path, opts, cb)
             all = opts.all;
         };
     }, function(res)
-        cb(res ~= nil and res.type == 'ok')
+        cb(make_args(res, 'ok'))
     end)
 end
 
@@ -341,11 +392,9 @@ fn.async.read_file_text = function(path, cb)
         type = 'file_read_text';
         data = { path = path };
     }, function(res)
-        if res ~= nil and res.type == 'text' then
-            cb(res.data.data)
-        else
-            cb(nil)
-        end
+        cb(make_args(res, 'text', function(data)
+            return data.data
+        end))
     end)
 end
 
@@ -366,7 +415,7 @@ fn.async.remove = function(path, opts, cb)
             force = opts.force;
         };
     }, function(res)
-        cb(res ~= nil and res.type == 'ok')
+        cb(make_args(res, 'ok'))
     end)
 end
 
@@ -386,7 +435,7 @@ fn.async.rename = function(src, dst, cb)
             dst = dst;
         };
     }, function(res)
-        cb(res ~= nil and res.type == 'ok')
+        cb(make_args(res, 'ok'))
     end)
 end
 
@@ -410,7 +459,7 @@ fn.async.run = function(cmd, args, cb)
         end
     end
 
-    local function make_res(exit_code, data)
+    local function make_data(exit_code, data)
         return {
             exit_code = exit_code;
             stdout = u.filter_map(data, function(item)
@@ -435,6 +484,7 @@ fn.async.run = function(cmd, args, cb)
                 exit_code = -1
             end
         end
+        return exit_code
     end
 
     -- Register a callback to receive stdout/stderr/done messages
@@ -453,7 +503,7 @@ fn.async.run = function(cmd, args, cb)
                 table.insert(tmp, msg)
                 if proc_id and msg.type == 'proc_done' then
                     unregister()
-                    wrapped_cb(make_res(make_exit_code(msg), tmp))
+                    wrapped_cb(nil, make_data(make_exit_code(msg), tmp))
                 end
             end
         end
@@ -473,7 +523,7 @@ fn.async.run = function(cmd, args, cb)
 
             -- It is now safe to filter out all of our messages
             tmp = u.filter_map(tmp, function(item)
-                if item.id == proc_id then
+                if item.data.id == proc_id then
                     return item
                 else
                     return nil
@@ -488,10 +538,13 @@ fn.async.run = function(cmd, args, cb)
             -- If we already have the result, stop the broadcast and return it
             if done then
                 s.client():unregister_broadcast(broadcast_id)
-                wrapped_cb(make_res(make_exit_code(done), tmp))
+                wrapped_cb(nil, make_data(make_exit_code(done), tmp))
             end
         else
-            wrapped_cb(nil)
+            -- Didn't get a proc_start, so stop our broadcast
+            s.client():unregister_broadcast(broadcast_id)
+
+            wrapped_cb(make_args(res, 'proc_start'))
         end
     end)
 end
@@ -505,11 +558,7 @@ fn.async.system_info = function(cb)
         type = 'system_info';
         data = {[vim.type_idx] = vim.types.dictionary};
     }, function(res)
-        if res ~= nil and res.type == 'system_info' then
-            cb(res.data)
-        else
-            cb(nil)
-        end
+        cb(make_args(res, 'system_info'))
     end)
 end
 
@@ -529,7 +578,7 @@ fn.async.write_file_text = function(path, text, cb)
             text = text;
         };
     }, function(res)
-        cb(res ~= nil and res.type == 'ok')
+        cb(make_args(res, 'ok'))
     end)
 end
 
