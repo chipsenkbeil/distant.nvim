@@ -348,7 +348,7 @@ utils.read_lines = function(path)
     local f = io.open(path, "rb")
     local contents = nil
     if f then
-        f:read(_VERSION <= "Lua 5.2" and "*a" or "a")
+        contents = f:read(_VERSION <= "Lua 5.2" and "*a" or "a")
         f:close()
     end
     if contents ~= nil then
