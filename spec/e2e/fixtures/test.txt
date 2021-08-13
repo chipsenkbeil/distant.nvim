@@ -1,2 +1,0 @@
-This is a file used for tests
-with multiple lines of text.

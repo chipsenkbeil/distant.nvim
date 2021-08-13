@@ -31,10 +31,10 @@ test-e2e: vendor ## Runs e2e tests in a headless neovim instance
 test-docker: ## Runs all tests using a pair of docker containers that have shared SSH keys
 	@docker-compose build
 	@docker-compose up -d server
-	@docker-compose run client
-	@docker-compose rm -f client
-	@docker-compose stop server
-	@docker-compose rm -f server
+	@-docker-compose run client
+	@-docker-compose rm -f client
+	@-docker-compose stop server
+	@-docker-compose rm -f server
 
 # Pulls in all of our dependencies for tests
 vendor: vendor/plenary.nvim
