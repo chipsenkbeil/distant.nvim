@@ -1,5 +1,7 @@
 # distant.nvim
 
+[![CI](https://github.com/chipsenkbeil/distant.nvim/actions/workflows/ci.yml/badge.svg)](https://github.com/chipsenkbeil/distant.nvim/actions/workflows/ci.yml)
+
 A wrapper around [`distant`](https://github.com/chipsenkbeil/distant) that
 enables users to edit remote files from the comfort of their local environment.
 
