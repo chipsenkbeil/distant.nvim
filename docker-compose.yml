@@ -2,9 +2,6 @@ version: "3"
 services:
   server:
     build: .
-    ports:
-      - "2222:22"
-      - "8080-8099:8080-8099"
     command: sudo /usr/sbin/sshd -D -e
   client:
     build: .
