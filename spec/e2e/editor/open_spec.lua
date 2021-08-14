@@ -3,17 +3,18 @@ local fn = require('distant.fn')
 local Driver = require('spec.e2e.driver')
 
 describe('editor.open', function()
-    local driver, fixture
+    local driver, file, dir
 
     before_each(function()
         driver = Driver:setup()
-        fixture = driver:new_fixture({
+        file = driver:new_file_fixture({
             ext = 'txt',
             lines = {
                 'This is a file used for tests',
                 'with multiple lines of text.',
             },
         })
+        dir = driver:new_dir_fixture()
     end)
 
     after_each(function()
@@ -21,8 +22,47 @@ describe('editor.open', function()
         driver:teardown()
     end)
 
+    it('should open a directory and set appropriate configuration', function()
+        -- Set up some items within the directory
+        dir.dir('dir1').make()
+        dir.dir('dir2').make()
+        dir.file('file1').touch()
+        dir.file('file2').touch()
+        dir.file('file3').touch()
+
+        -- Load the directory into a buffer
+        local test_path = dir.path()
+        local buf = driver.buffer(editor.open(test_path))
+
+        -- Verify the buffer contains the items
+        buf.assert.same({
+            'dir1',
+            'dir2',
+            'file1',
+            'file2',
+            'file3',
+        })
+
+        -- Get the absolute path to the file we are editing
+        local err, metadata = fn.metadata(test_path, {canonicalize = true})
+        assert(not err, err)
+
+        -- Verify we set a remote path variable to the absolute path
+        local remote_path = buf.get_var('distant_remote_path')
+        assert.are.equal(metadata.canonicalized_path, remote_path)
+
+        -- Verify we set dir-specific buffer properties
+        assert.are.equal(remote_path, buf.name())
+        assert.are.equal('distant-dir', buf.filetype())
+        assert.are.equal('nofile', buf.buftype())
+        assert.is.falsy(buf.modifiable())
+
+        -- Verify we switched our window to the current buffer
+        assert.is.truthy(buf.is_focused())
+    end)
+
     it('should open a file and set appropriate configuration', function()
-        local test_path = fixture.path()
+        local test_path = file.path()
         local buf = driver.buffer(editor.open(test_path))
 
         -- Read the contents of the buffer that should have been populated
@@ -45,11 +85,11 @@ describe('editor.open', function()
         assert.are.equal('acwrite', buf.buftype())
 
         -- Verify we switched our window to the current buffer
-        assert.are.equal(buf.id(), vim.api.nvim_win_get_buf(0))
+        assert.is.truthy(buf.is_focused())
     end)
 
     it('should configure file buffers to send contents to remote server on write', function()
-        local test_path = fixture.path()
+        local test_path = file.path()
         local buf = driver.buffer(editor.open(test_path))
 
         -- Change the buffer and write it back to the remote destination
@@ -57,11 +97,11 @@ describe('editor.open', function()
         vim.cmd([[write]])
 
         -- Verify that the remote file did change
-        fixture.assert.same({'line 1', 'line 2'})
+        file.assert.same({'line 1', 'line 2'})
     end)
 
     it('should configure file buffers to reload contents from remote server on edit', function()
-        local test_path = fixture.path()
+        local test_path = file.path()
         local buf = driver.buffer(editor.open(test_path))
 
         -- Change our buffer to something new
@@ -75,6 +115,6 @@ describe('editor.open', function()
         vim.cmd([[edit!]])
 
         -- Verify that buffer has been updated with current remote contents
-        buf.assert.same(fixture.lines())
+        buf.assert.same(file.lines())
     end)
 end)
