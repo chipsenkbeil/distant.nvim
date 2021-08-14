@@ -48,8 +48,9 @@ describe('editor.open', function()
         assert(not err, err)
 
         -- Verify we set a remote path variable to the absolute path
-        local remote_path = buf.get_var('distant_remote_path')
+        local remote_path = buf.remote_path()
         assert.are.equal(metadata.canonicalized_path, remote_path)
+        assert.are.equal('dir', buf.remote_type())
 
         -- Verify we set dir-specific buffer properties
         assert.are.equal(remote_path, buf.name())
@@ -76,8 +77,9 @@ describe('editor.open', function()
         assert(not err, err)
 
         -- Verify we set a remote path variable to the absolute path
-        local remote_path = buf.get_var('distant_remote_path')
+        local remote_path = buf.remote_path()
         assert.are.equal(metadata.canonicalized_path, remote_path)
+        assert.are.equal('file', buf.remote_type())
 
         -- Verify we set file-specific buffer properties
         assert.are.equal(remote_path, buf.name())

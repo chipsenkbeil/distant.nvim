@@ -42,10 +42,18 @@ actions.up = function()
 end
 
 --- Creates a new file in the current directory
-actions.newfile = function()
+---
+--- ### Options
+---
+--- * path: If provided, is used as new file path joined to current directory
+---
+--- @param opts table
+actions.newfile = function(opts)
+    opts = opts or {}
+
     local base_path = v.buf.remote_path()
     if base_path ~= nil then
-        local name = vim.fn.input('Name: ')
+        local name = opts.path or vim.fn.input('Name: ')
         if name == '' then
             return
         end
@@ -56,10 +64,18 @@ actions.newfile = function()
 end
 
 --- Creates a directory within the current directory (fails if file)
-actions.mkdir = function()
+---
+--- ### Options
+---
+--- * path: If provided, is used as new directory path joined to current directory
+---
+--- @param opts table
+actions.mkdir = function(opts)
+    opts = opts or {}
+
     local base_path = v.buf.remote_path()
     if base_path ~= nil then
-        local name = vim.fn.input('Directory name: ')
+        local name = opts.path or vim.fn.input('Directory name: ')
         if name == '' then
             return
         end
@@ -81,12 +97,20 @@ actions.mkdir = function()
 end
 
 --- Renames a file or directory within the current directory
-actions.rename = function()
+---
+--- ### Options
+---
+--- * path: If provided, is used as new directory path joined to current directory
+---
+--- @param opts table
+actions.rename = function(opts)
+    opts = opts or {}
+
     local base_path = v.buf.remote_path()
     if base_path ~= nil then
         local old_path = full_path_under_cursor()
         if old_path ~= nil then
-            local new_path = vim.fn.input('New name: ', old_path)
+            local new_path = opts.path or vim.fn.input('New name: ', old_path)
             if new_path == '' then
                 return
             end
@@ -108,6 +132,13 @@ actions.rename = function()
 end
 
 --- Removes a file or directory within the current directory
+---
+--- ### Options
+---
+--- * force: If true, will remove directories that are not empty
+--- * no_prompt: If true, will not prompt to delete current file/directory
+---
+--- @param opts table
 actions.remove = function(opts)
     opts = opts or {}
 

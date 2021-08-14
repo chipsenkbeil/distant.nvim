@@ -222,6 +222,12 @@ local function configure_buf(args)
 
     -- Add stateful information to the buffer, helping keep track of it
     v.buf.set_remote_path(args.buf, args.path)
+    v.buf.set_remote_type(
+        args.buf, 
+        args.is_dir and 'dir' or
+        args.is_file and 'file' or
+        'symlink'
+    )
 
     -- Display the buffer in the specified window, defaulting to current
     vim.api.nvim_win_set_buf(args.win or 0, args.buf)
@@ -292,7 +298,9 @@ return function(path, opts)
         name = buf_name;
         path = p.path;
         is_dir = p.is_dir;
-        is_file = p.is_file;
+        -- NOTE: In the case that there is nothing at the given path, we treat
+        --       it as a file such that the next write will create it
+        is_file = p.is_file or p.missing;
         win = opts.win;
     })
 

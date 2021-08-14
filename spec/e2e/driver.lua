@@ -94,7 +94,7 @@ end
 --- * lines string[]|string: list of lines or a singular string containing contents
 --- * ext string|nil: extension to use on the created file
 ---
---- @return string path The path on the remote machine to the fixture
+--- @return table fixture The new file fixture (remote_file)
 function Driver:new_file_fixture(opts)
     opts = opts or {}
     assert(type(opts) == 'table', 'opts must be a table')
@@ -128,8 +128,9 @@ end
 --- Creates a new fixture for a directory using the provided arguments
 ---
 --- * base_path string|nil: base directory in which to create a fixture
+--- * items string[]|nil: items to create within directory
 ---
---- @return string path The path on the remote machine to the fixture
+--- @return table fixture The new directory fixture (remote_dir)
 function Driver:new_dir_fixture(opts)
     opts = opts or {}
     assert(type(opts) == 'table', 'opts must be a table')
@@ -143,49 +144,191 @@ function Driver:new_dir_fixture(opts)
     -- Store our new fixture in fixtures list
     table.insert(self.__state.fixtures, rd)
 
+    -- Create all additional items within fixture
+    local items = opts.items or {}
+    for _, item in ipairs(items) do
+        local is_dir = vim.endswith(item, '/')
+        if is_dir then
+            rd.dir(item).make()
+        else
+            rd.file(item).touch()
+        end
+    end
+
     return rd
+end
+
+-------------------------------------------------------------------------------
+-- DRIVER WINDOW OPERATIONS
+-------------------------------------------------------------------------------
+
+--- @return table window
+Driver.window = function(win)
+    win = win or vim.api.nvim_get_current_win()
+
+    local obj = {}
+
+    --- Returns window id
+    --- @return number
+    obj.id = function()
+        return win
+    end
+
+    --- Returns id of buffer attached to window
+    --- @return number
+    obj.buf = function()
+        return vim.api.nvim_win_get_buf(win)
+    end
+
+    --- Places the specific buffer in this window
+    --- @param buf number
+    obj.set_buf = function(buf)
+        vim.api.nvim_win_set_buf(win, buf)
+    end
+
+    --- Moves the cursor to the current line in the window
+    --- @param line number (1-based index)
+    obj.move_cursor_to_line = function(line)
+        assert(line ~= 0, 'line is 1-based index')
+        vim.api.nvim_win_set_cursor(win, {line, 0})
+    end
+
+    --- Moves cursor to line and column where first match is found
+    --- for the given pattern
+    --- @param p string pattern to match against
+    --- @param line_only? boolean if true, will only move to the line and not column
+    --- @return number line, number col The line and column position, or nil if no movement
+    obj.move_cursor_to = function(p, line_only)
+        assert(type(p) == 'string', 'pattern must be a string')
+        local lines = Driver.buffer(obj.buf()).lines()
+
+        for ln, line in ipairs(lines) do
+            local start = string.find(line, p)
+            if start ~= nil then
+                local col = start - 1
+                if line_only then
+                    col = 0
+                end
+
+                vim.api.nvim_win_set_cursor(win, {ln, col})
+                return ln, col
+            end
+        end
+    end
+
+    --- Returns the line number (1-based index) of the cursor's position
+    --- @return number line (1-based index)
+    obj.cursor_line_number = function()
+        return vim.api.nvim_win_get_cursor(win)[1]
+    end
+
+    --- Retrieves content at line where cursor is
+    --- @return string
+    obj.line_at_cursor = function()
+        local ln = obj.cursor_line_number() - 1
+        return vim.api.nvim_buf_get_lines(
+            obj.buf(),
+            ln,
+            ln + 1,
+            true
+        )[1]
+    end
+
+    return obj
 end
 
 -------------------------------------------------------------------------------
 -- DRIVER BUFFER OPERATIONS
 -------------------------------------------------------------------------------
 
+--- @return table buffer
+Driver.make_buffer = function(contents, opts)
+    opts = opts or {}
+    local buf = vim.api.nvim_create_buf(true, false)
+    assert(buf ~= 0, 'failed to create buffer')
+
+    local buffer = Driver.buffer(buf)
+
+    local lines = contents
+    if type(lines) == 'string' then
+        lines = vim.split(lines, '\n', true)
+    else
+        lines = {}
+    end
+
+    buffer.set_lines(lines, opts)
+
+    return buffer
+end
+
+--- @return table buffer
 Driver.buffer = function(buf)
     buf = buf or vim.api.nvim_get_current_buf()
 
     local obj = {}
 
     --- Returns buffer id
+    --- @return number
     obj.id = function()
         return buf
     end
 
     --- Return name of buffer
+    --- @return string
     obj.name = function()
         return vim.api.nvim_buf_get_name(buf)
     end
 
     --- Return filetype of buffer
+    --- @return string
     obj.filetype = function()
         return vim.api.nvim_buf_get_option(buf, 'filetype')
     end
 
     --- Return buftype of buffer
+    --- @return string
     obj.buftype = function()
         return vim.api.nvim_buf_get_option(buf, 'buftype')
     end
 
     --- Return if modifiable
+    --- @return boolean
     obj.modifiable = function()
         return vim.api.nvim_buf_get_option(buf, 'modifiable')
     end
 
     --- Return buffer variable with given name
+    --- @return any
     obj.get_var = function(name)
         return vim.api.nvim_buf_get_var(buf, name)
     end
 
+    --- Return the remote path associated with the buffer, if it has one
+    --- @return string|nil
+    obj.remote_path = function()
+        local success, data = pcall(obj.get_var, 'distant_remote_path')
+        if success then
+            return data
+        end
+    end
+
+    --- Return the remote type associated with the buffer, if it has one
+    --- @return string|nil
+    obj.remote_type = function()
+        local success, data = pcall(obj.get_var, 'distant_remote_type')
+        if success then
+            return data
+        end
+    end
+
+    --- Reads lines from buffer as a single string separated by newlines
+    --- @return string
+    obj.contents = function()
+        return table.concat(obj.lines(), '\n')
+    end
+
     --- Read lines from buffer
+    --- @return string[]
     obj.lines = function()
         return vim.api.nvim_buf_get_lines(
             buf,
@@ -196,7 +339,11 @@ Driver.buffer = function(buf)
     end
 
     --- Set lines of buffer
-    obj.set_lines = function(lines)
+    --- @param lines string[]
+    --- @param opts table
+    obj.set_lines = function(lines, opts)
+        opts = opts or {}
+
         vim.api.nvim_buf_set_lines(
             buf,
             0,
@@ -204,9 +351,14 @@ Driver.buffer = function(buf)
             true,
             lines
         )
+
+        if opts.modified ~= nil then
+            vim.api.nvim_buf_set_option(buf, 'modified', opts.modified)
+        end
     end
 
     --- Return if buffer is focused
+    --- @return boolean
     obj.is_focused = function()
         return buf == vim.api.nvim_get_current_buf()
     end
@@ -229,6 +381,7 @@ end
 -- DRIVER REMOTE DIRECTORY OPERATIONS
 -------------------------------------------------------------------------------
 
+--- @return table remote_dir
 Driver.remote_dir = function(remote_path)
     assert(type(remote_path) == 'string', 'remote_path must be a string')
 
@@ -263,7 +416,9 @@ Driver.remote_dir = function(remote_path)
             assert(success, 'ssh ls failed (' .. errno .. '): ' .. out)
         end
         if success then
-            return vim.split(out, '\n', true)
+            return vim.tbl_filter(function(item)
+                return item ~= ''
+            end, vim.split(out, '\n', true))
         end
     end
 
@@ -287,6 +442,23 @@ Driver.remote_dir = function(remote_path)
         return Driver.remote_dir(remote_path .. '/' .. rel_path)
     end
 
+    --- Checks if dir's path exists and is a directory
+    --- @param opts? table
+    --- @return boolean
+    obj.exists = function(opts)
+        opts = opts or {}
+
+        local cmd = 'test -d ' .. remote_path .. ' && echo yes || echo no'
+        local out = vim.fn.system({'ssh', '-p', c.port, c.host, 'sh', '-c', '"' .. cmd .. '"'})
+        local errno = tonumber(vim.v.shell_error)
+
+        local success = errno == 0
+        if not opts.ignore_errors then
+            assert(success, 'ssh test failed (' .. errno .. '): ' .. out)
+        end
+        return vim.trim(out) == 'yes'
+    end
+
     --- Removes the remote directory at the specified path along with any items within
     --- @param opts? table
     obj.remove = function(opts)
@@ -305,6 +477,7 @@ end
 -- DRIVER REMOTE FILE OPERATIONS
 -------------------------------------------------------------------------------
 
+--- @return table remote_file
 Driver.remote_file = function(remote_path)
     assert(type(remote_path) == 'string', 'remote_path must be a string')
 
@@ -391,9 +564,28 @@ Driver.remote_file = function(remote_path)
         local out = vim.fn.system({'ssh', '-p', c.port, c.host, 'touch', remote_path})
         local errno = tonumber(vim.v.shell_error)
 
+        local success = errno == 0
         if not opts.ignore_errors then
-            assert(errno == 0, 'ssh touch failed (' .. errno .. '): ' .. out)
+            assert(success, 'ssh touch failed (' .. errno .. '): ' .. out)
         end
+        return success
+    end
+
+    --- Checks if file's path exists and is a regular file
+    --- @param opts? table
+    --- @return boolean
+    obj.exists = function(opts)
+        opts = opts or {}
+
+        local cmd = 'test -f ' .. remote_path .. ' && echo yes || echo no'
+        local out = vim.fn.system({'ssh', '-p', c.port, c.host, 'sh', '-c', '"' .. cmd .. '"'})
+        local errno = tonumber(vim.v.shell_error)
+
+        local success = errno == 0
+        if not opts.ignore_errors then
+            assert(success, 'ssh test failed (' .. errno .. '): ' .. out)
+        end
+        return vim.trim(out) == 'yes'
     end
 
     --- Removes the remote file at the specified path
@@ -427,6 +619,7 @@ end
 -- DRIVER LOCAL FILE OPERATIONS
 -------------------------------------------------------------------------------
 
+--- @return table local_file
 Driver.local_file = function(path)
     assert(type(path) == 'string', 'path must be a string')
 
