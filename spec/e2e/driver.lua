@@ -9,8 +9,14 @@ Driver.__index = Driver
 -- DRIVER SETUP & TEARDOWN
 -------------------------------------------------------------------------------
 
---- Initializes a driver for e2e tests
-function Driver:setup(timeout, interval)
+local session = nil
+
+--- Initialize a session if one has not been initialized yet
+local function initialize_session(timeout, interval)
+    if session ~= nil then
+        return session
+    end
+
     timeout = timeout or c.timeout
     interval = interval or c.timeout_interval
 
@@ -25,7 +31,7 @@ function Driver:setup(timeout, interval)
     --       the same connection and only have one perform an actual launch?
     local args = {
         distant = c.bin,
-        extra_server_args = '"--current-dir \"' .. c.root_dir .. '\" --shutdown-after 60 --port 8080:8999"',
+        extra_server_args = '"--current-dir \"' .. c.root_dir .. '\" --shutdown-after 5 --port 8080:8999"',
     }
     editor.launch(c.host, args, {use_var = err_var})
     local status = vim.fn.wait(timeout, function() return s.session() ~= nil end, interval)
@@ -39,12 +45,17 @@ function Driver:setup(timeout, interval)
 
     -- Validate that we were successful
     assert(status == 0, 'Session not received in time: ' .. messages)
+    session = s.session()
+    return session
+end
 
+--- Initializes a driver for e2e tests
+function Driver:setup(timeout, interval)
     -- Create a new instance and assign the session to it
     local obj = {}
     setmetatable(obj, Driver)
     obj.__state = {
-        session = s.session(),
+        session = initialize_session(timeout, interval),
         fixtures = {},
     }
 

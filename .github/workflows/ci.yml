@@ -17,11 +17,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Pull latest images to build
-        run: docker-compose pull
-      - name: Perform caching
-        uses: satackey/action-docker-layer-caching@v0.0.11
-        continue-on-error: true
+      - uses: whoan/docker-build-with-cache-action@v5
+        with:
+          username: "${{ github.repository_owner }}"
+          password: "${{ secrets.GITHUB_TOKEN }}"
+          registry: docker.pkg.github.com
+          compose_file: docker-compose.yml
+          push_image_and_stages: on:push
       - name: Run tests
         run: make test-docker
       - name: Check running containers
