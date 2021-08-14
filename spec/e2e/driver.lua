@@ -14,14 +14,31 @@ function Driver:setup(timeout, interval)
     timeout = timeout or c.timeout
     interval = interval or c.timeout_interval
 
-    -- First, attempt to launch and connect to a remote session
+    -- Capture all messages as we want to report errors that are written
+    local err_var = 'driver_launch_' .. math.floor(math.random() * 10000)
+
+    -- Attempt to launch and connect to a remote session
+    -- NOTE: We bump up our port range as tests are run in parallel and each
+    --       stand up a new distant connection AND server, meaning we need
+    --       to avoid running out of ports!
+    -- TODO: Because of the above situation, should we instead have drivers use
+    --       the same connection and only have one perform an actual launch?
     local args = {
         distant = c.bin,
-        extra_server_args = '"--current-dir \"' .. c.root_dir .. '\" --shutdown-after 60"',
+        extra_server_args = '"--current-dir \"' .. c.root_dir .. '\" --shutdown-after 60 --port 8080:8999"',
     }
-    editor.launch(c.host, args)
+    editor.launch(c.host, args, {use_var = err_var})
     local status = vim.fn.wait(timeout, function() return s.session() ~= nil end, interval)
-    assert(status == 0, 'Session not received in time')
+
+    -- Extract messages received
+    local messages = ''
+    if vim.fn.exists('g:' .. err_var) == 1 then
+        messages = vim.api.nvim_get_var(err_var)
+        vim.api.nvim_del_var(err_var)
+    end
+
+    -- Validate that we were successful
+    assert(status == 0, 'Session not received in time: ' .. messages)
 
     -- Create a new instance and assign the session to it
     local obj = {}

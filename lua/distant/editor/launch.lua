@@ -8,13 +8,44 @@ local DEFAULT_HEIGHT = 8
 --- Launches a new instance of the distance binary on the remote machine and sets
 --- up a session so clients are able to communicate with it
 ---
+--- ### Options
+---
+--- * background: If true, will not open a terminal for launching but instead run launch job in background
+--- * use_err_buf: If true, will not display an error msg dialog on error but instead write to messages
+--- * use_var: If provided, will not display an error msg dialog on error but instead write global vim variable
+---
+--- ### Arguments
+---
 --- @param host string host to connect to (e.g. example.com)
 --- @param args table of arguments to append to the launch command, where all
 ---             keys with _ are replaced with - (e.g. my_key -> --my-key)
---- @return number Exit code once launch has completed, or nil if times out
-return function(host, args)
+--- @param opts table Additional options for launch function
+--- @return number #Job id if succeeds in spawning job, otherwise nil
+return function(host, args, opts)
     assert(type(host) == 'string', 'Missing or invalid host argument')
     args = args or {}
+    opts = opts or {}
+
+    local function report_err(lines)
+        if vim.tbl_islist(lines) then
+            lines = table.concat(lines, '\n')
+        else
+            assert(type(lines) == 'string', 'lines must be list or string')
+        end
+
+        if opts.use_err_buf then
+            u.log_err(lines)
+        elseif opts.use_var then
+            if vim.fn.exists('g:' .. opts.use_var) == 0 then
+                vim.api.nvim_set_var(opts.use_var, lines)
+            else
+                local old_value = vim.api.nvim_get_var(opts.use_var)
+                vim.api.nvim_set_var(opts.use_var, old_value .. '\n' .. lines)
+            end
+        else
+            ui.show_msg(lines, 'err')
+        end
+    end
 
     -- If we are running headless, info will be nil, which is the case for our tests
     local info = vim.api.nvim_list_uis()[1]
@@ -44,7 +75,7 @@ return function(host, args)
     -- If we have a visual way to present, do so
     local run = nil
     local win = nil
-    if info ~= nil then
+    if info ~= nil and not opts.background then
         local buf = vim.api.nvim_create_buf(false, true)
         assert(buf ~= 0, 'Failed to create buffer for launch')
 
@@ -85,13 +116,13 @@ return function(host, args)
                             auth_key = tokens[5];
                         }
                         if session.host == nil then
-                            u.log_err('Session missing host')
+                            report_err('Session missing host')
                         end
                         if session.port == nil then
-                            u.log_err('Session missing port')
+                            report_err('Session missing port')
                         end
                         if session.auth_key == nil then
-                            u.log_err('Session missing auth key')
+                            report_err('Session missing auth key')
                         end
                         if session.host and session.port and session.auth_key then
                             s.set_session(session)
@@ -125,25 +156,25 @@ return function(host, args)
 
                         -- If we have ERROR lines, report just those
                         if #err_lines > 0 then
-                            ui.show_msg(err_lines, 'err')
+                            report_err(err_lines)
 
                         -- Otherwise, just report all of our log output
                         else
-                            ui.show_msg(lines, 'err')
+                            report_err(lines)
                         end
                     else
                         lines = u.filter_map(raw_data, function(line)
                             return u.clean_term_line(line)
                         end)
-                        ui.show_msg(lines, 'err')
+                        report_err(lines)
                     end
                 end
 
                 if s.session() == nil then
-                    ui.show_msg({
+                    report_err({
                         'Failed to acquire session!',
                         'Errors logged to ' .. err_log,
-                    }, 'err')
+                    })
                 else
                     -- Warm up our client if we were successful
                     s.client()
@@ -157,5 +188,7 @@ return function(host, args)
         ui.show_msg('Invalid arguments for launch!', 'err')
     elseif code == -1 then
         ui.show_msg(s.settings.binary_name .. ' is not executable!', 'err')
+    else
+        return code
     end
 end

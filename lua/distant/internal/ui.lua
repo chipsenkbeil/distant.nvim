@@ -13,7 +13,7 @@ ui.show_msg = function(msg, ty, width, height, closing_keys)
     local buf = vim.api.nvim_create_buf(false, true)
     assert(buf ~= 0, 'Failed to create buffer for msg')
 
-    local info = vim.api.nvim_list_uis()[1]
+    local info = vim.api.nvim_list_uis()[1] or {width = 80, height = 8}
 
     -- Get lines as a list
     if type(msg) == 'table' then

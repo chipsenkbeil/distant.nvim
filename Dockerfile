@@ -1,5 +1,6 @@
 FROM alpine:3.14
 ARG user=docker
+ARG version=0.10.1
 
 # Install all of the packages we need
 #
@@ -51,7 +52,7 @@ RUN sudo mkdir -p /var/run/sshd /run/openrc \
 
 # Install distant binary and make sure its in a path for everyone
 RUN source /home/$user/.cargo/env \
-    && cargo install --version 0.10.0 distant \
+    && cargo install --version $version distant \
     && sudo mv /home/$user/.cargo/bin/distant /usr/local/bin/distant
 
 # Install our repository within a subdirectory of home
