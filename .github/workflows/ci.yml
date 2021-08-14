@@ -22,7 +22,7 @@ jobs:
           username: "${{ github.repository_owner }}"
           password: "${{ secrets.GITHUB_TOKEN }}"
           registry: docker.pkg.github.com
-          compose_file: docker-compose.yml
+          image_name: distant_nvim_test
           push_image_and_stages: on:push
       - name: Run tests
         run: make test-docker

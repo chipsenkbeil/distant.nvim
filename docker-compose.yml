@@ -2,11 +2,11 @@ version: "3"
 services:
   server:
     build: .
-    image: distant_nvim_test
+    image: chipsenkbeil/distant_nvim_test
     command: sudo /usr/sbin/sshd -D -e
   client:
     build: .
-    image: distant_nvim_test
+    image: chipsenkbeil/distant_nvim_test
     depends_on:
       - server
     environment:
