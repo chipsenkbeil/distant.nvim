@@ -53,6 +53,24 @@ fn.dir_list = function(path, opts)
     return err1 or err2, result
 end
 
+--- Checks whether or not the provided path exists on the remote machine
+---
+--- @param path string Path to the file, directory, or symlink
+--- @param opts.timeout number Maximum time to wait for a response
+--- @param opts.interval number Time in milliseconds to wait between checks for a response
+--- @return string|nil error, boolean|nil exists
+fn.exists = function(path, opts)
+    opts = opts or {}
+    local tx, rx = u.oneshot_channel(
+        opts.timeout or s.settings.max_timeout,
+        opts.interval or s.settings.timeout_interval
+    )
+
+    fn.async.exists(path, tx)
+    local err1, err2, result = rx()
+    return err1 or err2, result
+end
+
 --- Retrieves filesystem metadata about a remote file, directory, or symlink
 ---
 --- @param path string Path to the file, directory, or symlink
@@ -315,6 +333,21 @@ fn.async.dir_list = function(path, opts, cb)
         cb(make_args(res, 'dir_entries', function(data)
             return data.entries
         end))
+    end)
+end
+
+--- Checks whether or not the provided path exists on the remote machine
+---
+--- @param path string Path to the file, directory, or symlink
+--- @param cb function Function that is passed true if exists or false if does not
+fn.async.exists = function(path, cb)
+    assert(type(path) == 'string', 'path must be a string')
+
+    s.client():send({
+        type = 'exists';
+        data = { path = path };
+    }, function(res)
+        cb(make_args(res, 'exists'))
     end)
 end
 

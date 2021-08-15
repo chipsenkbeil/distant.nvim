@@ -1,4 +1,5 @@
 local c = require('distant.internal.constants')
+local e = require('distant.internal.errors')
 local s = require('distant.internal.settings')
 local u = require('distant.internal.utils')
 local v = require('distant.internal.vars')
@@ -306,7 +307,12 @@ state.client = function()
         inner.client:start(u.merge(state.settings.client, {
             on_exit = function(code)
                 if code ~= 0 and inner.client:is_running() then
-                    u.log_err('client failed to start! Error code ' .. code)
+                    local msg = 'Client failed (' .. code .. ')'
+                    local reason = e.description_by_code(code)
+                    if reason then
+                        msg = msg .. ': ' .. reason
+                    end
+                    u.log_err(msg)
                 end
             end;
         }))

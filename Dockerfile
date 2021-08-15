@@ -1,6 +1,4 @@
 FROM alpine:3.14
-ARG user=docker
-ARG version=0.10.1
 
 # Install all of the packages we need
 #
@@ -18,6 +16,7 @@ RUN apk add --update --no-cache \
 # Configure a non-root user with a password that matches its name
 # as we need a user with a password even when we are providing
 # passwordless login via ssh
+ARG user=docker
 RUN addgroup -S $user \
     && adduser --home /home/$user -s /bin/sh -S $user -G $user \
     && adduser $user wheel \
@@ -51,6 +50,7 @@ RUN sudo mkdir -p /var/run/sshd /run/openrc \
     && echo 'StrictHostKeyChecking no' > /home/$user/.ssh/config
 
 # Install distant binary and make sure its in a path for everyone
+ARG version=0.11.0
 RUN source /home/$user/.cargo/env \
     && cargo install --version $version distant \
     && sudo mv /home/$user/.cargo/bin/distant /usr/local/bin/distant

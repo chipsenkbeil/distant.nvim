@@ -17,15 +17,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: whoan/docker-build-with-cache-action@v5
-        with:
-          username: "${{ github.repository_owner }}"
-          password: "${{ secrets.GITHUB_TOKEN }}"
-          registry: docker.pkg.github.com
-          image_name: distant_nvim_test
-          push_image_and_stages: on:push
+      - uses: satackey/action-docker-layer-caching@v0.0.11
+        continue-on-error: true
+      - name: Build test container
+        run: make docker
       - name: Run tests
-        run: make test-docker
-      - name: Check running containers
-        run: docker ps -a
-
+        run: make test
