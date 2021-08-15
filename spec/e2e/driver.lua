@@ -88,6 +88,10 @@ local function random_dir_name()
     return 'test_dir_' .. math.floor(math.random() * 10000)
 end
 
+local function random_symlink_name()
+    return 'test_symlink_' .. math.floor(math.random() * 10000)
+end
+
 --- Creates a new fixture for a file using the provided arguments
 ---
 --- * base_path string|nil: base directory in which to create a fixture
@@ -156,6 +160,29 @@ function Driver:new_dir_fixture(opts)
     end
 
     return rd
+end
+
+--- Creates a new fixture for a symlink using the provided arguments
+---
+--- * base_path string|nil: base directory in which to create a fixture
+--- * source string: path to source that will be linked to
+---
+--- @return table fixture The new symlink fixture (remote_symlink)
+function Driver:new_symlink_fixture(opts)
+    opts = opts or {}
+    assert(type(opts) == 'table', 'opts must be a table')
+    assert(type(opts.source) == 'string', 'opts.source must be a string')
+    local base_path = opts.base_path or '/tmp'
+    local path = base_path .. '/' .. random_symlink_name()
+
+    -- Create the remote symlink
+    local rl = Driver.remote_symlink(path)
+    rl.make(opts.source)
+
+    -- Store our new fixture in fixtures list
+    table.insert(self.__state.fixtures, rl)
+
+    return rl
 end
 
 -------------------------------------------------------------------------------
@@ -395,18 +422,22 @@ Driver.remote_dir = function(remote_path)
 
     --- Creates the directory and all of the parent components on the remote machine
     --- @param opts? table
+    --- @return boolean
     obj.make = function(opts)
         opts = opts or {}
         local out = vim.fn.system({'ssh', '-p', c.port, c.host, 'mkdir', '-p', remote_path})
         local errno = tonumber(vim.v.shell_error)
+
+        local success = errno == 0
         if not opts.ignore_errors then
-            assert(errno == 0, 'ssh mkdir failed (' .. errno .. '): ' .. out)
+            assert(success, 'ssh mkdir failed (' .. errno .. '): ' .. out)
         end
+        return success
     end
 
     --- Lists directory contents as individual items
     --- @param opts? table
-    --- @return string[]
+    --- @return string[]|nil
     obj.items = function(opts)
         opts = opts or {}
         local out = vim.fn.system({'ssh', '-p', c.port, c.host, 'ls', remote_path})
@@ -461,13 +492,17 @@ Driver.remote_dir = function(remote_path)
 
     --- Removes the remote directory at the specified path along with any items within
     --- @param opts? table
+    --- @return boolean
     obj.remove = function(opts)
         opts = opts or {}
         local out = vim.fn.system({'ssh', '-p', c.port, c.host, 'rm', '-rf', remote_path})
         local errno = tonumber(vim.v.shell_error)
+
+        local success = errno == 0
         if not opts.ignore_errors then
-            assert(errno == 0, 'ssh rm failed (' .. errno .. '): ' .. out)
+            assert(success, 'ssh rm failed (' .. errno .. '): ' .. out)
         end
+        return success
     end
 
     return obj
@@ -502,7 +537,7 @@ Driver.remote_file = function(remote_path)
 
     --- Leverages scp and a temporary file to read a remote file into memory
     --- @param opts? table
-    --- @return string
+    --- @return string|nil
     obj.read = function(opts)
         opts = opts or {}
 
@@ -590,15 +625,18 @@ Driver.remote_file = function(remote_path)
 
     --- Removes the remote file at the specified path
     --- @param opts? table
+    --- @return boolean
     obj.remove = function(opts)
         opts = opts or {}
 
         local out = vim.fn.system({'ssh', '-p', c.port, c.host, 'rm', '-f', remote_path})
         local errno = tonumber(vim.v.shell_error)
 
+        local success = errno == 0
         if not opts.ignore_errors then
-            assert(errno == 0, 'ssh rm failed (' .. errno .. '): ' .. out)
+            assert(success, 'ssh rm failed (' .. errno .. '): ' .. out)
         end
+        return success
     end
 
     obj.assert = {}
@@ -610,6 +648,92 @@ Driver.remote_file = function(remote_path)
         end
 
         assert.are.same(lines, obj.lines())
+    end
+
+    return obj
+end
+
+-------------------------------------------------------------------------------
+-- DRIVER REMOTE SYMLINK OPERATIONS
+-------------------------------------------------------------------------------
+
+--- @return table remote_symlink
+Driver.remote_symlink = function(remote_path)
+    assert(type(remote_path) == 'string', 'remote_path must be a string')
+
+    local obj = {}
+
+    --- Return path of symlink on remote machine
+    --- @return string
+    obj.path = function()
+        return remote_path
+    end
+
+    --- Return path of source of symlink, if it exists
+    --- @param opts? table
+    --- @return string|nil
+    obj.source_path = function(opts)
+        opts = opts or {}
+
+        local out = vim.fn.system({'ssh', '-p', c.port, c.host, 'readlink', remote_path})
+        local errno = tonumber(vim.v.shell_error)
+
+        local success = errno == 0
+        if not opts.ignore_errors then
+            assert(success, 'ssh test failed (' .. errno .. '): ' .. out)
+        end
+        if success then
+            return vim.trim(out)
+        end
+    end
+
+    --- Creates the symlink, pointing to the specified location
+    --- @param source string Path that is the source for a symlink (what it points to)
+    --- @param opts? table
+    --- @return boolean
+    obj.make = function(source, opts)
+        opts = opts or {}
+        local out = vim.fn.system({'ssh', '-p', c.port, c.host, 'ln', '-s', source, remote_path})
+        local errno = tonumber(vim.v.shell_error)
+
+        local success = errno == 0
+        if not opts.ignore_errors then
+            assert(success, 'ssh mkdir failed (' .. errno .. '): ' .. out)
+        end
+        return success
+    end
+
+    --- Checks if path exists and is a symlink
+    --- @param opts? table
+    --- @return boolean
+    obj.exists = function(opts)
+        opts = opts or {}
+
+        local cmd = 'test -L ' .. remote_path .. ' && echo yes || echo no'
+        local out = vim.fn.system({'ssh', '-p', c.port, c.host, 'sh', '-c', '"' .. cmd .. '"'})
+        local errno = tonumber(vim.v.shell_error)
+
+        local success = errno == 0
+        if not opts.ignore_errors then
+            assert(success, 'ssh test failed (' .. errno .. '): ' .. out)
+        end
+        return vim.trim(out) == 'yes'
+    end
+
+    --- Removes the remote symlink at the specified path
+    --- @param opts? table
+    --- @return boolean
+    obj.remove = function(opts)
+        opts = opts or {}
+
+        local out = vim.fn.system({'ssh', '-p', c.port, c.host, 'rm', '-f', remote_path})
+        local errno = tonumber(vim.v.shell_error)
+
+        local success = errno == 0
+        if not opts.ignore_errors then
+            assert(success, 'ssh rm failed (' .. errno .. '): ' .. out)
+        end
+        return success
     end
 
     return obj

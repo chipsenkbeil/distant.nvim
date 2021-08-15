@@ -119,4 +119,77 @@ describe('editor.open', function()
         -- Verify that buffer has been updated with current remote contents
         buf.assert.same(file.lines())
     end)
+
+    it('should support symlinks that are files', function()
+        local symlink = driver:new_symlink_fixture({ source = file.path() })
+
+        -- Load the file (symlink) into a buffer
+        local test_path = symlink.path()
+        local buf = driver.buffer(editor.open(test_path))
+
+        -- Read the contents of the buffer that should have been populated
+        buf.assert.same({
+            'This is a file used for tests',
+            'with multiple lines of text.',
+        })
+
+        -- Get the absolute path to the file we are editing
+        local err, metadata = fn.metadata(test_path, {canonicalize = true})
+        assert(not err, err)
+
+        -- Verify we set a remote path variable to the absolute path
+        local remote_path = buf.remote_path()
+        assert.are.equal(metadata.canonicalized_path, remote_path)
+        assert.are.equal('file', buf.remote_type())
+
+        -- Verify we set file-specific buffer properties
+        assert.are.equal(remote_path, buf.name())
+        assert.are.equal('text', buf.filetype())
+        assert.are.equal('acwrite', buf.buftype())
+
+        -- Verify we switched our window to the current buffer
+        assert.is.truthy(buf.is_focused())
+    end)
+
+    it('should support symlinks that are directories', function()
+        local symlink = driver:new_symlink_fixture({ source = dir.path() })
+
+        -- Set up some items within the directory
+        dir.dir('dir1').make()
+        dir.dir('dir2').make()
+        dir.file('file1').touch()
+        dir.file('file2').touch()
+        dir.file('file3').touch()
+
+        -- Load the directory (symlink) into a buffer
+        local test_path = symlink.path()
+        local buf = driver.buffer(editor.open(test_path))
+
+        -- Verify the buffer contains the items
+        buf.assert.same({
+            'dir1',
+            'dir2',
+            'file1',
+            'file2',
+            'file3',
+        })
+
+        -- Get the absolute path to the file we are editing
+        local err, metadata = fn.metadata(test_path, {canonicalize = true})
+        assert(not err, err)
+
+        -- Verify we set a remote path variable to the absolute path
+        local remote_path = buf.remote_path()
+        assert.are.equal(metadata.canonicalized_path, remote_path)
+        assert.are.equal('dir', buf.remote_type())
+
+        -- Verify we set dir-specific buffer properties
+        assert.are.equal(remote_path, buf.name())
+        assert.are.equal('distant-dir', buf.filetype())
+        assert.are.equal('nofile', buf.buftype())
+        assert.is.falsy(buf.modifiable())
+
+        -- Verify we switched our window to the current buffer
+        assert.is.truthy(buf.is_focused())
+    end)
 end)
