@@ -4,6 +4,9 @@ services:
     build: .
     image: chipsenkbeil/distant_nvim_test
     command: sudo /usr/sbin/sshd -D -e
+    ports:
+      - "2222:22"
+      - "8080-8099:8080-8099"
   client:
     build: .
     image: chipsenkbeil/distant_nvim_test

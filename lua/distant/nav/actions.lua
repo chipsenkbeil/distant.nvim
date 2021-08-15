@@ -19,6 +19,22 @@ local function full_path_under_cursor()
     end
 end
 
+--- Wraps an action such that it is performed if the buffer is remote,
+--- otherwise the else condition is performed
+actions.if_remote = function(if_f, else_f)
+    return function(...)
+        if v.buf.remote_path() then
+            if type(if_f) == 'function' then
+                if_f(...)
+            end
+        else
+            if type(else_f) == 'function' then
+                else_f(...)
+            end
+        end
+    end
+end
+
 --- Opens the selected item to be edited
 ---
 --- 1. In the case of a file, it is loaded into a buffer

@@ -114,6 +114,7 @@ describe('actions', function()
             -- Check that our current buffer is pointing to the remote file
             assert.are.equal(root.path() .. '/' .. 'dir1', driver.buffer().remote_path())
             assert.are.equal('dir', driver.buffer().remote_type())
+            assert.are.equal('distant-dir', driver.buffer().filetype())
         end)
 
         it('should open the parent directory of an open remote file', function()
@@ -125,9 +126,10 @@ describe('actions', function()
             -- Should have changed buffers
             assert.are.not_equal(buf.id(), vim.api.nvim_get_current_buf())
 
-            -- Check that our current buffer is pointing to the remote file
+            -- Check that our current buffer is pointing to the remote directory
             assert.are.equal(root.path() .. '/' .. 'dir1', driver.buffer().remote_path())
             assert.are.equal('dir', driver.buffer().remote_type())
+            assert.are.equal('distant-dir', driver.buffer().filetype())
         end)
 
         it('should do nothing if not in a remote buffer', function()
