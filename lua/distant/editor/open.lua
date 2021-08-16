@@ -49,7 +49,7 @@ local function check_path(path, opts)
     local missing = metadata == nil
     local is_dir = not missing and metadata.file_type == 'dir'
     local is_file = not missing and metadata.file_type == 'file'
-    local is_symlink = not missing and metadata.file_type == 'sym_link'
+    local is_symlink = not missing and metadata.file_type == 'symlink'
 
     -- Use canonicalized path if available
     local full_path = path
