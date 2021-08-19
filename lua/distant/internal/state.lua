@@ -70,7 +70,7 @@ local function lsp_start_client(config, opts)
         state.settings.binary_name,
         'action',
         '--mode', 'shell',
-        '--session', 'environment',
+        '--session', 'lsp',
     }
     cmd = vim.list_extend(cmd, args)
     cmd = vim.list_extend(cmd, {'proc-run', '--'})
@@ -83,12 +83,14 @@ local function lsp_start_client(config, opts)
     end
     cmd = vim.list_extend(cmd, config_cmd)
 
-    -- Provide our credentials as part of the environment so our proxy
+    -- Provide our credentials as part of the initialization options so our proxy
     -- knows who to talk to and has access to do so
-    local cmd_env = u.merge(config.cmd_env or {}, {
-        ['DISTANT_HOST'] = session.host;
-        ['DISTANT_PORT'] = session.port;
-        ['DISTANT_AUTH_KEY'] = session.auth_key;
+    local init_options = u.merge(config.init_options or {}, {
+        ['distant'] = {
+            ['host'] = session.host;
+            ['port'] = session.port;
+            ['auth_key'] = session.auth_key;
+        }
     })
 
     -- TODO: Followed this based on nvim-lspconfig, but don't yet understand
@@ -124,7 +126,7 @@ local function lsp_start_client(config, opts)
         end
     end
 
-    -- Override the config's cmd, cmd_env, and capabilities
+    -- Override the config's cmd, init_options, and capabilities
     -- as we take those existing config fields and alter them to work on
     -- a remote machine
     return vim.lsp.start_client(u.merge(
@@ -132,8 +134,8 @@ local function lsp_start_client(config, opts)
         {
             before_init = before_init;
             cmd = cmd;
-            cmd_env = cmd_env;
             capabilities = capabilities;
+            init_options = init_options;
 
             -- Must zero these out to ensure that we pass validation
             -- TODO: Support Windows local machine

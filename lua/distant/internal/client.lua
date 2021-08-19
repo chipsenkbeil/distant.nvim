@@ -70,19 +70,10 @@ function client:start(opts)
     end
 
     local session = s.session()
-    local env = nil
-    if session ~= nil then
-        env = {
-            ['DISTANT_HOST'] = session.host;
-            ['DISTANT_PORT'] = session.port;
-            ['DISTANT_AUTH_KEY'] = session.auth_key;
-        }
-    end
-
     local args = u.build_arg_str(u.merge(opts, {
         interactive = true;
         mode = 'json';
-        session = 'environment';
+        session = 'pipe';
     }), {'on_exit', 'verbose'})
     if type(opts.verbose) == 'number' and opts.verbose > 0 then
         args = vim.trim(args .. ' -' .. string.rep('v', opts.verbose))
@@ -90,7 +81,6 @@ function client:start(opts)
 
     local cmd = vim.trim(s.settings.binary_name .. ' action ' .. args)
     local handle = u.job_start(cmd, {
-        env = env;
         on_success = function()
             if type(opts.on_exit) == 'function' then
                 opts.on_exit(0)
@@ -114,6 +104,19 @@ function client:start(opts)
             end
         end
     })
+
+    -- Send our session initialization line
+    if session ~= nil then
+        handle.write(
+            'DISTANT DATA '
+            .. session.host
+            .. ' '
+            .. session.port
+            .. ' '
+            .. session.auth_key
+            .. '\n'
+        )
+    end
 
     self.__state = {
         tenant = 'nvim_tenant_' .. u.next_id();
