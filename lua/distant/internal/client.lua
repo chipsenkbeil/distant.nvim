@@ -72,7 +72,7 @@ function client:start(opts)
     local session = s.session()
     local args = u.build_arg_str(u.merge(opts, {
         interactive = true;
-        mode = 'json';
+        format = 'json';
         session = 'pipe';
     }), {'on_exit', 'verbose'})
     if type(opts.verbose) == 'number' and opts.verbose > 0 then

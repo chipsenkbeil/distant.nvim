@@ -272,7 +272,7 @@ return function(path, opts)
     local p = check_path(path, opts)
 
     -- Determine if we already have a buffer with the matching name
-    local buf_name = p.path
+    local buf_name = 'distant://' .. p.path
     local buf = vim.fn.bufnr('^' .. buf_name .. '$')
     local buf_exists = buf ~= -1
 

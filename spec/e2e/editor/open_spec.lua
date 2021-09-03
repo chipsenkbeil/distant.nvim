@@ -53,7 +53,7 @@ describe('editor.open', function()
         assert.are.equal('dir', buf.remote_type())
 
         -- Verify we set dir-specific buffer properties
-        assert.are.equal(remote_path, buf.name())
+        assert.are.equal('distant://' .. remote_path, buf.name())
         assert.are.equal('distant-dir', buf.filetype())
         assert.are.equal('nofile', buf.buftype())
         assert.is.falsy(buf.modifiable())
@@ -82,7 +82,7 @@ describe('editor.open', function()
         assert.are.equal('file', buf.remote_type())
 
         -- Verify we set file-specific buffer properties
-        assert.are.equal(remote_path, buf.name())
+        assert.are.equal('distant://' .. remote_path, buf.name())
         assert.are.equal('text', buf.filetype())
         assert.are.equal('acwrite', buf.buftype())
 
@@ -143,7 +143,7 @@ describe('editor.open', function()
         assert.are.equal('file', buf.remote_type())
 
         -- Verify we set file-specific buffer properties
-        assert.are.equal(remote_path, buf.name())
+        assert.are.equal('distant://' .. remote_path, buf.name())
         assert.are.equal('text', buf.filetype())
         assert.are.equal('acwrite', buf.buftype())
 
@@ -184,7 +184,7 @@ describe('editor.open', function()
         assert.are.equal('dir', buf.remote_type())
 
         -- Verify we set dir-specific buffer properties
-        assert.are.equal(remote_path, buf.name())
+        assert.are.equal('distant://' .. remote_path, buf.name())
         assert.are.equal('distant-dir', buf.filetype())
         assert.are.equal('nofile', buf.buftype())
         assert.is.falsy(buf.modifiable())

@@ -1,5 +1,6 @@
 local editor = require('distant.editor')
 local settings = require('distant.internal.settings')
+local v = require('distant.internal.vars')
 local u = require('distant.internal.utils')
 
 return function(opts)
@@ -20,7 +21,7 @@ return function(opts)
             -- NOTE: editor.open a new buffer or jumps to an existing buffer that
             --       uses the canonicalized path, so we need to close the any buffer
             --       that is open with the non-canonicalized name
-            if path ~= vim.api.nvim_buf_get_name(buf) then
+            if path ~= v.buf.remote_path(buf) then
                 buf = vim.fn.bufnr('^' .. fname .. '$')
                 if buf ~= -1 then
                     vim.api.nvim_buf_delete(buf, {
