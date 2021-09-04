@@ -41,15 +41,17 @@ end
 --- @param path string Path to directory to show
 --- @param opts.timeout number Maximum time to wait for a response (optional)
 --- @param opts.interval number Time in milliseconds to wait between checks for a response (optional)
---- @return table #Table containing `path`, `is_dir`, `is_file`, `is_symlink`, and `missing` fields
+--- @return table #Table containing `path`, `is_dir`, `is_file`, and `missing` fields
 local function check_path(path, opts)
     -- We need to figure out if we are working with a file or directory
-    local _, metadata = fn.metadata(path, u.merge(opts, {canonicalize = true}))
+    local _, metadata = fn.metadata(
+        path,
+        u.merge(opts, {canonicalize = true, resolve_file_type = true})
+    )
 
     local missing = metadata == nil
     local is_dir = not missing and metadata.file_type == 'dir'
     local is_file = not missing and metadata.file_type == 'file'
-    local is_symlink = not missing and metadata.file_type == 'symlink'
 
     -- Use canonicalized path if available
     local full_path = path
@@ -61,7 +63,6 @@ local function check_path(path, opts)
         path = full_path,
         is_dir = is_dir,
         is_file = is_file,
-        is_symlink = is_symlink,
         missing = missing,
     }
 end
@@ -178,8 +179,8 @@ local function load_content(p, buf, opts)
     if p.is_dir then
         return load_buf_from_dir(p.path, buf, opts)
 
-    -- If path points to a file (or symlink), load its contents as lines
-    elseif p.is_file or p.is_symlink then
+    -- If path points to a file, load its contents as lines
+    elseif p.is_file then
         return load_buf_from_file(p.path, buf, opts)
 
     -- Otherwise, we set ourselves up to create a new, empty file
@@ -224,9 +225,7 @@ local function configure_buf(args)
     v.buf.set_remote_path(args.buf, args.path)
     v.buf.set_remote_type(
         args.buf,
-        args.is_dir and 'dir' or
-        args.is_file and 'file' or
-        'symlink'
+        args.is_dir and 'dir' or 'file'
     )
 
     -- Display the buffer in the specified window, defaulting to current
@@ -268,8 +267,10 @@ return function(path, opts)
     assert(type(path) == 'string', 'path must be a string')
     opts = opts or {}
 
+    local local_path = u.strip_prefix(path, 'distant://')
+
     -- Retrieve information about our path
-    local p = check_path(path, opts)
+    local p = check_path(local_path, opts)
 
     -- Determine if we already have a buffer with the matching name
     local buf_name = 'distant://' .. p.path

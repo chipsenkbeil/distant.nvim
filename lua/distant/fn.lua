@@ -356,6 +356,8 @@ end
 --- @param path string Path to the file, directory, or symlink
 --- @param opts.canonicalize boolean If true, includes a canonicalized version
 ---        of the path in the response
+--- @param opts.resolve_file_type boolean If true, resolves symlink file type
+---        to the underlying dir or file type instead
 --- @param cb function Function that is passed a table in the following format
 ---        where `accessed`, `created`, `modified`, and `canonicalized_path` are
 ---        optional and may be missing from the table
@@ -382,6 +384,7 @@ fn.async.metadata = function(path, opts, cb)
         data = {
             path = path;
             canonicalize = opts.canonicalize or false;
+            resolve_file_type = opts.resolve_file_type or false;
         };
     }, function(res)
         cb(make_args(res, 'metadata', function(data)

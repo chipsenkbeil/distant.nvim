@@ -21,7 +21,12 @@ return function(opts)
             -- NOTE: editor.open a new buffer or jumps to an existing buffer that
             --       uses the canonicalized path, so we need to close the any buffer
             --       that is open with the non-canonicalized name
-            if path ~= v.buf.remote_path(buf) then
+            --
+            -- TODO: CHIP CHIP CHIP -- something is broken here that is causing us to
+            --       delete the loaded buffer's contents! Commenting out loads the
+            --       contents but now syntax and other buffer features are not getting
+            --       applied. Maybe this has to do with metadata changes
+            --[[ if path ~= v.buf.remote_path(buf) then
                 buf = vim.fn.bufnr('^' .. fname .. '$')
                 if buf ~= -1 then
                     vim.api.nvim_buf_delete(buf, {
@@ -29,7 +34,7 @@ return function(opts)
                         unload = false,
                     })
                 end
-            end
+            end ]]
         end)
     end)
 end
