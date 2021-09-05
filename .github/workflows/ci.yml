@@ -20,6 +20,6 @@ jobs:
       - uses: satackey/action-docker-layer-caching@v0.0.11
         continue-on-error: true
       - name: Build test container
-        run: make docker
+        run: make docker-build
       - name: Run tests
-        run: make test
+        run: make docker-test

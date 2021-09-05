@@ -1,4 +1,4 @@
-.PHONY: help test
+.PHONY: help test docker-test
 .EXPORT_ALL_VARIABLES:
 
 # Configuration for our tests
@@ -17,18 +17,35 @@ help: ## Display help information
 	@printf 'usage: make [target] ...\n\ntargets:\n'
 	@egrep '^(.+)\:\ .*##\ (.+)' ${MAKEFILE_LIST} | sed 's/:.*##/#/' | column -t -c 2 -s '#'
 
-docker: ## Builds test docker image
+docker-test: docker-cleanup docker-build docker-standup ## Runs all tests using a pair of docker containers that have shared SSH keys
+	make docker-test-internal; STATUS=$$?; make docker-cleanup; exit $$STATUS
+
+docker-build:
 	@docker build . --file Dockerfile --tag $(DOCKER_IMAGE)
 
-test: docker ## Runs all tests using a pair of docker containers that have shared SSH keys
+docker-cleanup: docker-test-server-remove docker-network-remove
+
+docker-standup: docker-network-create docker-test-server
+
+docker-network-create:
 	@docker network create $(DOCKER_NETWORK)
+
+docker-network-remove:
+	@-docker network rm $(DOCKER_NETWORK)
+
+docker-test-server:
 	@docker run \
 		--rm \
 		--name $(DOCKER_SERVER) \
 		-itd \
 		--network=$(DOCKER_NETWORK) \
 		$(DOCKER_IMAGE) sudo /usr/sbin/sshd -D -e
-	@-docker run \
+
+docker-test-server-remove:
+	@-docker rm -f $(DOCKER_SERVER)
+
+docker-test-internal: 
+	@docker run \
 		--rm \
 		--name $(DOCKER_CLIENT) \
 		-it \
@@ -36,20 +53,18 @@ test: docker ## Runs all tests using a pair of docker containers that have share
 		-e DISTANT_HOST=$(DOCKER_SERVER) \
 		-e DISTANT_PORT=22 \
 		-e DISTANT_BIN=/usr/local/bin/distant \
-		$(DOCKER_IMAGE) sh -c "cd app && make test-local"
-	@-docker rm -f $(DOCKER_SERVER)
-	@-docker network rm $(DOCKER_NETWORK)
+		$(DOCKER_IMAGE) sh -c "cd app && make test"
 
-test-local: test-local-unit test-local-e2e ## Runs all tests in a headless neovim instance on the local machine
+test: test-unit test-e2e ## Runs all tests in a headless neovim instance on the local machine
 
-test-local-unit: vendor ## Runs unit tests in a headless neovim instance on the local machine
+test-unit: vendor ## Runs unit tests in a headless neovim instance on the local machine
 	@nvim \
 		--headless \
 		--noplugin \
 		-u spec/spec.vim \
 		-c "PlenaryBustedDirectory spec/unit/ { minimal_init = 'spec/spec.vim' }"
 
-test-local-e2e: vendor ## Runs e2e tests in a headless neovim instance on the local machine
+test-e2e: vendor ## Runs e2e tests in a headless neovim instance on the local machine
 	@nvim \
 		--headless \
 		--noplugin \
