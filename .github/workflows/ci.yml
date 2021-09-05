@@ -17,9 +17,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: satackey/action-docker-layer-caching@v0.0.11
+      - uses: actions/cache@v2
+        with:
+          path: /tmp/distant_nvim_test.tar
+          key: ${{ runner.os }}-docker-${{ hashFiles('Dockerfile') }}
+          restore-keys: |
+            ${{ runner.os }}-docker-
+            ${{ runner.os }}-
+      - name: Load Docker cache
+        run: docker load --input /tmp/distant_nvim_test.tar
         continue-on-error: true
       - name: Build test container
         run: make docker-build
+      - name: Save Docker cache
+        run: docker save --output /tmp/distant_nvim_test.tar distant_nvim_test:latest
       - name: Run tests
         run: make docker-test
