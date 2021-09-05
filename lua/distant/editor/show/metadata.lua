@@ -1,4 +1,5 @@
 local fn = require('distant.fn')
+local log = require('distant.log')
 local ui = require('distant.internal.ui')
 
 --- Opens a new window to show metadata for some path
@@ -9,6 +10,7 @@ local ui = require('distant.internal.ui')
 --- @param opts.timeout number Maximum time to wait for a response (optional)
 --- @param opts.interval number Time in milliseconds to wait between checks for a response (optional)
 return function(path, opts)
+    log.trace('editor.show.metadata(' .. vim.inspect(path) .. ')')
     assert(type(path) == 'string', 'path must be a string')
     opts = opts or {}
 

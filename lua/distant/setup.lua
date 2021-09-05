@@ -1,6 +1,5 @@
 local editor = require('distant.editor')
 local settings = require('distant.internal.settings')
-local v = require('distant.internal.vars')
 local u = require('distant.internal.utils')
 
 return function(opts)
@@ -9,32 +8,23 @@ return function(opts)
     -- Update our global settings
     settings.merge(opts)
 
-    -- Assign appropriate handlers for distant filetypes
+    -- Assign appropriate handlers for distant:// scheme
     u.augroup('distant', function()
-        -- Register a command to receive distant:// schema and turn
-        -- it into a buffer without the schema
         u.autocmd('BufReadCmd', 'distant://*', function()
-            local fname = vim.fn.expand('<afile>')
+            local buf = tonumber(vim.fn.expand('<abuf>'))
+            local fname = vim.fn.expand('<amatch>')
             local path = u.strip_prefix(fname, 'distant://')
-            local buf = editor.open(path, {reload = true})
+            editor.open(path, {
+                buf = buf;
+                reload = true;
+            })
+        end)
 
-            -- NOTE: editor.open a new buffer or jumps to an existing buffer that
-            --       uses the canonicalized path, so we need to close the any buffer
-            --       that is open with the non-canonicalized name
-            --
-            -- TODO: CHIP CHIP CHIP -- something is broken here that is causing us to
-            --       delete the loaded buffer's contents! Commenting out loads the
-            --       contents but now syntax and other buffer features are not getting
-            --       applied. Maybe this has to do with metadata changes
-            --[[ if path ~= v.buf.remote_path(buf) then
-                buf = vim.fn.bufnr('^' .. fname .. '$')
-                if buf ~= -1 then
-                    vim.api.nvim_buf_delete(buf, {
-                        force = true,
-                        unload = false,
-                    })
-                end
-            end ]]
+        u.autocmd('BufWriteCmd', 'distant://*', function()
+            local buf = tonumber(vim.fn.expand('<abuf>'))
+            if type(buf) == 'number' and buf ~= -1 then
+                editor.write(buf)
+            end
         end)
     end)
 end

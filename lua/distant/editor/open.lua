@@ -1,4 +1,5 @@
 local fn = require('distant.fn')
+local log = require('distant.log')
 local s = require('distant.internal.state')
 local u = require('distant.internal.utils')
 local v = require('distant.internal.vars')
@@ -108,53 +109,6 @@ local function load_buf_from_file(path, buf, opts)
     return create_or_populate_buf(buf, lines)
 end
 
-local function attach_buf_autocmds(buf)
-    local pattern = '<buffer=' .. buf .. '>'
-
-    -- BEGIN GROUP
-    vim.cmd([[ augroup distant ]])
-
-    -- {write id, read id, unload id}
-    local ids = {
-        'buf_' .. buf .. '_write_' .. u.next_id(),
-        'buf_' .. buf .. '_read_' .. u.next_id(),
-        'buf_' .. buf .. '_delete_' .. u.next_id(),
-    }
-
-    -- Register a command on the buffer to forward writes
-    s.data.set(ids[1], function() require('distant.editor.write')(buf) end)
-    local write_cmd = s.data.get_as_key_mapping(ids[1])
-    vim.cmd('autocmd BufWriteCmd ' .. pattern .. ' ' .. write_cmd)
-
-    -- Register a command on the buffer to forward reloads
-    s.data.set(ids[2], function()
-        local path = v.buf.remote_path(buf)
-        if path ~= nil then
-            load_buf_from_file(path, buf)
-
-            -- Once content is added, we've lost our filetype syntax highlighting
-            -- (the type is still there) along with attached LSP clients
-            apply_mappings(buf, s.settings.file.mappings)
-            vim.cmd([[ syntax on ]])
-            s.lsp.connect(buf)
-        end
-    end)
-    local read_cmd = s.data.get_as_key_mapping(ids[2])
-    vim.cmd('autocmd BufReadCmd ' .. pattern .. ' ' .. read_cmd)
-
-    -- Register a command to remove callbacks when buffer deleted
-    s.data.set(ids[3], function()
-        for _, id in ipairs(ids) do
-            s.data.remove(id)
-        end
-    end)
-    local delete_cmd = s.data.get_as_key_mapping(ids[3])
-    vim.cmd('autocmd BufDelete ' .. pattern .. ' ' .. delete_cmd)
-
-    -- END GROUP
-    vim.cmd([[ augroup END ]])
-end
-
 local function load_buf_from_dir(path, buf, opts)
     local err, entries = fn.dir_list(path, opts)
     assert(not err, err)
@@ -244,9 +198,6 @@ local function configure_buf(args)
         --       have control
         vim.cmd([[ filetype detect ]])
 
-        -- Ensure that reading/writing gets translated remotely
-        attach_buf_autocmds(args.buf)
-
         -- Launch any associated LSP clients
         s.lsp.connect(args.buf)
     end
@@ -259,11 +210,13 @@ end
 --- 3. If path does not exist, opens a blank buffer that points to the file to be written
 ---
 --- @param path string Path to directory to show
+--- @param opts.buf number If not -1 and number, will use this buffer number instead of looking for a buffer
 --- @param opts.reload boolean If true, will reload the buffer even if already open
 --- @param opts.timeout number Maximum time to wait for a response (optional)
 --- @param opts.interval number Time in milliseconds to wait between checks for a response (optional)
 --- @return number|nil #The handle of the created buffer for the remote file/directory, or nil if failed
 return function(path, opts)
+    log.trace('editor.open(' .. vim.inspect(path) .. ')')
     assert(type(path) == 'string', 'path must be a string')
     opts = opts or {}
 
@@ -274,26 +227,21 @@ return function(path, opts)
 
     -- Determine if we already have a buffer with the matching name
     local buf_name = 'distant://' .. p.path
-    local buf = vim.fn.bufnr('^' .. buf_name .. '$')
+    local buf = (type(opts.buf) == 'number' and opts.buf ~= -1)
+        and opts.buf
+        or vim.fn.bufnr('^' .. buf_name .. '$')
     local buf_exists = buf ~= -1
 
-    -- If we already have a buffer and we are not reloading, just
-    -- switch to it
-    if buf_exists and not opts.reload then
-        vim.api.nvim_win_set_buf(0, buf)
-        return buf
+    -- If the buffer didn't exist already (or if forcing reload), load contents
+    -- into the buffer, optionally creating it if the buffer id is -1
+    if not buf_exists or opts.reload then
+        -- Load content and either place it inside the provided buffer or create
+        -- a new buffer in one is not provided (buf == -1)
+        buf = load_content(p, buf, opts)
     end
 
-    -- Load content and either place it inside the provided buffer or create
-    -- a new buffer in one is not provided (buf == -1)
-    buf = load_content(p, buf, opts)
-
-    -- If our buffer already existed, this is all we want to do as everything
-    -- beyond this point is first-time setup
-    if buf_exists then
-        return buf
-    end
-
+    -- Reconfigure the buffer, setting its name and various properties as well as
+    -- launching and attaching LSP clients if necessary
     configure_buf({
         buf = buf;
         name = buf_name;

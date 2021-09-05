@@ -1,4 +1,5 @@
 local fn = require('distant.fn')
+local log = require('distant.log')
 local ui = require('distant.internal.ui')
 
 --- Opens a new window to display system info
@@ -6,6 +7,7 @@ local ui = require('distant.internal.ui')
 --- @param opts.timeout number Maximum time to wait for a response (optional)
 --- @param opts.interval number Time in milliseconds to wait between checks for a response (optional)
 return function(opts)
+    log.trace('editor.show.system()')
     opts = opts or {}
 
     local indent = '    '

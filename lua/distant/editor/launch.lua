@@ -1,3 +1,4 @@
+local log = require('distant.log')
 local s = require('distant.internal.state')
 local ui = require('distant.internal.ui')
 local u = require('distant.internal.utils')
@@ -22,6 +23,7 @@ local DEFAULT_HEIGHT = 8
 --- @param opts table Additional options for launch function
 --- @return number #Job id if succeeds in spawning job, otherwise nil
 return function(host, args, opts)
+    log.trace('editor.launch(' .. vim.inspect(host) .. ')')
     assert(type(host) == 'string', 'Missing or invalid host argument')
     args = args or {}
     opts = opts or {}
