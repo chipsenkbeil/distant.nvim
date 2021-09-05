@@ -28,7 +28,7 @@ jobs:
         run: docker load --input /tmp/distant_nvim_test.tar
         continue-on-error: true
       - name: Build test container
-        run: make docker-build
+        run: docker build . --file Dockerfile --tag distant_nvim_test --cache-from=distant_nvim_test
       - name: Save Docker cache
         run: docker save --output /tmp/distant_nvim_test.tar distant_nvim_test:latest
       - name: Run tests
