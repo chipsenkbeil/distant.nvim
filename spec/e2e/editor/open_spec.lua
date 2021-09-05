@@ -96,6 +96,11 @@ describe('editor.open', function()
 
         -- Change the buffer and write it back to the remote destination
         buf.set_lines({'line 1', 'line 2'})
+
+        -- NOTE: To have write work, we require an autocmd for BufReadCmd, which only
+        --       appears if we have called the setup function; so, if you get an error
+        --       about no autocmd associated, it means we've not called setup for
+        --       some reason!
         vim.cmd([[write]])
 
         -- Verify that the remote file did change

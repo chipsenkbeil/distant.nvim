@@ -50,9 +50,9 @@ RUN sudo mkdir -p /var/run/sshd /run/openrc \
     && echo 'StrictHostKeyChecking no' > /home/$user/.ssh/config
 
 # Install distant binary and make sure its in a path for everyone
-ARG version=0.12.0
+ARG rev=9bd21123448682e0a16ac275ad2fb8cd91e883c3
 RUN source /home/$user/.cargo/env \
-    && cargo install --version $version distant \
+    && cargo install --git https://github.com/chipsenkbeil/distant --rev $rev \
     && sudo mv /home/$user/.cargo/bin/distant /usr/local/bin/distant
 
 # Install our repository within a subdirectory of home
