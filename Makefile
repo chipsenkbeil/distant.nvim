@@ -37,7 +37,7 @@ docker-test-server:
 	@docker run \
 		--rm \
 		--name $(DOCKER_SERVER) \
-		-itd \
+		-d \
 		--network=$(DOCKER_NETWORK) \
 		$(DOCKER_IMAGE) sudo /usr/sbin/sshd -D -e
 
@@ -48,7 +48,6 @@ docker-test-internal:
 	@docker run \
 		--rm \
 		--name $(DOCKER_CLIENT) \
-		-it \
 		--network=$(DOCKER_NETWORK) \
 		-e DISTANT_HOST=$(DOCKER_SERVER) \
 		-e DISTANT_PORT=22 \
