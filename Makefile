@@ -21,7 +21,7 @@ docker-test: docker-cleanup docker-build docker-standup ## Runs all tests using 
 	make docker-test-internal; STATUS=$$?; make docker-cleanup; exit $$STATUS
 
 docker-build:
-	@docker build . --file Dockerfile --tag $(DOCKER_IMAGE)
+	@docker build . --file Dockerfile --tag $(DOCKER_IMAGE) --cache-from=$(DOCKER_IMAGE)
 
 docker-cleanup: docker-test-server-remove docker-network-remove
 
