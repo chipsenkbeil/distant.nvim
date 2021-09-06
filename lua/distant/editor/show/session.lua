@@ -1,9 +1,11 @@
+local log = require('distant.log')
 local s = require('distant.internal.state')
 local ui = require('distant.internal.ui')
 local u = require('distant.internal.utils')
 
 --- Opens a new window to display session info
 return function()
+    log.trace('editor.show.session()')
     local indent = '    '
     local session = s.session()
     local distant_buf_names = u.filter_map(vim.api.nvim_list_bufs(), function(buf)

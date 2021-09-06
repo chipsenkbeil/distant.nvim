@@ -6,7 +6,7 @@ A wrapper around [`distant`](https://github.com/chipsenkbeil/distant) that
 enables users to edit remote files from the comfort of their local environment.
 
 - **Requires neovim 0.5+**
-- **Requires distant 0.12.0+**
+- **Requires distant 0.13.0+**
 
 🚧 **(Alpha stage software) This plugin is in rapid development and may
 break or change frequently!** 🚧
@@ -123,6 +123,7 @@ more details, check out the doc comments for the individual functions.
 |-----------------------|-------------------------------------------------------------------------------|
 | `fn.copy`             | Copies a remote file or directory to another remote location                  |
 | `fn.dir_list`         | Lists remote files & directories for the given path on the remote machine     |
+| `fn.exists`           | Determines whether or not the path exists on the remote machine               |
 | `fn.metadata`         | Retrieves metadata about a remote file, directory, or symlink                 |
 | `fn.mkdir`            | Creates a new directory remotely                                              |
 | `fn.read_file_text`   | Reads a remote file, returning its content as text                            |
@@ -143,6 +144,7 @@ for the individual functions.
 |-------------------------------|-----------------------------------------------------------|
 | `fn.async.copy`               | Async variant of `fn.copy` using callbacks                |
 | `fn.async.dir_list`           | Async variant of `fn.dir_list` using callbacks            |
+| `fn.async.exists`             | Async variant of `fn.exists` using callbacks              |
 | `fn.async.metadata`           | Async variant of `fn.metadata` using callbacks            |
 | `fn.async.mkdir`              | Async variant of `fn.mkdir` using callbacks               |
 | `fn.async.read_file_text`     | Async variant of `fn.read_file_text` using callbacks      |

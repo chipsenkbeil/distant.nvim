@@ -68,12 +68,12 @@ local function lsp_start_client(config, opts)
     -- as we are running the actual lsp server remotely
     local cmd = {
         state.settings.binary_name,
-        'action',
-        '--mode', 'shell',
+        'lsp',
+        '--format', 'shell',
         '--session', 'lsp',
     }
     cmd = vim.list_extend(cmd, args)
-    cmd = vim.list_extend(cmd, {'proc-run', '--'})
+    cmd = vim.list_extend(cmd, {'--'})
 
     -- Finally add the config command that we are wrapping, transforming a string
     -- into a list split by space if needed

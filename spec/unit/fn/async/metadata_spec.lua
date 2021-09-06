@@ -17,6 +17,7 @@ describe('fn.async.metadata', function()
             data = {
                 path = path,
                 canonicalize = false,
+                resolve_file_type = false,
             }
         }), _)
     end)
@@ -26,7 +27,10 @@ describe('fn.async.metadata', function()
         u.stub_send(send)
 
         local path = 'some/path'
-        fn.async.metadata(path, { canonicalize = true }, function() end)
+        fn.async.metadata(path, {
+            canonicalize = true,
+            resolve_file_type = true,
+        }, function() end)
 
         local _ = match._
         assert.spy(send).was.called_with(match.is_same({
@@ -34,6 +38,7 @@ describe('fn.async.metadata', function()
             data = {
                 path = path,
                 canonicalize = true,
+                resolve_file_type = true,
             }
         }), _)
     end)
