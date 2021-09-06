@@ -12,6 +12,8 @@ DOCKER_IMAGE=distant_nvim_test
 DOCKER_NETWORK=distant_nvim_network
 DOCKER_CLIENT=client
 DOCKER_SERVER=server
+DOCKER_OUT_DIR=/tmp
+DOCKER_OUT_ARCHIVE=$(DOCKER_OUT_DIR)/distant_nvim_images.tar
 
 help: ## Display help information
 	@printf 'usage: make [target] ...\n\ntargets:\n'
@@ -22,6 +24,12 @@ docker-test: docker-cleanup docker-build docker-standup ## Runs all tests using 
 
 docker-build:
 	@docker build . --file Dockerfile --tag $(DOCKER_IMAGE) --cache-from=$(DOCKER_IMAGE)
+
+docker-save:
+	@docker save --output $(DOCKER_OUT_ARCHIVE) $(DOCKER_IMAGE):latest
+
+docker-load:
+	@docker load --input $(DOCKER_OUT_ARCHIVE)
 
 docker-cleanup: docker-test-server-remove docker-network-remove
 
