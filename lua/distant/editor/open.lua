@@ -9,6 +9,7 @@ local v = require('distant.internal.vars')
 --- @param buf number
 --- @param mappings table
 local function apply_mappings(buf, mappings)
+    log.fmt_trace('apply_mappings(%s, %s)', buf, mappings)
     -- Take the global mappings specified for navigation and apply them
     -- TODO: Since these mappings are global, should we set them once
     --       elsewhere and look them up by key instead?
@@ -44,6 +45,7 @@ end
 --- @param opts.interval number Time in milliseconds to wait between checks for a response (optional)
 --- @return table #Table containing `path`, `is_dir`, `is_file`, and `missing` fields
 local function check_path(path, opts)
+    log.fmt_trace('check_path(%s, %s)', path, opts)
     -- We need to figure out if we are working with a file or directory
     local _, metadata = fn.metadata(
         path,
@@ -69,6 +71,7 @@ local function check_path(path, opts)
 end
 
 local function create_or_populate_buf(buf, lines)
+    log.fmt_trace('create_or_populate_buf(%s, %s)', buf, lines)
     -- Create a buffer to house the text if no buffer exists
     if buf == -1 then
         buf = vim.api.nvim_create_buf(true, false)
@@ -95,6 +98,7 @@ local function create_or_populate_buf(buf, lines)
 end
 
 local function load_buf_from_file(path, buf, opts)
+    log.fmt_trace('load_buf_from_file(%s, %s, %s)', path, buf, opts)
     local err, text = fn.read_file_text(path, opts)
     assert(not err, err)
 
@@ -102,7 +106,7 @@ local function load_buf_from_file(path, buf, opts)
     if text ~= nil then
         lines = vim.split(text, '\n', true)
     else
-        u.log_err('Failed to read file: ' .. path)
+        log.fmt_error('Failed to read file: %s', path)
         return buf
     end
 
@@ -110,6 +114,7 @@ local function load_buf_from_file(path, buf, opts)
 end
 
 local function load_buf_from_dir(path, buf, opts)
+    log.fmt_trace('load_buf_from_dir(%s, %s, %s)', path, buf, vim.inspect(opts))
     local err, entries = fn.dir_list(path, opts)
     assert(not err, err)
 
@@ -129,6 +134,8 @@ local function load_buf_from_dir(path, buf, opts)
 end
 
 local function load_content(p, buf, opts)
+    log.fmt_trace('load_content(%s, %s, %s)', p, buf, opts)
+
     -- If the path points to a directory, load the entries as lines
     if p.is_dir then
         return load_buf_from_dir(p.path, buf, opts)
@@ -144,6 +151,7 @@ local function load_content(p, buf, opts)
 end
 
 local function configure_buf(args)
+    log.fmt_trace('configure_buf(%s)', args)
     assert(type(args.buf) == 'number')
     assert(type(args.name) == 'string')
     assert(type(args.path) == 'string')
@@ -216,7 +224,7 @@ end
 --- @param opts.interval number Time in milliseconds to wait between checks for a response (optional)
 --- @return number|nil #The handle of the created buffer for the remote file/directory, or nil if failed
 return function(path, opts)
-    log.trace('editor.open(' .. vim.inspect(path) .. ')')
+    log.fmt_trace('editor.open(%s)', path)
     assert(type(path) == 'string', 'path must be a string')
     opts = opts or {}
 

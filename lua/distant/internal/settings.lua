@@ -1,6 +1,8 @@
 local c = require('distant.internal.constants')
 local u = require('distant.internal.utils')
 
+local log = require('distant.log')
+
 -- Represents the label used to signify default/global settings
 local DEFAULT_LABEL = '*'
 
@@ -105,6 +107,8 @@ end
 --- @param no_default? boolean If true, will not apply default settings first
 --- @return table #The settings associated with the remote machine (or empty table)
 settings.for_label = function(label, no_default)
+    log.trace('settings.for_label(%s, %s)', label, no_default)
+
     local specific = inner[label] or {}
     local default = settings.default()
 

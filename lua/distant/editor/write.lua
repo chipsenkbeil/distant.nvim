@@ -8,7 +8,7 @@ local v = require('distant.internal.vars')
 --- @param opts.timeout number Maximum time to wait for a response (optional)
 --- @param opts.interval number Time in milliseconds to wait between checks for a response (optional)
 return function(buf, opts)
-    log.trace('editor.write(' .. vim.inspect(buf) .. ')')
+    log.fmt_trace('editor.write(%s)', buf)
     -- Load the remote path from the buffer being saved
     local path = v.buf.remote_path(buf)
 

@@ -1,3 +1,5 @@
+local log = require('distant.log')
+
 local utils = {}
 
 --- Builds an argument string by taking a table's keys and converting them
@@ -114,9 +116,9 @@ utils.job_start = function(cmd, opts)
     })
 
     if job_id == 0 then
-        utils.log_err('Invalid arguments: ' .. cmd)
+        log.fmt_error('Invalid arguments: %s', cmd)
     elseif job_id == -1 then
-        utils.log_err('Cmd is not executable: ' .. cmd)
+        log.fmt_error('Cmd is not executable: %s', cmd)
     else
         return {
             id = function()
@@ -224,12 +226,6 @@ utils.nvim_remove_var = function(name)
     vim.api.nvim_del_var(name)
 
     return value
-end
-
---- Logs an error
-utils.log_err = function(err)
-    assert(type(err) == 'string', 'Error must be a string')
-    vim.api.nvim_err_writeln(err)
 end
 
 --- Returns a new id for use in sending messages

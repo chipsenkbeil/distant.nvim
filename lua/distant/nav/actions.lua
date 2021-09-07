@@ -1,4 +1,5 @@
 local editor = require('distant.editor')
+local log = require('distant.log')
 local fn = require('distant.fn')
 local u = require('distant.internal.utils')
 local v = require('distant.internal.vars')
@@ -107,7 +108,7 @@ actions.mkdir = function(opts)
                 msg = msg .. ': ' .. err
             end
 
-            u.log_err(msg)
+            log.error(msg)
         end
     end
 end
@@ -141,7 +142,7 @@ actions.rename = function(opts)
                     msg = msg .. ': ' .. err
                 end
 
-                u.log_err(msg)
+                log.error(msg)
             end
         end
     end
@@ -179,7 +180,7 @@ actions.remove = function(opts)
                     msg = msg .. ': ' .. err
                 end
 
-                u.log_err(msg)
+                log.error(msg)
             end
         end
     end

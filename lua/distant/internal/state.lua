@@ -4,6 +4,8 @@ local s = require('distant.internal.settings')
 local u = require('distant.internal.utils')
 local v = require('distant.internal.vars')
 
+local log = require('distant.log')
+
 local state = {}
 
 -- Inner data that is not directly exposed
@@ -152,6 +154,7 @@ state.lsp = {}
 --- starting clients if needed
 --- @param buf number Handle of the buffer where clients will attach
 state.lsp.connect = function(buf)
+    log.fmt_trace('lsp.connect(%s)', buf)
     local path = v.buf.remote_path(buf)
 
     -- Only perform a connection if we have connected
@@ -164,11 +167,15 @@ state.lsp.connect = function(buf)
         for label, config in pairs(state.settings.lsp) do
             -- Only apply clients with a root directory that contains this file
             if vim.startswith(path, config.root_dir) then
+                log.fmt_trace('File %s is within %s of %s', path, config.root_dir, label)
+
                 -- Check if this lsp is filtered by filetype, and if so make sure that
                 -- this buffer's filetype matches
                 local filetypes = config.filetypes or {}
                 local buf_ft = vim.api.nvim_buf_get_option(buf, 'filetype')
                 if vim.tbl_isempty(filetypes) or vim.tbl_contains(filetypes, buf_ft) then
+                    log.fmt_trace('File %s of type %s applies to %s', path, buf_ft, label)
+
                     -- Start the client if it doesn't exist
                     if inner.lsp_clients[label] == nil then
                         -- Wrap the exit so we can clear our id tracker
@@ -176,7 +183,7 @@ state.lsp.connect = function(buf)
                             inner.lsp_clients[label] = nil
 
                             if code ~= 0 then
-                                u.log_err('Client terminated: ' .. vim.lsp.client_errors[client_id])
+                                log.fmt_error('Client terminated: %s', vim.lsp.client_errors[client_id])
                             end
 
                             if type(config.on_exit) == 'function' then
@@ -185,6 +192,7 @@ state.lsp.connect = function(buf)
                         end
 
                         -- Support lsp-specific opts
+                        log.fmt_debug('Starting LSP %s', label)
                         local opts = config.opts or {}
                         local id = lsp_start_client(u.merge(config, {on_exit = on_exit}), opts)
                         inner.lsp_clients[label] = id
@@ -193,6 +201,7 @@ state.lsp.connect = function(buf)
                     -- Attach to our buffer if it isn't already
                     local client_id = inner.lsp_clients[label]
                     if not vim.lsp.buf_is_attached(client_id) then
+                        log.fmt_debug('Attaching to buf %s for LSP %s', buf, label)
                         vim.lsp.buf_attach_client(buf, client_id)
                     end
                 end
@@ -284,21 +293,18 @@ local function check_version(version)
     assert(v_num >= m_num, fail_msg)
 end
 
+--- Returns whether or not a client is active
+state.has_client = function()
+    return not (not inner.client)
+end
+
 --- Retrieves the client, optionally initializing it if needed
 state.client = function()
     -- NOTE: Inlined here to avoid loop from circular dependencies
     local client = require('distant.internal.client')
     if not inner.client then
+        log.debug('Initializing client')
         inner.client = client:new()
-
-        -- Define augroup that will stop client when exiting neovim
-        u.augroup('distant_client', function()
-            u.autocmd('VimLeave', '*', function()
-                if inner.client then
-                    inner.client:stop()
-                end
-            end)
-        end)
     end
 
     -- Validate that the version we support is available
@@ -306,6 +312,7 @@ state.client = function()
 
     -- If our client died, try to restart it
     if not inner.client:is_running() then
+        log.debug('Starting client')
         inner.client:start(u.merge(state.settings.client, {
             on_exit = function(code)
                 if code ~= 0 and inner.client:is_running() then
@@ -314,7 +321,7 @@ state.client = function()
                     if reason then
                         msg = msg .. ': ' .. reason
                     end
-                    u.log_err(msg)
+                    log.error(msg)
                 end
             end;
         }))

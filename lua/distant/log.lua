@@ -6,7 +6,7 @@
 -- This library is free software; you can redistribute it and/or modify it
 -- under the terms of the MIT license. See LICENSE for details.
 
-local p_debug = vim.fn.getenv "DEBUG_DISTANT"
+local d_debug = vim.fn.getenv "DEBUG_DISTANT"
 if d_debug == vim.NIL then
   d_debug = false
 end

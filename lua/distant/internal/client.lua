@@ -1,3 +1,4 @@
+local log = require('distant.log')
 local s = require('distant.internal.state')
 local u = require('distant.internal.utils')
 
@@ -61,11 +62,12 @@ end
 --- * on_exit: a function that is invoked when the client exits
 --- * verbose: level of verbosity to apply to the client when spawned
 function client:start(opts)
+    log.fmt_debug('Starting client with options: %s', opts)
     assert(not self:is_running(), 'client is already running!')
     opts = opts or {}
 
     if vim.fn.executable(s.settings.binary_name) ~= 1 then
-        u.log_err('Executable ' .. s.settings.binary_name .. ' is not on path')
+        log.fmt_error('Executable %s is not on path', s.settings.binary_name)
         return
     end
 
@@ -80,6 +82,7 @@ function client:start(opts)
     end
 
     local cmd = vim.trim(s.settings.binary_name .. ' action ' .. args)
+    log.fmt_debug('Client cmd: %s', cmd)
     local handle = u.job_start(cmd, {
         on_success = function()
             if type(opts.on_exit) == 'function' then
@@ -100,13 +103,14 @@ function client:start(opts)
         end;
         on_stderr_line = function(line)
             if line ~= nil and line ~= "" then
-                u.log_err(line)
+                log.error(line)
             end
         end
     })
 
     -- Send our session initialization line
     if session ~= nil then
+        log.trace('Sending session initialization line')
         handle.write(
             'DISTANT DATA '
             .. session.host
@@ -145,6 +149,7 @@ end
 --- * unaltered: when true, the callback will not be wrapped in the situation where there is
 ---   a single request payload entry to then return a single response payload entry
 function client:send(msgs, cb, opts)
+    log.fmt_trace('client:send(%s, _, %s)', msgs, opts)
     assert(self:is_running(), 'client is not running!')
     opts = opts or {}
 
@@ -184,6 +189,7 @@ end
 --- up to `timeout` milliseconds, checking every `interval` milliseconds for
 --- a result (default timeout = 1000, interval = 200)
 function client:send_wait(msgs, opts)
+    log.fmt_trace('client:send_wait(%s, %s)', msgs, opts)
     opts = opts or {}
     local tx, rx = u.oneshot_channel(
         opts.timeout or s.settings.max_timeout,
@@ -201,12 +207,13 @@ end
 --- to `timeout` milliseconds, checking every `interval` milliseconds for a
 --- result (default timeout = 1000, interval = 200), and report an error if not okay
 function client:send_wait_ok(msgs, opts)
+    log.fmt_trace('client:send_wait_ok(%s, %s)', msgs, opts)
     local timeout = opts.timeout or s.settings.max_timeout
     local result = self:send_wait(msgs, opts)
     if result == nil then
-        u.log_err('Max timeout ('..tostring(timeout)..') reached waiting for result')
+        log.fmt_error('Max timeout (%s) reached waiting for result', timeout)
     elseif result.type == 'error' then
-        u.log_err('Call failed: ' .. result.data.description)
+        log.fmt_error('Call failed: %s', result.data.description)
     else
         return result
     end

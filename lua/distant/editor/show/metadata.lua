@@ -10,7 +10,7 @@ local ui = require('distant.internal.ui')
 --- @param opts.timeout number Maximum time to wait for a response (optional)
 --- @param opts.interval number Time in milliseconds to wait between checks for a response (optional)
 return function(path, opts)
-    log.trace('editor.show.metadata(' .. vim.inspect(path) .. ')')
+    log.fmt_trace('editor.show.metadata(%s)', path)
     assert(type(path) == 'string', 'path must be a string')
     opts = opts or {}
 

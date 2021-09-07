@@ -23,7 +23,7 @@ local DEFAULT_HEIGHT = 8
 --- @param opts table Additional options for launch function
 --- @return number #Job id if succeeds in spawning job, otherwise nil
 return function(host, args, opts)
-    log.trace('editor.launch(' .. vim.inspect(host) .. ')')
+    log.trace('editor.launch(%s)', host)
     assert(type(host) == 'string', 'Missing or invalid host argument')
     args = args or {}
     opts = opts or {}
@@ -36,7 +36,7 @@ return function(host, args, opts)
         end
 
         if opts.use_err_buf then
-            u.log_err(lines)
+            log.error(lines)
         elseif opts.use_var then
             if vim.fn.exists('g:' .. opts.use_var) == 0 then
                 vim.api.nvim_set_var(opts.use_var, lines)
