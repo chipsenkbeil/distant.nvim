@@ -92,7 +92,6 @@ Supports the following features against remote machines:
 
 Support is coming up for these features:
 
-- [ ] Optional [lir.nvim](https://github.com/tamago324/lir.nvim) integration
 - [ ] Optional [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) integration
 
 ## Getting Started
@@ -185,10 +184,6 @@ function's arguments as input.
 | `DistantRemove`       | Alias to `lua require('distant').fn.remove`       |
 | `DistantRename`       | Alias to `lua require('distant').fn.rename`       |
 | `DistantRun`          | Alias to `lua require('distant').fn.run`          |
-
-## lir Integration
-
-TODO
 
 ## telescope Integration
 
