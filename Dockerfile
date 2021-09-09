@@ -54,9 +54,9 @@ RUN sudo mkdir -p /var/run/sshd /run/openrc \
 # RUN source /home/$user/.cargo/env \
 #     && cargo install --git https://github.com/chipsenkbeil/distant --rev $rev \
 #     && sudo mv /home/$user/.cargo/bin/distant /usr/local/bin/distant
-ARG version=0.13.0
+ARG version=0.13.1
 RUN source /home/$user/.cargo/env \
-    && cargo install distant --version 0.13.0 \
+    && cargo install distant --version $version \
     && sudo mv /home/$user/.cargo/bin/distant /usr/local/bin/distant
 
 # Install our repository within a subdirectory of home
