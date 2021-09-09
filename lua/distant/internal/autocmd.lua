@@ -32,7 +32,6 @@ local function _initialize()
         -- Define augroup that will stop client when exiting neovim
         u.autocmd('VimLeave', '*', function()
             if s.has_client() then
-                log.info('Shutting down client')
                 s.client():stop()
             end
         end)

@@ -10,9 +10,9 @@ local ui = require('distant.internal.ui')
 --- @param opts.timeout number Maximum time to wait for a response (optional)
 --- @param opts.interval number Time in milliseconds to wait between checks for a response (optional)
 return function(path, opts)
-    log.fmt_trace('editor.show.metadata(%s)', path)
     assert(type(path) == 'string', 'path must be a string')
     opts = opts or {}
+    log.fmt_trace('editor.show.metadata(%s, %s)', path, opts)
 
     local err, metadata = fn.metadata(path, opts)
     if metadata == nil then

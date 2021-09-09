@@ -149,9 +149,9 @@ end
 --- * unaltered: when true, the callback will not be wrapped in the situation where there is
 ---   a single request payload entry to then return a single response payload entry
 function client:send(msgs, cb, opts)
+    opts = opts or {}
     log.fmt_trace('client:send(%s, _, %s)', msgs, opts)
     assert(self:is_running(), 'client is not running!')
-    opts = opts or {}
 
     local payload = msgs
     if not vim.tbl_islist(payload) then
@@ -189,8 +189,8 @@ end
 --- up to `timeout` milliseconds, checking every `interval` milliseconds for
 --- a result (default timeout = 1000, interval = 200)
 function client:send_wait(msgs, opts)
-    log.fmt_trace('client:send_wait(%s, %s)', msgs, opts)
     opts = opts or {}
+    log.fmt_trace('client:send_wait(%s, %s)', msgs, opts)
     local tx, rx = u.oneshot_channel(
         opts.timeout or s.settings.max_timeout,
         opts.interval or s.settings.timeout_interval
@@ -207,13 +207,14 @@ end
 --- to `timeout` milliseconds, checking every `interval` milliseconds for a
 --- result (default timeout = 1000, interval = 200), and report an error if not okay
 function client:send_wait_ok(msgs, opts)
+    opts = opts or {}
     log.fmt_trace('client:send_wait_ok(%s, %s)', msgs, opts)
     local timeout = opts.timeout or s.settings.max_timeout
     local result = self:send_wait(msgs, opts)
     if result == nil then
         log.fmt_error('Max timeout (%s) reached waiting for result', timeout)
     elseif result.type == 'error' then
-        log.fmt_error('Call failed: %s', result.data.description)
+        log.fmt_error('Call failed: %s', vim.inspect(result.data.description))
     else
         return result
     end
@@ -239,23 +240,28 @@ end
 --- Primary event handler, routing received events to the corresponding callbacks
 function client:__handler(msg)
     assert(type(msg) == 'table', 'msg must be a table')
+    log.fmt_trace('client:__handler(%s)', msg)
 
     -- {"id": ..., "origin_id": ..., "payload": ...}
     local origin_id = msg.origin_id
     local payload = msg.payload
 
-    -- If no origin or payload, nothing to process for a callback
-    if not origin_id or not payload then
+    -- If no payload, nothing to process for a callback
+    if not payload then
         return
     end
 
     -- Look up our callback and, if it exists, invoke it
-    local cb = self.__state.callbacks[origin_id]
-    self.__state.callbacks[origin_id] = nil
+    local cb = nil
+    if origin_id ~= vim.NIL then
+        cb = self.__state.callbacks[origin_id]
+        self.__state.callbacks[origin_id] = nil
+    end
 
     if cb then
         cb(payload)
     else
+        -- Otherwise, we pass the payload to each registered broadcast function
         for id, r in pairs(self.__state.registered) do
             r(payload, function()
                 self:unregister_broadcast(id)

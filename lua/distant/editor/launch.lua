@@ -23,8 +23,8 @@ local DEFAULT_HEIGHT = 8
 --- @param opts table Additional options for launch function
 --- @return number #Job id if succeeds in spawning job, otherwise nil
 return function(host, args, opts)
-    log.trace('editor.launch(%s)', host)
     assert(type(host) == 'string', 'Missing or invalid host argument')
+    log.trace('editor.launch(%s)', host)
     args = args or {}
     opts = opts or {}
 

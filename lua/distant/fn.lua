@@ -529,17 +529,23 @@ fn.async.run = function(cmd, args, cb)
     -- have to store all messages until we do
     local proc_id = nil
     local tmp = {}
-    local broadcast_id = s.client():register_broadcast(function(msg, unregister)
-        if (
-            msg.type == 'proc_done' or
-            msg.type == 'proc_stdout' or
-            msg.type == 'proc_stderr'
-        ) then
-            if proc_id == nil or proc_id == msg.data.id then
-                table.insert(tmp, msg)
-                if proc_id and msg.type == 'proc_done' then
-                    unregister()
-                    wrapped_cb(nil, make_data(make_exit_code(msg), tmp))
+    local broadcast_id = s.client():register_broadcast(function(msgs, unregister)
+        if not vim.tbl_islist(msgs) then
+            msgs = {msgs}
+        end
+
+        for _, msg in pairs(msgs) do
+            if (
+                msg.type == 'proc_done' or
+                msg.type == 'proc_stdout' or
+                msg.type == 'proc_stderr'
+            ) then
+                if proc_id == nil or proc_id == msg.data.id then
+                    table.insert(tmp, msg)
+                    if proc_id and msg.type == 'proc_done' then
+                        unregister()
+                        wrapped_cb(false, make_data(make_exit_code(msg), tmp))
+                    end
                 end
             end
         end
@@ -574,7 +580,7 @@ fn.async.run = function(cmd, args, cb)
             -- If we already have the result, stop the broadcast and return it
             if done then
                 s.client():unregister_broadcast(broadcast_id)
-                wrapped_cb(nil, make_data(make_exit_code(done), tmp))
+                wrapped_cb(false, make_data(make_exit_code(done), tmp))
             end
         else
             -- Didn't get a proc_start, so stop our broadcast

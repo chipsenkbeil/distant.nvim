@@ -7,8 +7,8 @@ local ui = require('distant.internal.ui')
 --- @param opts.timeout number Maximum time to wait for a response (optional)
 --- @param opts.interval number Time in milliseconds to wait between checks for a response (optional)
 return function(opts)
-    log.trace('editor.show.system()')
     opts = opts or {}
+    log.trace('editor.show.system(%s)', opts)
 
     local indent = '    '
     local err, info = fn.system_info(opts)

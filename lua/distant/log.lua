@@ -6,9 +6,9 @@
 -- This library is free software; you can redistribute it and/or modify it
 -- under the terms of the MIT license. See LICENSE for details.
 
-local d_debug = vim.fn.getenv "DEBUG_DISTANT"
-if d_debug == vim.NIL then
-  d_debug = false
+local d_log_level = vim.fn.getenv("DISTANT_LOG_LEVEL")
+if d_log_level == vim.NIL then
+  d_log_level = "info"
 end
 
 -- User configuration section
@@ -27,7 +27,7 @@ local default_config = {
   use_file = true,
 
   -- Any messages above this level will be logged.
-  level = d_debug and "debug" or "info",
+  level = string.lower(d_log_level),
 
   -- Level configuration
   modes = {
