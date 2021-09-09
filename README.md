@@ -11,6 +11,10 @@ enables users to edit remote files from the comfort of their local environment.
 🚧 **(Alpha stage software) This plugin is in rapid development and may
 break or change frequently!** 🚧
 
+## Demo
+
+[![Demo Video](https://img.youtube.com/vi/BuW2b1Ii0RI/0.jpg)](https://www.youtube.com/watch?v=BuW2b1Ii0RI)
+
 ## Installation
 
 Using [packer.nvim](https://github.com/wbthomason/packer.nvim)
