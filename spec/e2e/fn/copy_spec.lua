@@ -27,6 +27,8 @@ describe('fn', function()
             assert(not err, err)
             assert.is.truthy(res)
 
+            -- Ensure that the new file matches the old file
+            file.assert.same({'some file content'})
             dst.assert.same({'some file content'})
         end)
     end)

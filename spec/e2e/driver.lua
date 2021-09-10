@@ -76,8 +76,7 @@ end
 -------------------------------------------------------------------------------
 
 local function random_file_name(ext)
-    assert(type(ext) == 'string', 'ext must be a string')
-    local filename = 'test-file-' .. math.floor(math.random() * 10000)
+    local filename = 'test_file_' .. math.floor(math.random() * 10000)
     if type(ext) == 'string' and string.len(ext) > 0 then
         filename = filename .. '.' .. ext
     end
