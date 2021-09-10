@@ -5,6 +5,20 @@ local s = require('distant.internal.state')
 local Driver = {}
 Driver.__index = Driver
 
+--- Maximum random value (inclusive) in form of [1, MAX_RAND_VALUE]
+local MAX_RAND_VALUE = 100000
+local seed = nil
+
+local function next_id()
+    --- Seed driver's random with time
+    if seed == nil then
+        seed = os.time() - os.clock() * 1000
+        math.randomseed(seed)
+    end
+
+    return math.random(MAX_RAND_VALUE)
+end
+
 -------------------------------------------------------------------------------
 -- DRIVER SETUP & TEARDOWN
 -------------------------------------------------------------------------------
@@ -21,7 +35,7 @@ local function initialize_session(timeout, interval)
     interval = interval or c.timeout_interval
 
     -- Capture all messages as we want to report errors that are written
-    local err_var = 'driver_launch_' .. math.floor(math.random() * 10000)
+    local err_var = 'driver_launch_' .. next_id()
 
     -- Attempt to launch and connect to a remote session
     -- NOTE: We bump up our port range as tests are run in parallel and each
@@ -76,7 +90,7 @@ end
 -------------------------------------------------------------------------------
 
 local function random_file_name(ext)
-    local filename = 'test_file_' .. math.floor(math.random() * 10000)
+    local filename = 'test_file_' .. next_id()
     if type(ext) == 'string' and string.len(ext) > 0 then
         filename = filename .. '.' .. ext
     end
@@ -84,11 +98,11 @@ local function random_file_name(ext)
 end
 
 local function random_dir_name()
-    return 'test_dir_' .. math.floor(math.random() * 10000)
+    return 'test_dir_' .. next_id()
 end
 
 local function random_symlink_name()
-    return 'test_symlink_' .. math.floor(math.random() * 10000)
+    return 'test_symlink_' .. next_id()
 end
 
 --- Creates a new fixture for a file using the provided arguments
@@ -119,7 +133,7 @@ function Driver:new_file_fixture(opts)
 
     -- Create the remote file
     local rf = self.remote_file(path)
-    rf.write(contents)
+    assert(rf.write(contents), 'Failed to populate file fixture: ' .. path)
 
     -- Store our new fixture in fixtures list
     table.insert(self.__state.fixtures, rf)
@@ -142,7 +156,7 @@ function Driver:new_dir_fixture(opts)
 
     -- Create the remote directory
     local rd = Driver.remote_dir(path)
-    rd.make()
+    assert(rd.make(), 'Failed to create directory fixture: ' .. rd.path())
 
     -- Store our new fixture in fixtures list
     table.insert(self.__state.fixtures, rd)
@@ -152,9 +166,11 @@ function Driver:new_dir_fixture(opts)
     for _, item in ipairs(items) do
         local is_dir = vim.endswith(item, '/')
         if is_dir then
-            rd.dir(item).make()
+            local dir = rd.dir(item)
+            assert(dir.make(), 'Failed to create dir: ' .. dir.path())
         else
-            rd.file(item).touch()
+            local file = rd.file(item)
+            assert(file.touch(), 'Failed to create file: ' .. file.path())
         end
     end
 
@@ -176,7 +192,7 @@ function Driver:new_symlink_fixture(opts)
 
     -- Create the remote symlink
     local rl = Driver.remote_symlink(path)
-    rl.make(opts.source)
+    assert(rl.make(opts.source), 'Failed to create symlink: ' .. rl.path())
 
     -- Store our new fixture in fixtures list
     table.insert(self.__state.fixtures, rl)
