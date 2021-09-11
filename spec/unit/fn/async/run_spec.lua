@@ -123,8 +123,8 @@ describe('fn.async.run', function()
             assert.is.falsy(err)
             assert.is.same({
                 code = 456,
-                stdout = {'abc', 'def'},
-                stderr = {'ghi', 'jkl'},
+                stdout = {'abcdef'},
+                stderr = {'ghijkl'},
             }, data)
 
             done()
@@ -185,8 +185,8 @@ describe('fn.async.run', function()
             assert.is.falsy(err)
             assert.is.same({
                 code = 456,
-                stdout = {'abc', 'def'},
-                stderr = {'ghi', 'jkl'},
+                stdout = {'abcdef'},
+                stderr = {'ghijkl'},
             }, data)
 
             done()
@@ -247,8 +247,8 @@ describe('fn.async.run', function()
             assert.is.falsy(err)
             assert.is.same({
                 code = 456,
-                stdout = {'abc', 'def'},
-                stderr = {'ghi', 'jkl'},
+                stdout = {'abcdef'},
+                stderr = {'ghijkl'},
             }, data)
 
             done()
