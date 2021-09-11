@@ -5,6 +5,20 @@ local s = require('distant.internal.state')
 local Driver = {}
 Driver.__index = Driver
 
+--- Maximum random value (inclusive) in form of [1, MAX_RAND_VALUE]
+local MAX_RAND_VALUE = 100000
+local seed = nil
+
+local function next_id()
+    --- Seed driver's random with time
+    if seed == nil then
+        seed = os.time() - os.clock() * 1000
+        math.randomseed(seed)
+    end
+
+    return math.random(MAX_RAND_VALUE)
+end
+
 -------------------------------------------------------------------------------
 -- DRIVER SETUP & TEARDOWN
 -------------------------------------------------------------------------------
@@ -21,7 +35,7 @@ local function initialize_session(timeout, interval)
     interval = interval or c.timeout_interval
 
     -- Capture all messages as we want to report errors that are written
-    local err_var = 'driver_launch_' .. math.floor(math.random() * 10000)
+    local err_var = 'driver_launch_' .. next_id()
 
     -- Attempt to launch and connect to a remote session
     -- NOTE: We bump up our port range as tests are run in parallel and each
@@ -76,8 +90,7 @@ end
 -------------------------------------------------------------------------------
 
 local function random_file_name(ext)
-    assert(type(ext) == 'string', 'ext must be a string')
-    local filename = 'test-file-' .. math.floor(math.random() * 10000)
+    local filename = 'test_file_' .. next_id()
     if type(ext) == 'string' and string.len(ext) > 0 then
         filename = filename .. '.' .. ext
     end
@@ -85,11 +98,11 @@ local function random_file_name(ext)
 end
 
 local function random_dir_name()
-    return 'test_dir_' .. math.floor(math.random() * 10000)
+    return 'test_dir_' .. next_id()
 end
 
 local function random_symlink_name()
-    return 'test_symlink_' .. math.floor(math.random() * 10000)
+    return 'test_symlink_' .. next_id()
 end
 
 --- Creates a new fixture for a file using the provided arguments
@@ -120,7 +133,7 @@ function Driver:new_file_fixture(opts)
 
     -- Create the remote file
     local rf = self.remote_file(path)
-    rf.write(contents)
+    assert(rf.write(contents), 'Failed to populate file fixture: ' .. path)
 
     -- Store our new fixture in fixtures list
     table.insert(self.__state.fixtures, rf)
@@ -143,7 +156,7 @@ function Driver:new_dir_fixture(opts)
 
     -- Create the remote directory
     local rd = Driver.remote_dir(path)
-    rd.make()
+    assert(rd.make(), 'Failed to create directory fixture: ' .. rd.path())
 
     -- Store our new fixture in fixtures list
     table.insert(self.__state.fixtures, rd)
@@ -151,11 +164,19 @@ function Driver:new_dir_fixture(opts)
     -- Create all additional items within fixture
     local items = opts.items or {}
     for _, item in ipairs(items) do
-        local is_dir = vim.endswith(item, '/')
-        if is_dir then
-            rd.dir(item).make()
-        else
-            rd.file(item).touch()
+        if type(item) == 'string' then
+            local is_dir = vim.endswith(item, '/')
+            if is_dir then
+                local dir = rd.dir(item)
+                assert(dir.make(), 'Failed to create dir: ' .. dir.path())
+            else
+                local file = rd.file(item)
+                assert(file.touch(), 'Failed to create file: ' .. file.path())
+            end
+        elseif vim.tbl_islist(item) and #item == 2 then
+            local symlink = rd.symlink(item[1])
+            local target = rd.file(item[2]).path()
+            assert(symlink.make(target), 'Failed to create symlink: ' .. symlink.path() .. ' to ' .. target)
         end
     end
 
@@ -177,7 +198,7 @@ function Driver:new_symlink_fixture(opts)
 
     -- Create the remote symlink
     local rl = Driver.remote_symlink(path)
-    rl.make(opts.source)
+    assert(rl.make(opts.source), 'Failed to create symlink: ' .. rl.path())
 
     -- Store our new fixture in fixtures list
     table.insert(self.__state.fixtures, rl)
@@ -420,6 +441,22 @@ Driver.remote_dir = function(remote_path)
         return remote_path
     end
 
+    --- Return canonicalized path of directory on remote machine
+    --- @param opts? table
+    --- @return string|nil
+    obj.canonicalized_path = function(opts)
+        opts = opts or {}
+        local out = vim.fn.system({'ssh', '-p', c.port, c.host, 'realpath', remote_path})
+        local errno = tonumber(vim.v.shell_error)
+        local success = errno == 0
+        if not opts.ignore_errors then
+            assert(success, 'ssh realpath failed (' .. errno .. '): ' .. out)
+        end
+        if success then
+            return vim.trim(out)
+        end
+    end
+
     --- Creates the directory and all of the parent components on the remote machine
     --- @param opts? table
     --- @return boolean
@@ -473,6 +510,16 @@ Driver.remote_dir = function(remote_path)
         return Driver.remote_dir(remote_path .. '/' .. rel_path)
     end
 
+    --- References a remote symlink within the directory; if no relative path is provided
+    --- then a random symlink path will be produced
+    ---
+    --- @param rel_path? string Relative path within the remote directory
+    --- @return table
+    obj.symlink = function(rel_path)
+        rel_path = rel_path or random_dir_name()
+        return Driver.remote_symlink(remote_path .. '/' .. rel_path)
+    end
+
     --- Checks if dir's path exists and is a directory
     --- @param opts? table
     --- @return boolean
@@ -522,6 +569,22 @@ Driver.remote_file = function(remote_path)
     --- @return string
     obj.path = function()
         return remote_path
+    end
+
+    --- Return canonicalized path of file on remote machine
+    --- @param opts? table
+    --- @return string|nil
+    obj.canonicalized_path = function(opts)
+        opts = opts or {}
+        local out = vim.fn.system({'ssh', '-p', c.port, c.host, 'realpath', remote_path})
+        local errno = tonumber(vim.v.shell_error)
+        local success = errno == 0
+        if not opts.ignore_errors then
+            assert(success, 'ssh realpath failed (' .. errno .. '): ' .. out)
+        end
+        if success then
+            return vim.trim(out)
+        end
     end
 
     --- Read remote file into list of lines
@@ -669,6 +732,22 @@ Driver.remote_symlink = function(remote_path)
         return remote_path
     end
 
+    --- Return canonicalized path of symlink on remote machine
+    --- @param opts? table
+    --- @return string|nil
+    obj.canonicalized_path = function(opts)
+        opts = opts or {}
+        local out = vim.fn.system({'ssh', '-p', c.port, c.host, 'realpath', remote_path})
+        local errno = tonumber(vim.v.shell_error)
+        local success = errno == 0
+        if not opts.ignore_errors then
+            assert(success, 'ssh realpath failed (' .. errno .. '): ' .. out)
+        end
+        if success then
+            return vim.trim(out)
+        end
+    end
+
     --- Return path of source of symlink, if it exists
     --- @param opts? table
     --- @return string|nil
@@ -753,6 +832,12 @@ Driver.local_file = function(path)
     --- @return string
     obj.path = function()
         return path
+    end
+
+    --- Return canonicalized path of file on local machine
+    --- @return string|nil
+    obj.canonicalized_path = function()
+        return vim.loop.fs_realpath(path)
     end
 
     --- Read local file into list of lines

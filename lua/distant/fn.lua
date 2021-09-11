@@ -186,7 +186,7 @@ end
 --- @param args list Array of arguments to append to the command
 --- @param opts.timeout number Maximum time to wait for the program to finish
 --- @param opts.interval number Time in milliseconds to wait between checks for program to finish
---- @return table output Table with exit_code, stdout, and stderr fields where
+--- @return table output Table with code, stdout, and stderr fields where
 ---         stdout and stderr are lists of individual lines of output, or
 ---         returns nil if timeout
 fn.run = function(cmd, args, opts)
@@ -479,7 +479,7 @@ end
 ---
 --- @param cmd string Name of the command to run
 --- @param args list Array of arguments to append to the command
---- @param cb function Function that is passed table with exit_code, stdout,
+--- @param cb function Function that is passed table with code, stdout,
 ---        and stderr fields where stdout and stderr are lists of individual
 ---        lines of output, or nil if timeout
 fn.async.run = function(cmd, args, cb)
@@ -495,32 +495,47 @@ fn.async.run = function(cmd, args, cb)
         end
     end
 
-    local function make_data(exit_code, data)
+    local function make_data(code, data)
+        local function collect_and_split(ty)
+            -- Get all text segments and join them together
+            local parts = u.filter_map(data, function(item)
+                if item.type == ty then
+                    local text = item.data.data
+                    if type(text) == 'string' then
+                        return text
+                    end
+                end
+            end)
+
+            -- If we have any parts at all, then join together and
+            -- then split out by newline
+            if not vim.tbl_isempty(parts) then
+                local text = table.concat(parts)
+                return vim.split(text, '\n', true)
+
+            -- Otherwise, return an empty list
+            else
+                return {}
+            end
+        end
+
         return {
-            exit_code = exit_code;
-            stdout = u.filter_map(data, function(item)
-                if item.type == 'proc_stdout' then
-                    return item.data.data
-                end
-            end);
-            stderr = u.filter_map(data, function(item)
-                if item.type == 'proc_stderr' then
-                    return item.data.data
-                end
-            end);
+            code = code;
+            stdout = collect_and_split('proc_stdout');
+            stderr = collect_and_split('proc_stderr');
         }
     end
 
     local function make_exit_code(msg)
-        local exit_code = msg.data.exit_code
-        if exit_code == nil then
+        local code = msg.data.code
+        if code == nil then
             if msg.data.success then
-                exit_code = 0
+                code = 0
             else
-                exit_code = -1
+                code = -1
             end
         end
-        return exit_code
+        return code
     end
 
     -- Register a callback to receive stdout/stderr/done messages

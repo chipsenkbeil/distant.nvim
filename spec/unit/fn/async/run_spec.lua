@@ -76,7 +76,7 @@ describe('fn.async.run', function()
         fn.async.run('cmd', {'arg1', 'arg2'}, function(err, data)
             assert.is.falsy(err)
             assert.is.same({
-                exit_code = 456,
+                code = 456,
                 stdout = {},
                 stderr = {},
             }, data)
@@ -97,7 +97,7 @@ describe('fn.async.run', function()
 
         -- End the process
         rb_cb(
-            { type = 'proc_done', data = { id = 999, exit_code = 456 } },
+            { type = 'proc_done', data = { id = 999, code = 456 } },
             function() urb(123) end
         )
 
@@ -122,9 +122,9 @@ describe('fn.async.run', function()
         fn.async.run('cmd', {'arg1', 'arg2'}, function(err, data)
             assert.is.falsy(err)
             assert.is.same({
-                exit_code = 456,
-                stdout = {'abc', 'def'},
-                stderr = {'ghi', 'jkl'},
+                code = 456,
+                stdout = {'abcdef'},
+                stderr = {'ghijkl'},
             }, data)
 
             done()
@@ -152,14 +152,14 @@ describe('fn.async.run', function()
         rb_cb({ type = 'proc_stderr', data = { id = 123, data = 'bad' } })
 
         -- end process with wrong id is ignored
-        rb_cb({ type = 'proc_done', data = { id = 123, exit_code = 'bad' } })
+        rb_cb({ type = 'proc_done', data = { id = 123, code = 'bad' } })
 
         -- Verify that unregister still not triggered because not done
         assert.spy(urb).was.not_called()
 
         -- End the process
         rb_cb(
-            { type = 'proc_done', data = { id = 999, exit_code = 456 } },
+            { type = 'proc_done', data = { id = 999, code = 456 } },
             function() urb(123) end
         )
 
@@ -184,9 +184,9 @@ describe('fn.async.run', function()
         fn.async.run('cmd', {'arg1', 'arg2'}, function(err, data)
             assert.is.falsy(err)
             assert.is.same({
-                exit_code = 456,
-                stdout = {'abc', 'def'},
-                stderr = {'ghi', 'jkl'},
+                code = 456,
+                stdout = {'abcdef'},
+                stderr = {'ghijkl'},
             }, data)
 
             done()
@@ -208,14 +208,14 @@ describe('fn.async.run', function()
         rb_cb({ type = 'proc_stderr', data = { id = 123, data = 'bad' } })
 
         -- end process with wrong id is ignored
-        rb_cb({ type = 'proc_done', data = { id = 123, exit_code = 'bad' } })
+        rb_cb({ type = 'proc_done', data = { id = 123, code = 'bad' } })
 
         -- Verify that unregister still not triggered because not done
         assert.spy(urb).was.not_called()
 
         -- End the process
         rb_cb(
-            { type = 'proc_done', data = { id = 999, exit_code = 456 } },
+            { type = 'proc_done', data = { id = 999, code = 456 } },
             function() end
         )
 
@@ -246,9 +246,9 @@ describe('fn.async.run', function()
         fn.async.run('cmd', {'arg1', 'arg2'}, function(err, data)
             assert.is.falsy(err)
             assert.is.same({
-                exit_code = 456,
-                stdout = {'abc', 'def'},
-                stderr = {'ghi', 'jkl'},
+                code = 456,
+                stdout = {'abcdef'},
+                stderr = {'ghijkl'},
             }, data)
 
             done()
@@ -276,14 +276,14 @@ describe('fn.async.run', function()
         assert.spy(urb).was.not_called()
 
         -- end process with wrong id is ignored
-        rb_cb({ type = 'proc_done', data = { id = 123, exit_code = 'bad' } })
+        rb_cb({ type = 'proc_done', data = { id = 123, code = 'bad' } })
 
         -- Verify that unregister still not triggered because not done
         assert.spy(urb).was.not_called()
 
         -- End the process
         rb_cb(
-            { type = 'proc_done', data = { id = 999, exit_code = 456 } },
+            { type = 'proc_done', data = { id = 999, code = 456 } },
             function() urb(123) end
         )
 
@@ -309,7 +309,7 @@ describe('fn.async.run', function()
 
             -- Exit code is -1 if success is falsy
             assert.is.same({
-                exit_code = -1,
+                code = -1,
                 stdout = {},
                 stderr = {},
             }, data)
@@ -344,7 +344,7 @@ describe('fn.async.run', function()
 
             -- Exit code is 0 if success is truthy
             assert.is.same({
-                exit_code = 0,
+                code = 0,
                 stdout = {},
                 stderr = {},
             }, data)
