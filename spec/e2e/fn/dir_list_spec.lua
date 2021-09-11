@@ -90,7 +90,7 @@ describe('fn', function()
             local err, entries = fn.dir_list(root.path(), {include_root = true})
             assert(not err, err)
             assert.are.same(entries, {
-                {path = root.path(), file_type = 'dir', depth = 0},
+                {path = root.canonicalized_path(), file_type = 'dir', depth = 0},
                 {path = 'dir', file_type = 'dir', depth = 1},
                 {path = 'file', file_type = 'file', depth = 1},
                 {path = 'link', file_type = 'symlink', depth = 1},

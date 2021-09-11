@@ -441,6 +441,22 @@ Driver.remote_dir = function(remote_path)
         return remote_path
     end
 
+    --- Return canonicalized path of directory on remote machine
+    --- @param opts? table
+    --- @return string|nil
+    obj.canonicalized_path = function(opts)
+        opts = opts or {}
+        local out = vim.fn.system({'ssh', '-p', c.port, c.host, 'realpath', remote_path})
+        local errno = tonumber(vim.v.shell_error)
+        local success = errno == 0
+        if not opts.ignore_errors then
+            assert(success, 'ssh realpath failed (' .. errno .. '): ' .. out)
+        end
+        if success then
+            return vim.trim(out)
+        end
+    end
+
     --- Creates the directory and all of the parent components on the remote machine
     --- @param opts? table
     --- @return boolean
@@ -553,6 +569,22 @@ Driver.remote_file = function(remote_path)
     --- @return string
     obj.path = function()
         return remote_path
+    end
+
+    --- Return canonicalized path of file on remote machine
+    --- @param opts? table
+    --- @return string|nil
+    obj.canonicalized_path = function(opts)
+        opts = opts or {}
+        local out = vim.fn.system({'ssh', '-p', c.port, c.host, 'realpath', remote_path})
+        local errno = tonumber(vim.v.shell_error)
+        local success = errno == 0
+        if not opts.ignore_errors then
+            assert(success, 'ssh realpath failed (' .. errno .. '): ' .. out)
+        end
+        if success then
+            return vim.trim(out)
+        end
     end
 
     --- Read remote file into list of lines
@@ -700,6 +732,22 @@ Driver.remote_symlink = function(remote_path)
         return remote_path
     end
 
+    --- Return canonicalized path of symlink on remote machine
+    --- @param opts? table
+    --- @return string|nil
+    obj.canonicalized_path = function(opts)
+        opts = opts or {}
+        local out = vim.fn.system({'ssh', '-p', c.port, c.host, 'realpath', remote_path})
+        local errno = tonumber(vim.v.shell_error)
+        local success = errno == 0
+        if not opts.ignore_errors then
+            assert(success, 'ssh realpath failed (' .. errno .. '): ' .. out)
+        end
+        if success then
+            return vim.trim(out)
+        end
+    end
+
     --- Return path of source of symlink, if it exists
     --- @param opts? table
     --- @return string|nil
@@ -784,6 +832,12 @@ Driver.local_file = function(path)
     --- @return string
     obj.path = function()
         return path
+    end
+
+    --- Return canonicalized path of file on local machine
+    --- @return string|nil
+    obj.canonicalized_path = function()
+        return vim.loop.fs_realpath(path)
     end
 
     --- Read local file into list of lines
