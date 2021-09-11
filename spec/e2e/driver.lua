@@ -164,13 +164,19 @@ function Driver:new_dir_fixture(opts)
     -- Create all additional items within fixture
     local items = opts.items or {}
     for _, item in ipairs(items) do
-        local is_dir = vim.endswith(item, '/')
-        if is_dir then
-            local dir = rd.dir(item)
-            assert(dir.make(), 'Failed to create dir: ' .. dir.path())
-        else
-            local file = rd.file(item)
-            assert(file.touch(), 'Failed to create file: ' .. file.path())
+        if type(item) == 'string' then
+            local is_dir = vim.endswith(item, '/')
+            if is_dir then
+                local dir = rd.dir(item)
+                assert(dir.make(), 'Failed to create dir: ' .. dir.path())
+            else
+                local file = rd.file(item)
+                assert(file.touch(), 'Failed to create file: ' .. file.path())
+            end
+        elseif vim.tbl_islist(item) and #item == 2 then
+            local symlink = rd.symlink(item[1])
+            local target = rd.file(item[2]).path()
+            assert(symlink.make(target), 'Failed to create symlink: ' .. symlink.path() .. ' to ' .. target)
         end
     end
 
