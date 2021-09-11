@@ -498,21 +498,29 @@ fn.async.run = function(cmd, args, cb)
     local function make_data(exit_code, data)
         return {
             exit_code = exit_code;
-            stdout = u.filter_map(data, function(item)
+            stdout = vim.tbl_flatten(u.filter_map(data, function(item)
                 if item.type == 'proc_stdout' then
-                    return item.data.data
+                    local text = item.data.data
+                    if type(text) == 'string' then
+                        text = vim.split(text, '\n', true)
+                    end
+                    return text
                 end
-            end);
-            stderr = u.filter_map(data, function(item)
+            end));
+            stderr = vim.tbl_flatten(u.filter_map(data, function(item)
                 if item.type == 'proc_stderr' then
-                    return item.data.data
+                    local text = item.data.data
+                    if type(text) == 'string' then
+                        text = vim.split(text, '\n', true)
+                    end
+                    return text
                 end
-            end);
+            end));
         }
     end
 
     local function make_exit_code(msg)
-        local exit_code = msg.data.exit_code
+        local exit_code = msg.data.code
         if exit_code == nil then
             if msg.data.success then
                 exit_code = 0

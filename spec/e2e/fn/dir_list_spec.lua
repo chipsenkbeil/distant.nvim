@@ -96,5 +96,21 @@ describe('fn', function()
                 {path = 'link', file_type = 'symlink', depth = 1},
             })
         end)
+
+        it('should return empty entries if path is to a file', function()
+            local file = root.file()
+            assert(file.touch(), 'Failed to create file: ' .. file.path())
+
+            local err, entries = fn.dir_list(file.path())
+            assert.is.falsy(err)
+            assert.are.same(entries, {})
+        end)
+
+        it('should fail if the path does not exist', function()
+            local dir = root.dir()
+            local err, res = fn.dir_list(dir.path())
+            assert.is.truthy(err)
+            assert.is.falsy(res)
+        end)
     end)
 end)

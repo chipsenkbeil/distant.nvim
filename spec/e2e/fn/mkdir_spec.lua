@@ -6,8 +6,6 @@ describe('fn', function()
 
     before_each(function()
         driver = Driver:setup()
-
-        -- Create a test dir and file on the remote machine
         root = driver:new_dir_fixture()
     end)
 

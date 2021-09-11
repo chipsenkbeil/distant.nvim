@@ -2,14 +2,13 @@ local fn = require('distant.fn')
 local Driver = require('spec.e2e.driver')
 
 describe('fn', function()
-    local driver, dir, file
+    local driver, root, file
 
     before_each(function()
         driver = Driver:setup()
+        root = driver:new_dir_fixture()
 
-        -- Create a test dir and file on the remote machine
-        dir = driver:new_dir_fixture()
-        file = dir.file()
+        file = root.file()
         assert(file.touch(), 'Failed to create file: ' .. file.path())
     end)
 
