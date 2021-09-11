@@ -17,7 +17,7 @@ describe('fn', function()
             local err, res = fn.run('printf', {'hello\non\nmultiple\nlines'})
             assert(not err, err)
             assert.are.same(res, {
-                exit_code = 0,
+                code = 0,
                 stdout = {'hello', 'on', 'multiple', 'lines'},
                 stderr = {},
             })
@@ -27,7 +27,7 @@ describe('fn', function()
             local err, res = fn.run('sh', {'-c', '1>&2 printf "hello\non\nmultiple\nlines"'})
             assert(not err, err)
             assert.are.same(res, {
-                exit_code = 0,
+                code = 0,
                 stdout = {},
                 stderr = {'hello', 'on', 'multiple', 'lines'},
             })
@@ -37,7 +37,7 @@ describe('fn', function()
             local err, res = fn.run('sh', {'-c', 'exit 99'})
             assert(not err, err)
             assert.are.same(res, {
-                exit_code = 99,
+                code = 99,
                 stdout = {},
                 stderr = {},
             })

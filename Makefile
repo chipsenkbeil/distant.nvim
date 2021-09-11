@@ -16,8 +16,8 @@ DOCKER_OUT_DIR=/tmp
 DOCKER_OUT_ARCHIVE=$(DOCKER_OUT_DIR)/distant_nvim_images.tar
 
 define docker_exec
-@docker rm -f $(DOCKER_SERVER) >& /dev/null || true
-@docker network rm $(DOCKER_NETWORK) >& /dev/null || true
+@docker rm -f $(DOCKER_SERVER) > /dev/null 2>&1 || true
+@docker network rm $(DOCKER_NETWORK) > /dev/null 2>&1 || true
 @docker build . --file Dockerfile --tag $(DOCKER_IMAGE) --cache-from=$(DOCKER_IMAGE)
 @docker network create $(DOCKER_NETWORK)
 @docker run \
@@ -35,8 +35,8 @@ define docker_exec
 	-e DISTANT_BIN=/usr/local/bin/distant \
 	$(DOCKER_IMAGE) sh -c "cd app && $(1)"; \
 	STATUS=$$?; \
-	docker rm -f $(DOCKER_SERVER) >& /dev/null; \
-	docker network rm $(DOCKER_NETWORK) >& /dev/null; \
+	docker rm -f $(DOCKER_SERVER) > /dev/null 2>&1; \
+	docker network rm $(DOCKER_NETWORK) > /dev/null 2>&1; \
 	exit $$STATUS
 endef
 
