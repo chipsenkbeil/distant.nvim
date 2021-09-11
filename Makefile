@@ -15,6 +15,12 @@ DOCKER_SERVER=server
 DOCKER_OUT_DIR=/tmp
 DOCKER_OUT_ARCHIVE=$(DOCKER_OUT_DIR)/distant_nvim_images.tar
 
+COMMA:=,
+
+# Function docker_exec runs tests within a docker container
+# 
+# Args:
+#	1: The command to run inside the container such as `make test`
 define docker_exec
 @docker rm -f $(DOCKER_SERVER) > /dev/null 2>&1 || true
 @docker network rm $(DOCKER_NETWORK) > /dev/null 2>&1 || true
@@ -40,12 +46,18 @@ define docker_exec
 	exit $$STATUS
 endef
 
+# Function test_exec runs tests using neovim
+#
+# Args:
+#	1: The path within the spec directory such as e2e/fn/copy_spec.lua to run a
+#	   specific test or e2e/ to run all e2e tests
+#	2: Optional configuration to pass to PlenaryBustedDirectory such as `sequential = true`
 define test_exec
 @nvim \
 	--headless \
 	--noplugin \
 	-u spec/spec.vim \
-	-c "PlenaryBustedDirectory spec/$(1) { minimal_init = 'spec/spec.vim' }"
+	-c "PlenaryBustedDirectory spec/$(1) { minimal_init = 'spec/spec.vim' $(if 2,$(COMMA)$(2)) }"
 endef
 
 ###############################################################################
@@ -69,7 +81,7 @@ test-unit: vendor ## Runs unit tests in a headless neovim instance on the local 
 	$(call test_exec,unit/)
 
 test-e2e: vendor ## Runs e2e tests in a headless neovim instance on the local machine
-	$(call test_exec,e2e/)
+	$(call test_exec,e2e/,sequential = true)
 
 # Pulls in all of our dependencies for tests
 vendor: vendor/plenary.nvim
