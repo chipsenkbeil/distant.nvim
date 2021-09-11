@@ -496,26 +496,33 @@ fn.async.run = function(cmd, args, cb)
     end
 
     local function make_data(code, data)
+        local function collect_and_split(ty)
+            -- Get all text segments and join them together
+            local parts = u.filter_map(data, function(item)
+                if item.type == ty then
+                    local text = item.data.data
+                    if type(text) == 'string' then
+                        return text
+                    end
+                end
+            end)
+
+            -- If we have any parts at all, then join together and
+            -- then split out by newline
+            if not vim.tbl_isempty(parts) then
+                local text = table.concat(parts)
+                return vim.split(text, '\n', true)
+
+            -- Otherwise, return an empty list
+            else
+                return {}
+            end
+        end
+
         return {
             code = code;
-            stdout = vim.tbl_flatten(u.filter_map(data, function(item)
-                if item.type == 'proc_stdout' then
-                    local text = item.data.data
-                    if type(text) == 'string' then
-                        text = vim.split(text, '\n', true)
-                    end
-                    return text
-                end
-            end));
-            stderr = vim.tbl_flatten(u.filter_map(data, function(item)
-                if item.type == 'proc_stderr' then
-                    local text = item.data.data
-                    if type(text) == 'string' then
-                        text = vim.split(text, '\n', true)
-                    end
-                    return text
-                end
-            end));
+            stdout = collect_and_split('proc_stdout');
+            stderr = collect_and_split('proc_stderr');
         }
     end
 
