@@ -1,0 +1,33 @@
+local fn = require('distant.fn')
+local Driver = require('spec.e2e.driver')
+
+describe('fn', function()
+    local driver, dir, file
+
+    before_each(function()
+        driver = Driver:setup()
+
+        -- Create a test dir and file on the remote machine
+        dir = driver:new_dir_fixture()
+        file = dir.file()
+        assert(file.touch(), 'Failed to create file: ' .. file.path())
+    end)
+
+    after_each(function()
+        driver:teardown()
+    end)
+
+    describe('exists', function()
+        it('should return true when path exists', function()
+            local err, res = fn.exists(file.path())
+            assert(not err, err)
+            assert.is.truthy(res)
+        end)
+
+        it('should return false when path does not exist', function()
+            local err, res = fn.exists(file.path() .. '123')
+            assert(not err, err)
+            assert.is.falsy(res)
+        end)
+    end)
+end)

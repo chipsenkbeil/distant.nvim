@@ -488,6 +488,16 @@ Driver.remote_dir = function(remote_path)
         return Driver.remote_dir(remote_path .. '/' .. rel_path)
     end
 
+    --- References a remote symlink within the directory; if no relative path is provided
+    --- then a random symlink path will be produced
+    ---
+    --- @param rel_path? string Relative path within the remote directory
+    --- @return table
+    obj.symlink = function(rel_path)
+        rel_path = rel_path or random_dir_name()
+        return Driver.remote_symlink(remote_path .. '/' .. rel_path)
+    end
+
     --- Checks if dir's path exists and is a directory
     --- @param opts? table
     --- @return boolean
