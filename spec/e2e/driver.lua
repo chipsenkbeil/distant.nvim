@@ -1,6 +1,7 @@
 local c = require('spec.e2e.config')
 local editor = require('distant.editor')
 local s = require('distant.internal.state')
+local settings = require('distant.internal.settings')
 
 local Driver = {}
 Driver.__index = Driver
@@ -45,7 +46,7 @@ local function initialize_session(timeout, interval)
     --       the same connection and only have one perform an actual launch?
     local args = {
         distant = c.bin,
-        extra_server_args = '"--current-dir \"' .. c.root_dir .. '\" --shutdown-after 5 --port 8080:8999"',
+        extra_server_args = '"--current-dir \"' .. c.root_dir .. '\" --shutdown-after 60 --port 8080:8999"',
     }
     editor.launch(c.host, args, {use_var = err_var})
     local status = vim.fn.wait(timeout, function() return s.session() ~= nil end, interval)
@@ -64,16 +65,38 @@ local function initialize_session(timeout, interval)
 end
 
 --- Initializes a driver for e2e tests
-function Driver:setup(timeout, interval)
+function Driver:setup(opts)
+    opts = opts or {}
+
+    if type(opts.settings) == 'table' then
+        settings.merge(opts.settings)
+    end
+
     -- Create a new instance and assign the session to it
     local obj = {}
     setmetatable(obj, Driver)
     obj.__state = {
-        session = initialize_session(timeout, interval),
+        session = nil,
         fixtures = {},
     }
 
+    if not opts.lazy then
+        obj:initialize(opts)
+    end
+
     return obj
+end
+
+--- Initializes the session of the driver
+function Driver:initialize(opts)
+    opts = opts or {}
+
+    if type(opts.settings) == 'table' then
+        settings.merge(opts.settings)
+    end
+
+    self.__state.session = initialize_session(opts.timeout, opts.interval)
+    return self
 end
 
 --- Tears down driver, cleaning up resources
@@ -82,6 +105,28 @@ function Driver:teardown()
 
     for _, fixture in ipairs(self.__state.fixtures) do
         fixture.remove({ignore_errors = true})
+    end
+end
+
+-------------------------------------------------------------------------------
+-- DRIVER EXECUTABLE FUNCTIONS
+-------------------------------------------------------------------------------
+
+--- Executes a program on the remote machine
+--- @return string|nil
+Driver.exec = function(cmd, args, opts)
+    args = args or {}
+    opts = opts or {}
+
+    local out = vim.fn.system({'ssh', '-p', c.port, c.host, cmd, unpack(args)})
+    local errno = tonumber(vim.v.shell_error)
+
+    local success = errno == 0
+    if not opts.ignore_errors then
+        assert(success, 'ssh ' .. cmd .. ' failed (' .. errno .. '): ' .. out)
+    end
+    if success then
+        return out
     end
 end
 

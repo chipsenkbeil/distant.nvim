@@ -107,7 +107,7 @@ end
 --- @param no_default? boolean If true, will not apply default settings first
 --- @return table #The settings associated with the remote machine (or empty table)
 settings.for_label = function(label, no_default)
-    log.trace('settings.for_label(%s, %s)', label, vim.inspect(no_default))
+    log.fmt_trace('settings.for_label(%s, %s)', label, vim.inspect(no_default))
 
     local specific = inner[label] or {}
     local default = settings.default()

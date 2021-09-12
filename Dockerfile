@@ -1,4 +1,4 @@
-FROM alpine:3.14
+FROM --platform=linux/amd64 alpine:3.14
 
 # Install all of the packages we need
 #
@@ -6,12 +6,13 @@ FROM alpine:3.14
 # 2. openssh & openrc to be able to run sshd (and ssh as client)
 # 3. build-base & rustup to be able to build the distant binary
 # 4. git to be able to clone plenary for tests
-# 5. curl to pull down neovim binary
+# 5. curl & gzip to pull down rust-analyzer
 RUN apk add --update --no-cache \
     sudo \
     openssh openrc \
     build-base rustup \
-    git
+    git \
+    curl gzip
 
 # Configure a non-root user with a password that matches its name
 # as we need a user with a password even when we are providing
@@ -26,8 +27,14 @@ RUN addgroup -S $user \
 USER $user
 WORKDIR /home/$user
 
-# Install and configure rust for binary building
-RUN rustup-init -y
+ARG cargo_bin_dir=/home/$user/.cargo/bin
+RUN mkdir -p $cargo_bin_dir
+
+# Install and configure rust & rls
+RUN rustup-init -y \
+    && source /home/$user/.cargo/env \
+    && rustup component add rls \
+    && sudo ln -s $cargo_bin_dir/rls /usr/local/bin/rls
 
 # Install neovim 0.5 binary (from edge)
 RUN sudo apk add neovim \
@@ -50,14 +57,10 @@ RUN sudo mkdir -p /var/run/sshd /run/openrc \
     && echo 'StrictHostKeyChecking no' > /home/$user/.ssh/config
 
 # Install distant binary and make sure its in a path for everyone
-# ARG rev=9bd21123448682e0a16ac275ad2fb8cd91e883c3
-# RUN source /home/$user/.cargo/env \
-#     && cargo install --git https://github.com/chipsenkbeil/distant --rev $rev \
-#     && sudo mv /home/$user/.cargo/bin/distant /usr/local/bin/distant
-ARG version=0.13.1
-RUN source /home/$user/.cargo/env \
-    && cargo install distant --version $version \
-    && sudo mv /home/$user/.cargo/bin/distant /usr/local/bin/distant
+ARG distant_release=https://github.com/chipsenkbeil/distant/releases/download/v0.13.1
+RUN curl -L $distant_release/distant-linux64-musl > $cargo_bin_dir/distant \
+    && chmod +x $cargo_bin_dir/distant \
+    && sudo ln -s $cargo_bin_dir/distant /usr/local/bin/distant
 
 # Install our repository within a subdirectory of home
 COPY --chown=$user . app/

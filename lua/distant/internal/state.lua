@@ -48,6 +48,7 @@ local function lsp_start_client(config, opts)
     assert(config.cmd, 'cmd is required')
     assert(config.root_dir, 'root_dir is required')
     opts = opts or {}
+    log.fmt_trace('lsp_start_client(%s, %s)', config, opts)
 
     -- TODO: If no log file is specified for output, we need to make our process quiet
     --       otherwise invalid data can be fed to the LSP client somehow; this shouldn't
@@ -131,7 +132,7 @@ local function lsp_start_client(config, opts)
     -- Override the config's cmd, init_options, and capabilities
     -- as we take those existing config fields and alter them to work on
     -- a remote machine
-    return vim.lsp.start_client(u.merge(
+    local lsp_config = u.merge(
         config,
         {
             before_init = before_init;
@@ -144,7 +145,8 @@ local function lsp_start_client(config, opts)
             root_dir = '/';
             workspace_folders = nil;
         }
-    ))
+    )
+    return vim.lsp.start_client(lsp_config)
 end
 
 --- Contains operations to apply against LSP instances on remote machines
