@@ -84,14 +84,14 @@ test-unit: vendor ## Runs unit tests in a headless neovim instance on the local 
 	$(call test_exec,unit/)
 
 test-e2e: vendor ## Runs e2e tests in a headless neovim instance on the local machine
-	$(call test_exec,e2e/,sequential = true)
+	$(call test_exec,e2e/,sequential = true$(COMMA)timeout = 300000)
 
 # Pulls in all of our dependencies for tests
 vendor: vendor/plenary.nvim
 
 # Pulls in the latest version of plenary.nvim, which we use to run our tests
 vendor/plenary.nvim:
-	git clone https://github.com/nvim-lua/plenary.nvim.git vendor/plenary.nvim || \
+	git clone https://github.com/chipsenkbeil/plenary.nvim.git vendor/plenary.nvim || \
 		( cd vendor/plenary.nvim && git pull --rebase; )
 
 ###############################################################################
