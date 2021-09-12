@@ -7,6 +7,7 @@ DISTANT_HOST?=localhost
 DISTANT_PORT?=22
 DISTANT_IDENTITY_FILE?=
 DISTANT_BIN?="$(HOME)/.cargo/bin/distant"
+DISTANT_LOG_LEVEL?=info
 
 DOCKER_IMAGE=distant_nvim_test
 DOCKER_NETWORK=distant_nvim_network
@@ -22,6 +23,7 @@ COMMA:=,
 # Args:
 #	1: The command to run inside the container such as `make test`
 define docker_exec
+@docker rm -f $(DOCKER_CLIENT) > /dev/null 2>&1 || true
 @docker rm -f $(DOCKER_SERVER) > /dev/null 2>&1 || true
 @docker network rm $(DOCKER_NETWORK) > /dev/null 2>&1 || true
 @docker build . --file Dockerfile --tag $(DOCKER_IMAGE) --cache-from=$(DOCKER_IMAGE)
@@ -39,6 +41,7 @@ define docker_exec
 	-e DISTANT_HOST=$(DOCKER_SERVER) \
 	-e DISTANT_PORT=22 \
 	-e DISTANT_BIN=/usr/local/bin/distant \
+	$(2) \
 	$(DOCKER_IMAGE) sh -c "cd app && $(1)"; \
 	STATUS=$$?; \
 	docker rm -f $(DOCKER_SERVER) > /dev/null 2>&1; \
@@ -115,3 +118,11 @@ docker-save:
 
 docker-load:
 	@docker load --input $(DOCKER_OUT_ARCHIVE)
+
+docker-shell: ## Runs our client docker container in an interactive shell
+	$(call docker_exec,/bin/sh,-it --init)
+
+docker-shutdown:
+	@docker rm -f $(DOCKER_CLIENT) > /dev/null 2>&1 || true
+	@docker rm -f $(DOCKER_SERVER) > /dev/null 2>&1 || true
+	@docker network rm $(DOCKER_NETWORK) > /dev/null 2>&1 || true
