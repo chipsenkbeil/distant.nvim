@@ -29,11 +29,11 @@ command.open = function(...)
     editor.open(path, opts)
 end
 
---- DistantLaunch host [arg1, arg2]
+--- DistantLaunch host [opt1=..., opt2=...]
 command.launch = function(...)
     local args = {...}
     local host = args[1]
-    local launch_args = vim.list_slice(args, 2, #args)
+    local launch_args = parse_opts(unpack(vim.list_slice(args, 2, #args)))
 
     editor.launch(host, launch_args)
 end

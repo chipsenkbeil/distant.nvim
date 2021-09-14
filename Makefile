@@ -91,7 +91,7 @@ vendor: vendor/plenary.nvim
 
 # Pulls in the latest version of plenary.nvim, which we use to run our tests
 vendor/plenary.nvim:
-	git clone https://github.com/chipsenkbeil/plenary.nvim.git vendor/plenary.nvim || \
+	git clone https://github.com/nvim-lua/plenary.nvim.git vendor/plenary.nvim || \
 		( cd vendor/plenary.nvim && git pull --rebase; )
 
 ###############################################################################
