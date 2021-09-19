@@ -69,10 +69,7 @@ return function(host, args, opts)
         s.settings.launch,
         args,
         {log_file = err_log; session = 'pipe'}
-    ), {'verbose'})
-    if type(args.verbose) == 'number' and args.verbose > 0 then
-        args = vim.trim(args .. ' -' .. string.rep('v', args.verbose))
-    end
+    ))
 
     -- If we have a visual way to present, do so
     local run = nil

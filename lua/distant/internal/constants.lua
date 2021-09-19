@@ -12,6 +12,6 @@ constants.TIMEOUT_INTERVAL = 200
 
 --- Represents the minimum support version of the binary that this plugin requires
 --- Format is {major, minor, patch}
-constants.MIN_SUPPORTED_VERSION = {0, 13, 1}
+constants.MIN_SUPPORTED_VERSION = {0, 14, 0}
 
 return constants

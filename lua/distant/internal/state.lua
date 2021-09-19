@@ -41,7 +41,7 @@ state.settings = s.default()
 --- @param config table The configuration to use with the LSP client,
 ---        mirring that of `vim.lsp.start_client`
 --- @param opts table Additional options to use for the distant binary
----        acting as a proxy such as `log_file` or `verbose`
+---        acting as a proxy such as `log_file` or `log_level`
 --- @return number #The id of the created client
 local function lsp_start_client(config, opts)
     assert(type(config) == 'table', 'config must be a table')
@@ -61,11 +61,7 @@ local function lsp_start_client(config, opts)
     local session = assert(state.session(), 'Session not yet established! Launch first!')
 
     -- Build our extra arguments for the distant binary
-    local args = u.build_arg_str(opts, {'verbose'})
-    if type(opts.verbose) == 'number' and opts.verbose > 0 then
-        args = vim.trim(args .. ' -' .. string.rep('v', opts.verbose))
-    end
-    args = vim.split(args, ' ', true)
+    local args = vim.split(u.build_arg_str(opts), ' ', true)
 
     -- The command needs to be wrapped with a prefix that is our distant binary
     -- as we are running the actual lsp server remotely
