@@ -69,14 +69,14 @@ describe('editor.lsp', function()
                 ['*'] = {
                     client = {
                         log_file = '/tmp/test.distant.client.log',
-                        verbose = 3,
+                        log_level = 'trace',
                     },
                     lsp = {
                         ['rust'] = {
                             cmd = { 'rls' },
                             filetypes = { 'rust' },
                             root_dir = root.path(),
-                            opts = { log_file = '/tmp/test.distant.rust.log', verbose = 3 },
+                            opts = { log_file = '/tmp/test.distant.rust.log', log_level = 'trace' },
                         }
                     }
                 }

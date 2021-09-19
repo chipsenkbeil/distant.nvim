@@ -46,8 +46,8 @@ local DEFAULT_SETTINGS = {
         -- Username to use when logging into the remote machine via SSH
         username = nil;
 
-        -- Verbosity level (1 = info, 2 = debug, 3 = trace) for the launch command
-        verbose = 0;
+        -- Log level (off/error/warn/info/debug/trace) for the client
+        log_level = 'warn';
     };
 
     -- Settings that apply to the client that is created to interact with the server
@@ -55,8 +55,8 @@ local DEFAULT_SETTINGS = {
         -- Log file to use with the client
         log_file = nil;
 
-        -- Verbosity level (1 = info, 2 = debug, 3 = trace) for the client
-        verbose = 0;
+        -- Log level (off/error/warn/info/debug/trace) for the client
+        log_level = 'warn';
     };
 
     -- Settings that apply when editing a remote file

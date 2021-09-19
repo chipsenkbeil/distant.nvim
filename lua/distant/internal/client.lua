@@ -60,7 +60,6 @@ end
 --- Takes an optional set of options to define special handlers:
 ---
 --- * on_exit: a function that is invoked when the client exits
---- * verbose: level of verbosity to apply to the client when spawned
 function client:start(opts)
     log.fmt_debug('Starting client with options: %s', opts)
     assert(not self:is_running(), 'client is already running!')
@@ -76,10 +75,7 @@ function client:start(opts)
         interactive = true;
         format = 'json';
         session = 'pipe';
-    }), {'on_exit', 'verbose'})
-    if type(opts.verbose) == 'number' and opts.verbose > 0 then
-        args = vim.trim(args .. ' -' .. string.rep('v', opts.verbose))
-    end
+    }), {'on_exit'})
 
     local cmd = vim.trim(s.settings.binary_name .. ' action ' .. args)
     log.fmt_debug('Client cmd: %s', cmd)
@@ -117,7 +113,7 @@ function client:start(opts)
             .. ' '
             .. session.port
             .. ' '
-            .. session.auth_key
+            .. session.key
             .. '\n'
         )
     end

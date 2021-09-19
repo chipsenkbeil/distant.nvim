@@ -69,10 +69,7 @@ return function(host, args, opts)
         s.settings.launch,
         args,
         {log_file = err_log; session = 'pipe'}
-    ), {'verbose'})
-    if type(args.verbose) == 'number' and args.verbose > 0 then
-        args = vim.trim(args .. ' -' .. string.rep('v', args.verbose))
-    end
+    ))
 
     -- If we have a visual way to present, do so
     local run = nil
@@ -115,7 +112,7 @@ return function(host, args, opts)
                         local session = {
                             host = tokens[3];
                             port = tonumber(tokens[4]);
-                            auth_key = tokens[5];
+                            key = tokens[5];
                         }
                         if session.host == nil then
                             report_err('Session missing host')
@@ -123,10 +120,10 @@ return function(host, args, opts)
                         if session.port == nil then
                             report_err('Session missing port')
                         end
-                        if session.auth_key == nil then
-                            report_err('Session missing auth key')
+                        if session.key == nil then
+                            report_err('Session missing key')
                         end
-                        if session.host and session.port and session.auth_key then
+                        if session.host and session.port and session.key then
                             s.set_session(session)
                         end
                     end
