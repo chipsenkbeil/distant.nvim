@@ -20,7 +20,7 @@ return function()
         session_info = {
             indent .. '* Host = "' .. session.host .. '"';
             indent .. '* Port = "' .. session.port .. '"';
-            indent .. '* Auth = "' .. session.auth_key .. '"';
+            indent .. '* Key = "' .. session.key .. '"';
         }
     end
 

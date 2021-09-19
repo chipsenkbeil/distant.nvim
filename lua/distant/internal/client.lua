@@ -113,7 +113,7 @@ function client:start(opts)
             .. ' '
             .. session.port
             .. ' '
-            .. session.auth_key
+            .. session.key
             .. '\n'
         )
     end

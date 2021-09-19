@@ -112,7 +112,7 @@ return function(host, args, opts)
                         local session = {
                             host = tokens[3];
                             port = tonumber(tokens[4]);
-                            auth_key = tokens[5];
+                            key = tokens[5];
                         }
                         if session.host == nil then
                             report_err('Session missing host')
@@ -120,10 +120,10 @@ return function(host, args, opts)
                         if session.port == nil then
                             report_err('Session missing port')
                         end
-                        if session.auth_key == nil then
-                            report_err('Session missing auth key')
+                        if session.key == nil then
+                            report_err('Session missing key')
                         end
-                        if session.host and session.port and session.auth_key then
+                        if session.host and session.port and session.key then
                             s.set_session(session)
                         end
                     end

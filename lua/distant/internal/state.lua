@@ -88,7 +88,7 @@ local function lsp_start_client(config, opts)
         ['distant'] = {
             ['host'] = session.host;
             ['port'] = session.port;
-            ['auth_key'] = session.auth_key;
+            ['key'] = session.key;
         }
     })
 
@@ -333,13 +333,13 @@ end
 -------------------------------------------------------------------------------
 
 --- Sets the globally-available session
---- @param session table|nil the session in the form of {host, port, auth key}
+--- @param session table|nil the session in the form of {host, port, key}
 state.set_session = function(session)
     inner.session = session
 end
 
 --- Returns the current session, or nil if unavailable
---- @return table|nil #the session in the form of {host, port, auth key}
+--- @return table|nil #the session in the form of {host, port, key}
 state.session = function()
     return inner.session
 end
