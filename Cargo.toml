@@ -1,0 +1,19 @@
+[package]
+name = "distant-nvim"
+version = "0.15.0"
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib"]
+
+[patch.crates-io]
+ssh2 = { git = "https://github.com/wez/ssh2-rs.git", branch="win32ssl" }
+
+[dependencies]
+distant-core = { version = "=0.15.0-alpha.1", git = "https://github.com/chipsenkbeil/distant", tag = "v0.15.0-alpha.1" }
+distant-ssh2 = { version = "=0.15.0-alpha.1", git = "https://github.com/chipsenkbeil/distant", tag = "v0.15.0-alpha.1" }
+futures = "0.3.17"
+mlua = { version = "0.6.3", features = ["luajit", "vendored", "module", "serialize", "async", "macros"] }
+once_cell = "1.8.0"
+serde = { version = "1.0.130", features = ["derive"] }
+tokio = { version = "1.12.0", features = ["full"] }

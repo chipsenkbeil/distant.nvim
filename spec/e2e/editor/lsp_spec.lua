@@ -39,12 +39,17 @@ local function make_rust_project(root)
     ]])), 'Failed to create src/other.rs')
 end
 
-local function try_buf_request(bufnr, method)
+local function try_buf_request(bufnr, method, params)
+    params = params or {}
     local function make_request_sync()
         return vim.lsp.buf_request_sync(
             bufnr,
             method,
-            vim.lsp.util.make_position_params(),
+            vim.tbl_deep_extend(
+                'keep',
+                vim.lsp.util.make_position_params(),
+                params
+            ),
             90 * 1000
         )
     end
@@ -132,6 +137,64 @@ describe('editor.lsp', function()
         assert.are.equal(root.dir('src').file('other.rs').path(), buf.remote_path())
         buf.assert.same(d(3, [[
             pub fn say_hello() {
+                println!("Hello, world!");
+            }
+        ]]))
+    end)
+
+    pending('should support renaming symbols in remote files', function()
+        make_rust_project(root)
+        driver.exec('sh', {'-c', '"cd ' .. root.path() .. ' && $HOME/.cargo/bin/cargo build"'})
+
+        -- Open main.rs, which should start the LSP server
+        local main_rs = root.dir('src').file('main.rs')
+        local buf = driver.buffer(editor.open(main_rs.path()))
+
+        -- Wait for the language server to be ready
+        assert(
+            vim.wait(1000 * 5, function() return vim.lsp.buf.server_ready() end),
+            'Language server not ready'
+        )
+
+        -- Jump to other::say_hello() and have cursor on say_hello
+        local ln, col = driver.window().move_cursor_to('say_hello')
+        assert.are.equal(4, ln)
+        assert.are.equal(11, col)
+
+        -- Perform request in blocking fashion to make sure that we're ready
+        -- NOTE: This does not perform a jump or anything else
+        local res = try_buf_request(buf.id(), 'textDocument/definition')
+        assert(res, 'Failed to get definition')
+
+        -- Now perform the rename in blocking fashion
+        local params = vim.lsp.util.make_position_params()
+        params.newName = 'print_hello'
+        local _, err = vim.lsp.buf_request_sync(buf.id(), 'textDocument/rename', params, 1000 * 10)
+        assert(not err, err)
+
+        -- Verify that we did rename in the buffer
+        buf.assert.same(d(3, [[
+            mod other;
+
+            fn main() {
+                other::print_hello();
+            }
+        ]]))
+
+        -- Next, neovim's rename actually opens all of the files in other buffers and makes the changes,
+        -- so we want to write all of them to verify that the contents change
+        vim.cmd([[wall]])
+
+        -- Verify that the underlying files changed
+        root.dir('src').file('main.rs').assert.same(d(3, [[
+            mod other;
+
+            fn main() {
+                other::print_hello();
+            }
+        ]]))
+        root.dir('src').file('other.rs').assert.same(d(3, [[
+            pub fn print_hello() {
                 println!("Hello, world!");
             }
         ]]))
