@@ -1,21 +1,27 @@
-use distant_core::{Session, SessionExt};
-use mlua::chunk;
 use mlua::prelude::*;
+
+mod runtime;
+mod session;
+pub use session::{LaunchOpts, Session};
 
 #[mlua::lua_module]
 fn distant_nvim(lua: &Lua) -> LuaResult<LuaTable> {
     let exports = lua.create_table()?;
-    exports.set("hello", lua.create_function(hello)?)?;
-    Ok(exports)
-}
 
-fn hello(lua: &Lua, name: String) -> LuaResult<LuaTable> {
-    let t = lua.create_table()?;
-    t.set("name", name.clone())?;
-    let _globals = lua.globals();
-    lua.load(chunk! {
-        print("hello, " .. $name)
-    })
-    .exec()?;
-    Ok(t)
+    // get_session_by_id(id: usize) -> Session
+    exports.set(
+        "get_session_by_id",
+        lua.create_function(|_, id: usize| Ok(Session::new(id)))?,
+    )?;
+
+    // launch(opts: LaunchOpts) -> Session
+    exports.set(
+        "launch",
+        lua.create_async_function(|lua, value: LuaValue| async move {
+            let opts: LaunchOpts = lua.from_value(value)?;
+            Session::launch(opts).await
+        }),
+    )?;
+
+    Ok(exports)
 }
