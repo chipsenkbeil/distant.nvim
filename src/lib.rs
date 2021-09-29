@@ -2,6 +2,8 @@ use mlua::prelude::*;
 
 mod runtime;
 mod session;
+mod utils;
+
 pub use session::{LaunchOpts, Session};
 
 #[mlua::lua_module]
@@ -18,9 +20,9 @@ fn distant_nvim(lua: &Lua) -> LuaResult<LuaTable> {
     exports.set(
         "launch",
         lua.create_async_function(|lua, value: LuaValue| async move {
-            let opts: LaunchOpts = lua.from_value(value)?;
+            let opts = LaunchOpts::from_lua(value, lua)?;
             Session::launch(opts).await
-        }),
+        })?,
     )?;
 
     Ok(exports)

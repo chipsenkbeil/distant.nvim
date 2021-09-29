@@ -1,8 +1,9 @@
+use crate::utils;
 use distant_core::{
     Session as DistantSession, SessionChannel, SessionChannelExt, SessionInfo,
     XChaCha20Poly1305Codec,
 };
-use distant_ssh2::{Ssh2AuthHandler, Ssh2Session};
+use distant_ssh2::Ssh2Session;
 use mlua::{prelude::*, LuaSerdeExt, UserData, UserDataFields, UserDataMethods};
 use once_cell::sync::Lazy;
 use paste::paste;
@@ -69,13 +70,12 @@ impl Session {
 
     /// Launches a new distant session on a remote machine
     // pub async fn launch(ssh_opts: SshOpts) -> LuaResult {}
-    pub async fn launch(opts: LaunchOpts) -> LuaResult<Self> {
+    pub async fn launch(opts: LaunchOpts<'_>) -> LuaResult<Self> {
         let LaunchOpts {
             host,
             method,
+            handler,
             ssh,
-            on_authenticate,
-            on_host_verify,
             timeout,
         } = opts;
 
@@ -83,14 +83,7 @@ impl Session {
         let ssh_session = Ssh2Session::connect(host, ssh.into()).to_lua_err()?;
 
         // Second, authenticate with the server and get a session that is powered by SSH
-        let session = ssh_session
-            .authenticate(Ssh2AuthHandler {
-                /* pub on_authenticate: Box<dyn FnMut(Ssh2AuthEvent) -> io::Result<Vec<String>>>,
-                pub on_banner: Box<dyn FnMut(&str)>,
-                pub on_host_verify: Box<dyn FnMut(&str) -> io::Result<bool>>, */
-            })
-            .await
-            .to_lua_err()?;
+        let mut session = ssh_session.authenticate(handler).await.to_lua_err()?;
 
         // Third, if the actual method we want is distant, then we use our current session to
         // spawn distant and then swap out our session with that one
@@ -98,9 +91,9 @@ impl Session {
         // Otherwise, we just return this session as is
         let session = match method {
             Method::Distant => {
-                // TODO: Provide spawn arguments
+                // TODO: Provide spawn arguments (--host and other)
                 let mut proc = session
-                    .spawn("", "distant", Vec::new())
+                    .spawn("<launch>", "distant", vec!["listen", "--daemon"])
                     .await
                     .to_lua_err()?;
                 let mut stdout = proc.stdout.take().unwrap();
@@ -119,11 +112,11 @@ impl Session {
                     match maybe_info {
                         Some(info) => {
                             let addr = info.to_socket_addr().await.to_lua_err()?;
-                            let key = todo!();
+                            let key = info.key;
                             let codec = XChaCha20Poly1305Codec::from(key);
                             DistantSession::tcp_connect_timeout(addr, codec, timeout)
                                 .await
-                                .to_lua_err()?;
+                                .to_lua_err()?
                         }
                         None => {
                             return Err(io::Error::new(
@@ -149,7 +142,7 @@ impl Session {
         };
 
         // Fourth, store our current session in our global map and then return a reference
-        let id = oorandom::Rand32::rand_u32() as usize;
+        let id = utils::rand_u32()? as usize;
         SESSION_MAP
             .write()
             .map_err(|x| x.to_string().to_lua_err())?
