@@ -1,6 +1,6 @@
 local fn = require('distant.fn')
 local log = require('distant.log')
-local ui = require('distant.internal.ui')
+local ui = require('distant.ui')
 
 --- Opens a new window to show metadata for some path
 ---

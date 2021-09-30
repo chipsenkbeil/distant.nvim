@@ -1,6 +1,6 @@
 local fn = require('distant.fn')
 local log = require('distant.log')
-local v = require('distant.internal.vars')
+local v = require('distant.vars')
 
 --- Writes a buffer to disk on the remote machine
 ---

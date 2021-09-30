@@ -1,5 +1,5 @@
-local s = require('distant.internal.state')
-local u = require('distant.internal.utils')
+local s = require('distant.state')
+local u = require('distant.utils')
 
 local fn = {}
 

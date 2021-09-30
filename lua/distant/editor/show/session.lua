@@ -1,7 +1,7 @@
 local log = require('distant.log')
-local s = require('distant.internal.state')
-local ui = require('distant.internal.ui')
-local u = require('distant.internal.utils')
+local s = require('distant.state')
+local ui = require('distant.ui')
+local u = require('distant.utils')
 
 --- Opens a new window to display session info
 return function()

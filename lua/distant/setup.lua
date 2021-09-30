@@ -1,5 +1,5 @@
 local log = require('distant.log')
-local settings = require('distant.internal.settings')
+local settings = require('distant.settings')
 
 return function(opts)
     log.fmt_trace('setup(%s)', opts)

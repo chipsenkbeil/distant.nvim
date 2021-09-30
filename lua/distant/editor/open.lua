@@ -1,8 +1,8 @@
 local fn = require('distant.fn')
 local log = require('distant.log')
-local s = require('distant.internal.state')
-local u = require('distant.internal.utils')
-local v = require('distant.internal.vars')
+local s = require('distant.state')
+local u = require('distant.utils')
+local v = require('distant.vars')
 
 --- Applies neovim buffer-local mappings
 ---
