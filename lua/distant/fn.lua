@@ -1,7 +1,11 @@
-local s = require('distant.state')
+local state = require('distant.state')
 local u = require('distant.utils')
 
 local fn = {}
+
+local function session()
+    return assert(state.session, "Session not initialized")
+end
 
 -------------------------------------------------------------------------------
 -- SYNC FUNCTIONS
@@ -292,12 +296,9 @@ fn.async.copy = function(src, dst, cb)
     assert(type(src) == 'string', 'src must be a string')
     assert(type(dst) == 'string', 'dst must be a string')
 
-    s.client():send({
-        type = 'copy';
-        data = {
-            src = src;
-            dst = dst;
-        };
+    session():copy({
+        src = src;
+        dst = dst;
     }, function(res)
         cb(make_args(res, 'ok'))
     end)
@@ -320,15 +321,12 @@ fn.async.dir_list = function(path, opts, cb)
     assert(type(path) == 'string', 'path must be a string')
     opts = opts or {}
 
-    s.client():send({
-        type = 'dir_read';
-        data = {
-            path = path;
-            depth = opts.depth or 1;
-            absolute = opts.absolute or false;
-            canonicalize = opts.canonicalize or false;
-            include_root = opts.include_root or false;
-        };
+    session():dir_read({
+        path = path;
+        depth = opts.depth or 1;
+        absolute = opts.absolute or false;
+        canonicalize = opts.canonicalize or false;
+        include_root = opts.include_root or false;
     }, function(res)
         cb(make_args(res, 'dir_entries', function(data)
             return data.entries
@@ -343,10 +341,7 @@ end
 fn.async.exists = function(path, cb)
     assert(type(path) == 'string', 'path must be a string')
 
-    s.client():send({
-        type = 'exists';
-        data = { path = path };
-    }, function(res)
+    session():exists({ path = path }, function(res)
         cb(make_args(res, 'exists'))
     end)
 end
@@ -379,13 +374,10 @@ fn.async.metadata = function(path, opts, cb)
     assert(type(path) == 'string', 'path must be a string')
     opts = opts or {}
 
-    s.client():send({
-        type = 'metadata';
-        data = {
-            path = path;
-            canonicalize = opts.canonicalize or false;
-            resolve_file_type = opts.resolve_file_type or false;
-        };
+    session():metadata({
+        path = path;
+        canonicalize = opts.canonicalize or false;
+        resolve_file_type = opts.resolve_file_type or false;
     }, function(res)
         cb(make_args(res, 'metadata', function(data)
             if data.canonicalized_path == vim.NIL then
@@ -406,12 +398,9 @@ fn.async.mkdir = function(path, opts, cb)
     opts = opts or {}
     opts.all = not (not opts.all)
 
-    s.client():send({
-        type = 'dir_create';
-        data = {
-            path = path;
-            all = opts.all;
-        };
+    session():dir_create({
+        path = path;
+        all = opts.all;
     }, function(res)
         cb(make_args(res, 'ok'))
     end)
@@ -424,10 +413,7 @@ end
 fn.async.read_file_text = function(path, cb)
     assert(type(path) == 'string', 'path must be a string')
 
-    s.client():send({
-        type = 'file_read_text';
-        data = { path = path };
-    }, function(res)
+    session():read_file_text({ path = path }, function(res)
         cb(make_args(res, 'text', function(data)
             return data.data
         end))
@@ -444,12 +430,9 @@ fn.async.remove = function(path, opts, cb)
     opts = opts or {}
     opts.force = not (not opts.force)
 
-    s.client():send({
-        type = 'remove';
-        data = {
-            path = path;
-            force = opts.force;
-        };
+    session():remove({
+        path = path;
+        force = opts.force;
     }, function(res)
         cb(make_args(res, 'ok'))
     end)
@@ -464,12 +447,9 @@ fn.async.rename = function(src, dst, cb)
     assert(type(src) == 'string', 'src must be a string')
     assert(type(dst) == 'string', 'dst must be a string')
 
-    s.client():send({
-        type = 'rename';
-        data = {
-            src = src;
-            dst = dst;
-        };
+    session():rename({
+        src = src;
+        dst = dst;
     }, function(res)
         cb(make_args(res, 'ok'))
     end)
@@ -611,10 +591,7 @@ end
 --- @param cb function Function that is passed a table with family, os, arch, current_dir,
 ---        and main_separator; or nil if failed
 fn.async.system_info = function(cb)
-    s.client():send({
-        type = 'system_info';
-        data = {[vim.type_idx] = vim.types.dictionary};
-    }, function(res)
+    session():system_info({}, function(res)
         cb(make_args(res, 'system_info'))
     end)
 end
@@ -628,12 +605,9 @@ fn.async.write_file_text = function(path, text, cb)
     assert(type(path) == 'string', 'path must be a string')
     assert(type(text) == 'string', 'text must be a string')
 
-    s.client():send({
-        type = 'file_write_text';
-        data = {
-            path = path;
-            text = text;
-        };
+    session():write_file_text({
+        path = path;
+        text = text;
     }, function(res)
         cb(make_args(res, 'ok'))
     end)

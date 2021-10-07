@@ -255,12 +255,12 @@ end
 ---        representing a vim expression
 utils.autocmd = function(name, pattern, cmd)
     -- NOTE: Inlined here to avoid loop from circular dependencies
-    local s = require('distant.state')
+    local data = require('distant.data')
 
     local cmd_type = type(cmd)
     if cmd_type == 'function' then
-        local id = s.data.insert(cmd)
-        cmd = s.data.get_as_key_mapping(id)
+        local id = data.insert(cmd)
+        cmd = data.get_as_key_mapping(id)
     elseif cmd_type ~= 'string' then
         error('autocmd(): unsupported cmd type: ' .. cmd_type)
     end

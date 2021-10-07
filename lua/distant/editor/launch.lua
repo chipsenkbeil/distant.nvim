@@ -1,3 +1,4 @@
+local lib = require('distant.lib')
 local log = require('distant.log')
 local s = require('distant.state')
 local ui = require('distant.ui')
@@ -27,6 +28,8 @@ return function(host, args, opts)
     log.fmt_trace('editor.launch(%s)', host)
     args = args or {}
     opts = opts or {}
+
+    lib.launch()
 
     local function report_err(lines)
         if vim.tbl_islist(lines) then

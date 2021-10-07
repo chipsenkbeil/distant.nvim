@@ -1,5 +1,6 @@
 vendor/
 !vendor/.placeholder
+**/*.so
 
 
 # Added by cargo
