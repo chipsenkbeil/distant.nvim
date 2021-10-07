@@ -4,4 +4,4 @@
 --       1. Download a pre-built library using curl for the detected OS
 --       2. Build from source by cloning the repository, running cargo build --release,
 --          and copying the release artifact to the appropriate location
-return require('distant.lib.distant_lua')
+return require('distant_lua')

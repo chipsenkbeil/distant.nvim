@@ -9,7 +9,7 @@ endif
 let g:loaded_distant = 1
 
 " Ensure our autocmds are initialized
-lua require('distant.internal.autocmd').initialize()
+lua require('distant.autocmd').initialize()
 
 " Define our specialized commands that wrap the lua calls
 command! -nargs=* DistantOpen lua require('distant.command').open(<f-args>)
