@@ -13,7 +13,19 @@ local function parse_opts(...)
         if #tokens == 2 then
             local key = vim.trim(tokens[1])
             local value = vim.trim(tokens[2])
-            opts[key] = value
+
+            -- Support key in form of path.to.key = value
+            -- to produce { path = { to = { key = value } } }
+            local path = vim.split(key, '.', true)
+            local tbl = opts
+            for i, component in ipairs(path) do
+                if i < #path then
+                    tbl[component] = {}
+                    tbl = tbl[component]
+                else
+                    tbl[component] = value
+                end
+            end
         end
     end
 
@@ -114,15 +126,15 @@ command.run = function(...)
         args = cmd_args,
     }
 
-    local err, res = fn.run(opts)
+    local err, res = fn.spawn_wait(opts)
     assert(not err, err)
 
-    if not vim.tbl_isempty(res.stdout) then
-        print(table.concat(res.stdout, '\n'))
+    if #res.stdout > 0 then
+        print(res.stdout)
     end
 
-    if not vim.tbl_isempty(res.stderr) then
-        vim.api.nvim_err_writeln(table.concat(res.stderr, '\n'))
+    if #res.stderr > 0 then
+        vim.api.nvim_err_writeln(res.stderr)
     end
 end
 

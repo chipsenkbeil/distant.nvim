@@ -7,7 +7,6 @@ local u = require('distant.utils')
 return function()
     log.trace('editor.show.session()')
     local indent = '    '
-    local session = state.session()
     local distant_buf_names = u.filter_map(vim.api.nvim_list_bufs(), function(buf)
         local name = vim.api.nvim_buf_get_name(buf)
         if vim.startswith(name, 'distant://') then
@@ -15,21 +14,19 @@ return function()
         end
     end)
 
-    local session_info = {'Disconnected'}
-    if session ~= nil then
-        session_info = {
-            indent .. '* Host = "' .. session.host .. '"';
-            indent .. '* Port = "' .. session.port .. '"';
-            indent .. '* Key = "' .. session.key .. '"';
-        }
-    end
-
     local msg = {}
     vim.list_extend(msg, {
         '= Session =';
         '';
     })
-    vim.list_extend(msg, session_info)
+
+    local session = state.session
+    if session then
+        table.insert(msg, indent .. ' * Tag = "' .. session.connection_tag .. '"')
+    else
+        table.insert(msg, 'Disconnected')
+    end
+
     vim.list_extend(msg, {
         '';
         '= Remote Files =';

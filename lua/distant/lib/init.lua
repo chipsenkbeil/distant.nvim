@@ -361,6 +361,19 @@ local function build_library(cb)
     end)
 end
 
+--- Get the library if it is loaded, otherwise returns nil
+local function get()
+    local success, lib = pcall(require, 'distant_lua')
+    if success then
+        return lib
+    end
+end
+
+--- Returns true if the library is loaded, otherwise return false
+local function is_loaded()
+    return get() ~= nil
+end
+
 --- Loads the library asynchronously, providing several options to install the library
 --- if it is unavailable
 ---
@@ -401,7 +414,7 @@ local function load(opts, cb)
         {
             'Download a prebuilt lib',
             'Build from source',
-            'Use local copy',
+            'Copy local lib',
         }
     )
 
@@ -409,41 +422,21 @@ local function load(opts, cb)
         return cb(false, 'Aborted choice prompt')
     end
 
+    local on_installed = function(status, msg)
+        if not status then
+            return cb(status, msg)
+        end
+
+        return cb(pcall(require, 'distant_lua'))
+    end
+
     if choice == 1 then
-        return download_library(function(status, msg)
-            if not status then
-                return cb(status, msg)
-            end
-            cb(pcall(require, 'distant_lua'))
-        end)
+        return download_library(on_installed)
     elseif choice == 2 then
-        return build_library(function(status, msg)
-            if not status then
-                return cb(status, msg)
-            end
-            cb(pcall(require, 'distant_lua'))
-        end)
+        return build_library(on_installed)
     elseif choice == 3 then
-        return copy_library(function(status, msg)
-            if not status then
-                return cb(status, msg)
-            end
-            cb(pcall(require, 'distant_lua'))
-        end)
+        return copy_library(on_installed)
     end
-end
-
---- Get the library if it is loaded, otherwise returns nil
-local function get()
-    local success, lib = pcall(require, 'distant_lua')
-    if success then
-        return lib
-    end
-end
-
---- Returns true if the library is loaded, otherwise return false
-local function is_loaded()
-    return get() ~= nil
 end
 
 return {

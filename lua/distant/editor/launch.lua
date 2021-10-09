@@ -12,14 +12,14 @@ return function(opts)
     -- Verify that we were provided a host
     local host_type = type(opts.host)
     if host_type ~= 'string' then
-        error('opts.host should string, but got ' .. host_type)
+        error('opts.host should be string, but got ' .. host_type)
     end
 
     -- Load settings for the particular host
     state.load_settings(opts.host)
 
     -- Clear any pre-existing session
-    state.set_session(nil)
+    state.session = nil
 
     -- Inject custom handlers for launching
     opts.on_authenticate = function(ev)
@@ -57,13 +57,22 @@ return function(opts)
             return
         end
 
+        -- TODO: Remove this test log
+        -- TODO: CHIP CHIP CHIP terminal mode is useless as it interrupts neovim,
+        --       so unless we can provide a callback or some way to map logging
+        --       to neovim's console, we should disable that in the C module
+        res.log.init({
+            file = '/tmp/chip.log',
+            level = 'trace',
+        })
+
         local session
-        success, session = res.session.launch(opts)
+        success, session = pcall(res.session.launch, opts)
         if not success then
             vim.api.nvim_err_writeln(tostring(session))
             return
         end
 
-        state.set_session(session)
+        state.session = session
     end)
 end

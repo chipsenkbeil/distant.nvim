@@ -6,6 +6,9 @@ local DEFAULT_LABEL = '*'
 
 -- Default settings to apply to any-and-all servers
 local DEFAULT_SETTINGS = {
+    max_timeout = 15 * 1000,
+    timeout_interval = 250,
+
     -- Settings that apply when launching the server
     launch = {
         -- Control the IP address that the server will bind to

@@ -75,7 +75,7 @@ local function make_fn(name)
                     return cb(tostring(res) or 'Unknown error occurred')
                 end
 
-                return cb(nil, res)
+                return cb(false, res)
             end)
         end)
 
@@ -103,15 +103,16 @@ end)({
     'append_file',
     'append_file_text',
     'copy',
-    'dir_list',
+    'create_dir',
     'exists',
     'metadata',
-    'mkdir',
+    'read_dir',
     'read_file',
     'read_file_text',
     'remove',
     'rename',
     'spawn',
+    'spawn_lsp',
     'spawn_wait',
     'system_info',
     'write_file',

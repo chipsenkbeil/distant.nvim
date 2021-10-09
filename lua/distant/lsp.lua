@@ -119,7 +119,8 @@ local function lsp_start_client(config, opts)
         local pid = 123
         local handle = {
             is_closing = function()
-                -- returns bool
+                -- returns bool if closing or closed
+                -- luv has note that only used between init and before close cb
             end,
             close = function(cb)
                 -- cb() (optional) when done
