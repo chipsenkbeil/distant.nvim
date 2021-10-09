@@ -132,10 +132,10 @@ actions.rename = function(opts)
                 return
             end
 
-            local err, success = fn.rename(old_path, new_path)
+            local err, success = fn.rename({src = old_path, dst = new_path})
 
             if success then
-                editor.open(base_path, {reload = true})
+                editor.open({path = base_path, reload = true})
             else
                 local msg = 'Failed to rename ' .. old_path .. ' to ' .. new_path
                 if err then
@@ -170,7 +170,7 @@ actions.remove = function(opts)
                 end
             end
 
-            local err, success = fn.remove(path, opts)
+            local err, success = fn.remove(vim.tbl_extend('keep', {path = path}, opts))
 
             if success then
                 editor.open(base_path, {reload = true})

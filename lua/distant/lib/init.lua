@@ -1,5 +1,5 @@
 local REPO_URL = 'https://github.com/chipsenkbeil/distant'
-local REPO_RELEASE_URL = REPO_URL .. '/releases/latest/download'
+local REPO_LATEST_RELEASE_URL = REPO_URL .. '/releases/latest/download'
 
 local PLATFORM_BIN = {
     ['windows:x86_64'] = 'distant-win64.exe',
@@ -11,8 +11,8 @@ local PLATFORM_BIN = {
 local PLATFORM_LIB = {
     ['windows:x86_64'] = 'distant_lua-win64.dll',
     ['linux:x86_64'] = 'distant_lua-linux64.so',
-    ['macos:x86_64'] = 'distant_lua-macos.dylib',
-    ['macos:arm'] = 'distant_lua-macos.dylib',
+    ['macos:x86_64'] = 'distant_lua-macos-intel.dylib',
+    ['macos:arm'] = 'distant_lua-macos-arm.dylib',
 }
 
 -- From https://stackoverflow.com/a/23535333/3164172
@@ -220,7 +220,7 @@ local function download_library(cb)
         return cb(false, 'No library available for ' .. HOST_PLATFORM)
     end
 
-    local url = string.format('%s/%s', REPO_RELEASE_URL, lib_name)
+    local url = string.format('%s/%s', REPO_LATEST_RELEASE_URL, lib_name)
 
     local dst = ROOT_DIR
     if vim.endswith(lib_name, 'dll') then
@@ -229,7 +229,6 @@ local function download_library(cb)
         dst = dst .. SEP .. 'distant_lua.so'
     end
 
-    -- TODO: Display progress
     return download(url, dst, cb)
 end
 
@@ -252,13 +251,6 @@ local function copy_library(path, cb)
     end
 
     if path and #path > 0 then
-        local lib_file = io.open(path, 'r')
-        if not lib_file then
-            return cb(false, path .. ' does not exist')
-        end
-        local contents = lib_file:read('*a')
-        lib_file:close()
-
         local dst = ROOT_DIR
         if vim.endswith(path, 'dll') then
             dst = dst .. SEP .. 'distant_lua.dll'
@@ -266,11 +258,17 @@ local function copy_library(path, cb)
             dst = dst .. SEP .. 'distant_lua.so'
         end
 
-        local dst_file = io.open(dst, 'w')
-        dst_file:write(contents)
-        dst_file:close()
-
-        cb(true)
+        vim.loop.fs_copyfile(path, dst, function(err, success)
+            vim.schedule(function()
+                if err then
+                    cb(false, err)
+                elseif not success then
+                    cb(false, 'Failed to copy ' .. path .. ' to ' .. dst)
+                else
+                    cb(true)
+                end
+            end)
+        end)
     else
         cb(false, 'Library path missing')
     end
@@ -363,21 +361,52 @@ local function build_library(cb)
     end)
 end
 
-local function load(cb)
-    local success, lib = pcall(require, 'distant_lua')
-    if success then
-        return cb(success, lib)
+--- Loads the library asynchronously, providing several options to install the library
+--- if it is unavailable
+---
+--- An option of `reload` can be provided to force prompts and remove any loaded instance
+--- of the library.
+---
+--- @param opts table
+--- @param cb function
+local function load(opts, cb)
+    if not cb then
+        cb = opts
+        opts = {}
+    end
+    vim.validate({
+        opts={opts, 'table'},
+        cb={cb, 'function'},
+    })
+    opts.reload = not (not opts.reload)
+
+    -- If not reloading the library
+    if not opts.reload then
+        local success, lib = pcall(require, 'distant_lua')
+        if success then
+            return cb(success, lib)
+        end
+
+    -- If reloading the library, clear it out
+    else
+        package.loaded.distant_lua = nil
     end
 
-    local choice
-    choice = prompt_choices('C library not found! What would you like to do?', {
-        'Download a prebuilt lib',
-        'Build from source',
-        'Use local copy',
-    })
+    local prompt = opts.reload and
+        'Reloading C library! What would you like to do?' or
+        'C library not found! What would you like to do?'
+
+    local choice = prompt_choices(
+        prompt,
+        {
+            'Download a prebuilt lib',
+            'Build from source',
+            'Use local copy',
+        }
+    )
 
     if not choice then
-        error('distant_lua is not available!')
+        return cb(false, 'Aborted choice prompt')
     end
 
     if choice == 1 then
@@ -404,4 +433,21 @@ local function load(cb)
     end
 end
 
-return { load = load }
+--- Get the library if it is loaded, otherwise returns nil
+local function get()
+    local success, lib = pcall(require, 'distant_lua')
+    if success then
+        return lib
+    end
+end
+
+--- Returns true if the library is loaded, otherwise return false
+local function is_loaded()
+    return get() ~= nil
+end
+
+return {
+    get = get,
+    is_loaded = is_loaded,
+    load = load,
+}

@@ -1,7 +1,4 @@
-local log = require('distant.log')
 local settings = require('distant.settings')
-local u = require('distant.utils')
-local v = require('distant.vars')
 
 local state = {
     -- Set default settings so we don't get nil access errors even when no

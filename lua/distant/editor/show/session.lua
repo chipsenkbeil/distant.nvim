@@ -1,5 +1,5 @@
 local log = require('distant.log')
-local s = require('distant.state')
+local state = require('distant.state')
 local ui = require('distant.ui')
 local u = require('distant.utils')
 
@@ -7,7 +7,7 @@ local u = require('distant.utils')
 return function()
     log.trace('editor.show.session()')
     local indent = '    '
-    local session = s.session()
+    local session = state.session()
     local distant_buf_names = u.filter_map(vim.api.nvim_list_bufs(), function(buf)
         local name = vim.api.nvim_buf_get_name(buf)
         if vim.startswith(name, 'distant://') then

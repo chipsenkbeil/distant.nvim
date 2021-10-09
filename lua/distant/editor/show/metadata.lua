@@ -3,18 +3,15 @@ local log = require('distant.log')
 local ui = require('distant.ui')
 
 --- Opens a new window to show metadata for some path
----
---- @param path string Path to file/directory/symlink to show
---- @param opts.canonicalize boolean If true, includes a canonicalized version
----        of the path in the response
---- @param opts.timeout number Maximum time to wait for a response (optional)
---- @param opts.interval number Time in milliseconds to wait between checks for a response (optional)
-return function(path, opts)
-    assert(type(path) == 'string', 'path must be a string')
+return function(opts)
     opts = opts or {}
-    log.fmt_trace('editor.show.metadata(%s, %s)', path, opts)
+    local path = opts.path
+    if not path then
+        error('opts.path is missing')
+    end
+    log.fmt_trace('editor.show.metadata(%s)', opts)
 
-    local err, metadata = fn.metadata(path, opts)
+    local err, metadata = fn.metadata(opts)
     if metadata == nil then
         local msg = {path .. ' does not exist'}
         if err then

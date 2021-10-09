@@ -414,8 +414,10 @@ end
 --- @param interval number is the milliseconds to wait inbetween checking for a message
 --- @return function tx, function rx #tx sends the value and rx receives the value
 utils.oneshot_channel = function(timeout, interval)
-    assert(type(timeout) == 'number', 'timeout must be a number')
-    assert(type(interval) == 'number', 'interval must be a number')
+    vim.validate({
+        timeout = {timeout, 'number'},
+        interval = {interval, 'number'},
+    })
 
     -- Will store our result
     local data
@@ -426,7 +428,7 @@ utils.oneshot_channel = function(timeout, interval)
 
     local rx = function()
         -- Wait for the result to be set, or time out
-        vim.fn.wait(
+        vim.wait(
             timeout,
             function() return data ~= nil end,
             interval
@@ -438,7 +440,7 @@ utils.oneshot_channel = function(timeout, interval)
 
         -- Add our error to beginning of the result list
         if not vim.tbl_islist(result) then
-            local err = 'Timeout of ' .. timeout .. ' exceeded!'
+            local err = 'Timeout of ' .. tostring(timeout) .. ' exceeded!'
             result = {err, result}
 
         -- Otherwise, add our error argument to the front

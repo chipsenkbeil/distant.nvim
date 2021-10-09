@@ -106,9 +106,59 @@ local function lsp_start_client(config, opts)
     )
 
     -- NOTE: Need to overwrite uv.spawn (aka vim.loop.spawn) temporarily
-    vim.loop.spawn
-    -- handle, pid = uv.spawn(cmd, spawn_params, onexit)
-    return vim.lsp.start_client(lsp_config)
+    local uv_spawn = vim.loop.spawn
+    vim.loop.spawn = function(cmd, spawn_params, on_exit)
+        -- cmd = string
+        -- spawn_params = {
+        --     args = cmd_args;
+        --     stdio = {stdin, stdout, stderr};
+        -- }
+        -- on_exit = function(code, signal) where
+        --     * code = exit code
+        --     * signal = signal used to terminate (if any)
+        local pid = 123
+        local handle = {
+            is_closing = function()
+                -- returns bool
+            end,
+            close = function(cb)
+                -- cb() (optional) when done
+                -- returns nothing
+            end,
+            kill = function(_signum)
+                -- Only ever sends 15, which is sigterm
+                -- returns 0 or fail
+            end,
+        }
+        return handle, pid
+    end
+
+    -- NOTE: Need to overwrite uv.new_pipe (aka vim.loop.new_pipe) temporarily
+    local uv_new_pipe = vim.loop.new_pipe
+    vim.loop.new_pipe = function(_ipc)
+        return {
+            -- Private function used to set the pipe from within the uv.spawn wrapper
+            __set = function()
+            end,
+
+            read_start = function(cb)
+                -- cb(err = string|nil, data = string|nil)
+                -- returns 0 or fail
+            end,
+            write = function(data, cb)
+                -- data = string, cb = function() (optional) when done
+                -- returns uv_write_t (unused) or fail
+            end
+        }
+    end
+
+    -- Start the client and restore uv functions
+    local success, res = pcall(vim.lsp.start_client, lsp_config)
+    vim.loop.spawn = uv_spawn
+    vim.loop.new_pipe = uv_new_pipe
+
+    assert(success, res)
+    return res
 end
 
 --- Connects relevant LSP clients to the provided buffer, optionally

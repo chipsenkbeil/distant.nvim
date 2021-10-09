@@ -9,6 +9,7 @@ local ui = require('distant.ui')
 return function(opts)
     opts = opts or {}
     log.trace('editor.show.system(%s)', opts)
+    vim.validate({opts = {opts, 'table'}})
 
     local indent = '    '
     local err, info = fn.system_info(opts)

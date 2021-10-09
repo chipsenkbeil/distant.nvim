@@ -25,17 +25,19 @@ command.open = function(...)
     local args = {...}
     local path = args[1]
     local opts = parse_opts(unpack(vim.list_slice(args, 2, #args)))
+    opts.path = path
 
-    editor.open(path, opts)
+    editor.open(opts)
 end
 
 --- DistantLaunch host [opt1=..., opt2=...]
 command.launch = function(...)
     local args = {...}
     local host = args[1]
-    local launch_args = parse_opts(unpack(vim.list_slice(args, 2, #args)))
+    local opts = parse_opts(unpack(vim.list_slice(args, 2, #args)))
+    opts.host = host
 
-    editor.launch(host, launch_args)
+    editor.launch(opts)
 end
 
 --- DistantMetadata path [opt1=... opt2=...]
@@ -43,8 +45,9 @@ command.metadata = function(...)
     local args = {...}
     local path = args[1]
     local opts = parse_opts(unpack(vim.list_slice(args, 2, #args)))
+    opts.path = path
 
-    editor.show_metadata(path, opts)
+    editor.show_metadata(opts)
 end
 
 --- DistantSessionInfo
@@ -63,8 +66,10 @@ command.copy = function(...)
     local src = args[1]
     local dst = args[2]
     local opts = parse_opts(unpack(vim.list_slice(args, 3, #args)))
+    opts.src = src
+    opts.dst = dst
 
-    fn.copy(src, dst, opts)
+    fn.copy(opts)
 end
 
 --- DistantMkdir path [opt1=... opt2=...]
@@ -72,8 +77,9 @@ command.mkdir = function(...)
     local args = {...}
     local path = args[1]
     local opts = parse_opts(unpack(vim.list_slice(args, 2, #args)))
+    opts.path = path
 
-    fn.mkdir(path, opts)
+    fn.mkdir(opts)
 end
 
 --- DistantRemove path [opt1=... opt2=...]
@@ -81,8 +87,9 @@ command.remove = function(...)
     local args = {...}
     local path = args[1]
     local opts = parse_opts(unpack(vim.list_slice(args, 2, #args)))
+    opts.path = path
 
-    fn.remove(path, opts)
+    fn.remove(opts)
 end
 
 --- DistantRename src dst [opt1=... opt2=...]
@@ -91,8 +98,10 @@ command.rename = function(...)
     local src = args[1]
     local dst = args[2]
     local opts = parse_opts(unpack(vim.list_slice(args, 3, #args)))
+    opts.src = src
+    opts.dst = dst
 
-    fn.rename(src, dst, opts)
+    fn.rename(opts)
 end
 
 --- DistantRun cmd [arg1 arg2]
@@ -100,8 +109,12 @@ command.run = function(...)
     local args = {...}
     local cmd = args[1]
     local cmd_args = vim.list_slice(args, 2, #args)
+    local opts = {
+        cmd = cmd,
+        args = cmd_args,
+    }
 
-    local err, res = fn.run(cmd, cmd_args)
+    local err, res = fn.run(opts)
     assert(not err, err)
 
     if not vim.tbl_isempty(res.stdout) then
