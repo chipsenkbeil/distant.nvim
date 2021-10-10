@@ -72,10 +72,6 @@ describe('editor.lsp', function()
         driver:initialize({
             settings = {
                 ['*'] = {
-                    client = {
-                        log_file = '/tmp/test.distant.client.log',
-                        log_level = 'trace',
-                    },
                     lsp = {
                         ['rust'] = {
                             cmd = { 'rls' },

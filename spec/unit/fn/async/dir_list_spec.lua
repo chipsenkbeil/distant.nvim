@@ -3,7 +3,7 @@ local match = require('luassert.match')
 local spy = require('luassert.spy')
 local u = require('spec.unit.utils')
 
-describe('fn.async.dir_list', function()
+describe('fn.dir_list (async)', function()
     it('should send a dir_list request via the global client', function()
         local send = spy.new(function() end)
         u.stub_send(send)

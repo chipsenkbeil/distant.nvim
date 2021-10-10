@@ -25,7 +25,7 @@ local function fake_response(res, rb, urb)
     stub_client(function(_, cb) cb(res) end, rb, urb)
 end
 
-describe('fn.async.run', function()
+describe('fn.run (async)', function()
     it('should send a run request via the global client', function()
         local send = spy.new(function() end)
         local rb = spy.new(function() return 123 end)

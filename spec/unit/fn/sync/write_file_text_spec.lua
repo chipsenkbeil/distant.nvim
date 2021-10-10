@@ -1,22 +1,24 @@
 local fn = require('distant.fn')
-local s = require('distant.internal.state')
+local s = require('distant.state')
 local stub = require('luassert.stub')
-local u = require('distant.internal.utils')
+local u = require('distant.utils')
 
-describe('fn.copy', function()
+describe('fn.write_file_text (sync)', function()
     before_each(function()
         -- Make our async fn do nothing as we're going to stub
         -- the channel return values separately
-        stub(fn.async, 'copy')
+        stub(fn.async, 'write_file_text')
     end)
 
-    it('should perform an async copy and wait for the result', function()
+    it('should perform an async write_file_text and wait for the result', function()
         stub(u, 'oneshot_channel', 'fake tx', function()
             return false, false, true
         end)
 
-        local err, result = fn.copy('src', 'dst')
-        assert.stub(fn.async.copy).was.called_with('src', 'dst', 'fake tx')
+        local path = 'some/path'
+        local content = 'some text content'
+        local err, result = fn.write_file_text(path, content)
+        assert.stub(fn.async.write_file_text).was.called_with(path, content, 'fake tx')
         assert.falsy(err)
         assert.truthy(result)
     end)
@@ -26,7 +28,7 @@ describe('fn.copy', function()
             return 'timeout error', false, true
         end)
 
-        local err, _ = fn.copy('src', 'dst')
+        local err, _ = fn.write_file_text('some/path', 'some text content')
         assert.are.equal('timeout error', err)
     end)
 
@@ -35,7 +37,7 @@ describe('fn.copy', function()
             return false, 'async error', true
         end)
 
-        local err, _ = fn.copy('src', 'dst')
+        local err, _ = fn.write_file_text('some/path', 'some text content')
         assert.are.equal('async error', err)
     end)
 
@@ -44,7 +46,7 @@ describe('fn.copy', function()
             return false, false, true
         end)
 
-        fn.copy('src', 'dst', {
+        fn.write_file_text('some/path', 'some text content', {
             timeout = 123,
             interval = 456,
         })
@@ -56,7 +58,7 @@ describe('fn.copy', function()
             return false, false, true
         end)
 
-        fn.copy('src', 'dst')
+        fn.write_file_text('some/path', 'some text content')
         assert.stub(u.oneshot_channel).was.called_with(
             s.settings.max_timeout,
             s.settings.timeout_interval

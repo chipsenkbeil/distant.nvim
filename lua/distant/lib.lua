@@ -1,12 +1,6 @@
 local REPO_URL = 'https://github.com/chipsenkbeil/distant'
-local REPO_LATEST_RELEASE_URL = REPO_URL .. '/releases/latest/download'
-
-local PLATFORM_BIN = {
-    ['windows:x86_64'] = 'distant-win64.exe',
-    ['linux:x86_64'] = 'distant-linux64-gnu',
-    ['macos:x86_64'] = 'distant-macos',
-    ['macos:arm'] = 'distant-macos',
-}
+local RELEASE_API_ENDPOINT = 'https://api.github.com/repos/chipsenkbeil/distant/releases'
+local MAX_DOWNLOAD_CHOICES = 5
 
 local PLATFORM_LIB = {
     ['windows:x86_64'] = 'distant_lua-win64.dll',
@@ -29,6 +23,123 @@ local make_path_parent_fn = function(sep)
     return function(abs_path)
         return abs_path:match(formatted)
     end
+end
+
+local function query_release_api(opts, cb)
+    if not cb then
+        cb = opts
+        opts = {}
+    end
+    vim.validate({opts = {opts, 'table'}, cb = {cb, 'function'}})
+
+    -- Build our query string of ?page=N&per_page=N
+    local query = ''
+    if type(opts.page) == 'number' then
+        query = query .. 'page=' .. tostring(opts.page)
+    end
+    if type(opts.per_page) == 'number' then
+        if #query > 0 then
+            query = query .. '&'
+        end
+        query = query .. 'per_page=' .. tostring(opts.per_page)
+    end
+    if #query > 0 then
+        query = '?' .. query
+    end
+
+    local endpoint = RELEASE_API_ENDPOINT .. query
+
+    local cmd
+    if tonumber(vim.fn.executable('curl')) == 1 then
+        cmd = string.format('curl -fL %s', endpoint)
+    elseif tonumber(vim.fn.executable('wget')) == 1 then
+        cmd = string.format('wget -q -O - %s', endpoint)
+    elseif tonumber(vim.fn.executable('fetch')) == 1 then
+        cmd = string.format('fetch -q -o - %s', endpoint)
+    end
+
+    if not cmd then
+        return cb(false, 'No external command is available. Please install curl, wget, or fetch!')
+    end
+
+    local json_str, err
+    vim.fn.jobstart(cmd, {
+        on_exit = function(_, exit_code)
+            if exit_code ~= 0 then
+                cb(false, 'Exit ' .. tostring(exit_code) .. ': ' .. tostring(err))
+            else
+                cb(pcall(vim.fn.json_decode, json_str or ''))
+            end
+        end,
+        on_stdout = function(_, data, _)
+            json_str = table.concat(data)
+        end,
+        on_stderr = function(_, data, _)
+            err = table.concat(data)
+        end,
+        stdout_buffered = true,
+        stderr_buffered = true,
+    })
+end
+
+-- Retrieve entries in the form of
+--
+-- { url = '...', tag = '...', prerelease = false, description = '...' }
+local function query_release_list(opts, cb)
+    if not cb then
+        cb = opts
+        opts = {}
+    end
+    vim.validate({opts = {opts, 'table'}, cb = {cb, 'function'}})
+    if type(opts.asset_name) ~= 'string' then
+        error('opts.asset_name is required and must be a string')
+    end
+
+    query_release_api(opts, function(success, res)
+        if not success then
+            return cb(success, res)
+        end
+
+        local entries = {}
+        for _, item in ipairs(res) do
+            local entry = {
+                tag = item.tag_name,
+                draft = item.draft,
+                prerelease = item.prerelease,
+            }
+
+            -- Find the url to use to download the asset
+            for _, asset in ipairs(item.assets or {}) do
+                if asset.name == opts.asset_name then
+                    entry.url = asset.browser_download_url
+                    break
+                end
+            end
+
+            -- Only add the entry if we have an appropriate asset
+            -- and a tag associated with it
+            if entry.url and entry.tag then
+                local attrs = {}
+                if entry.draft then
+                    table.insert(attrs, 'draft')
+                end
+                if entry.prerelease then
+                    table.insert(attrs, 'prerelease')
+                end
+
+                entry.description = entry.tag
+                if #attrs > 0 then
+                    entry.description = string.format(
+                        '%s (%s)', entry.description, table.concat(attrs, ',')
+                    )
+                end
+
+                table.insert(entries, entry)
+            end
+        end
+
+        cb(true, entries)
+    end)
 end
 
 -- Downloads src using curl, wget, or fetch and stores it at dst
@@ -158,15 +269,41 @@ local function detect_os_arch()
 	return os_name, arch_name
 end
 
-local function prompt_choices(prompt, choices)
-    local args = {prompt}
+local function prompt_choices(opts)
+    vim.validate({opts = {opts, 'table'}})
+    local prompt = opts.prompt
+    local choices = opts.choices
+    local max_choices = opts.max_choices or 999
+
+    local choices_list = {{}}
     for i, choice in ipairs(choices) do
-        table.insert(args, string.format('%s. %s', i, choice))
+        -- If current selection is maxed out in size, start a new one
+        if #choices_list[#choices_list] == max_choices then
+            table.insert(choices_list, {})
+        end
+
+        table.insert(
+            choices_list[#choices_list],
+            string.format('%s. %s', ((i - 1) % max_choices) + 1, choice)
+        )
     end
 
-    local choice = vim.fn.inputlist(args)
-    if choice > 0 and choice <= #choices then
-        return choice
+    for i, args in ipairs(choices_list) do
+        local not_last = i < #choices_list
+        local size = #args
+        table.insert(args, 1, prompt)
+        if not_last then
+            table.insert(args, tostring(max_choices + 1) .. '. [Show me more]')
+        end
+
+        local choice = vim.fn.inputlist(args)
+        if choice > 0 and choice <= size then
+            return choice + (max_choices * (i - 1))
+        elseif choice == size + 1 and not_last then
+            -- Continue our loop with the next set
+        else
+            break
+        end
     end
 end
 
@@ -175,11 +312,10 @@ local HOST_OS, HOST_ARCH = detect_os_arch()
 local HOST_PLATFORM = HOST_OS .. ':' .. HOST_ARCH
 local SEP = HOST_OS == 'windows' and '\\' or '/'
 local ROOT_DIR = (function()
-    -- script_path -> /path/to/lua/distant/lib/{distant_lua.so}
-    -- up -> /path/to/lua/distant/{distant_lua.so}
-    -- up -> /path/to/lua/{distant_lua.so}
+    -- script_path -> /path/to/lua/distant/
+    -- up -> /path/to/lua
     local get_parent_path = make_path_parent_fn(SEP)
-    return get_parent_path(get_parent_path(script_path()))
+    return get_parent_path(script_path())
 end)()
 
 -- From https://www.lua.org/pil/19.3.html
@@ -207,10 +343,10 @@ local function download_library(cb)
             table.insert(choices, platform)
             table.insert(libs, platform_lib)
         end
-        local idx = prompt_choices(
-            string.format('\nUnknown platform %s! Please select from the following:', HOST_PLATFORM),
-            choices
-        )
+        local idx = prompt_choices({
+            prompt = string.format('\nUnknown platform %s! Please select from the following:', HOST_PLATFORM),
+            choices = choices,
+        })
         if idx then
             lib_name = libs[idx]
         end
@@ -220,16 +356,31 @@ local function download_library(cb)
         return cb(false, 'No library available for ' .. HOST_PLATFORM)
     end
 
-    local url = string.format('%s/%s', REPO_LATEST_RELEASE_URL, lib_name)
+    query_release_list({asset_name = lib_name}, function(success, res)
+        if not success then
+            return cb(success, res)
+        end
 
-    local dst = ROOT_DIR
-    if vim.endswith(lib_name, 'dll') then
-        dst = dst .. SEP .. 'distant_lua.dll'
-    else
-        dst = dst .. SEP .. 'distant_lua.so'
-    end
+        local choices = vim.tbl_map(function(entry) return entry.description end, res)
+        local choice = prompt_choices({
+            prompt = 'Which version of the library do you want?',
+            choices = choices,
+            max_choices = MAX_DOWNLOAD_CHOICES,
+        })
+        local entry = res[choice]
+        if not entry then
+            return cb(false, 'Cancelled selecting library version')
+        end
 
-    return download(url, dst, cb)
+        local dst = ROOT_DIR
+        if vim.endswith(lib_name, 'dll') then
+            dst = dst .. SEP .. 'distant_lua.dll'
+        else
+            dst = dst .. SEP .. 'distant_lua.so'
+        end
+
+        return download(entry.url, dst, cb)
+    end)
 end
 
 local function copy_library(path, cb)
@@ -381,7 +532,7 @@ end
 --- of the library.
 ---
 --- @param opts table
---- @param cb function
+--- @param cb function (bool, lib|err) where bool = true on success and lib would be second arg
 local function load(opts, cb)
     if not cb then
         cb = opts
@@ -409,14 +560,14 @@ local function load(opts, cb)
         'Reloading C library! What would you like to do?' or
         'C library not found! What would you like to do?'
 
-    local choice = prompt_choices(
-        prompt,
-        {
+    local choice = prompt_choices({
+        prompt = prompt,
+        choices = {
             'Download a prebuilt lib',
             'Build from source',
             'Copy local lib',
-        }
-    )
+        },
+    })
 
     if not choice then
         return cb(false, 'Aborted choice prompt')

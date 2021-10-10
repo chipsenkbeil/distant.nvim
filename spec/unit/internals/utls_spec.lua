@@ -1,4 +1,4 @@
-local u = require('distant.internal.utils')
+local u = require('distant.utils')
 
 describe('internal.utils', function()
    describe('build_arg_str', function()

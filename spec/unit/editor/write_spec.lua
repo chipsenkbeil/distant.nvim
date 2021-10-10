@@ -2,7 +2,7 @@ local editor = require('distant.editor')
 local fn = require('distant.fn')
 local match = require('luassert.match')
 local stub = require('luassert.stub')
-local v = require('distant.internal.vars')
+local v = require('distant.vars')
 
 describe('editor.write', function()
    it('should do nothing if the buffer does not have a remote path', function()
@@ -25,7 +25,7 @@ describe('editor.write', function()
       stub(vim.fn, 'getbufline', content_lines)
       stub(vim.api, 'nvim_buf_set_option')
 
-      editor.write(123, opts)
+      editor.write(vim.tbl_extend('keep', {buf = 123}, opts))
 
       local _ = match._
       assert.stub(v.buf.remote_path).was.called_with(123)
@@ -47,7 +47,7 @@ describe('editor.write', function()
 
       -- Fails as we return an error from writing text
       assert.has.errors(function()
-         editor.write(123, opts)
+         editor.write(vim.tbl_extend('keep', {buf = 123}, opts))
       end)
 
       assert.stub(vim.api.nvim_buf_set_option).was.not_called()

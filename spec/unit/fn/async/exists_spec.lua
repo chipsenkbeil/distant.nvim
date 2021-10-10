@@ -3,7 +3,7 @@ local match = require('luassert.match')
 local spy = require('luassert.spy')
 local u = require('spec.unit.utils')
 
-describe('fn.async.exists', function()
+describe('fn.exists (async)', function()
     it('should send an exists request via the global client', function()
         local send = spy.new(function() end)
         u.stub_send(send)

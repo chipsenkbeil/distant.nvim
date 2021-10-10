@@ -98,10 +98,10 @@ actions.mkdir = function(opts)
         end
 
         local path = u.join_path(base_path, name)
-        local err, success = fn.mkdir(path, {all = true})
+        local err, success = fn.mkdir({path = path, all = true})
 
         if success then
-            editor.open(base_path, {reload = true})
+            editor.open({path = base_path, reload = true})
         else
             local msg = 'Failed to create ' .. path
             if err then

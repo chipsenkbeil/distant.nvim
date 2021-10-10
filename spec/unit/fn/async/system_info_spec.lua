@@ -3,7 +3,7 @@ local match = require('luassert.match')
 local spy = require('luassert.spy')
 local u = require('spec.unit.utils')
 
-describe('fn.async.system_info', function()
+describe('fn.system_info (async)', function()
     it('should send a system_info request via the global client', function()
         local send = spy.new(function() end)
         u.stub_send(send)

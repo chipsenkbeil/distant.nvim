@@ -1,22 +1,23 @@
 local fn = require('distant.fn')
-local s = require('distant.internal.state')
+local s = require('distant.state')
 local stub = require('luassert.stub')
-local u = require('distant.internal.utils')
+local u = require('distant.utils')
 
-describe('fn.run', function()
+describe('fn.read_file_text (sync)', function()
     before_each(function()
         -- Make our async fn do nothing as we're going to stub
         -- the channel return values separately
-        stub(fn.async, 'run')
+        stub(fn.async, 'read_file_text')
     end)
 
-    it('should perform an async run and wait for the result', function()
+    it('should perform an async read_file_text and wait for the result', function()
         stub(u, 'oneshot_channel', 'fake tx', function()
             return false, false, true
         end)
 
-        local err, result = fn.run('cmd', {'arg1', 'arg2'})
-        assert.stub(fn.async.run).was.called_with('cmd', {'arg1', 'arg2'}, 'fake tx')
+        local path = 'some/path'
+        local err, result = fn.read_file_text(path)
+        assert.stub(fn.async.read_file_text).was.called_with(path, 'fake tx')
         assert.falsy(err)
         assert.truthy(result)
     end)
@@ -26,7 +27,7 @@ describe('fn.run', function()
             return 'timeout error', false, true
         end)
 
-        local err, _ = fn.run('cmd', {'arg1', 'arg2'})
+        local err, _ = fn.read_file_text('some/path')
         assert.are.equal('timeout error', err)
     end)
 
@@ -35,7 +36,7 @@ describe('fn.run', function()
             return false, 'async error', true
         end)
 
-        local err, _ = fn.run('cmd', {'arg1', 'arg2'})
+        local err, _ = fn.read_file_text('some/path')
         assert.are.equal('async error', err)
     end)
 
@@ -44,7 +45,7 @@ describe('fn.run', function()
             return false, false, true
         end)
 
-        fn.run('cmd', {'arg1', 'arg2'}, {
+        fn.read_file_text('some/path', {
             timeout = 123,
             interval = 456,
         })
@@ -56,7 +57,7 @@ describe('fn.run', function()
             return false, false, true
         end)
 
-        fn.run('cmd', {'arg1', 'arg2'})
+        fn.read_file_text('some/path')
         assert.stub(u.oneshot_channel).was.called_with(
             s.settings.max_timeout,
             s.settings.timeout_interval

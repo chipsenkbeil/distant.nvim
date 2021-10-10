@@ -1,3 +1,4 @@
+local data = require('distant.data')
 local fn = require('distant.fn')
 local lsp = require('distant.lsp')
 local log = require('distant.log')
@@ -18,9 +19,9 @@ local function apply_mappings(buf, mappings)
     local fn_ids = {}
     for lhs, rhs in pairs(mappings) do
         local id = 'buf_' .. buf .. '_key_' .. string.gsub(lhs, '.', string.byte)
-        state.data.set(id, rhs)
+        data.set(id, rhs)
         table.insert(fn_ids, id)
-        local key_mapping = '<Cmd>' .. state.data.get_as_key_mapping(id) .. '<CR>'
+        local key_mapping = '<Cmd>' .. data.get_as_key_mapping(id) .. '<CR>'
         vim.api.nvim_buf_set_keymap(buf, 'n', lhs, key_mapping, {
             noremap = true,
             silent = true,
@@ -33,7 +34,7 @@ local function apply_mappings(buf, mappings)
         vim.api.nvim_buf_attach(buf, false, {
             on_detach = function()
                 for _, id in ipairs(fn_ids) do
-                    state.data.remove(id)
+                    data.remove(id)
                 end
             end;
         })
@@ -123,7 +124,7 @@ local function load_buf_from_dir(path, buf, opts)
     opts = opts or {}
     log.fmt_trace('load_buf_from_dir(%s, %s, %s)', path, buf, opts)
 
-    local err, entries = fn.dir_list(vim.tbl_extend('keep', {path = path}, opts))
+    local err, entries = fn.read_dir(vim.tbl_extend('keep', {path = path}, opts))
     assert(not err, err)
 
     local lines = u.filter_map(entries, function(entry)
@@ -243,6 +244,8 @@ return function(opts)
     else
         path = opts.path
     end
+
+    vim.validate({opts = {opts, 'table'}})
 
     local local_path = u.strip_prefix(path, 'distant://')
 

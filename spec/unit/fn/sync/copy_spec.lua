@@ -1,22 +1,22 @@
 local fn = require('distant.fn')
-local s = require('distant.internal.state')
+local settings = require('distant.settings')
 local stub = require('luassert.stub')
-local u = require('distant.internal.utils')
+local u = require('distant.utils')
 
-describe('fn.rename', function()
+describe('fn.copy (sync)', function()
     before_each(function()
         -- Make our async fn do nothing as we're going to stub
         -- the channel return values separately
-        stub(fn.async, 'rename')
+        stub(fn.async, 'copy')
     end)
 
-    it('should perform an async rename and wait for the result', function()
+    it('should perform an async copy and wait for the result', function()
         stub(u, 'oneshot_channel', 'fake tx', function()
             return false, false, true
         end)
 
-        local err, result = fn.rename('src', 'dst')
-        assert.stub(fn.async.rename).was.called_with('src', 'dst', 'fake tx')
+        local err, result = fn.copy('src', 'dst')
+        assert.stub(fn.async.copy).was.called_with('src', 'dst', 'fake tx')
         assert.falsy(err)
         assert.truthy(result)
     end)
@@ -26,7 +26,7 @@ describe('fn.rename', function()
             return 'timeout error', false, true
         end)
 
-        local err, _ = fn.rename('src', 'dst')
+        local err, _ = fn.copy('src', 'dst')
         assert.are.equal('timeout error', err)
     end)
 
@@ -35,7 +35,7 @@ describe('fn.rename', function()
             return false, 'async error', true
         end)
 
-        local err, _ = fn.rename('src', 'dst')
+        local err, _ = fn.copy('src', 'dst')
         assert.are.equal('async error', err)
     end)
 
@@ -44,7 +44,7 @@ describe('fn.rename', function()
             return false, false, true
         end)
 
-        fn.rename('src', 'dst', {
+        fn.copy('src', 'dst', {
             timeout = 123,
             interval = 456,
         })
@@ -56,10 +56,10 @@ describe('fn.rename', function()
             return false, false, true
         end)
 
-        fn.rename('src', 'dst')
+        fn.copy('src', 'dst')
         assert.stub(u.oneshot_channel).was.called_with(
-            s.settings.max_timeout,
-            s.settings.timeout_interval
+            settings.max_timeout,
+            settings.timeout_interval
         )
     end)
 end)

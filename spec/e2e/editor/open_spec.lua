@@ -44,7 +44,7 @@ describe('editor.open', function()
         })
 
         -- Get the absolute path to the file we are editing
-        local err, metadata = fn.metadata(test_path, {canonicalize = true})
+        local err, metadata = fn.metadata({path = test_path, canonicalize = true})
         assert(not err, err)
 
         -- Verify we set a remote path variable to the absolute path
@@ -73,7 +73,7 @@ describe('editor.open', function()
         })
 
         -- Get the absolute path to the file we are editing
-        local err, metadata = fn.metadata(test_path, {canonicalize = true})
+        local err, metadata = fn.metadata({path = test_path, canonicalize = true})
         assert(not err, err)
 
         -- Verify we set a remote path variable to the absolute path
@@ -139,7 +139,7 @@ describe('editor.open', function()
         })
 
         -- Get the absolute path to the file we are editing
-        local err, metadata = fn.metadata(test_path, {canonicalize = true})
+        local err, metadata = fn.metadata({path = test_path, canonicalize = true})
         assert(not err, err)
 
         -- Verify we set a remote path variable to the absolute path
@@ -180,7 +180,7 @@ describe('editor.open', function()
         })
 
         -- Get the absolute path to the file we are editing
-        local err, metadata = fn.metadata(test_path, {canonicalize = true})
+        local err, metadata = fn.metadata({path = test_path, canonicalize = true})
         assert(not err, err)
 
         -- Verify we set a remote path variable to the absolute path

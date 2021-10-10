@@ -12,9 +12,9 @@ describe('fn', function()
         driver:teardown()
     end)
 
-    describe('run', function()
+    describe('spawn_wait', function()
         it('should execute remote program and return results', function()
-            local err, res = fn.run('printf', {'hello\non\nmultiple\nlines'})
+            local err, res = fn.spawn_wait({cmd = 'printf', args = 'hello\non\nmultiple\nlines'})
             assert(not err, err)
             assert.are.same(res, {
                 code = 0,
@@ -24,7 +24,7 @@ describe('fn', function()
         end)
 
         it('should support capturing stderr', function()
-            local err, res = fn.run('sh', {'-c', '1>&2 printf "hello\non\nmultiple\nlines"'})
+            local err, res = fn.spawn_wait({cmd = 'sh', args = {'-c', '1>&2 printf "hello\non\nmultiple\nlines"'}})
             assert(not err, err)
             assert.are.same(res, {
                 code = 0,
@@ -34,7 +34,7 @@ describe('fn', function()
         end)
 
         it('should support capturing exit code', function()
-            local err, res = fn.run('sh', {'-c', 'exit 99'})
+            local err, res = fn.spawn_wait({cmd = 'sh', args = {'-c', 'exit 99'}})
             assert(not err, err)
             assert.are.same(res, {
                 code = 99,
@@ -44,7 +44,7 @@ describe('fn', function()
         end)
 
         it('should fail if the remote program is not found', function()
-            local err, res = fn.run('idonotexist')
+            local err, res = fn.spawn_wait({cmd = 'idonotexist'})
             assert.is.truthy(err)
             assert.is.falsy(res)
         end)

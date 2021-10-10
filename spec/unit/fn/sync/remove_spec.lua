@@ -1,23 +1,23 @@
 local fn = require('distant.fn')
-local s = require('distant.internal.state')
+local s = require('distant.state')
 local stub = require('luassert.stub')
-local u = require('distant.internal.utils')
+local u = require('distant.utils')
 
-describe('fn.dir_list', function()
+describe('fn.remove (sync)', function()
     before_each(function()
         -- Make our async fn do nothing as we're going to stub
         -- the channel return values separately
-        stub(fn.async, 'dir_list')
+        stub(fn.async, 'remove')
     end)
 
-    it('should perform an async dir_list and wait for the result', function()
+    it('should perform an async remove and wait for the result', function()
         stub(u, 'oneshot_channel', 'fake tx', function()
             return false, false, true
         end)
 
         local path = 'some/path'
-        local err, result = fn.dir_list(path)
-        assert.stub(fn.async.dir_list).was.called_with(path, {}, 'fake tx')
+        local err, result = fn.remove(path)
+        assert.stub(fn.async.remove).was.called_with(path, {}, 'fake tx')
         assert.falsy(err)
         assert.truthy(result)
     end)
@@ -28,9 +28,9 @@ describe('fn.dir_list', function()
         end)
 
         local path = 'some/path'
-        local opts = {depth = 123, absolute = true, canonicalize = true, include_root = true}
-        local _ = fn.dir_list(path, opts)
-        assert.stub(fn.async.dir_list).was.called_with(path, opts, 'fake tx')
+        local opts = {force = true}
+        local _ = fn.remove(path, opts)
+        assert.stub(fn.async.remove).was.called_with(path, opts, 'fake tx')
     end)
 
     it('should report a timeout error if the timeout is exceeded', function()
@@ -38,7 +38,7 @@ describe('fn.dir_list', function()
             return 'timeout error', false, true
         end)
 
-        local err, _ = fn.dir_list('some/path')
+        local err, _ = fn.remove('some/path')
         assert.are.equal('timeout error', err)
     end)
 
@@ -47,7 +47,7 @@ describe('fn.dir_list', function()
             return false, 'async error', true
         end)
 
-        local err, _ = fn.dir_list('some/path')
+        local err, _ = fn.remove('some/path')
         assert.are.equal('async error', err)
     end)
 
@@ -56,7 +56,7 @@ describe('fn.dir_list', function()
             return false, false, true
         end)
 
-        fn.dir_list('some/path', {
+        fn.remove('some/path', {
             timeout = 123,
             interval = 456,
         })
@@ -68,7 +68,7 @@ describe('fn.dir_list', function()
             return false, false, true
         end)
 
-        fn.dir_list('some/path')
+        fn.remove('some/path')
         assert.stub(u.oneshot_channel).was.called_with(
             s.settings.max_timeout,
             s.settings.timeout_interval

@@ -7,6 +7,9 @@ local state = {
 
     -- Contains active session
     session = nil;
+
+    -- Contains all sessions mapped by host
+    sessions = {};
 }
 
 --- Loads into state the settings appropriate for the remote machine with

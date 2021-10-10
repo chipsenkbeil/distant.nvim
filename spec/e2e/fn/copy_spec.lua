@@ -20,7 +20,7 @@ describe('fn', function()
 
             local dst = root.file()
 
-            local err, res = fn.copy(src.path(), dst.path())
+            local err, res = fn.copy({src = src.path(), dst = dst.path()})
             assert(not err, err)
             assert.is.truthy(res)
 
@@ -37,7 +37,7 @@ describe('fn', function()
 
             local dst = root.dir()
 
-            local err, res = fn.copy(src.path(), dst.path())
+            local err, res = fn.copy({src = src.path(), dst = dst.path()})
             assert(not err, err)
             assert.is.truthy(res)
 
@@ -52,7 +52,7 @@ describe('fn', function()
             local src = root.file()
             local dst = root.file()
 
-            local err, res = fn.copy(src.path(), dst.path())
+            local err, res = fn.copy({src = src.path(), dst = dst.path()})
             assert.is.truthy(err)
             assert.is.falsy(res)
 
@@ -66,7 +66,7 @@ describe('fn', function()
 
             local dst = root.file('dir/file')
 
-            local err, res = fn.copy(src.path(), dst.path())
+            local err, res = fn.copy({src = src.path(), dst = dst.path()})
             assert.is.truthy(err)
             assert.is.falsy(res)
 

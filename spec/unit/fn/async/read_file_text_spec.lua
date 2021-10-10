@@ -3,7 +3,7 @@ local match = require('luassert.match')
 local spy = require('luassert.spy')
 local u = require('spec.unit.utils')
 
-describe('fn.async.read_file_text', function()
+describe('fn.read_file_text (async)', function()
     it('should send a read_file_text request via the global client', function()
         local send = spy.new(function() end)
         u.stub_send(send)
