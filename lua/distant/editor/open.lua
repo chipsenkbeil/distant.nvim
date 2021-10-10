@@ -124,10 +124,10 @@ local function load_buf_from_dir(path, buf, opts)
     opts = opts or {}
     log.fmt_trace('load_buf_from_dir(%s, %s, %s)', path, buf, opts)
 
-    local err, entries = fn.read_dir(vim.tbl_extend('keep', {path = path}, opts))
+    local err, res = fn.read_dir(vim.tbl_extend('keep', {path = path}, opts))
     assert(not err, err)
 
-    local lines = u.filter_map(entries, function(entry)
+    local lines = u.filter_map(res.entries, function(entry)
         if entry.depth > 0 then
             return entry.path
         end

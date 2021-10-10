@@ -34,7 +34,7 @@ return function(opts)
         -- Write the buffer contents
         local err, _ = fn.write_file_text(vim.tbl_extend('keep', {
             path = path,
-            data = table.concat(lines, '\n')
+            text = table.concat(lines, '\n')
         }, opts))
         assert(not err, err)
 

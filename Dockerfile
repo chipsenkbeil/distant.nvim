@@ -57,19 +57,18 @@ RUN sudo mkdir -p /var/run/sshd /run/openrc \
     && echo 'StrictHostKeyChecking no' > /home/$user/.ssh/config
 
 # Install distant binary and make sure its in a path for everyone
-ARG distant_release=https://github.com/chipsenkbeil/distant/releases/download/v0.15.0-alpha.11
+ARG distant_release=https://github.com/chipsenkbeil/distant/releases/download/v0.15.0-alpha.12
 RUN curl -L $distant_release/distant-linux64-musl > $cargo_bin_dir/distant \
     && chmod +x $cargo_bin_dir/distant \
     && sudo ln -s $cargo_bin_dir/distant /usr/local/bin/distant
 
 # Download the lua module so we can copy it into place
-RUN curl -fLo distant_lua.so --create-dirs $distant_release/distant_lua-linux64.so
+RUN curl -fLo distant_lua.so --create-dirs $distant_release/distant_lua-linux64.so \
+    && mkdir -p app/lua/ \
+    && mv distant_lua.so app/lua/distant_lua.so
 
 # Install our repository within a subdirectory of home
 COPY --chown=$user . app/
-
-# Move our lua module to the right location
-RUN mv distant_lua.so app/lua/distant_lua.so
 
 # By default, this will run the ssh server
 CMD ["sudo", "/usr/sbin/sshd", "-D", "-e"]
