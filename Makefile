@@ -60,7 +60,7 @@ define test_exec
 	--headless \
 	--noplugin \
 	-u spec/spec.vim \
-	-c "PlenaryBustedDirectory spec/$(1) { minimal_init = 'spec/spec.vim' $(if 2,$(COMMA)$(2)) }"
+	-c "lua require('plenary.test_harness').test_directory('spec/$(1)', {minimal_init='spec/spec.vim'$(if 2,$(COMMA)$(2))})"
 endef
 
 ###############################################################################
@@ -91,8 +91,11 @@ vendor: vendor/plenary.nvim
 
 # Pulls in the latest version of plenary.nvim, which we use to run our tests
 vendor/plenary.nvim:
-	git clone https://github.com/nvim-lua/plenary.nvim.git vendor/plenary.nvim || \
+	@git clone https://github.com/nvim-lua/plenary.nvim.git vendor/plenary.nvim || \
 		( cd vendor/plenary.nvim && git pull --rebase; )
+
+clean: ## Cleans out vendor directory
+	@rm -rf vendor/*
 
 ###############################################################################
 # DOCKER TEST TARGETS

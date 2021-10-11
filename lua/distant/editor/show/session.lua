@@ -14,17 +14,29 @@ return function()
         end
     end)
 
+    local session = state.session
     local msg = {}
     vim.list_extend(msg, {
-        '= Session =';
+        '= Session ' .. (session and 'Connected' or 'Disconnected') .. ' =';
         '';
     })
 
-    local session = state.session
     if session then
-        table.insert(msg, indent .. ' * Tag = "' .. session.connection_tag .. '"')
-    else
-        table.insert(msg, 'Disconnected')
+        local details = session.details
+        if details.tcp then
+            table.insert(msg, indent .. ' * Type = "tcp"')
+            table.insert(msg, indent .. ' * Address = "' .. details.tcp.addr .. '"')
+            table.insert(msg, indent .. ' * Tag = "' .. details.tcp.tag .. '"')
+        elseif details.socket then
+            table.insert(msg, indent .. ' * Type = "socket"')
+            table.insert(msg, indent .. ' * Path = "' .. details.socket.path .. '"')
+            table.insert(msg, indent .. ' * Tag = "' .. details.socket.tag .. '"')
+        elseif details.inmemory then
+            table.insert(msg, indent .. ' * Type = "inmemory"')
+            table.insert(msg, indent .. ' * Tag = "' .. details.inmemory.tag .. '"')
+        else
+            table.insert(msg, indent .. ' * Type = "unknown"')
+        end
     end
 
     vim.list_extend(msg, {

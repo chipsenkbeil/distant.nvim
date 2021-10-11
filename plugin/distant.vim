@@ -12,15 +12,25 @@ let g:loaded_distant = 1
 lua require('distant.autocmd').initialize()
 
 " Define our specialized commands that wrap the lua calls
-command! -nargs=* DistantOpen lua require('distant.command').open(<f-args>)
-command! -nargs=* DistantLaunch lua require('distant.command').launch(<f-args>)
-command! -nargs=* DistantMetadata lua require('distant.command').metadata(<f-args>)
-command! -nargs=0 DistantSessionInfo lua require('distant.command').session_info()
-command! -nargs=0 DistantSystemInfo lua require('distant.command').system_info()
+command! -nargs=* DistantOpen
+      \ lua require('distant.command').open(vim.fn.expand('<args>'))
+command! -nargs=* DistantLaunch
+      \ lua require('distant.command').launch(vim.fn.expand('<args>'))
+command! -nargs=* DistantMetadata
+      \ lua require('distant.command').metadata(vim.fn.expand('<args>'))
+command! -nargs=0 DistantSessionInfo
+      \ lua require('distant.command').session_info()
+command! -nargs=0 DistantSystemInfo
+      \ lua require('distant.command').system_info()
 
 " Define our purely-functional commands that wrap the lua calls
-command! -nargs=* DistantCopy lua require('distant.command').copy(<f-args>)
-command! -nargs=* DistantMkdir lua require('distant.command').mkdir(<f-args>)
-command! -nargs=* DistantRemove lua require('distant.command').remove(<f-args>)
-command! -nargs=* DistantRename lua require('distant.command').rename(<f-args>)
-command! -nargs=* DistantRun lua require('distant.command').run(<f-args>)
+command! -nargs=* DistantCopy
+      \ lua require('distant.command').copy(vim.fn.expand('<args>'))
+command! -nargs=* DistantMkdir
+      \ lua require('distant.command').mkdir(vim.fn.expand('<args>'))
+command! -nargs=* DistantRemove
+      \ lua require('distant.command').remove(vim.fn.expand('<args>'))
+command! -nargs=* DistantRename
+      \ lua require('distant.command').rename(vim.fn.expand('<args>'))
+command! -nargs=* DistantRun
+      \ lua require('distant.command').run(vim.fn.expand('<args>'))

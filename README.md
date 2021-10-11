@@ -163,6 +163,13 @@ Alongside functions, this plugin also provides vim commands that can be used to
 initiate different tasks remotely. It also includes specialized commands such
 as `DistantLaunch` that is used to start a remote session.
 
+Commands support positional and key=value pairs. Positional arguments are
+relative to each other and are not influenced by key=value pairs inbetween.
+
+```
+:DistantLaunch example.com distant.use_login_shell=true distant.args="--log-file /path/to/file.log --log-level info"
+```
+
 ### Specialized Commands
 
 These commands are geared towards performing actions that expose some dialogs

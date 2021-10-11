@@ -27,13 +27,23 @@ end
 local session = nil
 
 --- Initialize a session if one has not been initialized yet
-local function initialize_session(timeout, interval)
+local function initialize_session(opts)
+    opts = opts or {}
     if session ~= nil then
         return session
     end
 
-    timeout = timeout or config.timeout
-    interval = interval or config.timeout_interval
+    local timeout = opts.timeout or config.timeout
+    local interval = opts.interval or config.timeout_interval
+    opts.timeout = nil
+    opts.interval = nil
+
+    -- Verify that we have our C module library available as we will not be
+    -- interacting to acquire it during launch
+    local exists, _ = pcall(require, 'distant_lua')
+    if not exists then
+        error('distant_lua library is not on path!')
+    end
 
     -- Attempt to launch and connect to a remote session
     -- NOTE: We bump up our port range as tests are run in parallel and each
@@ -41,11 +51,42 @@ local function initialize_session(timeout, interval)
     --       to avoid running out of ports!
     -- TODO: Because of the above situation, should we instead have drivers use
     --       the same connection and only have one perform an actual launch?
+    local host = config.host
+    local distant_bin = config.bin
+    local distant_args = vim.tbl_extend('keep', {
+        '--current-dir', config.root_dir,
+        '--shutdown-after', '60',
+        '--port', '8080:8999',
+    }, opts)
     editor.launch({
-        host = config.host,
-        distant_bin = config.bin,
-        distant_args = {'--current-dir', config.root_dir, '--shutdown-after', '60', '--port', '8080:8999'},
-    })
+        host = host,
+        distant_bin = distant_bin,
+        distant_args = distant_args,
+        mode = 'distant',
+
+        -- All password challenges return empty password
+        on_authenticate = function(ev)
+            local answers = {}
+            for _ in 1, #ev.prompts do
+                table.insert(answers, '')
+            end
+            return answers
+        end,
+
+        -- Verify any host received
+        on_host_verify = function(_) return true end,
+    }, function(status, msg)
+        if not status then
+            local desc = string.format(
+                'editor.launch({ host = %s, distant_bin = %s, distant_args = %s })',
+                host, distant_bin, vim.inspect(distant_args)
+            )
+            error(string.format(
+                'For %s, failed: %s',
+                desc, msg
+            ))
+        end
+    end)
     local status = vim.fn.wait(timeout, function() return state.session ~= nil end, interval)
 
     -- Validate that we were successful
@@ -84,7 +125,7 @@ function Driver:initialize(opts)
         settings.merge(opts.settings)
     end
 
-    self.__state.session = initialize_session(opts.timeout, opts.interval)
+    self.__state.session = initialize_session(opts)
     return self
 end
 

@@ -1,6 +1,6 @@
 local u = require('distant.utils')
 
-describe('internal.utils', function()
+describe('utils', function()
    describe('build_arg_str', function()
       it('should fail if args is not a table', function()
          assert.has.errors(function()
