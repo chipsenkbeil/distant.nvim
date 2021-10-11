@@ -5,10 +5,7 @@ describe('fn', function()
     local driver
 
     before_each(function()
-        driver = Driver:setup({
-            log_file = '/tmp/spawn_wait.log',
-            log_level = 'trace',
-        })
+        driver = Driver:setup()
     end)
 
     after_each(function()

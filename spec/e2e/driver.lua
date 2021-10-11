@@ -35,14 +35,17 @@ local function initialize_session(opts)
 
     local timeout = opts.timeout or config.timeout
     local interval = opts.interval or config.timeout_interval
-    opts.timeout = nil
-    opts.interval = nil
 
     -- Verify that we have our C module library available as we will not be
     -- interacting to acquire it during launch
-    local exists, _ = pcall(require, 'distant_lua')
+    local exists, err = pcall(require, 'distant_lua')
     if not exists then
-        error('distant_lua library is not on path!')
+        local msg = 'distant_lua library is not on path!'
+        if err then
+            msg = tostring(err)
+        end
+
+        error(msg)
     end
 
     -- Attempt to launch and connect to a remote session
@@ -53,15 +56,17 @@ local function initialize_session(opts)
     --       the same connection and only have one perform an actual launch?
     local host = config.host
     local distant_bin = config.bin
-    local distant_args = vim.tbl_extend('keep', {
+    local distant_args = vim.list_extend({
         '--current-dir', config.root_dir,
         '--shutdown-after', '60',
         '--port', '8080:8999',
-    }, opts)
+    }, opts.args or {})
     editor.launch({
         host = host,
-        distant_bin = distant_bin,
-        distant_args = distant_args,
+        distant = {
+            bin = distant_bin,
+            args = distant_args,
+        },
         mode = 'distant',
 
         -- All password challenges return empty password
@@ -91,7 +96,8 @@ local function initialize_session(opts)
 
     -- Validate that we were successful
     assert(status == 0, 'Session not received in time')
-    return state.session
+    session = state.session
+    return session
 end
 
 --- Initializes a driver for e2e tests
