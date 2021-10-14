@@ -52,18 +52,23 @@ RUN sudo mkdir -p /var/run/sshd /run/openrc \
     && sudo touch /run/openrc/softlevel \
     && sudo ssh-keygen -A \
     && sudo rc-update add sshd \
-    && ssh-keygen -q -t rsa -N '' -f /home/docker/.ssh/id_rsa \
+    && ssh-keygen -q -t rsa -N "$user" -f /home/docker/.ssh/id_rsa \
     && cp /home/$user/.ssh/id_rsa.pub /home/$user/.ssh/authorized_keys \
     && echo 'StrictHostKeyChecking no' > /home/$user/.ssh/config
 
+# Install libc compatibility to provide /lib64/ld-linux-x86-64.so.2 and libgcc_s.so.1
+# Required due to https://github.com/rust-lang/rust/issues/82521
+RUN sudo apk add libc6-compat \
+    && sudo ln -s /lib/libc.musl-x86_64.so.1 /lib/ld-linux-x86-64.so.2
+
 # Install distant binary and make sure its in a path for everyone
-ARG distant_release=https://github.com/chipsenkbeil/distant/releases/download/v0.15.0-alpha.14
+ARG distant_release=https://github.com/chipsenkbeil/distant/releases/download/v0.15.0-snapshot
 RUN curl -L $distant_release/distant-linux64-musl > $cargo_bin_dir/distant \
     && chmod +x $cargo_bin_dir/distant \
     && sudo ln -s $cargo_bin_dir/distant /usr/local/bin/distant
 
 # Download the lua module so we can copy it into place
-RUN curl -fLo distant_lua.so --create-dirs $distant_release/distant_lua-linux64.so
+RUN curl -fLo distant_lua.so --create-dirs $distant_release/distant_lua-linux64-musl.so
 
 # Install our repository within a subdirectory of home
 COPY --chown=$user . app/

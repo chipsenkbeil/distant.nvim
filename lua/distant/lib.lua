@@ -4,7 +4,7 @@ local MAX_DOWNLOAD_CHOICES = 5
 
 local PLATFORM_LIB = {
     ['windows:x86_64'] = 'distant_lua-win64.dll',
-    ['linux:x86_64'] = 'distant_lua-linux64.so',
+    ['linux:x86_64'] = 'distant_lua-linux64-gnu.so',
     ['macos:x86_64'] = 'distant_lua-macos-intel.dylib',
     ['macos:arm'] = 'distant_lua-macos-arm.dylib',
 }

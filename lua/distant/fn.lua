@@ -29,8 +29,10 @@ end
 --- will be invoked synchronously and return `err|nil, data|nil`
 ---
 --- @param name string Name of the function on the session to call
+--- @param obj table|nil If provided, will wrap a function on the current obj
+---        instead of the active session
 --- @return function
-local function make_fn(name)
+local function make_fn(name, obj)
     vim.validate({name = {name, 'string'}})
     if not vim.endswith(name, '_async') then
         name = name .. '_async'
@@ -60,17 +62,17 @@ local function make_fn(name)
                 return cb(err)
             end
 
-            local async_method = session[name]
+            local async_method = (obj or session)[name]
             local async_method_type = type(async_method)
             if async_method_type ~= 'function' then
                 return cb(string.format(
-                    'type(session.%s) should be function, but got %s',
-                    name, async_method_type
+                    'type(%s.%s) should be function, but got %s',
+                    obj and 'obj' or 'session', name, async_method_type
                 ))
             end
 
             local f = lib.utils.nvim_wrap_async(async_method)
-            f(session, opts, function(success, res)
+            f(obj or session, opts, function(success, res)
                 if not success then
                     return cb(tostring(res) or 'Unknown error occurred')
                 end
@@ -96,6 +98,42 @@ return (function(names)
 
     for _, name in ipairs(names) do
         api[name] = make_fn(name)
+
+        -- Treat spawn and spawn_lsp specially as we want to wrap some of the
+        -- process methods
+        if name == 'spawn' or name == 'spawn_lsp' then
+            local f = api[name]
+            api[name] = function(opts, cb)
+                local function wrap_proc(proc)
+                    if not proc then
+                        return
+                    end
+
+                    return {
+                        id = proc.id,
+                        is_active = function() return proc:is_active() end,
+                        close_stdin = function() return proc:close_stdin() end,
+                        write_stdin = make_fn('write_stdin', proc),
+                        read_stdout = make_fn('read_stdout', proc),
+                        read_stderr = make_fn('read_stderr', proc),
+                        status = make_fn('status', proc),
+                        wait = make_fn('wait', proc),
+                        output = make_fn('output', proc),
+                        kill = make_fn('kill', proc),
+                        abort = function() return proc:abort() end,
+                    }
+                end
+
+                if not cb then
+                    local err, proc = f(opts)
+                    return err, wrap_proc(proc)
+                else
+                    f(opts, function(err, proc)
+                        cb(err, wrap_proc(proc))
+                    end)
+                end
+            end
+        end
     end
 
     return api

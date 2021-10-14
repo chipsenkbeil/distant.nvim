@@ -70,15 +70,6 @@ return function(opts, cb)
             return
         end
 
-        -- TODO: Remove this test log
-        -- TODO: CHIP CHIP CHIP terminal mode is useless as it interrupts neovim,
-        --       so unless we can provide a callback or some way to map logging
-        --       to neovim's console, we should disable that in the C module
-        res.log.init({
-            file = '/tmp/chip.log',
-            level = 'trace',
-        })
-
         local session
         success, session = pcall(res.session.launch, opts)
         if not success then

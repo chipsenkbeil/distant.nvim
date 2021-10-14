@@ -1,5 +1,6 @@
 local config = require('spec.e2e.config')
 local editor = require('distant.editor')
+local lib = require('distant.lib')
 local state = require('distant.state')
 local settings = require('distant.settings')
 
@@ -48,6 +49,26 @@ local function initialize_session(opts)
         error(msg)
     end
 
+    -- Enable logging for the library
+    local log_file
+    lib.load(function(status, res)
+        if not status then
+            error(tostring(res))
+        end
+
+        local path = vim.fn.tempname()
+        res.log.init({
+            file = path,
+            level = 'trace',
+        })
+        log_file = path
+    end)
+    assert(vim.wait(10000, function() return log_file ~= nil end), 'Failed to initialize logging')
+
+    -- Print out our log location and flush to ensure that it shows up in case we get stuck
+    print('Logging initialized', log_file)
+    io.stdout:flush()
+
     -- Attempt to launch and connect to a remote session
     -- NOTE: We bump up our port range as tests are run in parallel and each
     --       stand up a new distant connection AND server, meaning we need
@@ -69,11 +90,13 @@ local function initialize_session(opts)
         },
         mode = 'distant',
 
-        -- All password challenges return empty password
+        -- All password challenges return the same password
         on_authenticate = function(ev)
             local answers = {}
-            for _ in 1, #ev.prompts do
-                table.insert(answers, '')
+            local i = 1
+            while i <= #ev.prompts do
+                table.insert(answers, config.password)
+                i = i + 1
             end
             return answers
         end,
