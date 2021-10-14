@@ -76,8 +76,7 @@ describe('editor.lsp', function()
                         ['rust'] = {
                             cmd = { 'rls' },
                             filetypes = { 'rust' },
-                            root_dir = '/',
-                            -- root_dir = root.path(),
+                            root_dir = root.path(),
                         }
                     }
                 }

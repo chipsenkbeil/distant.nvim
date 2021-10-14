@@ -217,10 +217,7 @@ local function configure_buf(args)
         vim.cmd([[ filetype detect ]])
 
         -- Launch any associated LSP clients
-        print('CHIP CHIP CHIP')
-        print('LSP', vim.inspect(lsp))
         lsp.connect(args.buf)
-        print('POST CHIP CHIP')
     end
 end
 
