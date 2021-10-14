@@ -23,7 +23,7 @@ RUN addgroup -S $user \
     && adduser $user wheel \
     && echo "$user ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/$user \
     && chmod 0440 /etc/sudoers.d/$user \
-    && echo "$user:$user" | chpasswd
+    && echo "$user:" | chpasswd
 USER $user
 WORKDIR /home/$user
 
@@ -40,7 +40,7 @@ RUN rustup-init -y \
 RUN sudo apk add neovim \
     --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community/
 
-# Install and configure sshd
+# Install and configure sshd with key using empty password
 #
 # 1. Support openrc not being properly ready (touch softlevel)
 # 2. Generate host keys
@@ -52,7 +52,7 @@ RUN sudo mkdir -p /var/run/sshd /run/openrc \
     && sudo touch /run/openrc/softlevel \
     && sudo ssh-keygen -A \
     && sudo rc-update add sshd \
-    && ssh-keygen -q -t rsa -N "$user" -f /home/docker/.ssh/id_rsa \
+    && ssh-keygen -q -t rsa -N '' -f /home/docker/.ssh/id_rsa \
     && cp /home/$user/.ssh/id_rsa.pub /home/$user/.ssh/authorized_keys \
     && echo 'StrictHostKeyChecking no' > /home/$user/.ssh/config
 

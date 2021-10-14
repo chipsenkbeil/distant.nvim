@@ -8,7 +8,7 @@ DISTANT_PORT?=22
 DISTANT_IDENTITY_FILE?=
 DISTANT_BIN?="$(HOME)/.cargo/bin/distant"
 DISTANT_LOG_LEVEL?=info
-DISTANT_PASSWORD?=docker
+DISTANT_PASSWORD?=
 
 DOCKER_IMAGE=distant_nvim_test
 DOCKER_NETWORK=distant_nvim_network

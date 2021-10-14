@@ -94,8 +94,9 @@ local function initialize_session(opts)
         on_authenticate = function(ev)
             local answers = {}
             local i = 1
-            while i <= #ev.prompts do
-                table.insert(answers, config.password)
+            local n = tonumber(#ev.prompts)
+            while i <= n do
+                table.insert(answers, config.password or '')
                 i = i + 1
             end
             return answers
