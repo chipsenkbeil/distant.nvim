@@ -76,8 +76,8 @@ describe('editor.lsp', function()
                         ['rust'] = {
                             cmd = { 'rls' },
                             filetypes = { 'rust' },
-                            root_dir = root.path(),
-                            opts = { log_file = '/tmp/test.distant.rust.log', log_level = 'trace' },
+                            root_dir = '/',
+                            -- root_dir = root.path(),
                         }
                     }
                 }

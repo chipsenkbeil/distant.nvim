@@ -31,14 +31,20 @@ end
 --- @param name string Name of the function on the session to call
 --- @param obj table|nil If provided, will wrap a function on the current obj
 ---        instead of the active session
+--- @param input_ty string|nil If provided, will be used to validate the input type
+---        to the function, defaulting to 'function'
 --- @return function
-local function make_fn(name, obj)
+local function make_fn(name, obj, input_ty)
     vim.validate({name = {name, 'string'}})
     if not vim.endswith(name, '_async') then
         name = name .. '_async'
     end
 
     return function(opts, cb)
+        if type(opts) == 'function' and cb == nil then
+            cb = opts
+            opts = {}
+        end
         if not opts then
             opts = {}
         end
@@ -53,7 +59,7 @@ local function make_fn(name, obj)
         end
 
         vim.validate({
-            opts = {opts, 'table'},
+            opts = {opts, input_ty or 'table'},
             cb = {cb, 'function'},
         })
 
@@ -113,7 +119,7 @@ return (function(names)
                         id = proc.id,
                         is_active = function() return proc:is_active() end,
                         close_stdin = function() return proc:close_stdin() end,
-                        write_stdin = make_fn('write_stdin', proc),
+                        write_stdin = make_fn('write_stdin', proc, 'string'),
                         read_stdout = make_fn('read_stdout', proc),
                         read_stderr = make_fn('read_stderr', proc),
                         status = make_fn('status', proc),

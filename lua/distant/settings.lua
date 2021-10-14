@@ -8,6 +8,7 @@ local DEFAULT_LABEL = '*'
 local DEFAULT_SETTINGS = {
     max_timeout = 15 * 1000,
     timeout_interval = 250,
+    poll_interval = 200,
 
     -- Settings that apply when launching the server
     launch = {

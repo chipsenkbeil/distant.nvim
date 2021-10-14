@@ -5,6 +5,7 @@ local v = require('distant.vars')
 
 --- Contains operations to apply against LSP instances on remote machines
 local lsp = {
+    hello = 'world';
     __clients = {};
 }
 
@@ -16,6 +17,7 @@ local lsp = {
 ---        mirring that of `vim.lsp.start_client`
 --- @return number #The id of the created client
 lsp.start_client = function(config)
+    print('start_client', vim.inspect(config))
     vim.validate({config = {config, 'table'}})
     log.fmt_trace('distant.lsp.start_client(%s)', config)
 
@@ -70,6 +72,7 @@ lsp.start_client = function(config)
     -- NOTE: Need to overwrite uv.spawn (aka vim.loop.spawn) temporarily
     local uv_spawn = vim.loop.spawn
     vim.loop.spawn = function(cmd, spawn_params, on_exit)
+        print('spawn', cmd, vim.inspect(spawn_params))
         vim.validate({
             cmd = {cmd, 'string'},
             ['spawn_params.args'] = {spawn_params.args, 'table'},
@@ -99,7 +102,7 @@ lsp.start_client = function(config)
         -- Spawn polling check for process to complete
         local inner_on_exit
         inner_on_exit = function()
-            proc:status(function(err, status)
+            proc.status(function(err, status)
                 if err then
                     error(tostring(err))
                 end
@@ -112,7 +115,7 @@ lsp.start_client = function(config)
 
                 -- Otherwise, queue up another check
                 else
-                    vim.schedule(inner_on_exit)
+                    vim.defer_fn(inner_on_exit, state.settings.poll_interval)
                 end
             end)
         end
@@ -122,16 +125,16 @@ lsp.start_client = function(config)
             -- returns bool if closing or closed
             -- luv has note that only used between init and before close cb
             is_closing = function()
-                return not proc:is_active()
+                return not proc.is_active()
             end,
 
             -- cb() (optional) when done
             -- returns nothing
             close = function(cb)
                 -- Always try a kill and ignore results
-                proc:kill(function()
+                proc.kill(function()
                     -- Make sure the process stops its tasks
-                    proc:abort(function()
+                    proc.abort(function()
                         cb()
                     end)
                 end)
@@ -154,6 +157,7 @@ lsp.start_client = function(config)
     -- NOTE: Need to overwrite uv.new_pipe (aka vim.loop.new_pipe) temporarily
     local uv_new_pipe = vim.loop.new_pipe
     vim.loop.new_pipe = function()
+        print('new_pipe')
         local pipe_proc, pipe_ty
         return {
             --- Private function used to set the pipe from within the uv.spawn wrapper
@@ -164,44 +168,59 @@ lsp.start_client = function(config)
                 pipe_ty = ty
             end,
 
+            -- read_start(self, cb)
             -- cb(err = string|nil, data = string|nil)
             -- returns 0 or fail
-            read_start = function(cb)
+            read_start = function(_, cb)
+                print('read_start', vim.inspect(cb))
                 assert(pipe_proc, 'Pipe not configured! Must be passed to uv.spawn(...)')
 
                 local read_loop
                 if pipe_ty == 'stdout' then
                     read_loop = function()
-                        pipe_proc:read_stdout(function(...)
+                        print('stdout start')
+                        pipe_proc.read_stdout({}, function(...)
+                            print('stdout', vim.inspect({...}))
                             cb(...)
-                            vim.schedule(read_loop)
+
+                            if pipe_proc.is_active() then
+                                vim.defer_fn(read_loop, state.settings.poll_interval)
+                            end
                         end)
                     end
                     vim.schedule(read_loop)
                     return 0
                 elseif pipe_ty == 'stderr' then
                     read_loop = function()
-                        pipe_proc:read_stdout(function(...)
+                        print('stderr start')
+                        pipe_proc.read_stderr({}, function(...)
+                            print('stderr', vim.inspect({...}))
                             cb(...)
-                            vim.schedule(read_loop)
+
+                            if pipe_proc.is_active() then
+                                vim.defer_fn(read_loop, state.settings.poll_interval)
+                            end
                         end)
                     end
                     vim.schedule(read_loop)
                     return 0
                 else
+                    print('nope')
                     error('pipe is not stdout or stderr')
                 end
             end,
 
+            -- read_start(self, data, cb)
             -- data = string, cb = function() (optional) when done
             -- returns uv_write_t (unused) or fail
-            write = function(data, cb)
+            write = function(_, data, cb)
+                print('write', vim.inspect(data), vim.inspect(cb))
                 assert(pipe_proc, 'Pipe not configured! Must be passed to uv.spawn(...)')
 
                 if pipe_ty ~= 'stdin' then
                     error('pipe is not stdin')
                 end
-                pipe_proc:write_stdin(data, cb)
+                return pipe_proc.write_stdin(data, cb)
             end
         }
     end
@@ -219,6 +238,7 @@ end
 --- starting clients if needed
 --- @param buf number Handle of the buffer where clients will attach
 lsp.connect = function(buf)
+    print('connect', vim.inspect(buf))
     log.fmt_trace('distant.lsp.connect(%s)', buf)
     local path = v.buf.remote_path(buf)
 
