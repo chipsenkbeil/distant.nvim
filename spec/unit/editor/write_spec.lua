@@ -30,7 +30,13 @@ describe('editor.write', function()
       local _ = match._
       assert.stub(v.buf.remote_path).was.called_with(123)
       assert.stub(vim.fn.getbufline).was.called_with(123, _, _)
-      assert.stub(fn.write_file_text).was.called_with(path, contents, opts)
+      assert.stub(fn.write_file_text).was.called_with({
+          path = path,
+          text = contents,
+          buf = 123,
+          a = 3,
+          b = 'test',
+      })
       assert.stub(vim.api.nvim_buf_set_option).was.called_with(123, 'modified', false)
    end)
 

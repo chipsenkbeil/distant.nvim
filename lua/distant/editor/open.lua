@@ -241,7 +241,7 @@ return function(opts)
     if type(opts) == 'string' then
         path = opts
         opts = { path = path }
-    else
+    elseif type(opts) == 'table' then
         path = opts.path
     end
 
