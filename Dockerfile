@@ -52,7 +52,7 @@ RUN sudo mkdir -p /var/run/sshd /run/openrc \
     && sudo touch /run/openrc/softlevel \
     && sudo ssh-keygen -A \
     && sudo rc-update add sshd \
-    && ssh-keygen -q -t rsa -N '' -f /home/docker/.ssh/id_rsa \
+    && ssh-keygen -q -m PEM -t rsa -N '' -f /home/docker/.ssh/id_rsa \
     && cp /home/$user/.ssh/id_rsa.pub /home/$user/.ssh/authorized_keys \
     && echo 'StrictHostKeyChecking no' > /home/$user/.ssh/config
 
@@ -62,7 +62,7 @@ RUN sudo apk add libc6-compat \
     && sudo ln -s /lib/libc.musl-x86_64.so.1 /lib/ld-linux-x86-64.so.2
 
 # Install distant binary and make sure its in a path for everyone
-ARG distant_release=https://github.com/chipsenkbeil/distant/releases/download/v0.15.0-snapshot
+ARG distant_release=https://github.com/chipsenkbeil/distant/releases/download/v0.15.0-alpha.17
 RUN curl -L $distant_release/distant-linux64-musl > $cargo_bin_dir/distant \
     && chmod +x $cargo_bin_dir/distant \
     && sudo ln -s $cargo_bin_dir/distant /usr/local/bin/distant
