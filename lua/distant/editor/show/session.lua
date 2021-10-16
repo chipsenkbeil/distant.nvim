@@ -1,13 +1,12 @@
 local log = require('distant.log')
-local s = require('distant.internal.state')
-local ui = require('distant.internal.ui')
-local u = require('distant.internal.utils')
+local state = require('distant.state')
+local ui = require('distant.ui')
+local u = require('distant.utils')
 
 --- Opens a new window to display session info
 return function()
     log.trace('editor.show.session()')
     local indent = '    '
-    local session = s.session()
     local distant_buf_names = u.filter_map(vim.api.nvim_list_bufs(), function(buf)
         local name = vim.api.nvim_buf_get_name(buf)
         if vim.startswith(name, 'distant://') then
@@ -15,21 +14,31 @@ return function()
         end
     end)
 
-    local session_info = {'Disconnected'}
-    if session ~= nil then
-        session_info = {
-            indent .. '* Host = "' .. session.host .. '"';
-            indent .. '* Port = "' .. session.port .. '"';
-            indent .. '* Key = "' .. session.key .. '"';
-        }
-    end
-
+    local session = state.session
     local msg = {}
     vim.list_extend(msg, {
-        '= Session =';
+        '= Session ' .. (session and 'Connected' or 'Disconnected') .. ' =';
         '';
     })
-    vim.list_extend(msg, session_info)
+
+    if session then
+        local details = session.details
+        if details.tcp then
+            table.insert(msg, indent .. ' * Type = "tcp"')
+            table.insert(msg, indent .. ' * Address = "' .. details.tcp.addr .. '"')
+            table.insert(msg, indent .. ' * Tag = "' .. details.tcp.tag .. '"')
+        elseif details.socket then
+            table.insert(msg, indent .. ' * Type = "socket"')
+            table.insert(msg, indent .. ' * Path = "' .. details.socket.path .. '"')
+            table.insert(msg, indent .. ' * Tag = "' .. details.socket.tag .. '"')
+        elseif details.inmemory then
+            table.insert(msg, indent .. ' * Type = "inmemory"')
+            table.insert(msg, indent .. ' * Tag = "' .. details.inmemory.tag .. '"')
+        else
+            table.insert(msg, indent .. ' * Type = "unknown"')
+        end
+    end
+
     vim.list_extend(msg, {
         '';
         '= Remote Files =';

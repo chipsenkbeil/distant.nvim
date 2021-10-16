@@ -1,7 +1,6 @@
 local editor = require('distant.editor')
 local log = require('distant.log')
-local s = require('distant.internal.state')
-local u = require('distant.internal.utils')
+local u = require('distant.utils')
 
 local function _initialize()
     log.trace('Initializing autocmds')
@@ -14,7 +13,8 @@ local function _initialize()
             local path = u.strip_prefix(fname, 'distant://')
 
             log.fmt_debug('Reading %s into buf %s', path, buf)
-            editor.open(path, {
+            editor.open({
+                path = path;
                 buf = buf;
                 reload = true;
             })
@@ -26,13 +26,6 @@ local function _initialize()
             if type(buf) == 'number' and buf ~= -1 then
                 log.fmt_debug('Writing buf %s', buf)
                 editor.write(buf)
-            end
-        end)
-
-        -- Define augroup that will stop client when exiting neovim
-        u.autocmd('VimLeave', '*', function()
-            if s.has_client() then
-                s.client():stop()
             end
         end)
     end)

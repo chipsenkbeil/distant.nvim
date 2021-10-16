@@ -18,7 +18,7 @@ describe('fn', function()
             local file = root.file()
             assert(file.touch(), 'Failed to create file: ' .. file.path())
 
-            local err, res = fn.metadata(file.path())
+            local err, res = fn.metadata({path = file.path()})
             assert(not err, err)
 
             assert.are.equal(res.file_type, 'file')
@@ -29,7 +29,7 @@ describe('fn', function()
             local dir = root.dir()
             assert(dir.make(), 'Failed to create directory: ' .. dir.path())
 
-            local err, res = fn.metadata(dir.path())
+            local err, res = fn.metadata({path = dir.path()})
             assert(not err, err)
 
             assert.are.equal(res.file_type, 'dir')
@@ -43,7 +43,7 @@ describe('fn', function()
             local symlink = root.symlink()
             assert(symlink.make(file.path()), 'Failed to create symlink: ' .. symlink.path())
 
-            local err, res = fn.metadata(symlink.path())
+            local err, res = fn.metadata({path = symlink.path()})
             assert(not err, err)
 
             assert.are.equal(res.file_type, 'symlink')
@@ -56,7 +56,7 @@ describe('fn', function()
             local symlink = root.symlink()
             assert(symlink.make(file.path()), 'Failed to create symlink: ' .. symlink.path())
 
-            local err, res = fn.metadata(symlink.path(), {resolve_file_type = true})
+            local err, res = fn.metadata({path = symlink.path(), resolve_file_type = true})
             assert(not err, err)
 
             assert.are.equal(res.file_type, 'file')
@@ -69,7 +69,7 @@ describe('fn', function()
             local symlink = root.symlink()
             assert(symlink.make(file.path()), 'Failed to create symlink: ' .. symlink.path())
 
-            local err, res = fn.metadata(symlink.path(), {canonicalize = true})
+            local err, res = fn.metadata({path = symlink.path(), canonicalize = true})
             assert(not err, err)
 
             assert.are.equal(res.file_type, 'symlink')
@@ -78,7 +78,7 @@ describe('fn', function()
 
         it('should fail if the path does not exist', function()
             local file = root.file()
-            local err, res = fn.metadata(file.path())
+            local err, res = fn.metadata({path = file.path()})
             assert.is.truthy(err)
             assert.is.falsy(res)
         end)

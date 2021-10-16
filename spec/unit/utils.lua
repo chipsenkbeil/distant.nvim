@@ -1,7 +1,6 @@
 local c = require('spec.unit.config')
-local s = require('distant.internal.state')
-local stub = require('luassert.stub')
-local u = require('distant.internal.utils')
+local lib = require('distant.lib')
+local u = require('distant.utils')
 
 local utils = {}
 
@@ -21,24 +20,11 @@ utils.make_channel = function()
     return done, wait
 end
 
--- Stub the return value of state.client()
-utils.stub_client = function(client)
-   return stub(s, 'client', client)
-end
-
--- Stub client's send method and invoke the provided function
--- with msg, cb as the arguments
-utils.stub_send = function(f)
-   return utils.stub_client({
-        send = function(_, msg, cb)
-            f(msg, cb)
-        end
-    })
-end
-
--- Stub the client's send method and fake a response
-utils.fake_response = function(res)
-    return utils.stub_send(function(_, cb) cb(res) end)
+-- Replaces `distant.lib.load(...)` such that it always returns the fake library
+utils.set_fake_lib = function(fake_lib)
+    lib.load = function(cb)
+        cb(true, fake_lib)
+    end
 end
 
 return utils

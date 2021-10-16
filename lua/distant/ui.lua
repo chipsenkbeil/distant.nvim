@@ -1,4 +1,4 @@
-local u = require('distant.internal.utils')
+local u = require('distant.utils')
 
 local ui = {}
 

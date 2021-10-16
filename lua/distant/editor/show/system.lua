@@ -1,6 +1,6 @@
 local fn = require('distant.fn')
 local log = require('distant.log')
-local ui = require('distant.internal.ui')
+local ui = require('distant.ui')
 
 --- Opens a new window to display system info
 ---
@@ -9,6 +9,7 @@ local ui = require('distant.internal.ui')
 return function(opts)
     opts = opts or {}
     log.trace('editor.show.system(%s)', opts)
+    vim.validate({opts = {opts, 'table'}})
 
     local indent = '    '
     local err, info = fn.system_info(opts)

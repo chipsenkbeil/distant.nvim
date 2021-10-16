@@ -20,9 +20,8 @@ describe('fn', function()
 
             local dst = root.file()
 
-            local err, res = fn.rename(src.path(), dst.path())
+            local err = fn.rename({src = src.path(), dst = dst.path()})
             assert(not err, err)
-            assert.is.truthy(res)
 
             assert.is.falsy(src.exists())
             dst.assert.same('some text')
@@ -37,9 +36,8 @@ describe('fn', function()
 
             local dst = root.dir()
 
-            local err, res = fn.rename(src.path(), dst.path())
+            local err = fn.rename({src = src.path(), dst = dst.path()})
             assert(not err, err)
-            assert.is.truthy(res)
 
             assert.is.falsy(src.exists())
             assert.is.falsy(src_file.exists())
@@ -54,9 +52,8 @@ describe('fn', function()
 
             local dst = root.dir('dir/dir2')
 
-            local err, res = fn.rename(src.path(), dst.path())
+            local err = fn.rename({src = src.path(), dst = dst.path()})
             assert.is.truthy(err)
-            assert.is.falsy(res)
 
             assert.is.truthy(src.exists())
             assert.is.falsy(dst.exists())
@@ -66,9 +63,8 @@ describe('fn', function()
             local src = root.file()
             local dst = root.file()
 
-            local err, res = fn.rename(src.path(), dst.path())
+            local err = fn.rename({src = src.path(), dst = dst.path()})
             assert.is.truthy(err)
-            assert.is.falsy(res)
 
             assert.is.falsy(src.exists())
             assert.is.falsy(dst.exists())

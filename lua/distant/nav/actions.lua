@@ -1,8 +1,8 @@
 local editor = require('distant.editor')
 local log = require('distant.log')
 local fn = require('distant.fn')
-local u = require('distant.internal.utils')
-local v = require('distant.internal.vars')
+local u = require('distant.utils')
+local v = require('distant.vars')
 
 local actions = {}
 
@@ -17,22 +17,6 @@ local function full_path_under_cursor()
     local base_path = v.buf.remote_path()
     if base_path ~= nil then
         return u.join_path(base_path, path_under_cursor())
-    end
-end
-
---- Wraps an action such that it is performed if the buffer is remote,
---- otherwise the else condition is performed
-actions.if_remote = function(if_f, else_f)
-    return function(...)
-        if v.buf.remote_path() then
-            if type(if_f) == 'function' then
-                if_f(...)
-            end
-        else
-            if type(else_f) == 'function' then
-                else_f(...)
-            end
-        end
     end
 end
 
@@ -53,7 +37,7 @@ actions.up = function()
     if base_path ~= nil then
         local parent = u.parent_path(base_path)
         if parent ~= nil then
-            editor.open(parent)
+            editor.open({path = parent, reload = true})
         end
     end
 end
@@ -98,17 +82,12 @@ actions.mkdir = function(opts)
         end
 
         local path = u.join_path(base_path, name)
-        local err, success = fn.mkdir(path, {all = true})
+        local err = fn.create_dir({path = path, all = true})
 
-        if success then
-            editor.open(base_path, {reload = true})
+        if not err then
+            editor.open({path = base_path, reload = true})
         else
-            local msg = 'Failed to create ' .. path
-            if err then
-                msg = msg .. ': ' .. err
-            end
-
-            log.error(msg)
+            log.error(string.format('Failed to create %s: %s', path, err))
         end
     end
 end
@@ -132,17 +111,12 @@ actions.rename = function(opts)
                 return
             end
 
-            local err, success = fn.rename(old_path, new_path)
+            local err = fn.rename({src = old_path, dst = new_path})
 
-            if success then
-                editor.open(base_path, {reload = true})
+            if not err then
+                editor.open({path = base_path, reload = true})
             else
-                local msg = 'Failed to rename ' .. old_path .. ' to ' .. new_path
-                if err then
-                    msg = msg .. ': ' .. err
-                end
-
-                log.error(msg)
+                log.error(string.format('Failed to rename %s to %s: %s', old_path, new_path, err))
             end
         end
     end
@@ -170,17 +144,12 @@ actions.remove = function(opts)
                 end
             end
 
-            local err, success = fn.remove(path, opts)
+            local err = fn.remove(vim.tbl_extend('keep', {path = path}, opts))
 
-            if success then
-                editor.open(base_path, {reload = true})
+            if not err then
+                editor.open({path = base_path, reload = true})
             else
-                local msg = 'Failed to remove ' .. path
-                if err then
-                    msg = msg .. ': ' .. err
-                end
-
-                log.error(msg)
+                log.error(string.format('Failed to remove %s: %s', path, err))
             end
         end
     end

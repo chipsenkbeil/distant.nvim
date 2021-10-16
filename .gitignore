@@ -1,2 +1,10 @@
 vendor/
 !vendor/.placeholder
+**/*.so
+**/*.dll
+
+
+# Added by cargo
+
+/target
+Cargo.lock

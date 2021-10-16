@@ -1,8 +1,10 @@
+local data = require('distant.data')
 local fn = require('distant.fn')
+local lsp = require('distant.lsp')
 local log = require('distant.log')
-local s = require('distant.internal.state')
-local u = require('distant.internal.utils')
-local v = require('distant.internal.vars')
+local state = require('distant.state')
+local u = require('distant.utils')
+local v = require('distant.vars')
 
 --- Applies neovim buffer-local mappings
 ---
@@ -17,9 +19,9 @@ local function apply_mappings(buf, mappings)
     local fn_ids = {}
     for lhs, rhs in pairs(mappings) do
         local id = 'buf_' .. buf .. '_key_' .. string.gsub(lhs, '.', string.byte)
-        s.data.set(id, rhs)
+        data.set(id, rhs)
         table.insert(fn_ids, id)
-        local key_mapping = '<Cmd>' .. s.data.get_as_key_mapping(id) .. '<CR>'
+        local key_mapping = '<Cmd>' .. data.get_as_key_mapping(id) .. '<CR>'
         vim.api.nvim_buf_set_keymap(buf, 'n', lhs, key_mapping, {
             noremap = true,
             silent = true,
@@ -32,7 +34,7 @@ local function apply_mappings(buf, mappings)
         vim.api.nvim_buf_attach(buf, false, {
             on_detach = function()
                 for _, id in ipairs(fn_ids) do
-                    s.data.remove(id)
+                    data.remove(id)
                 end
             end;
         })
@@ -50,10 +52,11 @@ local function check_path(path, opts)
     log.fmt_trace('check_path(%s, %s)', path, opts)
 
     -- We need to figure out if we are working with a file or directory
-    local _, metadata = fn.metadata(
-        path,
-        u.merge(opts, {canonicalize = true, resolve_file_type = true})
-    )
+    local _, metadata = fn.metadata(vim.tbl_extend('keep', {
+        path = path,
+        canonicalize = true,
+        resolve_file_type = true,
+    }, opts))
 
     local missing = metadata == nil
     local is_dir = not missing and metadata.file_type == 'dir'
@@ -103,7 +106,7 @@ end
 local function load_buf_from_file(path, buf, opts)
     opts = opts or {}
     log.fmt_trace('load_buf_from_file(%s, %s, %s)', path, buf, opts)
-    local err, text = fn.read_file_text(path, opts)
+    local err, text = fn.read_file_text(vim.tbl_extend('keep', {path = path}, opts))
     assert(not err, err)
 
     local lines
@@ -121,10 +124,10 @@ local function load_buf_from_dir(path, buf, opts)
     opts = opts or {}
     log.fmt_trace('load_buf_from_dir(%s, %s, %s)', path, buf, opts)
 
-    local err, entries = fn.dir_list(path, opts)
+    local err, res = fn.read_dir(vim.tbl_extend('keep', {path = path}, opts))
     assert(not err, err)
 
-    local lines = u.filter_map(entries, function(entry)
+    local lines = u.filter_map(res.entries, function(entry)
         if entry.depth > 0 then
             return entry.path
         end
@@ -179,7 +182,7 @@ local function configure_buf(args)
         vim.api.nvim_buf_set_option(args.buf, 'buftype', 'nofile')
         vim.api.nvim_buf_set_option(args.buf, 'modifiable', false)
 
-        apply_mappings(args.buf, s.settings.dir.mappings)
+        apply_mappings(args.buf, state.settings.dir.mappings)
 
     -- Otherwise, in all other cases we treat this as a remote file
     else
@@ -187,7 +190,7 @@ local function configure_buf(args)
         -- control where it is going
         vim.api.nvim_buf_set_option(args.buf, 'buftype', 'acwrite')
 
-        apply_mappings(args.buf, s.settings.file.mappings)
+        apply_mappings(args.buf, state.settings.file.mappings)
     end
 
     -- Add stateful information to the buffer, helping keep track of it
@@ -214,7 +217,7 @@ local function configure_buf(args)
         vim.cmd([[ filetype detect ]])
 
         -- Launch any associated LSP clients
-        s.lsp.connect(args.buf)
+        lsp.connect(args.buf)
     end
 end
 
@@ -230,10 +233,19 @@ end
 --- @param opts.timeout number Maximum time to wait for a response (optional)
 --- @param opts.interval number Time in milliseconds to wait between checks for a response (optional)
 --- @return number|nil #The handle of the created buffer for the remote file/directory, or nil if failed
-return function(path, opts)
-    assert(type(path) == 'string', 'path must be a string')
+return function(opts)
     opts = opts or {}
-    log.fmt_trace('editor.open(%s, %s)', path, opts)
+    log.fmt_trace('editor.open(%s)', opts)
+
+    local path
+    if type(opts) == 'string' then
+        path = opts
+        opts = { path = path }
+    elseif type(opts) == 'table' then
+        path = opts.path
+    end
+
+    vim.validate({opts = {opts, 'table'}})
 
     local local_path = u.strip_prefix(path, 'distant://')
 
