@@ -22,27 +22,32 @@ describe('fn', function()
             }
         end
 
-        -- distant and ssh modes behave differently here
-        if driver:mode() == 'distant' then
-            it('should execute remote program and return results', function()
-                local err, res = fn.spawn_wait({cmd = 'printf', args = {'hello\non\nmultiple\nlines'}})
-                assert(not err, err)
-                assert.are.same(to_tbl(res), {
-                    success = true,
-                    exit_code = 0,
-                    stdout = 'hello\non\nmultiple\nlines',
-                    stderr = '',
-                })
-            end)
+        it('should execute remote program and return results', function()
+            local err, res = fn.spawn_wait({cmd = 'echo', args = {'some output'}})
+            assert(not err, err)
+            assert.are.same(to_tbl(res), {
+                success = true,
+                exit_code = 0,
+                stdout = 'some output\n',
+                stderr = '',
+            })
+        end)
 
+        -- distant and ssh modes behave differently here as ssh treats as a success and
+        -- echoes out that the process does not exist whereas distant clearly marks
+        -- as an error
+        --
+        -- TODO: For some reason, stderr is also not captured in the test below. distant-ssh2
+        --       is able to correctly capture stderr, so this will need to be investigated
+        if driver:mode() == 'distant' then
             it('should support capturing stderr', function()
-                local err, res = fn.spawn_wait({cmd = 'sh', args = {'-c', '1>&2 printf "hello\non\nmultiple\nlines"'}})
+                local err, res = fn.spawn_wait({cmd = 'sh', args = {'-c', '1>&2 echo some output'}})
                 assert(not err, err)
                 assert.are.same(to_tbl(res), {
                     success = true,
                     exit_code = 0,
                     stdout = '',
-                    stderr = 'hello\non\nmultiple\nlines',
+                    stderr = 'some output\n',
                 })
             end)
 
