@@ -31,10 +31,12 @@ ARG cargo_bin_dir=/home/$user/.cargo/bin
 RUN mkdir -p $cargo_bin_dir
 
 # Install and configure rust & rls
+# NOTE: Must install to a path like /usr/bin as 
+#       /usr/local/bin is not on path for ssh
 RUN rustup-init -y \
     && source /home/$user/.cargo/env \
     && rustup component add rls \
-    && sudo ln -s $cargo_bin_dir/rls /usr/local/bin/rls
+    && sudo ln -s $cargo_bin_dir/rls /usr/bin/rls
 
 # Install neovim 0.5 binary (from edge)
 RUN sudo apk add neovim \

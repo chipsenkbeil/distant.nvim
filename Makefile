@@ -45,7 +45,7 @@ define docker_exec
 	-e DISTANT_BIN=/usr/local/bin/distant \
 	-e DISTANT_USER=$(DISTANT_USER) \
 	$(2) \
-	$(DOCKER_IMAGE) sh -c "cd app && $(1)"; \
+	$(DOCKER_IMAGE) sh -c "cd app && ssh-keyscan -H $(DOCKER_SERVER) >> ~/.ssh/known_hosts && $(1)"; \
 	STATUS=$$?; \
 	docker rm -f $(DOCKER_SERVER) > /dev/null 2>&1; \
 	docker network rm $(DOCKER_NETWORK) > /dev/null 2>&1; \

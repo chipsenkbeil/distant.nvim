@@ -21,6 +21,16 @@ local function next_id()
     return math.random(MAX_RAND_VALUE)
 end
 
+local function ssh_cmd(cmd, args)
+    return {
+        'ssh',
+        '-p', config.port,
+        '-o', 'StrictHostKeyChecking=no',
+        config.host, cmd,
+        unpack(args)
+    }
+end
+
 -------------------------------------------------------------------------------
 -- DRIVER SETUP & TEARDOWN
 -------------------------------------------------------------------------------
@@ -82,7 +92,12 @@ local function initialize_session(opts)
         '--shutdown-after', '60',
         '--port', '8080:8999',
     }, opts.args or {})
-    local ssh = { user = config.user }
+    local ssh = {
+        user = config.user,
+        other = {
+            ['StrictHostKeyChecking'] = 'no'
+        },
+    }
     local launch_opts = {
         host = host,
         distant = {
@@ -107,7 +122,6 @@ local function initialize_session(opts)
         -- Verify any host received
         on_host_verify = function(_) return true end,
     }
-    print('Launching', vim.inspect(launch_opts))
     editor.launch(launch_opts, function(status, msg)
         if not status then
             local desc = string.format(
@@ -182,7 +196,7 @@ Driver.exec = function(cmd, args, opts)
     args = args or {}
     opts = opts or {}
 
-    local out = vim.fn.system({'ssh', '-p', config.port, config.host, cmd, unpack(args)})
+    local out = vim.fn.system(ssh_cmd(cmd, args))
     local errno = tonumber(vim.v.shell_error)
 
     local success = errno == 0
@@ -555,7 +569,7 @@ Driver.remote_dir = function(remote_path)
     --- @return string|nil
     obj.canonicalized_path = function(opts)
         opts = opts or {}
-        local out = vim.fn.system({'ssh', '-p', config.port, config.host, 'realpath', remote_path})
+        local out = vim.fn.system(ssh_cmd('realpath', {remote_path}))
         local errno = tonumber(vim.v.shell_error)
         local success = errno == 0
         if not opts.ignore_errors then
@@ -571,7 +585,7 @@ Driver.remote_dir = function(remote_path)
     --- @return boolean
     obj.make = function(opts)
         opts = opts or {}
-        local out = vim.fn.system({'ssh', '-p', config.port, config.host, 'mkdir', '-p', remote_path})
+        local out = vim.fn.system(ssh_cmd('mkdir', {'-p', remote_path}))
         local errno = tonumber(vim.v.shell_error)
 
         local success = errno == 0
@@ -586,7 +600,7 @@ Driver.remote_dir = function(remote_path)
     --- @return string[]|nil
     obj.items = function(opts)
         opts = opts or {}
-        local out = vim.fn.system({'ssh', '-p', config.port, config.host, 'ls', remote_path})
+        local out = vim.fn.system(ssh_cmd('ls', {remote_path}))
         local errno = tonumber(vim.v.shell_error)
         local success = errno == 0
         if not opts.ignore_errors then
@@ -636,7 +650,7 @@ Driver.remote_dir = function(remote_path)
         opts = opts or {}
 
         local cmd = 'test -d ' .. remote_path .. ' && echo yes || echo no'
-        local out = vim.fn.system({'ssh', '-p', config.port, config.host, 'sh', '-c', '"' .. cmd .. '"'})
+        local out = vim.fn.system(ssh_cmd('sh', {'-c', '"' .. cmd .. '"'}))
         local errno = tonumber(vim.v.shell_error)
 
         local success = errno == 0
@@ -651,7 +665,7 @@ Driver.remote_dir = function(remote_path)
     --- @return boolean
     obj.remove = function(opts)
         opts = opts or {}
-        local out = vim.fn.system({'ssh', '-p', config.port, config.host, 'rm', '-rf', remote_path})
+        local out = vim.fn.system(ssh_cmd('rm', {'-rf', remote_path}))
         local errno = tonumber(vim.v.shell_error)
 
         local success = errno == 0
@@ -685,7 +699,7 @@ Driver.remote_file = function(remote_path)
     --- @return string|nil
     obj.canonicalized_path = function(opts)
         opts = opts or {}
-        local out = vim.fn.system({'ssh', '-p', config.port, config.host, 'realpath', remote_path})
+        local out = vim.fn.system(ssh_cmd('realpath', {remote_path}))
         local errno = tonumber(vim.v.shell_error)
         local success = errno == 0
         if not opts.ignore_errors then
@@ -768,7 +782,7 @@ Driver.remote_file = function(remote_path)
     obj.touch = function(opts)
         opts = opts or {}
 
-        local out = vim.fn.system({'ssh', '-p', config.port, config.host, 'touch', remote_path})
+        local out = vim.fn.system(ssh_cmd('touch', {remote_path}))
         local errno = tonumber(vim.v.shell_error)
 
         local success = errno == 0
@@ -785,7 +799,7 @@ Driver.remote_file = function(remote_path)
         opts = opts or {}
 
         local cmd = 'test -f ' .. remote_path .. ' && echo yes || echo no'
-        local out = vim.fn.system({'ssh', '-p', config.port, config.host, 'sh', '-c', '"' .. cmd .. '"'})
+        local out = vim.fn.system(ssh_cmd('sh', {'-c', '"' .. cmd .. '"'}))
         local errno = tonumber(vim.v.shell_error)
 
         local success = errno == 0
@@ -801,7 +815,7 @@ Driver.remote_file = function(remote_path)
     obj.remove = function(opts)
         opts = opts or {}
 
-        local out = vim.fn.system({'ssh', '-p', config.port, config.host, 'rm', '-f', remote_path})
+        local out = vim.fn.system(ssh_cmd('rm', {'-f', remote_path}))
         local errno = tonumber(vim.v.shell_error)
 
         local success = errno == 0
@@ -846,7 +860,7 @@ Driver.remote_symlink = function(remote_path)
     --- @return string|nil
     obj.canonicalized_path = function(opts)
         opts = opts or {}
-        local out = vim.fn.system({'ssh', '-p', config.port, config.host, 'realpath', remote_path})
+        local out = vim.fn.system(ssh_cmd('realpath', {remote_path}))
         local errno = tonumber(vim.v.shell_error)
         local success = errno == 0
         if not opts.ignore_errors then
@@ -863,7 +877,7 @@ Driver.remote_symlink = function(remote_path)
     obj.source_path = function(opts)
         opts = opts or {}
 
-        local out = vim.fn.system({'ssh', '-p', config.port, config.host, 'readlink', remote_path})
+        local out = vim.fn.system(ssh_cmd('readlink', {remote_path}))
         local errno = tonumber(vim.v.shell_error)
 
         local success = errno == 0
@@ -881,7 +895,7 @@ Driver.remote_symlink = function(remote_path)
     --- @return boolean
     obj.make = function(source, opts)
         opts = opts or {}
-        local out = vim.fn.system({'ssh', '-p', config.port, config.host, 'ln', '-s', source, remote_path})
+        local out = vim.fn.system(ssh_cmd('ln', {'-s', source, remote_path}))
         local errno = tonumber(vim.v.shell_error)
 
         local success = errno == 0
@@ -898,7 +912,7 @@ Driver.remote_symlink = function(remote_path)
         opts = opts or {}
 
         local cmd = 'test -L ' .. remote_path .. ' && echo yes || echo no'
-        local out = vim.fn.system({'ssh', '-p', config.port, config.host, 'sh', '-c', '"' .. cmd .. '"'})
+        local out = vim.fn.system(ssh_cmd('sh', {'-c', '"' .. cmd .. '"'}))
         local errno = tonumber(vim.v.shell_error)
 
         local success = errno == 0
@@ -914,7 +928,7 @@ Driver.remote_symlink = function(remote_path)
     obj.remove = function(opts)
         opts = opts or {}
 
-        local out = vim.fn.system({'ssh', '-p', config.port, config.host, 'rm', '-f', remote_path})
+        local out = vim.fn.system(ssh_cmd('rm', {'-f', remote_path}))
         local errno = tonumber(vim.v.shell_error)
 
         local success = errno == 0
