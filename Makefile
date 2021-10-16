@@ -8,6 +8,7 @@ DISTANT_PORT?=22
 DISTANT_IDENTITY_FILE?=
 DISTANT_BIN?="$(HOME)/.cargo/bin/distant"
 DISTANT_LOG_LEVEL?=info
+DISTANT_USER?=$(shell whoami)
 DISTANT_PASSWORD?=
 
 DOCKER_IMAGE=distant_nvim_test
@@ -42,6 +43,7 @@ define docker_exec
 	-e DISTANT_HOST=$(DOCKER_SERVER) \
 	-e DISTANT_PORT=22 \
 	-e DISTANT_BIN=/usr/local/bin/distant \
+	-e DISTANT_USER=$(DISTANT_USER) \
 	$(2) \
 	$(DOCKER_IMAGE) sh -c "cd app && $(1)"; \
 	STATUS=$$?; \
@@ -102,30 +104,39 @@ clean: ## Cleans out vendor directory
 # DOCKER TEST TARGETS
 ###############################################################################
 
+docker-test: DISTANT_USER=docker
 docker-test: ## Runs all tests using a pair of docker containers that have shared SSH keys
 	$(call docker_exec,make test)
 
+docker-test-arg: DISTANT_USER=docker
 docker-test-arg: ## Runs all tests for a custom path (ARG) inside spec/ using a pair of docker containers that have shared SSH keys
 	$(call docker_exec,make test-arg ARG=$(ARG))
 
+docker-test-unit: DISTANT_USER=docker
 docker-test-unit: ## Runs all unit tests using a pair of docker containers that have shared SSH keys
 	$(call docker_exec,make test-unit)
 
+docker-test-e2e: DISTANT_USER=docker
 docker-test-e2e: ## Runs all e2e tests using a pair of docker containers that have shared SSH keys
 	$(call docker_exec,make test-e2e)
 
+docker-build: DISTANT_USER=docker
 docker-build:
 	@docker build . --file Dockerfile --tag $(DOCKER_IMAGE) --cache-from=$(DOCKER_IMAGE)
 
+docker-save: DISTANT_USER=docker
 docker-save:
 	@docker save --output $(DOCKER_OUT_ARCHIVE) $(DOCKER_IMAGE):latest
 
+docker-load: DISTANT_USER=docker
 docker-load:
 	@docker load --input $(DOCKER_OUT_ARCHIVE)
 
+docker-shell: DISTANT_USER=docker
 docker-shell: ## Runs our client docker container in an interactive shell
 	$(call docker_exec,/bin/sh,-it --init)
 
+docker-shutdown: DISTANT_USER=docker
 docker-shutdown:
 	@docker rm -f $(DOCKER_CLIENT) > /dev/null 2>&1 || true
 	@docker rm -f $(DOCKER_SERVER) > /dev/null 2>&1 || true

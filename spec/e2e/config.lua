@@ -8,6 +8,8 @@ config.bin = os.getenv('DISTANT_BIN')
 config.host = os.getenv('DISTANT_HOST') or 'localhost'
 config.port = tonumber(os.getenv('DISTANT_PORT')) or 22
 config.identity_file = os.getenv('DISTANT_IDENTITY_FILE')
+config.user = assert(os.getenv('DISTANT_USER'), 'DISTANT_USER not set')
+assert(config.user ~= '', 'DISTANT_USER cannot be empty')
 config.password = os.getenv('DISTANT_PASSWORD')
 
 config.timeout = tonumber(os.getenv('DISTANT_TIMEOUT')) or (1000 * 30)

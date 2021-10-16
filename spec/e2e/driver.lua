@@ -82,13 +82,15 @@ local function initialize_session(opts)
         '--shutdown-after', '60',
         '--port', '8080:8999',
     }, opts.args or {})
-    editor.launch({
+    local ssh = { user = config.user }
+    local launch_opts = {
         host = host,
         distant = {
             bin = distant_bin,
             args = distant_args,
         },
-        mode = 'distant',
+        mode = opts.mode or 'distant',
+        ssh = ssh,
 
         -- All password challenges return the same password
         on_authenticate = function(ev)
@@ -104,7 +106,9 @@ local function initialize_session(opts)
 
         -- Verify any host received
         on_host_verify = function(_) return true end,
-    }, function(status, msg)
+    }
+    print('Launching', vim.inspect(launch_opts))
+    editor.launch(launch_opts, function(status, msg)
         if not status then
             local desc = string.format(
                 'editor.launch({ host = %s, distant_bin = %s, distant_args = %s })',

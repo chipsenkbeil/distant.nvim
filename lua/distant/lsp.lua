@@ -164,6 +164,16 @@ lsp.start_client = function(config)
                 pipe_ty = ty
             end,
 
+            -- cb() (optional) when done
+            -- returns nothing
+            close = function(cb)
+                pipe_proc = nil
+                pipe_ty = nil
+                if type(cb) == 'function' then
+                    cb()
+                end
+            end,
+
             -- read_start(self, cb)
             -- cb(err = string|nil, data = string|nil)
             -- returns 0 or fail
@@ -173,10 +183,16 @@ lsp.start_client = function(config)
                 local read_loop
                 if pipe_ty == 'stdout' then
                     read_loop = function()
+                        -- Signals closing of pipe
+                        if pipe_proc == nil then
+                            return
+                        end
+
                         pipe_proc.read_stdout({}, function(...)
                             cb(...)
 
-                            if pipe_proc.is_active() then
+                            -- If we still have pipe (because it can become nil) and it is active
+                            if pipe_proc and pipe_proc.is_active() then
                                 vim.defer_fn(read_loop, state.settings.poll_interval)
                             end
                         end)
@@ -185,10 +201,16 @@ lsp.start_client = function(config)
                     return 0
                 elseif pipe_ty == 'stderr' then
                     read_loop = function()
+                        -- Signals closing of pipe
+                        if pipe_proc == nil then
+                            return
+                        end
+
                         pipe_proc.read_stderr({}, function(...)
                             cb(...)
 
-                            if pipe_proc.is_active() then
+                            -- If we still have pipe (because it can become nil) and it is active
+                            if pipe_proc and pipe_proc.is_active() then
                                 vim.defer_fn(read_loop, state.settings.poll_interval)
                             end
                         end)
