@@ -6,7 +6,7 @@ A wrapper around [`distant`](https://github.com/chipsenkbeil/distant) that
 enables users to edit remote files from the comfort of their local environment.
 
 - **Requires neovim 0.5+**
-- **Requires distant 0.15.0-alpha.8+**
+- **Requires distant 0.15.0+**
 
 🚧 **(Alpha stage software) This plugin is in rapid development and may
 break or change frequently!** 🚧
@@ -17,7 +17,27 @@ break or change frequently!** 🚧
 
 ## Installation
 
-Using [packer.nvim](https://github.com/wbthomason/packer.nvim)
+Using [packer.nvim](https://github.com/wbthomason/packer.nvim), the quickest
+way to get up and running is the following:
+
+```lua
+use {
+  'chipsenkbeil/distant.nvim',
+  config = function()
+    require('distant').setup {
+      -- Applies Chip's personal settings to every machine you connect to
+      --
+      -- 1. Ensures that distant servers terminate with no connections
+      -- 2. Provides navigation bindings for remote directories
+      -- 3. Provides keybinding to jump into a remote file's parent directory
+      ['*'] = require('distant.settings').chip_default()
+    }
+  end
+}
+```
+
+Normally, you would want to specify your own settings, both across all hosts
+and custom settings for specific remote machines:
 
 ```lua
 use {
@@ -28,13 +48,13 @@ use {
     require('distant').setup {
       -- Apply these settings to the specific host
       ['example.com'] = {
-        launch = {
-          -- Specify a specific location for the distant binary on the remote machine
-          distant = '/path/to/distant',
+        -- Specify a specific location for the distant binary on the remote machine
+        distant = {
+          bin = '/path/to/distant',
         }
 
+        -- Specify an LSP to run for a specific project
         lsp = {
-          -- Specify an LSP to run for a specific project
           ['My Project'] = {
             cmd = '/path/to/rust-analyzer',
             root_dir = '/path/to/project/root',
@@ -49,12 +69,14 @@ use {
       },
 
       -- Apply these settings to any remote host
+      --
+      -- NOTE: These mirror what is returned with
+      -- require('distant.settings').chip_default()
       ['*'] = {
         -- Apply these launch settings to all hosts
-        launch = {
-          -- Apply additional CLI options to the listening server, such as
-          -- shutting down when there is no connection to it after 30 seconds
-          extra_server_args = '"--shutdown-after 30"',
+        distant = {
+          -- Shutdown server after 60 seconds with no active connection
+          args = {'--shutdown-after', '60'},
         },
 
         -- Specify mappings to apply on remote file buffers
@@ -118,44 +140,59 @@ all of the contents of the specified directory.
 ### Blocking Functions
 
 Synchronous functions are available that perform the given operation in a
-blocking fashion. All blocking functions support being provided a timeout and
-interval to check said timeout, defaulting both to the global settings. For
-more details, check out the doc comments for the individual functions.
+blocking fashion. Each function takes a single argument, which is a table
+containing the arguments relevant for the function. Each function returns
+two values: `err` being a userdata error or false, and `result` being the
+results of the function call if it has any (like file text).
 
-| Functions             | Description                                                                   |
-|-----------------------|-------------------------------------------------------------------------------|
-| `fn.copy`             | Copies a remote file or directory to another remote location                  |
-| `fn.dir_list`         | Lists remote files & directories for the given path on the remote machine     |
-| `fn.exists`           | Determines whether or not the path exists on the remote machine               |
-| `fn.metadata`         | Retrieves metadata about a remote file, directory, or symlink                 |
-| `fn.mkdir`            | Creates a new directory remotely                                              |
-| `fn.read_file_text`   | Reads a remote file, returning its content as text                            |
-| `fn.remove`           | Removes a remote file or directory                                            |
-| `fn.rename`           | Renames a remote file or directory                                            |
-| `fn.run`              | Runs a remote program to completion, returning stdout, stderr, and exit code  |
-| `fn.system_info`      | Retrieves information about the remote machine such as its os name and arch   |
-| `fn.write_file_text`  | Writes text to a remote file                                                  |
+```lua
+local fn = require('distant.fn')
+
+local err, text = fn.read_file_text({path = 'path/to/file'})
+if err then
+  vim.api.nvim_err_writeln(tostring(err))
+  return
+end
+
+print('Read file contents', text)
+```
+
+| Functions             | Description                                                                           |
+|-----------------------|---------------------------------------------------------------------------------------|
+| `fn.append_file`      | Appends binary data to a remote file                                                  |
+| `fn.append_file_text` | Appends text to a remote file                                                         |
+| `fn.copy`             | Copies a remote file or directory to another remote location                          |
+| `fn.create_dir`       | Creates a new directory remotely                                                      |
+| `fn.exists`           | Determines whether or not the path exists on the remote machine                       |
+| `fn.metadata`         | Retrieves metadata about a remote file, directory, or symlink                         |
+| `fn.read_dir`         | Lists remote files & directories for the given path on the remote machine             |
+| `fn.read_file`        | Reads a remote file, returning its content as a list of bytes                         |
+| `fn.read_file_text`   | Reads a remote file, returning its content as text                                    |
+| `fn.remove`           | Removes a remote file or directory                                                    |
+| `fn.rename`           | Renames a remote file or directory                                                    |
+| `fn.spawn`            | Starts a process, returning it to support writing stdin and reading stdout and stderr |
+| `fn.spawn_wait`       | Runs a remote program to completion, returning table of stdout, stderr, and exit code |
+| `fn.system_info`      | Retrieves information about the remote machine such as its os name and arch           |
+| `fn.write_file`       | Writes binary data to a remote file                                                   |
+| `fn.write_file_text`  | Writes text to a remote file                                                          |
 
 ### Async Functions
 
-Asynchronous functions are available that use callbacks when functions are
-executed. The singular argument to the callback matches that of the return
-value of the synchronous function. For more details, check out the doc comments
-for the individual functions.
+Every blocking function above can also be called in a non-blocking fashion.
+This is done by supplying a callback function as the last argument.
 
-| Functions                     | Description                                               |
-|-------------------------------|-----------------------------------------------------------|
-| `fn.async.copy`               | Async variant of `fn.copy` using callbacks                |
-| `fn.async.dir_list`           | Async variant of `fn.dir_list` using callbacks            |
-| `fn.async.exists`             | Async variant of `fn.exists` using callbacks              |
-| `fn.async.metadata`           | Async variant of `fn.metadata` using callbacks            |
-| `fn.async.mkdir`              | Async variant of `fn.mkdir` using callbacks               |
-| `fn.async.read_file_text`     | Async variant of `fn.read_file_text` using callbacks      |
-| `fn.async.remove`             | Async variant of `fn.remove` using callbacks              |
-| `fn.async.rename`             | Async variant of `fn.rename` using callbacks              |
-| `fn.async.run`                | Async variant of `fn.run` using callbacks                 |
-| `fn.async.system_info`        | Async variant of `fn.system_info` using callbacks         |
-| `fn.async.write_file_text`    | Async variant of `fn.write_file_text` using callbacks     |
+```lua
+local fn = require('distant.fn')
+
+fn.read_file_text({path = 'path/to/file'}, function(err, text)
+  if err then
+    vim.api.nvim_err_writeln(tostring(err))
+    return
+  end
+
+  print('Read file contents', text)
+end)
+```
 
 ## Commands
 
@@ -179,6 +216,7 @@ or other user interfaces within neovim.
 |-----------------------|-----------------------------------------------------------|
 | `DistantOpen`         | Opens a file for editing or a directory for navigation    |
 | `DistantLaunch`       | Opens a dialog to launch `distant` on a remote machine    |
+| `DistantInstall`      | Triggers installation process for the C library           |
 | `DistantMetadata`     | Presents information about some path on a remote machine  |
 | `DistantSessionInfo`  | Presents information related to the remote connection     |
 | `DistantSystemInfo`   | Presents information about remote machine itself          |
@@ -194,7 +232,7 @@ function's arguments as input.
 | `DistantMkdir`        | Alias to `lua require('distant').fn.mkdir`        |
 | `DistantRemove`       | Alias to `lua require('distant').fn.remove`       |
 | `DistantRename`       | Alias to `lua require('distant').fn.rename`       |
-| `DistantRun`          | Alias to `lua require('distant').fn.run`          |
+| `DistantRun`          | Alias to `lua require('distant').fn.spawn_wait`   |
 
 ## telescope Integration
 

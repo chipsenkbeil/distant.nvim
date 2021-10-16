@@ -6,51 +6,16 @@ local DEFAULT_LABEL = '*'
 
 -- Default settings to apply to any-and-all servers
 local DEFAULT_SETTINGS = {
+    -- Maximimum time to wait (in milliseconds) for requests to finish
     max_timeout = 15 * 1000,
+
+    -- Time to wait (in milliseconds) inbetween checks to see
+    -- if a request timed out
     timeout_interval = 250,
+
+    -- Time to wait (in milliseconds) inbetween polling checks to
+    -- see if an async function has completed
     poll_interval = 200,
-
-    -- Settings that apply when launching the server
-    launch = {
-        -- Control the IP address that the server will bind to
-        bind_server = nil;
-
-        -- Alternative location for the distant binary on the remote machine
-        distant = nil;
-
-        -- Additional arguments to the server when launched (see listen help)
-        extra_server_args = nil;
-
-        -- Identity file to use with ssh
-        identity_file = nil;
-
-        -- Log file to use when running the launch command
-        log_file = nil;
-
-        -- Alternative port to port 22 for use in SSH
-        port = nil;
-
-        -- Maximum time (in seconds) for the server to run with no active connections
-        shutdown_after = nil;
-
-        -- Alternative location for the ssh binary on the local machine
-        ssh = nil;
-
-        -- Username to use when logging into the remote machine via SSH
-        username = nil;
-
-        -- Log level (off/error/warn/info/debug/trace) for the client
-        log_level = 'warn';
-    };
-
-    -- Settings that apply to the client that is created to interact with the server
-    client = {
-        -- Log file to use with the client
-        log_file = nil;
-
-        -- Log level (off/error/warn/info/debug/trace) for the client
-        log_level = 'warn';
-    };
 
     -- Settings that apply when editing a remote file
     file = {
@@ -117,6 +82,33 @@ end
 --- @return table #The settings to apply to any remote machine (or empty table)
 settings.default = function()
     return inner[DEFAULT_LABEL] or {}
+end
+
+--- Retrieve settings with opinionated configuration for Chip's usage
+--- @return table #The settings to apply to any remote machine (or empty table)
+settings.chip_default = function()
+    local actions = require('distant.nav.actions')
+
+    return vim.tbl_deep_extend('keep', {
+        distant = {
+            args = {'--shutdown-after', '60'},
+        },
+        file = {
+          mappings = {
+            ['-']         = actions.up,
+          },
+        },
+        dir = {
+          mappings = {
+            ['<Return>']  = actions.edit,
+            ['-']         = actions.up,
+            ['K']         = actions.mkdir,
+            ['N']         = actions.newfile,
+            ['R']         = actions.rename,
+            ['D']         = actions.remove,
+          }
+        },
+    }, settings.default())
 end
 
 return settings
