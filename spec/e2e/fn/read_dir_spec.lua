@@ -97,20 +97,32 @@ describe('fn', function()
             })
         end)
 
-        it('should return empty entries if path is to a file', function()
-            local file = root.file()
-            assert(file.touch(), 'Failed to create file: ' .. file.path())
-
-            local err, res = fn.read_dir({path = file.path()})
-            assert.is.falsy(err)
-            assert.are.same(res.entries, {})
-        end)
-
         it('should fail if the path does not exist', function()
             local dir = root.dir()
             local err, res = fn.read_dir({path = dir.path()})
             assert.is.truthy(err)
             assert.is.falsy(res)
         end)
+
+        -- distant and ssh modes behave differently here
+        if driver:mode() == 'distant' then
+            it('should return empty entries if path is to a file', function()
+                local file = root.file()
+                assert(file.touch(), 'Failed to create file: ' .. file.path())
+
+                local err, res = fn.read_dir({path = file.path()})
+                assert.is.falsy(err)
+                assert.are.same(res.entries, {})
+            end)
+        elseif driver:mode() == 'ssh' then
+            it('should fail if path is to a file', function()
+                local file = root.file()
+                assert(file.touch(), 'Failed to create file: ' .. file.path())
+
+                local err, res = fn.read_dir({path = file.path()})
+                assert.is.truthy(err)
+                assert.is.falsy(res)
+            end)
+        end
     end)
 end)

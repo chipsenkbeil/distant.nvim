@@ -22,43 +22,46 @@ describe('fn', function()
             }
         end
 
-        it('should execute remote program and return results', function()
-            local err, res = fn.spawn_wait({cmd = 'printf', args = {'hello\non\nmultiple\nlines'}})
-            assert(not err, err)
-            assert.are.same(to_tbl(res), {
-                success = true,
-                exit_code = 0,
-                stdout = 'hello\non\nmultiple\nlines',
-                stderr = '',
-            })
-        end)
+        -- distant and ssh modes behave differently here
+        if driver:mode() == 'distant' then
+            it('should execute remote program and return results', function()
+                local err, res = fn.spawn_wait({cmd = 'printf', args = {'hello\non\nmultiple\nlines'}})
+                assert(not err, err)
+                assert.are.same(to_tbl(res), {
+                    success = true,
+                    exit_code = 0,
+                    stdout = 'hello\non\nmultiple\nlines',
+                    stderr = '',
+                })
+            end)
 
-        it('should support capturing stderr', function()
-            local err, res = fn.spawn_wait({cmd = 'sh', args = {'-c', '1>&2 printf "hello\non\nmultiple\nlines"'}})
-            assert(not err, err)
-            assert.are.same(to_tbl(res), {
-                success = true,
-                exit_code = 0,
-                stdout = '',
-                stderr = 'hello\non\nmultiple\nlines',
-            })
-        end)
+            it('should support capturing stderr', function()
+                local err, res = fn.spawn_wait({cmd = 'sh', args = {'-c', '1>&2 printf "hello\non\nmultiple\nlines"'}})
+                assert(not err, err)
+                assert.are.same(to_tbl(res), {
+                    success = true,
+                    exit_code = 0,
+                    stdout = '',
+                    stderr = 'hello\non\nmultiple\nlines',
+                })
+            end)
 
-        it('should support capturing exit code', function()
-            local err, res = fn.spawn_wait({cmd = 'sh', args = {'-c', 'exit 99'}})
-            assert(not err, err)
-            assert.are.same(to_tbl(res), {
-                success = false,
-                exit_code = 99,
-                stdout = '',
-                stderr = '',
-            })
-        end)
+            it('should support capturing exit code', function()
+                local err, res = fn.spawn_wait({cmd = 'sh', args = {'-c', 'exit 99'}})
+                assert(not err, err)
+                assert.are.same(to_tbl(res), {
+                    success = false,
+                    exit_code = 99,
+                    stdout = '',
+                    stderr = '',
+                })
+            end)
 
-        it('should fail if the remote program is not found', function()
-            local err, res = fn.spawn_wait({cmd = 'idonotexist'})
-            assert.is.truthy(err)
-            assert.is.falsy(res)
-        end)
+            it('should fail if the remote program is not found', function()
+                local err, res = fn.spawn_wait({cmd = 'idonotexist'})
+                assert.is.truthy(err)
+                assert.is.falsy(res)
+            end)
+        end
     end)
 end)

@@ -31,6 +31,11 @@ local function ssh_cmd(cmd, args)
     }
 end
 
+local function launch_mode(opts)
+    opts = opts or {}
+    return opts.mode or config.mode or 'distant'
+end
+
 -------------------------------------------------------------------------------
 -- DRIVER SETUP & TEARDOWN
 -------------------------------------------------------------------------------
@@ -104,7 +109,7 @@ local function initialize_session(opts)
             bin = distant_bin,
             args = distant_args,
         },
-        mode = opts.mode or config.mode or 'distant',
+        mode = launch_mode(opts),
         ssh = ssh,
 
         -- All password challenges return the same password
@@ -122,7 +127,7 @@ local function initialize_session(opts)
         -- Verify any host received
         on_host_verify = function(_) return true end,
     }
-    print('launch', vim.inspect(launch_opts))
+    print('launch.mode', vim.inspect(launch_opts.mode))
     editor.launch(launch_opts, function(status, msg)
         if not status then
             local desc = string.format(
@@ -157,6 +162,7 @@ function Driver:setup(opts)
     obj.__state = {
         session = nil,
         fixtures = {},
+        mode = launch_mode(opts),
     }
 
     if not opts.lazy then
@@ -185,6 +191,11 @@ function Driver:teardown()
     for _, fixture in ipairs(self.__state.fixtures) do
         fixture.remove({ignore_errors = true})
     end
+end
+
+--- Returns the mode the driver is in (distant|ssh)
+function Driver:mode()
+    return self.__state.mode
 end
 
 -------------------------------------------------------------------------------
