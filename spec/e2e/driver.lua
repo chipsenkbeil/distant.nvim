@@ -104,7 +104,7 @@ local function initialize_session(opts)
             bin = distant_bin,
             args = distant_args,
         },
-        mode = opts.mode or 'distant',
+        mode = opts.mode or config.mode or 'distant',
         ssh = ssh,
 
         -- All password challenges return the same password
@@ -122,6 +122,7 @@ local function initialize_session(opts)
         -- Verify any host received
         on_host_verify = function(_) return true end,
     }
+    print('launch', vim.inspect(launch_opts))
     editor.launch(launch_opts, function(status, msg)
         if not status then
             local desc = string.format(

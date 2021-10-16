@@ -10,6 +10,7 @@ DISTANT_BIN?="$(HOME)/.cargo/bin/distant"
 DISTANT_LOG_LEVEL?=info
 DISTANT_USER?=$(shell whoami)
 DISTANT_PASSWORD?=
+DISTANT_MODE?=
 
 DOCKER_IMAGE=distant_nvim_test
 DOCKER_NETWORK=distant_nvim_network
@@ -44,6 +45,9 @@ define docker_exec
 	-e DISTANT_PORT=22 \
 	-e DISTANT_BIN=/usr/local/bin/distant \
 	-e DISTANT_USER=$(DISTANT_USER) \
+	-e DISTANT_PASSWORD=$(DISTANT_PASSWORD) \
+	-e DISTANT_MODE=$(DISTANT_MODE) \
+	-e DISTANT_LOG_LEVEL=$(DISTANT_LOG_LEVEL) \
 	$(2) \
 	$(DOCKER_IMAGE) sh -c "cd app && ssh-keyscan -H $(DOCKER_SERVER) >> ~/.ssh/known_hosts && $(1)"; \
 	STATUS=$$?; \

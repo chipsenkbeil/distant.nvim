@@ -31,5 +31,15 @@ jobs:
         run: make docker-build
       - name: Save Docker cache
         run: make docker-save
-      - name: Run tests
-        run: make docker-test
+      - name: Run unit tests
+        run: make docker-test-unit
+      - name: Run e2e tests (distant)
+        if: always()
+        run: make docker-test-e2e
+        env:
+          DISTANT_MODE: distant
+      - name: Run e2e tests (ssh)
+        if: always()
+        run: make docker-test-e2e
+        env:
+          DISTANT_MODE: ssh
