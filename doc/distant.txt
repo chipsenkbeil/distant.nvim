@@ -123,43 +123,228 @@ Specialized commands~
 These commands are geared towards performing actions that expose some dialogs
 or other user interfaces within neovim.
 
-                                                           *DistantOpen*
-DistantOpen           Opens a file for editing or a directory for navigation
+DistantOpen {path} {opts}                                        *DistantOpen*
 
-                                                           *DistantLaunch*
-DistantLaunch         Opens a dialog to launch distant on a remote machine
+    Opens a file for editing or a directory for navigation.
 
-                                                           *DistantInstall*
-DistantInstall        Triggers installation process for the C library
+    The open command accepts a path as its first argument and then an optional
+    series of named parameters in the form of `name=value`.
 
-                                                           *DistantMetadata*
-DistantMetadata       Presents information about some path on a remote machine
+    Options: ~
+        {buf}       (number)   if provided, will replace the specified buffer
+                               with the contents of the file or directory at
+                               the specified path (default: 0)
+        {reload}   (boolean)   if true, will reload the buffer by performing a
+                               network query to get the file or directory 
+                               contents (default: false)
+        {timeout}   (number)   maximum time in milliseconds before failing
+                               (default: settings.max_timeout)
+        {interval}  (number)   approximate time in milliseconds between each
+                               check to see if the operation completed
+                               (default: settings.timeout_interval)
 
-                                                           *DistantSessionInfo*
-DistantSessionInfo    Presents information related to the remote connection
+    Examples: ~
+>
+        :DistantOpen /path/to/file
+        :DistantOpen "some path/with spaces"
+        :DistantOpen /path/to/file reload=true
+<
 
-                                                           *DistantSystemInfo*
-DistantSystemInfo     Presents information about the remote machine
+DistantLaunch {host} {opts}                                    *DistantLaunch*
+
+    Opens a dialog to launch distant on a remote machine.
+
+    The launch command accepts a host as its first argument and then an
+    optional series of named parameters in the form of `name=value`.
+
+    Options: ~
+        {mode}           (string)  execution mode to use as a client, being
+                                   either "distant" or "ssh". When distant,
+                                   this command will ssh into the host,
+                                   spawn `distant listen`, and connect to
+                                   the server over TCP to communicate requests
+                                   like reading and writing. When ssh, this
+                                   command will ssh into the host and maintain
+                                   the ssh connection, using an sftp channel
+                                   alongside exec channels to read and write
+                                   (default: "distant")
+        {ssh.user}       (string)  alternative user for connecting to the ssh
+                                   server (default: "<neovim user>")
+        {ssh.port}       (number)  port of the ssh server (default: 22)
+        {distant.bin}    (string)  path to binary of `distant` on the remote
+                                   machine (default: "distant")
+        {distant.args}   (string)  additional arguments to provide to the
+                                   server during `distant listen`
+                                   (default: "")
+        {distant.use_login_shell}
+                        (boolean)  if true, will spawn the distant server
+                                   using a login shell (default: false)
+        {timeout}        (number)  maximum time in milliseconds before failing
+                                   (default: settings.max_timeout)
+        {interval}       (number)  approximate time in milliseconds between
+                                   each check to see if the operation completed
+                                   (default: settings.timeout_interval)
+
+    Examples: ~
+>
+        :DistantLaunch example.com
+        :DistantLaunch example.com mode=ssh
+        :DistantLaunch example.com ssh.port=2222 distant.bin=/path/to/distant
+<
+
+DistantInstall [reload]                                       *DistantInstall*
+
+    Triggers installation process for the C library.
+
+    If the word "reload" appears after `:DistantInstall`, then the
+    installation dialog will appear even if the library is already installed.
+
+    Examples: ~
+>
+        :DistantInstall
+        :DistantInstall reload
+<
+
+DistantMetadata {path} {opts}                                *DistantMetadata*
+
+    Presents information about some path on a remote machine.
+
+    The metadata command accepts a path as its first argument and then an
+    optional series of named parameters in the form of `name=value`.
+
+    Options: ~
+        {canonicalize}      (boolean)  if true, includes a canoncalized
+                                       version of the given path in the result
+                                       (default: false)
+        {resolve_file_type} (boolean)  if true, determines the file type of
+                                       symlinks (dir or file) rather than
+                                       returning "symlink" as the file type
+                                       (default: false)
+        {timeout}            (number)  maximum time in milliseconds before
+                                       failing (default: settings.max_timeout)
+        {interval}           (number)  approximate time in milliseconds
+                                       between each check to see if the
+                                       operation completed
+                                       (default: settings.timeout_interval)
+
+    Examples: ~
+>
+        :DistantMetadata /path/to/file
+        :DistantMetadata /path/to/file resolve_file_type=true
+<
+
+DistantSessionInfo                                        *DistantSessionInfo*
+
+    Presents information related to the remote connection.
+
+DistantSystemInfo                                          *DistantSystemInfo*
+
+    Presents information about the remote machine.
 
 Function commands~
 
 These commands are purely wrappers around existing functions that accept those
 function's arguments as input.
 
-                                                           *DistantCopy*
-DistantCopy           Alias to `lua require('distant').fn.copy`
+DistantCopy {src} {dst} {opts}                                   *DistantCopy*
 
-                                                           *DistantMkdir*
-DistantMkdir          Alias to `lua require('distant').fn.mkdir`
+    Copies a remote file or directory to another remote location.
 
-                                                           *DistantRemove*
-DistantRemove         Alias to `lua require('distant').fn.remove`
+    The copy command accepts a src path and dst path as its first two arguments
+    and then an optional series of named parameters in the form of `name=value`.
 
-                                                           *DistantRename*
-DistantRename         Alias to `lua require('distant').fn.rename`
+    Options: ~
+        {timeout}  (number)   maximum time in milliseconds before failing
+                              (default: settings.max_timeout)
+        {interval} (number)   approximate time in milliseconds between each
+                              check to see if the operation completed
+                              (default: settings.timeout_interval)
 
-                                                           *DistantRun*
-DistantRun            Alias to `lua require('distant').fn.spawn_wait`
+    Examples: ~
+>
+        :DistantCopy /path/to/file /new/path/to/file
+        :DistantCopy /path/to/file /new/path/to/file timeout=500
+<
+
+DistantMkdir {path} {opts}                                      *DistantMkdir*
+
+    Creates a new directory on the remote machine.
+
+    The mkdir command accepts a src path and dst path as its first two
+    arguments and then an optional series of named parameters in the form of
+    `name=value`.
+
+    Options: ~
+        {all}      (boolean)  if true, create all intermediate path components
+                              (default: false)
+        {timeout}   (number)  maximum time in milliseconds before failing
+                              (default: settings.max_timeout)
+        {interval}  (number)  approximate time in milliseconds between each
+                              check to see if the operation completed
+                              (default: settings.timeout_interval)
+
+    Examples: ~
+>
+        :DistantMkdir /path/to/dir
+        :DistantMkdir /path/to/dir all=true
+<
+
+DistantRemove {path} {opts}                                    *DistantRemove*
+
+    Removes a remote file, directory, or symlink.
+
+    The remove command accepts a src path and dst path as its first two
+    arguments and then an optional series of named parameters in the form of
+    `name=value`.
+
+    Options: ~
+        {force}    (number)   if true, will remove non-empty directories,
+                              otherwise this function will fail if
+                              encountering non-empty directories
+                              (default: false)
+        {timeout}  (number)   maximum time in milliseconds before failing
+                              (default: settings.max_timeout)
+        {interval} (number)   approximate time in milliseconds between each
+                              check to see if the operation completed
+                              (default: settings.timeout_interval)
+
+    Examples: ~
+>
+        :DistantRemove /path/to/file
+        :DistantRemove /path/to/dir force=true
+<
+
+DistantRename {src} {dst} {opts}                               *DistantRename*
+
+    Renames a remote file, directory, or symlink.
+
+    The rename command accepts a src path and dst path as its first two
+    arguments and then an optional series of named parameters in the form of
+    `name=value`.
+
+    Options: ~
+        {timeout}  (number)   maximum time in milliseconds before failing
+                              (default: settings.max_timeout)
+        {interval} (number)   approximate time in milliseconds between each
+                              check to see if the operation completed
+                              (default: settings.timeout_interval)
+
+    Examples: ~
+>
+        :DistantRename /path/to/file /new/path/to/file
+        :DistantRename /path/to/file /new/path/to/file timeout=500
+<
+
+DistantRun {cmd} {arg1} {arg2} ...                                *DistantRun*
+
+    Runs a remote program to completion, returning table of stdout, stderr,
+    and exit code.
+
+    Examples: ~
+>
+        :DistantRun echo "hello world"
+        :DistantRun ls -l
+<
 
 ==============================================================================
 SETTINGS                                                    *distant-settings*
