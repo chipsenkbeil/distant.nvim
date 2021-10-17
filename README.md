@@ -58,20 +58,20 @@ The above will initialize the plugin with the following:
 
 #### Within a file
 
-| Key | Action                          |
-|-----|---------------------------------|
-| `-` | `lua |distant.nav.actions.up()` |
+| Key | Action                         |
+|-----|--------------------------------|
+| `-` | `lua distant.nav.actions.up()` |
 
 #### Within a directory
 
-| Key        | Action                               |
-|------------|--------------------------------------|
-| `<Return>` | `lua |distant.nav.actions.edit()`    |
-| `-`        | `lua |distant.nav.actions.up()`      |
-| `K`        | `lua |distant.nav.actions.mkdir()`   |
-| `N`        | `lua |distant.nav.actions.newfile()` |
-| `R`        | `lua |distant.nav.actions.rename()`  |
-| `D`        | `lua |distant.nav.actions.remove()`  |
+| Key        | Action                              |
+|------------|-------------------------------------|
+| `<Return>` | `lua distant.nav.actions.edit()`    |
+| `-`        | `lua distant.nav.actions.up()`      |
+| `K`        | `lua distant.nav.actions.mkdir()`   |
+| `N`        | `lua distant.nav.actions.newfile()` |
+| `R`        | `lua distant.nav.actions.rename()`  |
+| `D`        | `lua distant.nav.actions.remove()`  |
 
 #### Post-setup
 
