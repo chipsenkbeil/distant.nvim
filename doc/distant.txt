@@ -58,7 +58,7 @@ displays all of the contents of the specified directory.
 ==============================================================================
 QUICK START                                               *distant-quickstart*
 
-Using [packer.nvim](https://github.com/wbthomason/packer.nvim), the quickest
+Using packer.nvim (https://github.com/wbthomason/packer.nvim), the quickest
 way to get up and running is the following:
 >
   use {
@@ -82,20 +82,20 @@ The above will initialize the plugin with the following:
 
 Within a file:~
 
-{lhs}		{rhs}
---------	-----------------------------------
--               lua |distant.nav.actions.up()|
+{lhs}       {rhs}
+--------    -----------------------------------
+-           lua |distant.nav.actions.up()|
 
 Within a directory:~
 
-{lhs}		{rhs}
---------	-----------------------------------
-<Return>        lua |distant.nav.actions.edit()|
--               lua |distant.nav.actions.up()|
-K               lua |distant.nav.actions.mkdir()|
-N               lua |distant.nav.actions.newfile()|
-R               lua |distant.nav.actions.rename()|
-D               lua |distant.nav.actions.remove()|
+{lhs}       {rhs}
+--------    -----------------------------------
+<Return>    lua |distant.nav.actions.edit()|
+-           lua |distant.nav.actions.up()|
+K           lua |distant.nav.actions.mkdir()|
+N           lua |distant.nav.actions.newfile()|
+R           lua |distant.nav.actions.rename()|
+D           lua |distant.nav.actions.remove()|
 
 ==============================================================================
 INSTALLATION                                            *distant-installation*
