@@ -24,20 +24,37 @@ end
 ---
 --- 1. In the case of a file, it is loaded into a buffer
 --- 2. In the case of a directory, the navigator enters it
-actions.edit = function()
+---
+--- @param opts table
+actions.edit = function(opts)
+    opts = opts or {}
+
     local path = full_path_under_cursor()
     if path ~= nil then
-        editor.open(path)
+        editor.open(vim.tbl_deep_extend('keep', {path = path}, opts))
     end
 end
 
 --- Moves up to the parent directory of the current file or directory
-actions.up = function()
+---
+--- ### Options
+---
+--- * reload: If provided, overrides the default (default: true)
+---
+--- @param opts table
+actions.up = function(opts)
+    opts = opts or {}
+
     local base_path = v.buf.remote_path()
+    local reload = true
+    if opts.reload ~= nil then
+        reload = opts.reload
+    end
+
     if base_path ~= nil then
         local parent = u.parent_path(base_path)
         if parent ~= nil then
-            editor.open({path = parent, reload = true})
+            editor.open({path = parent, reload = reload})
         end
     end
 end

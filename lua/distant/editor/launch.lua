@@ -18,6 +18,7 @@ return function(opts, cb)
 
     -- Load settings for the particular host
     state.load_settings(opts.host)
+    opts = vim.tbl_deep_extend('keep', opts, state.settings or {})
 
     -- Clear any pre-existing session
     state.session = nil

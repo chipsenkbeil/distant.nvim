@@ -11,7 +11,7 @@
        \▓▓▓▓▓▓▓ \▓▓▓▓▓▓ \▓▓▓▓▓▓    \▓▓   \▓▓   \▓▓\▓▓   \▓▓   \▓▓   
                                                               
 
-                          Version: 0.15.0
+                          Version: 0.1.0
 
 ==============================================================================
                                                                 *distant.nvim*
@@ -24,14 +24,17 @@ running neovim directly on the remote machine.
 ==============================================================================
 TABLE OF CONTENTS                                                *distant-toc*
 
-1. Introduction .......................................|distant-introduction|
-2. Installation .......................................|distant-installation|
-3. Commands ...............................................|distant-commands|
-4. Settings ...............................................|distant-settings|
-5. Lua API .................................................|distant-lua-api|
-6. FAQ .........................................................|distant-faq|
-7. Credits .................................................|distant-credits|
-8. License .................................................|distant-license|
+1.  Introduction .......................................|distant-introduction|
+2.  Quick Start ..........................................|distant-quickstart|
+3.  Installation .......................................|distant-installation|
+4.  Commands ...............................................|distant-commands|
+5.  Settings ...............................................|distant-settings|
+6.  Navigation ...........................................|distant-navigation|
+7.  Lua API .................................................|distant-lua-api|
+8.  FAQ .........................................................|distant-faq|
+9.  Changelog .............................................|distant-changelog|
+10. Credits .................................................|distant-credits|
+11. License .................................................|distant-license|
 
 ==============================================================================
 INTRODUCTION                                            *distant-introduction*
@@ -51,6 +54,48 @@ Once started, all remote operations will be sent to that machine! You can try
 out something simple like displaying a list of files, directories, and
 symlinks by running `:DistantOpen /some/dir`, which will open a dialog that
 displays all of the contents of the specified directory.
+
+==============================================================================
+QUICK START                                               *distant-quickstart*
+
+Using [packer.nvim](https://github.com/wbthomason/packer.nvim), the quickest
+way to get up and running is the following:
+>
+  use {
+    'chipsenkbeil/distant.nvim',
+    config = function()
+      require('distant').setup {
+        -- Applies Chip's personal settings to every machine you connect to
+        --
+        -- 1. Ensures that distant servers terminate with no connections
+        -- 2. Provides navigation bindings for remote directories
+        -- 3. Provides keybinding to jump into a remote file's parent directory
+        ['*'] = require('distant.settings').chip_default()
+      }
+    end
+  }
+<
+The above will initialize the plugin with the following:
+
+1. Any spawned distant server will shutdown after 60 seconds of inactivity
+2. Standard keybindings are assigned for remote buffers (described below)
+
+Within a file:~
+
+{lhs}		{rhs}
+--------	-----------------------------------
+-               lua |distant.nav.actions.up()|
+
+Within a directory:~
+
+{lhs}		{rhs}
+--------	-----------------------------------
+<Return>        lua |distant.nav.actions.edit()|
+-               lua |distant.nav.actions.up()|
+K               lua |distant.nav.actions.mkdir()|
+N               lua |distant.nav.actions.newfile()|
+R               lua |distant.nav.actions.rename()|
+D               lua |distant.nav.actions.remove()|
 
 ==============================================================================
 INSTALLATION                                            *distant-installation*
@@ -349,7 +394,306 @@ DistantRun {cmd} {arg1} {arg2} ...                                *DistantRun*
 ==============================================================================
 SETTINGS                                                    *distant-settings*
 
-TODO: Write settings
+Engaging with remote machines can require some specific configuration per
+host. To that end, distant.nvim provides the ability to define settings across
+all or individual hosts and supports overriding previously-defined settings.
+
+Defining settings is done by calling `require('distant').setup({opts})`:
+>
+  require('distant').setup {
+    -- Any settings defined here are applied to all hosts
+    ['*'] = {},
+
+    -- Any settings defined here are applied only to example.com
+    ['example.com'] = {},
+  }
+<
+
+distant.setup({opts})                                        *distant.setup()*
+
+    Defines the global settings for use with this plugin.
+
+    Parameters: ~
+        {opts}   (string) -> (table)  settings associated with this plugin,
+                                      keyed by host name whose value is
+                                      the associated options for that host
+                                      (default: {})
+
+    Options: ~
+        {ssh}              (SshOpts)  ssh settings (default: {})
+        {distant}      (DistantOpts)  distant server settings (default: {})
+        {mode}              (string)  execution mode to use as a client, being
+                                      either "distant" or "ssh". When distant,
+                                      this command will ssh into the host,
+                                      spawn `distant listen`, and connect to
+                                      the server over TCP to communicate
+                                      requests like reading and writing.
+                                      When ssh, this command will ssh into
+                                      the host and maintain the ssh
+                                      connection, using an sftp channel
+                                      alongside exec channels to read and write
+                                      (default: "distant")
+        {file}            (FileOpts)  settings that apply when editing remote
+                                      files (default: {})
+        {dir}              (DirOpts)  settings that apply when editing remote
+                                      directories (default: {})
+        {lsp}  (string) -> (LspOpts)  settings to use when starting LSP
+                                      instances, where each key is a string
+                                      representing an arbitrary label and
+                                      each value is a collection
+                                      (default: {})
+        {max_timeout}       (number)  maximum time in milliseconds to finish
+                                      requests (default: 15000 aka 15s)
+        {timeout_interval}  (number)  approximate time in milliseconds between
+                                      each check to see if a request has timed
+                                      out (default: 250 aka 0.25s)
+        {poll_interval}     (number)  approximate time in milliseconds between
+                                      each check to see if an async function
+                                      has completed (default: 250 aka 0.25s)
+
+    FileOpts: ~
+        {mappings}           (table)  table of (string) -> (function) that
+                                      is used to create buffer-local key
+                                      bindings within remote file buffers
+                                      from "key" to "function"
+
+    DirOpts: ~
+        {mappings}           (table)  table of (string) -> (function) that
+                                      is used to create buffer-local key
+                                      bindings within remote dir buffers
+                                      from "key" to "function"
+
+    LspOpts: ~
+        {root_dir}          (string)  root directory of the project that
+                                      will be using this language server
+                                      (required)
+        {filetypes}          (table)  list of file types to explicitly
+                                      support by this language server; if
+                                      the list is empty, then all file types
+                                      are supported by this server
+                                      (default: {})
+        {...}      (string) -> (any)  all other settings mirror those found
+                                      in |vim.lsp.start_client|
+
+    SshOpts: ~
+        {user}              (string)  alternative user for connecting to the
+                                      ssh server (default: "<neovim user>")
+        {port}              (number)  port of the ssh server (default: 22)
+
+    DistantOpts: ~
+        {bin}               (string)  path to binary of `distant` on the remote
+                                      machine (default: "distant")
+        {args}              (string)  additional arguments to provide to the
+                                      server during `distant listen`
+                                      (default: "")
+        {use_login_shell}  (boolean)  if true, will spawn the distant server
+                                      using a login shell (default: false)
+
+    Examples: ~
+>
+        local actions = require('distant.nav.actions')
+        require('distant').setup {
+          -- Any settings defined here are applied to all hosts
+          ['*'] = {
+            distant = {
+              args = '--shutdown-after 60',
+            },
+            file = {
+              mappings = {
+                ['-']         = actions.up,
+              },
+            },
+            dir = {
+              mappings = {
+                ['<Return>']  = actions.edit,
+                ['-']         = actions.up,
+                ['K']         = actions.mkdir,
+                ['N']         = actions.newfile,
+                ['R']         = actions.rename,
+                ['D']         = actions.remove,
+              }
+            },
+          },
+
+          -- Any settings defined here are applied only to example.com
+          ['example.com'] = {
+            distant = {
+              bin = '/path/to/distant',
+            },
+            lsp = {
+              ['My Rust Project'] = {
+                cmd = { '/path/to/rust-analyzer' },
+                filetypes = { 'rust' },
+                root_dir = '/path/to/project-rs',
+                on_attach = function()
+                  nnoremap('gD', '<CMD>lua vim.lsp.buf.declaration()<CR>')
+                  nnoremap('gd', '<CMD>lua vim.lsp.buf.definition()<CR>')
+                  nnoremap('gh', '<CMD>lua vim.lsp.buf.hover()<CR>')
+                  nnoremap('gi', '<CMD>lua vim.lsp.buf.implementation()<CR>')
+                  nnoremap('gr', '<CMD>lua vim.lsp.buf.references()<CR>')
+                end,
+              },
+            },
+          },
+        }
+<
+
+distant.settings.chip_default()              *distant.settings.chip_default()*
+
+    Returns host-wide settings used by Chip.
+
+    Return: ~
+        {settings}  (table)
+
+    Examples: ~
+>
+        require('distant').setup {
+          -- Applies Chip's personal settings to every machine you connect to
+          --
+          -- 1. Ensures that distant servers terminate with no connections
+          -- 2. Provides navigation bindings for remote directories
+          -- 3. Provides keybinding to jump into a remote file's parent directory
+          ['*'] = require('distant.settings').chip_default()
+        }
+<
+
+==============================================================================
+NAVIGATION                                                *distant-navigation*
+
+When using distant.nvim, one of the most common needs is to navigate between
+files and directories. The obvious way to do this is by using the command
+|DistantOpen|, which will load or reopen the appropriate buffer matching the
+file or directory. However, this can get cumbersome to do repeatedly. Luckily,
+this plugin provides another way to navigate around remote machines!
+
+Similar to the experience found using netrw + vim-vinegar or vim-dirvish,
+distant.nvim offers an experience where you can jump into a directory view
+and perform operations such as creating files & directories, renaming files,
+and opening up files within local buffers.
+
+This functionality is made available through `distant.nav.actions`, which
+exposes a series of Lua functions that enable you to navigate and manipulate
+your filesystem. These functions are designed to be assigned to key mappings
+that are placed on remote file and directory buffers.
+
+Navigation action functions~
+
+distant.nav.actions.edit({opts})                  *distant.nav.actions.edit()*
+
+    Opens the a file or directory, using the path denoted by the line under
+    the cursor.
+
+    1. In the case of a file, it is loaded into a buffer
+    2. In the case of a directory, the navigator enters it
+
+    Parameters: ~
+        {opts}         (table)  options associated with the function
+
+    Options: ~
+        {timeout}     (number)  maximum time in milliseconds before failing
+                                (default: settings.max_timeout)
+        {interval}    (number)  approximate time in milliseconds between each
+                                check to see if the operation completed
+                                (default: settings.timeout_interval)
+
+distant.nav.actions.mkdir({opts})                *distant.nav.actions.mkdir()*
+
+    Creates a directory within the current directory.
+
+    Will do nothing if not in a remote directory buffer.
+
+    Parameters: ~
+        {opts}         (table)  options associated with the function
+
+    Options: ~
+        {path}        (string)  if provided, new path relative to the current
+                                directory for the directory, otherwise will
+                                prompt for path (default: "")
+        {timeout}     (number)  maximum time in milliseconds before failing
+                                (default: settings.max_timeout)
+        {interval}    (number)  approximate time in milliseconds between each
+                                check to see if the operation completed
+                                (default: settings.timeout_interval)
+
+distant.nav.actions.newfile({opts})            *distant.nav.actions.newfile()*
+
+    Creates a new file in the current directory.
+
+    Will do nothing if not in a remote directory buffer.
+
+    Parameters: ~
+        {opts}         (table)  options associated with the function
+
+    Options: ~
+        {path}        (string)  if provided, new path relative to the current
+                                directory for the file, otherwise will prompt
+                                for path (default: "")
+        {timeout}     (number)  maximum time in milliseconds before failing
+                                (default: settings.max_timeout)
+        {interval}    (number)  approximate time in milliseconds between each
+                                check to see if the operation completed
+                                (default: settings.timeout_interval)
+
+distant.nav.actions.rename({opts})              *distant.nav.actions.rename()*
+
+    Renames a file or directory within the current directory.
+
+    Selects the path denoted by the line under the cursor. Will do nothing if
+    not in a remote directory buffer.
+
+    Parameters: ~
+        {opts}         (table)  options associated with the function
+
+    Options: ~
+        {path}        (string)  if provided, new path for the file or
+                                directory, otherwise will prompt for path
+                                (default: "")
+        {timeout}     (number)  maximum time in milliseconds before failing
+                                (default: settings.max_timeout)
+        {interval}    (number)  approximate time in milliseconds between each
+                                check to see if the operation completed
+                                (default: settings.timeout_interval)
+
+distant.nav.actions.remove({opts})              *distant.nav.actions.remove()*
+
+    Removes a file or directory within the current directory.
+
+    Selects the path denoted by the line under the cursor. Will do nothing if
+    not in a remote directory buffer.
+
+    Parameters: ~
+        {opts}         (table)  options associated with the function
+
+    Options: ~
+        {force}      (boolean)  if true, will remove directories that are not
+                                empty (default: false)
+        {no_prompt}  (boolean)  if true, will not prompt before removing
+                                (default: false)
+        {timeout}     (number)  maximum time in milliseconds before failing
+                                (default: settings.max_timeout)
+        {interval}    (number)  approximate time in milliseconds between each
+                                check to see if the operation completed
+                                (default: settings.timeout_interval)
+
+distant.nav.actions.up({opts})                      *distant.nav.actions.up()*
+
+    Moves up to the parent directory of the current file or directory.
+
+    Will do nothing if not in a remote buffer.
+
+    Parameters: ~
+        {opts}         (table)  options associated with the function
+
+    Options: ~
+        {reload}     (boolean)  if true, will perform a network request to
+                                reload the file or directory even if it is
+                                already loaded into a buffer
+                                (default: false)
+        {timeout}     (number)  maximum time in milliseconds before failing
+                                (default: settings.max_timeout)
+        {interval}    (number)  approximate time in milliseconds between each
+                                check to see if the operation completed
+                                (default: settings.timeout_interval)
 
 ==============================================================================
 LUA API                                                      *distant-lua-api*
@@ -922,6 +1266,19 @@ How does this plugin differ from using neovim with sshfs?  *distant-faq-sshfs*
 
   If you want to think of what this more closely relates to, then take a look
   at VS Code Remote Development or the formerly-active Nuclide project.
+
+==============================================================================
+CHANGELOG                                                  *distant-changelog*
+
+Latest ~
+
+  * Fixed settings not getting applied to |DistantLaunch|
+  * Add [reload] parameter to |DistantInstall| to force dialog to appear
+  * Wrote initial distant.txt documentation
+
+v0.1.0 ~
+
+  * First release of plugin against v0.15.0 of distant binary and Lua module
 
 ==============================================================================
 CREDITS                                                      *distant-credits*
