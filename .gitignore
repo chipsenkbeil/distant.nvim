@@ -2,6 +2,7 @@ vendor/
 !vendor/.placeholder
 **/*.so
 **/*.dll
+doc/tags
 
 
 # Added by cargo

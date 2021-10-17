@@ -212,12 +212,12 @@ distant.fn.append_file({opts}, {cb})                *distant.fn.append_file()*
     Appends binary data to a remote file.
 
     Parameters: ~
-        {opts} (table)        options associated with the function
-        {cb}   (function)     callback used with async invocation (optional)
+        {opts}      (table)   options associated with the function
+        {cb}     (function)   callback used with async invocation (optional)
 
     Options: ~
         {path}     (string)   path to the file on the remote machine
-        {data}     (table)    data as a list of bytes to append to the file
+        {data}      (table)   data as a list of bytes to append to the file
         {timeout}  (number)   maximum time in milliseconds before failing
                               (default: settings.max_timeout)
         {interval} (number)   approximate time in milliseconds between each
@@ -232,8 +232,8 @@ distant.fn.append_file_text({opts}, {cb})        *distant.fn.append_file_text*
     Appends text to a remote file.
 
     Parameters: ~
-        {opts} (table)        options associated with the function
-        {cb}   (function)     callback used with async invocation (optional)
+        {opts}      (table)   options associated with the function
+        {cb}     (function)   callback used with async invocation (optional)
 
     Options: ~
         {path}     (string)   path to the file on the remote machine
@@ -252,8 +252,8 @@ distant.fn.copy({opts}, {cb})                                *distant.fn.copy*
     Copies a remote file or directory to another remote location.
 
     Parameters: ~
-        {opts} (table)        options associated with the function
-        {cb}   (function)     callback used with async invocation (optional)
+        {opts}      (table)   options associated with the function
+        {cb}     (function)   callback used with async invocation (optional)
 
     Options: ~
         {src}      (string)   path to the existing file on the remote machine
@@ -273,29 +273,29 @@ distant.fn.create_dir({opts}, {cb})                    *distant.fn.create_dir*
     Creates a new directory on the remote machine.
 
     Parameters: ~
-        {opts} (table)        options associated with the function
-        {cb}   (function)     callback used with async invocation (optional)
+        {opts}       (table)  options associated with the function
+        {cb}      (function)  callback used with async invocation (optional)
 
     Options: ~
-        {path}     (string)   path where the directory will be created
+        {path}      (string)  path where the directory will be created
         {all}      (boolean)  if true, create all intermediate path components
                               (default: false)
-        {timeout}  (number)   maximum time in milliseconds before failing
+        {timeout}   (number)  maximum time in milliseconds before failing
                               (default: settings.max_timeout)
-        {interval} (number)   approximate time in milliseconds between each
+        {interval}  (number)  approximate time in milliseconds between each
                               check to see if the operation completed
                               (default: settings.timeout_interval)
 
     Return: ~
-        {err}  (string|nil)   returns an error if it occurs (synchronous only)
+        {err}   (string|nil)  returns an error if it occurs (synchronous only)
 
 distant.fn.exists({opts}, {cb})                            *distant.fn.exists*
 
     Determines whether or not the path exists on the remote machine.
 
     Parameters: ~
-        {opts} (table)        options associated with the function
-        {cb}   (function)     callback used with async invocation (optional)
+        {opts}      (table)   options associated with the function
+        {cb}     (function)   callback used with async invocation (optional)
 
     Options: ~
         {path}     (string)   path to check if it exists
@@ -315,11 +315,12 @@ distant.fn.metadata({opts}, {cb})                        *distant.fn.metadata*
     Retrieves metadata about a remote file, directory, or symlink.
 
     Parameters: ~
-        {opts} (table)        options associated with the function
-        {cb}   (function)     callback used with async invocation (optional)
+        {opts}                (table)  options associated with the function
+        {cb}               (function)  callback used with async invocation
+                                       (optional)
 
     Options: ~
-        {path}              (string)   path to file, directory, or symlink
+        {path}               (string)  path to file, directory, or symlink
                                        whose metadata to retrieve
         {canonicalize}      (boolean)  if true, includes a canoncalized
                                        version of the given path in the result
@@ -328,49 +329,50 @@ distant.fn.metadata({opts}, {cb})                        *distant.fn.metadata*
                                        symlinks (dir or file) rather than
                                        returning "symlink" as the file type
                                        (default: false)
-        {timeout}           (number)   maximum time in milliseconds before
+        {timeout}            (number)  maximum time in milliseconds before
                                        failing (default: settings.max_timeout)
-        {interval}          (number)   approximate time in milliseconds
+        {interval}           (number)  approximate time in milliseconds
                                        between each check to see if the
                                        operation completed
                                        (default: settings.timeout_interval)
 
     Return: ~
-        {err}  (string|nil)    an error if it occurs (synchronous only)
-        {res}  (Metadata|nil)  table of metadata (synchronous only)
+        {err}            (string|nil)  an error if it occurs (synchronous only)
+        {res}          (Metadata|nil)  table of metadata (synchronous only)
 
     Metadata: ~
-        {canonicalized_path} (string|nil)  canonicalized path to the file or
-                                           directory, resolving symlinks, only
-                                           included if canonicalize = true
-        {file_type}          (string)      type of entry as one of file, dir,
-                                           or symlink
-        {len}                (number)      size of the file, directory, or
-                                           symlink in bytes (will be 0 if
-                                           unknown)
-        {readonly}           (boolean)     whether or not the file, directory,
-                                           or symlink is marked as unwriteable
-        {accessed}           (number|nil)  last time (in milliseconds) when
-                                           the file, directory, or symlink was
-                                           accessed
-        {created}            (number|nil)  time (in milliseconds) when the
-                                           file, directory, or symlink was
-                                           created
-        {modified}           (number|nil)  last time (in milliseconds) when
-                                           the file, directory, or symlink was
-                                           modified
+        {canonicalized_path} 
+                         (string|nil)  canonicalized path to the file or
+                                       directory, resolving symlinks, only
+                                       included if canonicalize = true
+        {file_type}          (string)  type of entry as one of file, dir,
+                                       or symlink
+        {len}                (number)  size of the file, directory, or
+                                       symlink in bytes (will be 0 if unknown)
+        {readonly}          (boolean)  whether or not the file, directory,
+                                       or symlink is marked as unwriteable
+        {accessed}       (number|nil)  last time (in milliseconds) when
+                                       the file, directory, or symlink was
+                                       accessed
+        {created}        (number|nil)  time (in milliseconds) when the
+                                       file, directory, or symlink was
+                                       created
+        {modified}       (number|nil)  last time (in milliseconds) when
+                                       the file, directory, or symlink was
+                                       modified
 
 distant.fn.read_dir({opts}, {cb})                        *distant.fn.read_dir*
 
     Lists remote files & directories for the given path on the remote machine.
 
     Parameters: ~
-        {opts} (table)        options associated with the function
-        {cb}   (function)     callback used with async invocation (optional)
+        {opts}            (table)  options associated with the function
+        {cb}           (function)  callback used with async invocation 
+                                   (optional)
 
     Options: ~
-        {path}          (string)   path to the directory on the remote machine
-        {depth}         (number)   maximum depth to traverse with 0 indicating
+        {path}           (string)  path to the directory on the remote machine
+        {depth}          (number)  maximum depth to traverse with 0 indicating
                                    there is no maximum depth and 1 indicating
                                    the most immediate children within the
                                    directory (default: 1)
@@ -391,39 +393,40 @@ distant.fn.read_dir({opts}, {cb})                        *distant.fn.read_dir*
                                    be a canonicalized, absolute path and
                                    will not follow any of the other flags
                                    (default: false)
-        {timeout}       (number)   maximum time in milliseconds before
+        {timeout}        (number)  maximum time in milliseconds before
                                    failing (default: settings.max_timeout)
-        {interval}      (number)   approximate time in milliseconds
+        {interval}       (number)  approximate time in milliseconds
                                    between each check to see if the
                                    operation completed
                                    (default: settings.timeout_interval)
 
     Return: ~
-        {err}  (string|nil)            an error if it occurs 
-                                       (synchronous only)
-        {res}  (EntriesAndErrors|nil)  table of entries & errors
-                                       (synchronous only)
+        {err}        (string|nil)  an error if it occurs (synchronous only)
+        {res}  
+           (EntriesAndErrors|nil)  table of entries & errors (synchronous only)
 
     EntriesAndErrors: ~
-        {entries}    (table)   list of entries within the directory
-        {errors}     (string)  list of errors that occurred during traversal
+        {entries}         (table)  list of entries within the directory
+        {errors}         (string)  list of errors that occurred during
+                                   traversal
 
     Entry: ~
-        {path}       (string)  path to the entry, which will be relative to
-                               the input directory unless {absolute} is true
-                               or {canonicalize} is true and the path would
-                               appear outside the input directory as a result
-        {file_type}  (string)  type of entry as one of file, dir, or symlink
-        {depth}      (number)  depth of the entry, 0 being the directory itself,
-                               1 being the immediate children, etc.
+        {path}           (string)  path to the entry, which will be relative to
+                                   the input directory unless {absolute} is
+                                   true or {canonicalize} is true and the
+                                   path would appear outside the input
+                                   directory as a result
+        {file_type}      (string)  type of entry as one of file, dir, or symlink
+        {depth}          (number)  depth of the entry, 0 being the directory
+                                   itself, 1 being the immediate children, etc.
 
 distant.fn.read_file({opts}, {cb})                      *distant.fn.read_file*
 
     Reads a remote file, returning its content as a list of bytes.
 
     Parameters: ~
-        {opts} (table)        options associated with the function
-        {cb}   (function)     callback used with async invocation (optional)
+        {opts}      (table)   options associated with the function
+        {cb}     (function)   callback used with async invocation (optional)
 
     Options: ~
         {path}     (string)   path to the file to read
@@ -443,8 +446,8 @@ distant.fn.read_file_text({opts}, {cb})            *distant.fn.read_file_text*
     Reads a remote file, returning its content as text.
 
     Parameters: ~
-        {opts} (table)        options associated with the function
-        {cb}   (function)     callback used with async invocation (optional)
+        {opts}      (table)   options associated with the function
+        {cb}     (function)   callback used with async invocation (optional)
 
     Options: ~
         {path}     (string)   path to the file to read
@@ -464,8 +467,8 @@ distant.fn.remove({opts}, {cb})                            *distant.fn.remove*
     Removes a remote file, directory, or symlink.
 
     Parameters: ~
-        {opts} (table)        options associated with the function
-        {cb}   (function)     callback used with async invocation (optional)
+        {opts}      (table)   options associated with the function
+        {cb}     (function)   callback used with async invocation (optional)
 
     Options: ~
         {path}     (string)   path to the file, directory, or symlink to
@@ -488,13 +491,13 @@ distant.fn.rename({opts}, {cb})                            *distant.fn.rename*
     Renames a remote file, directory, or symlink.
 
     Parameters: ~
-        {opts} (table)        options associated with the function
-        {cb}   (function)     callback used with async invocation (optional)
+        {opts}      (table)   options associated with the function
+        {cb}     (function)   callback used with async invocation (optional)
 
     Options: ~
-        {src}     (string)    path to the file, directory, or symlink to
+        {src}      (string)   path to the file, directory, or symlink to
                               rename on a remote machine
-        {dst}     (string)    path to the new location for the file,
+        {dst}      (string)   path to the new location for the file,
                               directory, or symlink on a remote machine
         {timeout}  (number)   maximum time in milliseconds before failing
                               (default: settings.max_timeout)
@@ -511,28 +514,30 @@ distant.fn.spawn({opts}, {cb})                              *distant.fn.spawn*
     stdout and stderr.
 
     Parameters: ~
-        {opts} (table)        options associated with the function
-        {cb}   (function)     callback used with async invocation (optional)
+        {opts}            (table)  options associated with the function
+        {cb}           (function)  callback used with async invocation
+                                   (optional)
 
     Options: ~
-        {cmd}      (string)        path to binary to execute on remote machine
+        {cmd}            (string)  path to binary to execute on remote machine
         {args}     (string|table)  arguments to provide to {cmd}
-        {detached} (boolean)       if true, process is not killed if client
+        {detached}      (boolean)  if true, process is not killed if client
                                    disconnects from distant server 
                                    (default: false)
-        {timeout}  (number)        maximum time in milliseconds before failing
+        {timeout}        (number)  maximum time in milliseconds before failing
                                    (default: settings.max_timeout)
-        {interval} (number)        approximate time in milliseconds between
+        {interval}       (number)  approximate time in milliseconds between
                                    each check to see if the operation completed
                                    (default: settings.timeout_interval)
 
     Return: ~
-        {err}  (string|nil)   an error if it occurs (synchronous only)
-        {res}  (Process|nil)  result containing pointer to actively-running
-                              process on remote machine (synchronous only)
+        {err}        (string|nil)  an error if it occurs (synchronous only)
+        {res}       (Process|nil)  result containing pointer to
+                                   actively-running process on remote machine
+                                   (synchronous only)
 
     Process: ~
-        {id}           (number)    id associated with process (not pid)
+        {id}             (number)  id associated with process (not pid)
         {is_active}    (function)  returns true if process still running
         {close_stdin}  (function)  closes stdin of remote process
         {write_stdin}  (function)  writes text to stdin of remote process,
@@ -580,14 +585,14 @@ distant.fn.spawn({opts}, {cb})                              *distant.fn.spawn*
                                    the connection to the process is severed
 
     Status: ~
-        {success}   (boolean)     true if process exited successfully
-        {exit_code} (number|nil)  exit code if available
+        {success}       (boolean)  true if process exited successfully
+        {exit_code}  (number|nil)  exit code if available
 
     Output: ~
-        {success}   (boolean)     true if process exited successfully
-        {exit_code} (number|nil)  exit code if available
-        {stdout}    (string)      collected stdout from process execution
-        {stderr}    (string)      collected stderr from process execution
+        {success}       (boolean)  true if process exited successfully
+        {exit_code}  (number|nil)  exit code if available
+        {stdout}         (string)  collected stdout from process execution
+        {stderr}         (string)  collected stderr from process execution
 
 distant.fn.spawn_wait({opts}, {cb})                    *distant.fn.spawn_wait*
 
@@ -595,31 +600,32 @@ distant.fn.spawn_wait({opts}, {cb})                    *distant.fn.spawn_wait*
     and exit code.
 
     Parameters: ~
-        {opts} (table)        options associated with the function
-        {cb}   (function)     callback used with async invocation (optional)
+        {opts}            (table)  options associated with the function
+        {cb}           (function)  callback used with async invocation
+                                   (optional)
 
     Options: ~
-        {cmd}      (string)        path to binary to execute on remote machine
+        {cmd}            (string)  path to binary to execute on remote machine
         {args}     (string|table)  arguments to provide to {cmd}
-        {detached} (boolean)       if true, process is not killed if client
+        {detached}      (boolean)  if true, process is not killed if client
                                    disconnects from distant server 
                                    (default: false)
-        {timeout}  (number)        maximum time in milliseconds before failing
+        {timeout}        (number)  maximum time in milliseconds before failing
                                    (default: settings.max_timeout)
-        {interval} (number)        approximate time in milliseconds between
+        {interval}       (number)  approximate time in milliseconds between
                                    each check to see if the operation completed
                                    (default: settings.timeout_interval)
 
     Return: ~
-        {err}  (string|nil)  an error if it occurs (synchronous only)
-        {res}  (Output|nil)  result containing execution results such as
-                             exit code and stdout (synchronous only)
+        {err}        (string|nil)  an error if it occurs (synchronous only)
+        {res}        (Output|nil)  result containing execution results such as
+                                   exit code and stdout (synchronous only)
 
     Output: ~
-        {success}   (boolean)     true if process exited successfully
-        {exit_code} (number|nil)  exit code if available
-        {stdout}    (string)      collected stdout from process execution
-        {stderr}    (string)      collected stderr from process execution
+        {success}       (boolean)  true if process exited successfully
+        {exit_code}  (number|nil)  exit code if available
+        {stdout}         (string)  collected stdout from process execution
+        {stderr}         (string)  collected stderr from process execution
 
 distant.fn.system_info({opts}, {cb})                  *distant.fn.system_info*
 
@@ -627,20 +633,22 @@ distant.fn.system_info({opts}, {cb})                  *distant.fn.system_info*
     arch.
 
     Parameters: ~
-        {opts} (table)        options associated with the function
-        {cb}   (function)     callback used with async invocation (optional)
+        {opts}             (table)  options associated with the function
+        {cb}            (function)  callback used with async invocation
+                                    (optional)
 
     Options: ~
-        {timeout}  (number)   maximum time in milliseconds before failing
-                              (default: settings.max_timeout)
-        {interval} (number)   approximate time in milliseconds between each
-                              check to see if the operation completed
-                              (default: settings.timeout_interval)
+        {timeout}         (number)  maximum time in milliseconds before failing
+                                    (default: settings.max_timeout)
+        {interval}        (number)  approximate time in milliseconds between
+                                    each check to see if the operation
+                                    completed
+                                    (default: settings.timeout_interval)
 
     Return: ~
-        {err}  (string|nil)      an error if it occurs (synchronous only)
-        {res}  (SystemInfo|nil)  result containing system information
-                                 (synchronous only)
+        {err}         (string|nil)  an error if it occurs (synchronous only)
+        {res}     (SystemInfo|nil)  result containing system information
+                                    (synchronous only)
 
     SystemInfo: ~
         {family}          (string)  family of the operating system
@@ -656,12 +664,12 @@ distant.fn.write_file({opts}, {cb})                    *distant.fn.write_file*
     Writes list of bytes to a remote file.
 
     Parameters: ~
-        {opts} (table)        options associated with the function
-        {cb}   (function)     callback used with async invocation (optional)
+        {opts}      (table)   options associated with the function
+        {cb}     (function)   callback used with async invocation (optional)
 
     Options: ~
         {path}     (string)   path to the remote file
-        {data}     (table)    list of bytes to write to the remote file
+        {data}      (table)   list of bytes to write to the remote file
         {timeout}  (number)   maximum time in milliseconds before failing
                               (default: settings.max_timeout)
         {interval} (number)   approximate time in milliseconds between each
@@ -676,8 +684,8 @@ distant.fn.write_file_text({opts}, {cb})          *distant.fn.write_file_text*
     Writes text to a remote file.
 
     Parameters: ~
-        {opts} (table)        options associated with the function
-        {cb}   (function)     callback used with async invocation (optional)
+        {opts}      (table)   options associated with the function
+        {cb}     (function)   callback used with async invocation (optional)
 
     Options: ~
         {path}     (string)   path to the remote file
