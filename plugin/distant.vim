@@ -19,11 +19,7 @@ command! -nargs=* DistantLaunch
 command! -nargs=* DistantMetadata
       \ lua require('distant.command').metadata(vim.fn.expand('<args>'))
 command! -nargs=* DistantInstall
-      \ lua require('distant.lib').load(function(err)
-      \     if err then
-      \         vim.api.nvim_err_writeln(tostring(err))
-      \     end
-      \ end)
+      \ lua require('distant.command').install(vim.fn.expand('<args>'))
 command! -nargs=0 DistantSessionInfo
       \ lua require('distant.command').session_info()
 command! -nargs=0 DistantSystemInfo

@@ -1,0 +1,745 @@
+*distant.txt*   Plugin that supports working with remote machines
+
+       _______  ______  ______  ________  ______  __    __ ________ 
+      |       \|      \/      \|        \/      \|  \  |  \        \
+      | ▓▓▓▓▓▓▓\\▓▓▓▓▓▓  ▓▓▓▓▓▓\\▓▓▓▓▓▓▓▓  ▓▓▓▓▓▓\ ▓▓\ | ▓▓\▓▓▓▓▓▓▓▓
+      | ▓▓  | ▓▓ | ▓▓ | ▓▓___\▓▓  | ▓▓  | ▓▓__| ▓▓ ▓▓▓\| ▓▓  | ▓▓   
+      | ▓▓  | ▓▓ | ▓▓  \▓▓    \   | ▓▓  | ▓▓    ▓▓ ▓▓▓▓\ ▓▓  | ▓▓   
+      | ▓▓  | ▓▓ | ▓▓  _\▓▓▓▓▓▓\  | ▓▓  | ▓▓▓▓▓▓▓▓ ▓▓\▓▓ ▓▓  | ▓▓   
+      | ▓▓__/ ▓▓_| ▓▓_|  \__| ▓▓  | ▓▓  | ▓▓  | ▓▓ ▓▓ \▓▓▓▓  | ▓▓   
+      | ▓▓    ▓▓   ▓▓ \\▓▓    ▓▓  | ▓▓  | ▓▓  | ▓▓ ▓▓  \▓▓▓  | ▓▓   
+       \▓▓▓▓▓▓▓ \▓▓▓▓▓▓ \▓▓▓▓▓▓    \▓▓   \▓▓   \▓▓\▓▓   \▓▓   \▓▓   
+                                                              
+
+                          Version: 0.15.0
+
+==============================================================================
+                                                                *distant.nvim*
+
+Distant.nvim is a plugin for working with remote machines. It enables you to
+read, write, and execute from the comfort of your local machine and serves as
+an alternative to `ssh` and `mosh` sessions that rely on installing and
+running neovim directly on the remote machine.
+
+==============================================================================
+TABLE OF CONTENTS                                                *distant-toc*
+
+1. Introduction .......................................|distant-introduction|
+2. Installation .......................................|distant-installation|
+3. Commands ...............................................|distant-commands|
+4. Settings ...............................................|distant-settings|
+5. Lua API .................................................|distant-lua-api|
+6. FAQ .........................................................|distant-faq|
+7. Credits .................................................|distant-credits|
+8. License .................................................|distant-license|
+
+==============================================================================
+INTRODUCTION                                            *distant-introduction*
+
+Welcome to the neovim plugin built around the Lua bindings for distant, a set
+of tooling and libraries dedicated to interaction with remote machines.
+
+In order to operate against a remote machine, you first need to establish a
+connection to it. To do this, you run `:DistantLaunch {host}` where the host
+points to the remote machine and can be an IP address like `127.0.0.1` or a
+domain like `example.com`.
+
+The launch command will attempt to SSH into the remote machine using port 22
+by default and start an instance of the distant server.
+
+Once started, all remote operations will be sent to that machine! You can try
+out something simple like displaying a list of files, directories, and
+symlinks by running `:DistantOpen /some/dir`, which will open a dialog that
+displays all of the contents of the specified directory.
+
+==============================================================================
+INSTALLATION                                            *distant-installation*
+
+This plugin acts as a wrapper around the Lua bindings to distant's core and
+ssh libraries. In order for this library to function, `distant_lua.so` (or
+`distant_lua.dll` for Windows) must be placed in the lua directory of this
+plugin.
+
+Sound complicated? Not to worry! This plugin provides support to automatically
+install the shared library for you and will automatically begin the dialog
+when you first attempt to invoke a command or function associated with
+distant.
+
+You can trigger the installation dialog manually by running `:DistantInstall`.
+>
+  1. Download a prebuilt lib
+  2. Build from source
+  3. Copy local lib
+<
+Download a prebuilt lib~
+
+Selecting this option will query Github releases for the latest batch,
+downloading the release you select. The specific library will be downloaded
+based on the detected operation system and architecture of your local machine. 
+
+For instance, an M1 Mac will download `distant_lua-macos-arm.dylib` whereas a
+Linux machine will download `distant_lua-linux64-gnu.so`. The library
+downloaded will be renamed to work with this plugin.
+
+This requires that your machine have `curl`, `wget`, or `fetch` installed and
+available on your path.
+
+Build from source~
+
+Selecting this option will download the latest copy of the distant repository
+from https://github.com/chipsenkbeil/distant.
+
+Once downloaded, the source will be built using `cargo build --release` and the
+resulting shared library will be copied into the appropriate location.
+
+This requires that your machine have both `git` and `cargo` installed.
+Additionally, due to the build requirements of distant's library, you will
+also need `perl` to build a vendored copy of `openssh`.
+
+Copy local lib~
+
+Selecting this option will prompt for the path to a `so`, `dylib`, or `dll` to
+copy to the lua directory of this plugin.
+
+==============================================================================
+COMMANDS                                                    *distant-commands*
+
+This plugin provides vim commands that can be used to initiate different tasks
+remotely. It also includes specialized commands such as `DistantLaunch` that is
+used to start a remote session.
+
+Commands support {positional} and {key=value} pairs. Positional arguments are
+relative to each other and are not influenced by key=value pairs inbetween.
+>
+  :DistantLaunch example.com mode=ssh ssh.user=name ssh.port=2222
+<
+Commands also support quoted strings as values such as
+>
+  :DistantLaunch example.com distant.args="--log-file distant.log --log-level trace"
+<
+
+Specialized commands~
+
+These commands are geared towards performing actions that expose some dialogs
+or other user interfaces within neovim.
+
+                                                           *DistantOpen*
+DistantOpen           Opens a file for editing or a directory for navigation
+
+                                                           *DistantLaunch*
+DistantLaunch         Opens a dialog to launch distant on a remote machine
+
+                                                           *DistantInstall*
+DistantInstall        Triggers installation process for the C library
+
+                                                           *DistantMetadata*
+DistantMetadata       Presents information about some path on a remote machine
+
+                                                           *DistantSessionInfo*
+DistantSessionInfo    Presents information related to the remote connection
+
+                                                           *DistantSystemInfo*
+DistantSystemInfo     Presents information about the remote machine
+
+Function commands~
+
+These commands are purely wrappers around existing functions that accept those
+function's arguments as input.
+
+                                                           *DistantCopy*
+DistantCopy           Alias to `lua require('distant').fn.copy`
+
+                                                           *DistantMkdir*
+DistantMkdir          Alias to `lua require('distant').fn.mkdir`
+
+                                                           *DistantRemove*
+DistantRemove         Alias to `lua require('distant').fn.remove`
+
+                                                           *DistantRename*
+DistantRename         Alias to `lua require('distant').fn.rename`
+
+                                                           *DistantRun*
+DistantRun            Alias to `lua require('distant').fn.spawn_wait`
+
+==============================================================================
+SETTINGS                                                    *distant-settings*
+
+TODO: Write settings
+
+==============================================================================
+LUA API                                                      *distant-lua-api*
+
+Blocking Functions~
+
+Synchronous functions are available that perform the given operation in a
+blocking fashion. Each function takes a single argument, which is a table
+containing the arguments relevant for the function. Each function returns two
+values: err being a string or false, and result being the results of the
+function call if it has any (like file text).
+
+>
+  local fn = require('distant.fn')
+
+  local err, text = fn.read_file_text({path = 'path/to/file'})
+  if err then
+    vim.api.nvim_err_writeln(err)
+    return
+  end
+
+  print('Read file contents', text)
+<
+
+Asynchronous Functions~
+
+Every blocking function can also be called in a non-blocking fashion. This is
+done by supplying a callback function as the last argument.
+
+>
+  local fn = require('distant.fn')
+
+  fn.read_file_text({path = 'path/to/file'}, function(err, text)
+    if err then
+      vim.api.nvim_err_writeln(err)
+      return
+    end
+
+    print('Read file contents', text)
+  end)
+<
+
+distant.fn.append_file({opts}, {cb})                *distant.fn.append_file()*
+
+    Appends binary data to a remote file.
+
+    Parameters: ~
+        {opts} (table)        options associated with the function
+        {cb}   (function)     callback used with async invocation (optional)
+
+    Options: ~
+        {path}     (string)   path to the file on the remote machine
+        {data}     (table)    data as a list of bytes to append to the file
+        {timeout}  (number)   maximum time in milliseconds before failing
+                              (default: settings.max_timeout)
+        {interval} (number)   approximate time in milliseconds between each
+                              check to see if the operation completed
+                              (default: settings.timeout_interval)
+
+    Return: ~
+        {err}  (string|nil)   returns an error if it occurs (synchronous only)
+
+distant.fn.append_file_text({opts}, {cb})        *distant.fn.append_file_text*
+
+    Appends text to a remote file.
+
+    Parameters: ~
+        {opts} (table)        options associated with the function
+        {cb}   (function)     callback used with async invocation (optional)
+
+    Options: ~
+        {path}     (string)   path to the file on the remote machine
+        {text}     (string)   text to append to the file
+        {timeout}  (number)   maximum time in milliseconds before failing
+                              (default: settings.max_timeout)
+        {interval} (number)   approximate time in milliseconds between each
+                              check to see if the operation completed
+                              (default: settings.timeout_interval)
+
+    Return: ~
+        {err}  (string|nil)   returns an error if it occurs (synchronous only)
+
+distant.fn.copy({opts}, {cb})                                *distant.fn.copy*
+
+    Copies a remote file or directory to another remote location.
+
+    Parameters: ~
+        {opts} (table)        options associated with the function
+        {cb}   (function)     callback used with async invocation (optional)
+
+    Options: ~
+        {src}      (string)   path to the existing file on the remote machine
+        {dst}      (string)   path to where to copy the file to on the
+                              remote machine
+        {timeout}  (number)   maximum time in milliseconds before failing
+                              (default: settings.max_timeout)
+        {interval} (number)   approximate time in milliseconds between each
+                              check to see if the operation completed
+                              (default: settings.timeout_interval)
+
+    Return: ~
+        {err}  (string|nil)   returns an error if it occurs (synchronous only)
+
+distant.fn.create_dir({opts}, {cb})                    *distant.fn.create_dir*
+
+    Creates a new directory on the remote machine.
+
+    Parameters: ~
+        {opts} (table)        options associated with the function
+        {cb}   (function)     callback used with async invocation (optional)
+
+    Options: ~
+        {path}     (string)   path where the directory will be created
+        {all}      (boolean)  if true, create all intermediate path components
+                              (default: false)
+        {timeout}  (number)   maximum time in milliseconds before failing
+                              (default: settings.max_timeout)
+        {interval} (number)   approximate time in milliseconds between each
+                              check to see if the operation completed
+                              (default: settings.timeout_interval)
+
+    Return: ~
+        {err}  (string|nil)   returns an error if it occurs (synchronous only)
+
+distant.fn.exists({opts}, {cb})                            *distant.fn.exists*
+
+    Determines whether or not the path exists on the remote machine.
+
+    Parameters: ~
+        {opts} (table)        options associated with the function
+        {cb}   (function)     callback used with async invocation (optional)
+
+    Options: ~
+        {path}     (string)   path to check if it exists
+        {timeout}  (number)   maximum time in milliseconds before failing
+                              (default: settings.max_timeout)
+        {interval} (number)   approximate time in milliseconds between each
+                              check to see if the operation completed
+                              (default: settings.timeout_interval)
+
+    Return: ~
+        {err}  (string|nil)   an error if it occurs (synchronous only)
+        {res} (boolean|nil)   true/false indicator of whether or not the path
+                              exists on the remote machine (synchronous only)
+
+distant.fn.metadata({opts}, {cb})                        *distant.fn.metadata*
+
+    Retrieves metadata about a remote file, directory, or symlink.
+
+    Parameters: ~
+        {opts} (table)        options associated with the function
+        {cb}   (function)     callback used with async invocation (optional)
+
+    Options: ~
+        {path}              (string)   path to file, directory, or symlink
+                                       whose metadata to retrieve
+        {canonicalize}      (boolean)  if true, includes a canoncalized
+                                       version of the given path in the result
+                                       (default: false)
+        {resolve_file_type} (boolean)  if true, determines the file type of
+                                       symlinks (dir or file) rather than
+                                       returning "symlink" as the file type
+                                       (default: false)
+        {timeout}           (number)   maximum time in milliseconds before
+                                       failing (default: settings.max_timeout)
+        {interval}          (number)   approximate time in milliseconds
+                                       between each check to see if the
+                                       operation completed
+                                       (default: settings.timeout_interval)
+
+    Return: ~
+        {err}  (string|nil)    an error if it occurs (synchronous only)
+        {res}  (Metadata|nil)  table of metadata (synchronous only)
+
+    Metadata: ~
+        {canonicalized_path} (string|nil)  canonicalized path to the file or
+                                           directory, resolving symlinks, only
+                                           included if canonicalize = true
+        {file_type}          (string)      type of entry as one of file, dir,
+                                           or symlink
+        {len}                (number)      size of the file, directory, or
+                                           symlink in bytes (will be 0 if
+                                           unknown)
+        {readonly}           (boolean)     whether or not the file, directory,
+                                           or symlink is marked as unwriteable
+        {accessed}           (number|nil)  last time (in milliseconds) when
+                                           the file, directory, or symlink was
+                                           accessed
+        {created}            (number|nil)  time (in milliseconds) when the
+                                           file, directory, or symlink was
+                                           created
+        {modified}           (number|nil)  last time (in milliseconds) when
+                                           the file, directory, or symlink was
+                                           modified
+
+distant.fn.read_dir({opts}, {cb})                        *distant.fn.read_dir*
+
+    Lists remote files & directories for the given path on the remote machine.
+
+    Parameters: ~
+        {opts} (table)        options associated with the function
+        {cb}   (function)     callback used with async invocation (optional)
+
+    Options: ~
+        {path}          (string)   path to the directory on the remote machine
+        {depth}         (number)   maximum depth to traverse with 0 indicating
+                                   there is no maximum depth and 1 indicating
+                                   the most immediate children within the
+                                   directory (default: 1)
+        {absolute}      (boolean)  whether or not to return absolute or
+                                   relative paths (default: false)
+        {canonicalize}  (boolean)  whether or not to canonicalize the
+                                   resulting paths, meaning returning the
+                                   canonical, absolute form of a path with
+                                   all intermediate components normalized
+                                   and symbolic links resolved. Note that
+                                   the flag absolute must be true to have
+                                   absolute paths returned, even if
+                                   canonicalize is flagged as true
+                                   (default: false)
+        {include_root}  (boolean)  whether or not to include the root
+                                   directory in the retrieved entries. If
+                                   included, the root directory will also
+                                   be a canonicalized, absolute path and
+                                   will not follow any of the other flags
+                                   (default: false)
+        {timeout}       (number)   maximum time in milliseconds before
+                                   failing (default: settings.max_timeout)
+        {interval}      (number)   approximate time in milliseconds
+                                   between each check to see if the
+                                   operation completed
+                                   (default: settings.timeout_interval)
+
+    Return: ~
+        {err}  (string|nil)            an error if it occurs 
+                                       (synchronous only)
+        {res}  (EntriesAndErrors|nil)  table of entries & errors
+                                       (synchronous only)
+
+    EntriesAndErrors: ~
+        {entries}    (table)   list of entries within the directory
+        {errors}     (string)  list of errors that occurred during traversal
+
+    Entry: ~
+        {path}       (string)  path to the entry, which will be relative to
+                               the input directory unless {absolute} is true
+                               or {canonicalize} is true and the path would
+                               appear outside the input directory as a result
+        {file_type}  (string)  type of entry as one of file, dir, or symlink
+        {depth}      (number)  depth of the entry, 0 being the directory itself,
+                               1 being the immediate children, etc.
+
+distant.fn.read_file({opts}, {cb})                      *distant.fn.read_file*
+
+    Reads a remote file, returning its content as a list of bytes.
+
+    Parameters: ~
+        {opts} (table)        options associated with the function
+        {cb}   (function)     callback used with async invocation (optional)
+
+    Options: ~
+        {path}     (string)   path to the file to read
+        {timeout}  (number)   maximum time in milliseconds before failing
+                              (default: settings.max_timeout)
+        {interval} (number)   approximate time in milliseconds between each
+                              check to see if the operation completed
+                              (default: settings.timeout_interval)
+
+    Return: ~
+        {err}  (string|nil)   an error if it occurs (synchronous only)
+        {res}   (table|nil)   list of bytes representing file contents
+                              (synchronous only)
+
+distant.fn.read_file_text({opts}, {cb})            *distant.fn.read_file_text*
+
+    Reads a remote file, returning its content as text.
+
+    Parameters: ~
+        {opts} (table)        options associated with the function
+        {cb}   (function)     callback used with async invocation (optional)
+
+    Options: ~
+        {path}     (string)   path to the file to read
+        {timeout}  (number)   maximum time in milliseconds before failing
+                              (default: settings.max_timeout)
+        {interval} (number)   approximate time in milliseconds between each
+                              check to see if the operation completed
+                              (default: settings.timeout_interval)
+
+    Return: ~
+        {err}  (string|nil)   an error if it occurs (synchronous only)
+        {res}  (string|nil)   string representing file contents
+                              (synchronous only)
+
+distant.fn.remove({opts}, {cb})                            *distant.fn.remove*
+
+    Removes a remote file, directory, or symlink.
+
+    Parameters: ~
+        {opts} (table)        options associated with the function
+        {cb}   (function)     callback used with async invocation (optional)
+
+    Options: ~
+        {path}     (string)   path to the file, directory, or symlink to
+                              remove on a remote machine
+        {force}    (number)   if true, will remove non-empty directories,
+                              otherwise this function will fail if
+                              encountering non-empty directories
+                              (default: false)
+        {timeout}  (number)   maximum time in milliseconds before failing
+                              (default: settings.max_timeout)
+        {interval} (number)   approximate time in milliseconds between each
+                              check to see if the operation completed
+                              (default: settings.timeout_interval)
+
+    Return: ~
+        {err}  (string|nil)   an error if it occurs (synchronous only)
+
+distant.fn.rename({opts}, {cb})                            *distant.fn.rename*
+
+    Renames a remote file, directory, or symlink.
+
+    Parameters: ~
+        {opts} (table)        options associated with the function
+        {cb}   (function)     callback used with async invocation (optional)
+
+    Options: ~
+        {src}     (string)    path to the file, directory, or symlink to
+                              rename on a remote machine
+        {dst}     (string)    path to the new location for the file,
+                              directory, or symlink on a remote machine
+        {timeout}  (number)   maximum time in milliseconds before failing
+                              (default: settings.max_timeout)
+        {interval} (number)   approximate time in milliseconds between each
+                              check to see if the operation completed
+                              (default: settings.timeout_interval)
+
+    Return: ~
+        {err}  (string|nil)   an error if it occurs (synchronous only)
+
+distant.fn.spawn({opts}, {cb})                              *distant.fn.spawn*
+
+    Starts a process, returning it to support writing stdin and reading
+    stdout and stderr.
+
+    Parameters: ~
+        {opts} (table)        options associated with the function
+        {cb}   (function)     callback used with async invocation (optional)
+
+    Options: ~
+        {cmd}      (string)        path to binary to execute on remote machine
+        {args}     (string|table)  arguments to provide to {cmd}
+        {detached} (boolean)       if true, process is not killed if client
+                                   disconnects from distant server 
+                                   (default: false)
+        {timeout}  (number)        maximum time in milliseconds before failing
+                                   (default: settings.max_timeout)
+        {interval} (number)        approximate time in milliseconds between
+                                   each check to see if the operation completed
+                                   (default: settings.timeout_interval)
+
+    Return: ~
+        {err}  (string|nil)   an error if it occurs (synchronous only)
+        {res}  (Process|nil)  result containing pointer to actively-running
+                              process on remote machine (synchronous only)
+
+    Process: ~
+        {id}           (number)    id associated with process (not pid)
+        {is_active}    (function)  returns true if process still running
+        {close_stdin}  (function)  closes stdin of remote process
+        {write_stdin}  (function)  writes text to stdin of remote process,
+                                   taking optional callback as second arg
+                                   to return asynchronously when finished,
+                                   otherwise acts as a blocking function
+                                   returning err if failed
+        {read_stdout}  (function)  reads text from stdout of remote process,
+                                   taking optional callback as second arg
+                                   to return asynchronously when finished,
+                                   otherwise acts as a blocking function,
+                                   returning (err, text) where err is
+                                   string|nil and text is string|nil
+        {read_stderr}  (function)  reads text from stderr of remote process,
+                                   taking optional callback as second arg
+                                   to return asynchronously when finished,
+                                   otherwise acts as a blocking function,
+                                   returning (err, text) where err is
+                                   string|nil and text is string|nil
+        {status}       (function)  checks if process has completed, taking
+                                   taking optional callback as second arg
+                                   to return asynchronously when finished,
+                                   otherwise acts as a blocking function
+                                   returning (err, status) where err is
+                                   string|nil and status is Status|nil 
+        {wait}         (function)  consumes process reference to wait for
+                                   the process to complete and yield its
+                                   exit status, taking an optional callback
+                                   to return asynchronously when finished,
+                                   yielding (err, res) where err is
+                                   string|nil and res is a table with two
+                                   values (success, optional exit code)
+        {output}       (function)  consumes process reference to wait for
+                                   the process to complete and yield its
+                                   output, taking an optional callback
+                                   to return asynchronously when finished,
+                                   yielding (err, output) where err is
+                                   string|nil and output is Output|nil
+        {kill}         (function)  sends a kill request to the remote process,
+                                   taking optional callback to return
+                                   asynchronously when finished, otherwise
+                                   acts as a blocking function returning err
+                                   where err is string|nil
+        {abort}        (function)  aborts the process locally, meaning that
+                                   the connection to the process is severed
+
+    Status: ~
+        {success}   (boolean)     true if process exited successfully
+        {exit_code} (number|nil)  exit code if available
+
+    Output: ~
+        {success}   (boolean)     true if process exited successfully
+        {exit_code} (number|nil)  exit code if available
+        {stdout}    (string)      collected stdout from process execution
+        {stderr}    (string)      collected stderr from process execution
+
+distant.fn.spawn_wait({opts}, {cb})                    *distant.fn.spawn_wait*
+
+    Runs a remote program to completion, returning table of stdout, stderr,
+    and exit code.
+
+    Parameters: ~
+        {opts} (table)        options associated with the function
+        {cb}   (function)     callback used with async invocation (optional)
+
+    Options: ~
+        {cmd}      (string)        path to binary to execute on remote machine
+        {args}     (string|table)  arguments to provide to {cmd}
+        {detached} (boolean)       if true, process is not killed if client
+                                   disconnects from distant server 
+                                   (default: false)
+        {timeout}  (number)        maximum time in milliseconds before failing
+                                   (default: settings.max_timeout)
+        {interval} (number)        approximate time in milliseconds between
+                                   each check to see if the operation completed
+                                   (default: settings.timeout_interval)
+
+    Return: ~
+        {err}  (string|nil)  an error if it occurs (synchronous only)
+        {res}  (Output|nil)  result containing execution results such as
+                             exit code and stdout (synchronous only)
+
+    Output: ~
+        {success}   (boolean)     true if process exited successfully
+        {exit_code} (number|nil)  exit code if available
+        {stdout}    (string)      collected stdout from process execution
+        {stderr}    (string)      collected stderr from process execution
+
+distant.fn.system_info({opts}, {cb})                  *distant.fn.system_info*
+
+    Retrieves information about the remote machine such as its os name and
+    arch.
+
+    Parameters: ~
+        {opts} (table)        options associated with the function
+        {cb}   (function)     callback used with async invocation (optional)
+
+    Options: ~
+        {timeout}  (number)   maximum time in milliseconds before failing
+                              (default: settings.max_timeout)
+        {interval} (number)   approximate time in milliseconds between each
+                              check to see if the operation completed
+                              (default: settings.timeout_interval)
+
+    Return: ~
+        {err}  (string|nil)      an error if it occurs (synchronous only)
+        {res}  (SystemInfo|nil)  result containing system information
+                                 (synchronous only)
+
+    SystemInfo: ~
+        {family}          (string)  family of the operating system
+        {os}              (string)  name of the specific operating system
+        {arch}            (string)  architecture of the CPU
+        {current_dir}     (string)  current working directory of the running
+                                    server process
+        {main_separator}  (string)  primary separator for path components for
+                                    the current platform
+
+distant.fn.write_file({opts}, {cb})                    *distant.fn.write_file*
+
+    Writes list of bytes to a remote file.
+
+    Parameters: ~
+        {opts} (table)        options associated with the function
+        {cb}   (function)     callback used with async invocation (optional)
+
+    Options: ~
+        {path}     (string)   path to the remote file
+        {data}     (table)    list of bytes to write to the remote file
+        {timeout}  (number)   maximum time in milliseconds before failing
+                              (default: settings.max_timeout)
+        {interval} (number)   approximate time in milliseconds between each
+                              check to see if the operation completed
+                              (default: settings.timeout_interval)
+
+    Return: ~
+        {err}  (string|nil)   an error if it occurs (synchronous only)
+
+distant.fn.write_file_text({opts}, {cb})          *distant.fn.write_file_text*
+
+    Writes text to a remote file.
+
+    Parameters: ~
+        {opts} (table)        options associated with the function
+        {cb}   (function)     callback used with async invocation (optional)
+
+    Options: ~
+        {path}     (string)   path to the remote file
+        {text}     (string)   text to write to the remote file
+        {timeout}  (number)   maximum time in milliseconds before failing
+                              (default: settings.max_timeout)
+        {interval} (number)   approximate time in milliseconds between each
+                              check to see if the operation completed
+                              (default: settings.timeout_interval)
+
+    Return: ~
+        {err}  (string|nil)   an error if it occurs (synchronous only)
+
+==============================================================================
+FAQ                                                              *distant-faq*
+
+How does this plugin differ from using neovim with sshfs?  *distant-faq-sshfs*
+
+  There are a couple of the primary differences that come to mind:
+
+    1. `Filesystem`: sshfs is built using FUSE, meaning that you need support
+    for it as a userland filesystem. distant.nvim requires no special
+    filesystem as the file contents are only reflected in buffers. Anything
+    you read goes into a buffer and anything you write gets transmitted across
+    the network directly through the distant library.
+
+    2. `Program locations`: distant supports running programs on the remote
+    machine, colocated with your files. Language servers would run on the
+    remote machine, for instance. When using sshfs to mount the remote file
+    system on your local machine, you would then run programs locally and
+    point them to the mounted files.
+
+    With distant, you are leveraging the resources of a remote machine. This
+    can be advantageous if you want to perform CPU or GPU intensive operations
+    without heavily impacting your local machine. With sshfs, you are
+    leveraging the resources of a local machine for programs that you run.
+    Depending on what you're doing, this can be much more expensive.
+
+    If a program needs to access the filesystem frequently, this would
+    transmit a lot of requests over the network, especially if working over a
+    large set of files. With distant, all of the filesystem operations would
+    happen directly on the remote machine and only the program's output would
+    be transmitted over the network.
+
+  There are other technical differences, but the distinctions above are - at
+  the moment - the differences that stand out. In some cases, using sshfs
+  might be preferred, but for my use personally and at work this is the
+  preferred method. :)
+
+  If you want to think of what this more closely relates to, then take a look
+  at VS Code Remote Development or the formerly-active Nuclide project.
+
+==============================================================================
+CREDITS                                                      *distant-credits*
+
+Font for logo used at the top of this help doc curtesy of
+https://texteditor.com/ using 3D Blocks font.
+
+==============================================================================
+LICENSE                                                      *distant-license*
+
+This project is licensed under either of Apache License (Version 2.0) or MIT
+license at your option.
+
+vim:tw=78:ts=8:ft=help:norl:

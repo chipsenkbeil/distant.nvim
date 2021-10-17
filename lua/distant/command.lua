@@ -142,6 +142,17 @@ command.launch = function(input)
     editor.launch(input.opts)
 end
 
+--- DistantInstall [reload]
+command.install = function(input)
+    input = command.parse_input(input)
+    local reload = input.args[1] == 'reload'
+    require('distant.lib').load({reload = reload}, function(success, msg)
+        if not success then
+            vim.api.nvim_err_writeln(tostring(msg))
+        end
+    end)
+end
+
 --- DistantMetadata path [opt1=... opt2=...]
 command.metadata = function(input)
     input = command.parse_input(input)
