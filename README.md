@@ -28,7 +28,24 @@ Support is coming up for these features:
 
 ## Demo
 
-[![Demo Video](https://img.youtube.com/vi/BuW2b1Ii0RI/0.jpg)](https://www.youtube.com/watch?v=BuW2b1Ii0RI)
+### Intro Video
+
+Demonstrates using distant.nvim to edit files and use a language server on a
+remote machine.
+
+[![Intro Video](https://img.youtube.com/vi/BuW2b1Ii0RI/0.jpg)](https://www.youtube.com/watch?v=BuW2b1Ii0RI)
+
+### v0.1.0 Update
+
+Demonstrates the new release of distant.nvim (v0.1.0) leveraging distant's new
+lua module (v0.15.0). Main highlights include:
+
+- integrated ssh authentication
+- ssh mode
+- refactored and simplified vim & Lua APIs
+- complete help documentation
+
+[![v0.1.0 update](https://img.youtube.com/vi/wVAsbpByQ3o/0.jpg)](https://www.youtube.com/watch?v=wVAsbpByQ3o)
 
 ## Installation & Setup
 
