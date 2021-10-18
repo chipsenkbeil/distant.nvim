@@ -1272,9 +1272,11 @@ CHANGELOG                                                  *distant-changelog*
 
 Latest ~
 
-  * Fixed settings not getting applied to |DistantLaunch|
+  * Fix LSP start_client failing as checking for local executable fails for
+    remote binary
+  * Fix settings not getting applied to |DistantLaunch|
   * Add [reload] parameter to |DistantInstall| to force dialog to appear
-  * Wrote initial distant.txt documentation
+  * Write initial distant.txt documentation
 
 v0.1.0 ~
 

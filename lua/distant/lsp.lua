@@ -8,6 +8,196 @@ local lsp = {
     __clients = {};
 }
 
+local function uv_spawn(cmd, spawn_params, on_exit)
+    vim.validate({
+        cmd = {cmd, 'string'},
+        ['spawn_params.args'] = {spawn_params.args, 'table'},
+        ['spawn_params.stdio'] = {spawn_params.stdio, 'table'},
+        on_exit = {on_exit, 'function'},
+    })
+
+    -- spawn_params.args = {stdin, stdout, stderr}
+    local stdin = spawn_params.stdio[1]
+    local stdout = spawn_params.stdio[2]
+    local stderr = spawn_params.stdio[3]
+
+    local err, proc = fn.spawn_lsp({
+        cmd = cmd,
+        args = spawn_params.args or {},
+    })
+
+    if err then
+        return nil, err
+    end
+
+    -- Configure the pipes for the given process
+    stdin.__set(proc, 'stdin')
+    stdout.__set(proc, 'stdout')
+    stderr.__set(proc, 'stderr')
+
+    -- Spawn polling check for process to complete
+    local inner_on_exit
+    inner_on_exit = function()
+        proc.status(function(err, status)
+            if err then
+                error(tostring(err))
+            end
+
+            -- If we get a status, then we're done
+            -- on_exit(code, signal used to terminate)
+            if status then
+                local code = status.exit_code or (status.success and 0 or 1)
+                on_exit(code)
+
+            -- Otherwise, queue up another check
+            else
+                vim.defer_fn(inner_on_exit, state.settings.poll_interval)
+            end
+        end)
+    end
+    vim.schedule(inner_on_exit)
+
+    local handle = {
+        -- returns bool if closing or closed
+        -- luv has note that only used between init and before close cb
+        is_closing = function()
+            return not proc.is_active()
+        end,
+
+        -- cb() (optional) when done
+        -- returns nothing
+        close = function(cb)
+            -- Always try a kill and ignore results
+            proc.kill(function()
+                -- Make sure the process stops its tasks
+                proc.abort(function()
+                    cb()
+                end)
+            end)
+        end,
+
+        -- Only ever sends 15, which is sigterm
+        -- returns 0 or fail
+        kill = function(signum)
+            local success, err = pcall(proc.kill, proc)
+            if success then
+                return 0
+            else
+                error(string.format('kill(%s): %s', signum, tostring(err)))
+            end
+        end,
+    }
+    return handle, proc.id
+end
+
+local function uv_new_pipe()
+    local pipe_proc, pipe_ty
+    return {
+        --- Private function used to set the pipe from within the uv.spawn wrapper
+        --- @param proc userdata Process associated with the pipe
+        --- @param ty string Type of pipe (stdin|stdout|stderr)
+        __set = function(proc, ty)
+            pipe_proc = proc
+            pipe_ty = ty
+        end,
+
+        -- cb() (optional) when done
+        -- returns nothing
+        close = function(cb)
+            pipe_proc = nil
+            pipe_ty = nil
+            if type(cb) == 'function' then
+                cb()
+            end
+        end,
+
+        -- read_start(self, cb)
+        -- cb(err = string|nil, data = string|nil)
+        -- returns 0 or fail
+        read_start = function(_, cb)
+            assert(pipe_proc, 'Pipe not configured! Must be passed to uv.spawn(...)')
+
+            local read_loop
+            if pipe_ty == 'stdout' then
+                read_loop = function()
+                    -- Signals closing of pipe
+                    if pipe_proc == nil then
+                        return
+                    end
+
+                    pipe_proc.read_stdout({}, function(...)
+                        cb(...)
+
+                        -- If we still have pipe (because it can become nil) and it is active
+                        if pipe_proc and pipe_proc.is_active() then
+                            vim.defer_fn(read_loop, state.settings.poll_interval)
+                        end
+                    end)
+                end
+                vim.schedule(read_loop)
+                return 0
+            elseif pipe_ty == 'stderr' then
+                read_loop = function()
+                    -- Signals closing of pipe
+                    if pipe_proc == nil then
+                        return
+                    end
+
+                    pipe_proc.read_stderr({}, function(...)
+                        cb(...)
+
+                        -- If we still have pipe (because it can become nil) and it is active
+                        if pipe_proc and pipe_proc.is_active() then
+                            vim.defer_fn(read_loop, state.settings.poll_interval)
+                        end
+                    end)
+                end
+                vim.schedule(read_loop)
+                return 0
+            else
+                error('pipe is not stdout or stderr')
+            end
+        end,
+
+        -- read_start(self, data, cb)
+        -- data = string, cb = function() (optional) when done
+        -- returns uv_write_t (unused) or fail
+        write = function(_, data, cb)
+            assert(pipe_proc, 'Pipe not configured! Must be passed to uv.spawn(...)')
+
+            if pipe_ty ~= 'stdin' then
+                error('pipe is not stdin')
+            end
+            return pipe_proc.write_stdin(data, function()
+                if type(cb) == 'function' then
+                    cb()
+                end
+            end)
+        end
+    }
+end
+
+-- Loads a version of vim.lsp where uv.spawn and uv.new_pipe have been replaced
+local function with_vim_lsp(f, ...)
+    local old_spawn = vim.loop.spawn
+    vim.loop.spawn = uv_spawn
+
+    local old_new_pipe = vim.loop.new_pipe
+    vim.loop.new_pipe = uv_new_pipe
+
+    local old_executable = vim.fn.executable
+    vim.fn.executable = function() return 1 end
+
+    local success, res = pcall(f, ...)
+
+    vim.fn.executable = old_executable
+    vim.loop.spawn = old_spawn
+    vim.loop.new_pipe = old_new_pipe
+
+    assert(success, res)
+    return res
+end
+
 --- Wraps `vim.lsp.start_client`, injecting necessary details to run the
 --- LSP binary on the connected remote machine while acquiring and
 --- visualizing results on the local machine
@@ -67,186 +257,8 @@ lsp.start_client = function(config)
         config
     )
 
-    -- NOTE: Need to overwrite uv.spawn (aka vim.loop.spawn) temporarily
-    local uv_spawn = vim.loop.spawn
-    vim.loop.spawn = function(cmd, spawn_params, on_exit)
-        vim.validate({
-            cmd = {cmd, 'string'},
-            ['spawn_params.args'] = {spawn_params.args, 'table'},
-            ['spawn_params.stdio'] = {spawn_params.stdio, 'table'},
-            on_exit = {on_exit, 'function'},
-        })
-
-        -- spawn_params.args = {stdin, stdout, stderr}
-        local stdin = spawn_params.stdio[1]
-        local stdout = spawn_params.stdio[2]
-        local stderr = spawn_params.stdio[3]
-
-        local err, proc = fn.spawn_lsp({
-            cmd = cmd,
-            args = spawn_params.args or {},
-        })
-
-        if err then
-            return nil, err
-        end
-
-        -- Configure the pipes for the given process
-        stdin.__set(proc, 'stdin')
-        stdout.__set(proc, 'stdout')
-        stderr.__set(proc, 'stderr')
-
-        -- Spawn polling check for process to complete
-        local inner_on_exit
-        inner_on_exit = function()
-            proc.status(function(err, status)
-                if err then
-                    error(tostring(err))
-                end
-
-                -- If we get a status, then we're done
-                -- on_exit(code, signal used to terminate)
-                if status then
-                    local code = status.exit_code or (status.success and 0 or 1)
-                    on_exit(code)
-
-                -- Otherwise, queue up another check
-                else
-                    vim.defer_fn(inner_on_exit, state.settings.poll_interval)
-                end
-            end)
-        end
-        vim.schedule(inner_on_exit)
-
-        local handle = {
-            -- returns bool if closing or closed
-            -- luv has note that only used between init and before close cb
-            is_closing = function()
-                return not proc.is_active()
-            end,
-
-            -- cb() (optional) when done
-            -- returns nothing
-            close = function(cb)
-                -- Always try a kill and ignore results
-                proc.kill(function()
-                    -- Make sure the process stops its tasks
-                    proc.abort(function()
-                        cb()
-                    end)
-                end)
-            end,
-
-            -- Only ever sends 15, which is sigterm
-            -- returns 0 or fail
-            kill = function(signum)
-                local success, err = pcall(proc.kill, proc)
-                if success then
-                    return 0
-                else
-                    error(string.format('kill(%s): %s', signum, tostring(err)))
-                end
-            end,
-        }
-        return handle, proc.id
-    end
-
-    -- NOTE: Need to overwrite uv.new_pipe (aka vim.loop.new_pipe) temporarily
-    local uv_new_pipe = vim.loop.new_pipe
-    vim.loop.new_pipe = function()
-        local pipe_proc, pipe_ty
-        return {
-            --- Private function used to set the pipe from within the uv.spawn wrapper
-            --- @param proc userdata Process associated with the pipe
-            --- @param ty string Type of pipe (stdin|stdout|stderr)
-            __set = function(proc, ty)
-                pipe_proc = proc
-                pipe_ty = ty
-            end,
-
-            -- cb() (optional) when done
-            -- returns nothing
-            close = function(cb)
-                pipe_proc = nil
-                pipe_ty = nil
-                if type(cb) == 'function' then
-                    cb()
-                end
-            end,
-
-            -- read_start(self, cb)
-            -- cb(err = string|nil, data = string|nil)
-            -- returns 0 or fail
-            read_start = function(_, cb)
-                assert(pipe_proc, 'Pipe not configured! Must be passed to uv.spawn(...)')
-
-                local read_loop
-                if pipe_ty == 'stdout' then
-                    read_loop = function()
-                        -- Signals closing of pipe
-                        if pipe_proc == nil then
-                            return
-                        end
-
-                        pipe_proc.read_stdout({}, function(...)
-                            cb(...)
-
-                            -- If we still have pipe (because it can become nil) and it is active
-                            if pipe_proc and pipe_proc.is_active() then
-                                vim.defer_fn(read_loop, state.settings.poll_interval)
-                            end
-                        end)
-                    end
-                    vim.schedule(read_loop)
-                    return 0
-                elseif pipe_ty == 'stderr' then
-                    read_loop = function()
-                        -- Signals closing of pipe
-                        if pipe_proc == nil then
-                            return
-                        end
-
-                        pipe_proc.read_stderr({}, function(...)
-                            cb(...)
-
-                            -- If we still have pipe (because it can become nil) and it is active
-                            if pipe_proc and pipe_proc.is_active() then
-                                vim.defer_fn(read_loop, state.settings.poll_interval)
-                            end
-                        end)
-                    end
-                    vim.schedule(read_loop)
-                    return 0
-                else
-                    error('pipe is not stdout or stderr')
-                end
-            end,
-
-            -- read_start(self, data, cb)
-            -- data = string, cb = function() (optional) when done
-            -- returns uv_write_t (unused) or fail
-            write = function(_, data, cb)
-                assert(pipe_proc, 'Pipe not configured! Must be passed to uv.spawn(...)')
-
-                if pipe_ty ~= 'stdin' then
-                    error('pipe is not stdin')
-                end
-                return pipe_proc.write_stdin(data, function()
-                    if type(cb) == 'function' then
-                        cb()
-                    end
-                end)
-            end
-        }
-    end
-
     -- Start the client and restore uv functions
-    local success, res = pcall(vim.lsp.start_client, lsp_config)
-    vim.loop.spawn = uv_spawn
-    vim.loop.new_pipe = uv_new_pipe
-
-    assert(success, res)
-    return res
+    return with_vim_lsp(vim.lsp.start_client, lsp_config)
 end
 
 --- Connects relevant LSP clients to the provided buffer, optionally

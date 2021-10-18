@@ -49,7 +49,7 @@ define docker_exec
 	-e DISTANT_MODE=$(DISTANT_MODE) \
 	-e DISTANT_LOG_LEVEL=$(DISTANT_LOG_LEVEL) \
 	$(2) \
-	$(DOCKER_IMAGE) sh -c "cd app && ssh-keyscan -H $(DOCKER_SERVER) >> ~/.ssh/known_hosts && $(1)"; \
+	$(DOCKER_IMAGE) sh -c "cd app && ssh-keyscan -H $(DOCKER_SERVER) >> ~/.ssh/known_hosts && sudo rm /usr/bin/rls && $(1)"; \
 	STATUS=$$?; \
 	docker rm -f $(DOCKER_SERVER) > /dev/null 2>&1; \
 	docker network rm $(DOCKER_NETWORK) > /dev/null 2>&1; \
