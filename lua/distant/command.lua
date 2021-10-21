@@ -139,7 +139,18 @@ command.launch = function(input)
     local host = input.args[1]
     input.opts.host = host
 
-    editor.launch(input.opts)
+    if type(host) ~= 'string' then
+        vim.api.nvim_err_writeln('Missing host')
+        return
+    end
+
+    editor.launch(input.opts, function(success, msg)
+        if success then
+            print('Connected to ' .. host)
+        else
+            vim.api.nvim_err_writeln(tostring(msg) or 'Launch failed without cause')
+        end
+    end)
 end
 
 --- DistantInstall [reload]
@@ -147,8 +158,10 @@ command.install = function(input)
     input = command.parse_input(input)
     local reload = input.args[1] == 'reload'
     require('distant.lib').load({reload = reload}, function(success, msg)
-        if not success then
-            vim.api.nvim_err_writeln(tostring(msg))
+        if success then
+            print('Successfully installed Rust library')
+        else
+            vim.api.nvim_err_writeln(tostring(msg) or 'Install failed without cause')
         end
     end)
 end

@@ -558,8 +558,8 @@ local function load(opts, cb)
     end
 
     local prompt = opts.reload and
-        'Reloading C library! What would you like to do?' or
-        'C library not found! What would you like to do?'
+        'Reloading Rust library! What would you like to do?' or
+        'Rust library not found! What would you like to do?'
 
     local choice = prompt_choices({
         prompt = prompt,
