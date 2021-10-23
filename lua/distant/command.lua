@@ -129,16 +129,24 @@ end
 --- Paths are split by period, meaning `path.to.field` becomes
 --- `tbl.path.to.field = tonumber(tbl.path.to.field)`
 local function paths_to_number(tbl, paths)
+    tbl = tbl or {}
+
     local parts, inner
     for _, path in ipairs(paths) do
         parts = vim.split(path, '.', true)
         inner = tbl
         for i, part in ipairs(parts) do
+            if inner == nil then
+                break
+            end
+
             if i < #parts then
                 inner = inner[part]
             end
         end
-        inner[parts[#parts]] = tonumber(inner[parts[#parts]])
+        if inner ~= nil and inner[parts[#parts]] ~= nil then
+            inner[parts[#parts]] = tonumber(inner[parts[#parts]])
+        end
     end
 end
 
