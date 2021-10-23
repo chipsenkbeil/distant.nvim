@@ -124,9 +124,29 @@ command.parse_input = function(input)
     }
 end
 
+--- Converts each path within table into a number using `tonumber()`
+---
+--- Paths are split by period, meaning `path.to.field` becomes
+--- `tbl.path.to.field = tonumber(tbl.path.to.field)`
+local function paths_to_number(tbl, paths)
+    local parts, inner
+    for _, path in ipairs(paths) do
+        parts = vim.split(path, '.', true)
+        inner = tbl
+        for i, part in ipairs(parts) do
+            if i < #parts then
+                inner = inner[part]
+            end
+        end
+        inner[parts[#parts]] = tonumber(inner[parts[#parts]])
+    end
+end
+
 --- DistantOpen path [opt1=... opt2=...]
 command.open = function(input)
     input = command.parse_input(input)
+    paths_to_number(input.opts, {'buf', 'win'})
+
     local path = input.args[1]
     input.opts.path = path
 
@@ -136,6 +156,8 @@ end
 --- DistantLaunch host [opt1=..., opt2=...]
 command.launch = function(input)
     input = command.parse_input(input)
+    paths_to_number(input.opts, {'ssh.port', 'timeout', 'interval'})
+
     local host = input.args[1]
     input.opts.host = host
 
@@ -169,6 +191,8 @@ end
 --- DistantMetadata path [opt1=... opt2=...]
 command.metadata = function(input)
     input = command.parse_input(input)
+    paths_to_number(input.opts, {'timeout', 'interval'})
+
     local path = input.args[1]
     input.opts.path = path
 
@@ -188,6 +212,8 @@ end
 --- DistantCopy src dst [opt1=... opt2=...]
 command.copy = function(input)
     input = command.parse_input(input)
+    paths_to_number(input.opts, {'timeout', 'interval'})
+
     local src = input.args[1]
     local dst = input.args[2]
     input.opts.src = src
@@ -199,15 +225,19 @@ end
 --- DistantMkdir path [opt1=... opt2=...]
 command.mkdir = function(input)
     input = command.parse_input(input)
+    paths_to_number(input.opts, {'timeout', 'interval'})
+
     local path = input.args[1]
     input.opts.path = path
 
-    fn.mkdir(input.opts)
+    fn.create_dir(input.opts)
 end
 
 --- DistantRemove path [opt1=... opt2=...]
 command.remove = function(input)
     input = command.parse_input(input)
+    paths_to_number(input.opts, {'timeout', 'interval'})
+
     local path = input.args[1]
     input.opts.path = path
 
@@ -217,6 +247,8 @@ end
 --- DistantRename src dst [opt1=... opt2=...]
 command.rename = function(input)
     input = command.parse_input(input)
+    paths_to_number(input.opts, {'timeout', 'interval'})
+
     local src = input.args[1]
     local dst = input.args[2]
     input.opts.src = src
@@ -228,6 +260,8 @@ end
 --- DistantRun cmd [arg1 arg2 ...]
 command.run = function(input)
     input = command.parse_input(input)
+    paths_to_number(input.opts, {'timeout', 'interval'})
+
     local cmd = input.args[1]
     local cmd_args = vim.list_slice(input.args, 2, #input.args)
     local opts = {
