@@ -1272,6 +1272,8 @@ CHANGELOG                                                  *distant-changelog*
 
 Latest ~
 
+v0.1.1 ~
+
   * Fix `ssh.port` usage in |DistantLaunch| not converting from string -> u16
   * Add print & error output for launch and install command completion
   * Fix LSP start_client failing as checking for local executable fails for
