@@ -1,3 +1,4 @@
+local log = require('distant.log')
 local state = require('distant.state')
 local u = require('distant.utils')
 
@@ -9,9 +10,15 @@ local u = require('distant.utils')
 local function with_lib_and_session(cb)
     local lib = require('distant.lib')
 
+    local first_time = not lib.is_loaded()
     lib.load(function(success, res)
         if not success then
             return cb(tostring(res) or 'Failed to load distant.lib')
+        end
+
+        -- Initialize logging of rust module
+        if first_time then
+            log.init_lib(res)
         end
 
         if state.session then
@@ -77,7 +84,7 @@ local function make_fn(name, obj, input_ty)
                 ))
             end
 
-            local f = lib.utils.nvim_wrap_async(async_method)
+            local f = lib.utils.nvim_wrap_async(async_method, state.settings.poll_interval)
             f(obj or session, opts, function(success, res)
                 if not success then
                     return cb(tostring(res) or 'Unknown error occurred')

@@ -1,12 +1,13 @@
+local LIB_NAME = 'distant_lua'
 local REPO_URL = 'https://github.com/chipsenkbeil/distant'
 local RELEASE_API_ENDPOINT = 'https://api.github.com/repos/chipsenkbeil/distant/releases'
 local MAX_DOWNLOAD_CHOICES = 5
 
 local PLATFORM_LIB = {
-    ['windows:x86_64'] = 'distant_lua-win64.dll',
-    ['linux:x86_64'] = 'distant_lua-linux64-gnu.so',
-    ['macos:x86_64'] = 'distant_lua-macos-intel.dylib',
-    ['macos:arm'] = 'distant_lua-macos-arm.dylib',
+    ['windows:x86_64'] = LIB_NAME .. '-win64.dll',
+    ['linux:x86_64'] = LIB_NAME .. '-linux64-gnu.so',
+    ['macos:x86_64'] = LIB_NAME .. '-macos-intel.dylib',
+    ['macos:arm'] = LIB_NAME .. '-macos-arm.dylib',
 }
 
 -- From https://stackoverflow.com/a/23535333/3164172
@@ -375,9 +376,9 @@ local function download_library(cb)
 
         local dst = ROOT_DIR
         if vim.endswith(lib_name, 'dll') then
-            dst = dst .. SEP .. 'distant_lua.dll'
+            dst = dst .. SEP .. LIB_NAME .. '.dll'
         else
-            dst = dst .. SEP .. 'distant_lua.so'
+            dst = dst .. SEP .. LIB_NAME .. '.so'
         end
 
         return download(entry.url, dst, cb)
@@ -405,9 +406,9 @@ local function copy_library(path, cb)
     if path and #path > 0 then
         local dst = ROOT_DIR
         if vim.endswith(path, 'dll') then
-            dst = dst .. SEP .. 'distant_lua.dll'
+            dst = dst .. SEP .. LIB_NAME .. '.dll'
         else
-            dst = dst .. SEP .. 'distant_lua.so'
+            dst = dst .. SEP .. LIB_NAME .. '.so'
         end
 
         vim.loop.fs_copyfile(path, dst, function(err, success)
@@ -479,11 +480,11 @@ local function build_library(cb)
         local cargo_toml = tmpdir .. SEP .. 'distant-lua' .. SEP .. 'Cargo.toml'
         local release_lib = tmpdir .. SEP .. 'target' .. SEP .. 'release' .. SEP
         if HOST_OS == 'windows' then
-            release_lib = release_lib .. 'distant_lua.dll'
+            release_lib = release_lib .. LIB_NAME .. '.dll'
         elseif HOST_OS == 'macos' then
-            release_lib = release_lib .. 'libdistant_lua.dylib'
+            release_lib = release_lib .. 'lib' .. LIB_NAME .. '.dylib'
         else
-            release_lib = release_lib .. 'libdistant_lua.so'
+            release_lib = release_lib .. 'lib' .. LIB_NAME .. '.so'
         end
 
         -- Build release library
@@ -513,9 +514,9 @@ local function build_library(cb)
     end)
 end
 
---- Get the library if it is loaded, otherwise returns nil
+--- Get the library if it is available, otherwise returns nil
 local function get()
-    local success, lib = pcall(require, 'distant_lua')
+    local success, lib = pcall(require, LIB_NAME)
     if success then
         return lib
     end
@@ -523,7 +524,7 @@ end
 
 --- Returns true if the library is loaded, otherwise return false
 local function is_loaded()
-    return get() ~= nil
+    return package.loaded[LIB_NAME] ~= nil
 end
 
 --- Loads the library asynchronously, providing several options to install the library
@@ -547,14 +548,14 @@ local function load(opts, cb)
 
     -- If not reloading the library
     if not opts.reload then
-        local success, lib = pcall(require, 'distant_lua')
+        local success, lib = pcall(require, LIB_NAME)
         if success then
             return cb(success, lib)
         end
 
     -- If reloading the library, clear it out
     else
-        package.loaded.distant_lua = nil
+        package.loaded[LIB_NAME] = nil
     end
 
     local prompt = opts.reload and
@@ -579,7 +580,7 @@ local function load(opts, cb)
             return cb(status, msg)
         end
 
-        return cb(pcall(require, 'distant_lua'))
+        return cb(pcall(require, LIB_NAME))
     end
 
     if choice == 1 then

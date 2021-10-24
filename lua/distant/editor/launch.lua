@@ -63,12 +63,18 @@ return function(opts, cb)
         end
     end
 
+    local first_time = not lib.is_loaded()
     lib.load(function(success, res)
         if not success then
             local msg = tostring(res)
             vim.api.nvim_err_writeln(msg)
             cb(false, msg)
             return
+        end
+
+        -- Initialize logging of rust module
+        if first_time then
+            log.init_lib(res)
         end
 
         local session

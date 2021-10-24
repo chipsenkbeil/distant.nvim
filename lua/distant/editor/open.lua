@@ -251,6 +251,7 @@ return function(opts)
 
     -- Retrieve information about our path
     local p = check_path(local_path, opts)
+    log.fmt_debug('retrieved path info for %s', p.path)
 
     -- Determine if we already have a buffer with the matching name
     local buf_name = 'distant://' .. p.path
@@ -265,6 +266,7 @@ return function(opts)
         -- Load content and either place it inside the provided buffer or create
         -- a new buffer in one is not provided (buf == -1)
         buf = load_content(p, buf, opts)
+        log.fmt_debug('loaded %s into buf %s', p.path, buf)
     end
 
     -- Reconfigure the buffer, setting its name and various properties as well as
