@@ -183,6 +183,20 @@ command.launch = function(input)
     end)
 end
 
+--- DistantConnect host=<host> port=<port> [opt1=..., opt2=...]
+command.connect = function(input)
+    input = command.parse_input(input)
+    paths_to_number(input.opts, {'port', 'timeout', 'interval'})
+
+    editor.connect(input.opts, function(success, msg)
+        if success then
+            print('Connected to ' .. input.opts.host)
+        else
+            vim.api.nvim_err_writeln(tostring(msg) or 'Connect failed without cause')
+        end
+    end)
+end
+
 --- DistantInstall [reload]
 command.install = function(input)
     input = command.parse_input(input)

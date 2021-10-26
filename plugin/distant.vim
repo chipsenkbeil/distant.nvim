@@ -16,6 +16,8 @@ command! -nargs=* DistantOpen
       \ lua require('distant.command').open(vim.fn.expand('<args>'))
 command! -nargs=* DistantLaunch
       \ lua require('distant.command').launch(vim.fn.expand('<args>'))
+command! -nargs=* DistantConnect
+      \ lua require('distant.command').connect(vim.fn.expand('<args>'))
 command! -nargs=* DistantMetadata
       \ lua require('distant.command').metadata(vim.fn.expand('<args>'))
 command! -nargs=* DistantInstall

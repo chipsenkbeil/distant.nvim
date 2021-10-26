@@ -267,6 +267,7 @@ end
 lsp.connect = function(buf)
     log.fmt_trace('distant.lsp.connect(%s)', buf)
     local path = v.buf.remote_path(buf)
+    log.fmt_trace('buf(%s) remote path = %s', buf, path)
 
     -- Only perform a connection if we have connected
     -- and have a remote path
@@ -275,7 +276,10 @@ lsp.connect = function(buf)
     -- start an LSP client once per session as well as
     -- attach it to a buffer only once (not on enter)
     if path ~= nil then
+        log.fmt_trace('lsp settings: %s', state.settings.lsp)
         for label, config in pairs(state.settings.lsp) do
+            log.fmt_trace('Checking if %s is in %s', path, config.root_dir)
+
             -- Only apply clients with a root directory that contains this file
             if vim.startswith(path, config.root_dir) then
                 log.fmt_trace('File %s is within %s of %s', path, config.root_dir, label)
