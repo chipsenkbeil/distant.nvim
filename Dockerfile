@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 alpine:3.14
+FROM --platform=linux/amd64 anatolelucet/neovim:0.5.0
 
 # Install all of the packages we need
 #
@@ -37,10 +37,6 @@ RUN rustup-init -y \
     && source /home/$user/.cargo/env \
     && rustup component add rls \
     && sudo ln -s $cargo_bin_dir/rls /usr/bin/rls
-
-# Install neovim 0.5 binary (from edge)
-RUN sudo apk add neovim \
-    --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community/
 
 # Install and configure sshd with key using empty password
 #

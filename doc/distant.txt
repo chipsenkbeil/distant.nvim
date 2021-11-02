@@ -11,8 +11,6 @@
        \▓▓▓▓▓▓▓ \▓▓▓▓▓▓ \▓▓▓▓▓▓    \▓▓   \▓▓   \▓▓\▓▓   \▓▓   \▓▓   
                                                               
 
-                          Version: 0.1.0
-
 ==============================================================================
                                                                 *distant.nvim*
 
@@ -235,6 +233,26 @@ DistantLaunch {host} {opts}                                    *DistantLaunch*
         :DistantLaunch example.com
         :DistantLaunch example.com mode=ssh
         :DistantLaunch example.com ssh.port=2222 distant.bin=/path/to/distant
+<
+
+DistantConnect {host} {port} {opts}                           *DistantConnect*
+
+    Attempts to connect to a running distant server at the specified
+    host and port.
+
+    Will prompt for the secret key used to communicate with the server.
+
+    Options: ~
+        {timeout}        (number)  maximum time in milliseconds before failing
+                                   (default: settings.max_timeout)
+        {interval}       (number)  approximate time in milliseconds between
+                                   each check to see if the operation completed
+                                   (default: settings.timeout_interval)
+
+    Examples: ~
+>
+        :DistantConnect example.com 2222
+        :DistantConnect example.com 2222 timeout=5000
 <
 
 DistantInstall [reload]                                       *DistantInstall*
@@ -1274,6 +1292,7 @@ Latest ~
 
   * Add logging initialization for distant lua shared library
   * Fix `poll_interval` to be properly applied when polling futures
+  * Add |DistantConnect| as new command alternative to |DistantLaunch|
 
 v0.1.1 ~
 
