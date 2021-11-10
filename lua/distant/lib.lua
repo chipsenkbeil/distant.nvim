@@ -527,6 +527,31 @@ local function is_loaded()
     return package.loaded[LIB_NAME] ~= nil
 end
 
+--- Returns object with loaded (bool) and errors (list of err strings)
+--- when attempting to a load a library
+---
+--- From https://stackoverflow.com/a/15434737
+local function try_load_lib(name)
+    local errors = {}
+
+    if package.loaded[name] then
+        return { loaded = true, errors = errors }
+    else
+        for _, searcher in ipairs(package.searchers or package.loaders) do
+            local success, loader = pcall(searcher, name)
+            if success then
+                if type(loader) == 'function' then
+                    package.preload[name] = loader
+                    return { loaded = true, errors = errors }
+                end
+            else
+                table.insert(errors, tostring(loader))
+            end
+        end
+        return { loaded = false, errors = errors }
+    end
+end
+
 --- Loads the library asynchronously, providing several options to install the library
 --- if it is unavailable
 ---
@@ -536,6 +561,8 @@ end
 --- @param opts table
 --- @param cb function (bool, lib|err) where bool = true on success and lib would be second arg
 local function load(opts, cb)
+    local lib_status, err_msg
+
     if not cb then
         cb = opts
         opts = {}
@@ -548,6 +575,15 @@ local function load(opts, cb)
 
     -- If not reloading the library
     if not opts.reload then
+        lib_status = try_load_lib(LIB_NAME)
+        if not lib_status.loaded and not vim.tbl_isempty(lib_status.errors) then
+            err_msg = ''
+            for _, err in ipairs(lib_status.errors) do
+                err_msg = err_msg .. err
+            end
+            return cb(false, err_msg)
+        end
+
         local success, lib = pcall(require, LIB_NAME)
         if success then
             return cb(success, lib)
@@ -578,6 +614,15 @@ local function load(opts, cb)
     local on_installed = function(status, msg)
         if not status then
             return cb(status, msg)
+        end
+
+        lib_status = try_load_lib(LIB_NAME)
+        if not lib_status.loaded and not vim.tbl_isempty(lib_status.errors) then
+            err_msg = ''
+            for _, err in ipairs(lib_status.errors) do
+                err_msg = err_msg .. err
+            end
+            return cb(false, err_msg)
         end
 
         return cb(pcall(require, LIB_NAME))

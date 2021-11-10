@@ -1293,6 +1293,8 @@ Latest ~
   * Add logging initialization for distant lua shared library
   * Fix `poll_interval` to be properly applied when polling futures
   * Add |DistantConnect| as new command alternative to |DistantLaunch|
+  * Fix failing to load Rust lua module getting masked by a prompt to
+    install the module when an error is encountered
 
 v0.1.1 ~
 
