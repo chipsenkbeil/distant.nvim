@@ -1290,6 +1290,8 @@ CHANGELOG                                                  *distant-changelog*
 
 Latest ~
 
+v0.1.2 ~
+
   * Add logging initialization for distant lua shared library
   * Fix `poll_interval` to be properly applied when polling futures
   * Add |DistantConnect| as new command alternative to |DistantLaunch|
