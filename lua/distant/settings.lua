@@ -6,6 +6,11 @@ local DEFAULT_LABEL = '*'
 
 -- Default settings to apply to any-and-all servers
 local DEFAULT_SETTINGS = {
+    -- Settings to apply to the local distant binary used as a client
+    client = {
+        bin = 'distant',
+    },
+
     -- Maximimum time to wait (in milliseconds) for requests to finish
     max_timeout = 15 * 1000,
 
