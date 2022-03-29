@@ -3,8 +3,8 @@ local fn = require('distant.fn')
 local lsp = require('distant.lsp')
 local log = require('distant.log')
 local state = require('distant.state')
-local u = require('distant.utils')
-local v = require('distant.vars')
+local utils = require('distant.utils')
+local vars = require('distant.vars')
 
 --- Applies neovim buffer-local mappings
 ---
@@ -127,7 +127,7 @@ local function load_buf_from_dir(path, buf, opts)
     local err, res = fn.read_dir(vim.tbl_extend('keep', {path = path}, opts))
     assert(not err, err)
 
-    local lines = u.filter_map(res.entries, function(entry)
+    local lines = utils.filter_map(res.entries, function(entry)
         if entry.depth > 0 then
             return entry.path
         end
@@ -194,8 +194,8 @@ local function configure_buf(args)
     end
 
     -- Add stateful information to the buffer, helping keep track of it
-    v.buf.set_remote_path(args.buf, args.path)
-    v.buf.set_remote_type(
+    vars.buf.set_remote_path(args.buf, args.path)
+    vars.buf.set_remote_type(
         args.buf,
         args.is_dir and 'dir' or 'file'
     )
@@ -247,7 +247,7 @@ return function(opts)
 
     vim.validate({opts = {opts, 'table'}})
 
-    local local_path = u.strip_prefix(path, 'distant://')
+    local local_path = utils.strip_prefix(path, 'distant://')
 
     -- Retrieve information about our path
     local p = check_path(local_path, opts)

@@ -1,6 +1,6 @@
 local log = require('distant.log')
-local s = require('distant.state')
-local u = require('distant.utils')
+local state = require('distant.state')
+local utils = require('distant.utils')
 
 --- Represents a client connected to a remote machine
 local client = {}
@@ -29,12 +29,15 @@ end
 ---
 --- Note that pre-release and pre-release ver are optional
 function client:version()
-    local raw_version = vim.fn.system(s.settings.binary_name .. ' --version')
+    local raw_version = vim.fn.system(state.settings.binary_name .. ' --version')
     if not raw_version then
         return nil
     end
 
-    local version_string = vim.trim(u.strip_prefix(vim.trim(raw_version), s.settings.binary_name))
+    local version_string = vim.trim(utils.strip_prefix(
+        vim.trim(raw_version),
+        state.settings.binary_name
+    ))
     if not version_string then
         return nil
     end
@@ -50,7 +53,7 @@ function client:version()
         version = {major, minor, patch}
     end
 
-    return u.filter_map(version, (function(v)
+    return utils.filter_map(version, (function(v)
         return tonumber(v) or v
     end))
 end
@@ -65,21 +68,21 @@ function client:start(opts)
     assert(not self:is_running(), 'client is already running!')
     opts = opts or {}
 
-    if vim.fn.executable(s.settings.binary_name) ~= 1 then
-        log.fmt_error('Executable %s is not on path', s.settings.binary_name)
+    if vim.fn.executable(state.settings.binary_name) ~= 1 then
+        log.fmt_error('Executable %s is not on path', state.settings.binary_name)
         return
     end
 
-    local session = s.session()
-    local args = u.build_arg_str(u.merge(opts, {
+    local session = state.session()
+    local args = utils.build_arg_str(utils.merge(opts, {
         interactive = true;
         format = 'json';
         session = 'pipe';
     }), {'on_exit'})
 
-    local cmd = vim.trim(s.settings.binary_name .. ' action ' .. args)
+    local cmd = vim.trim(state.settings.binary_name .. ' action ' .. args)
     log.fmt_debug('Client cmd: %s', cmd)
-    local handle = u.job_start(cmd, {
+    local handle = utils.job_start(cmd, {
         on_success = function()
             if type(opts.on_exit) == 'function' then
                 opts.on_exit(0)
@@ -108,7 +111,7 @@ function client:start(opts)
     if session ~= nil then
         log.trace('Sending session initialization line')
         handle.write(
-            'DISTANT DATA '
+            'DISTANT CONNECT '
             .. session.host
             .. ' '
             .. session.port
@@ -119,7 +122,7 @@ function client:start(opts)
     end
 
     self.__state = {
-        tenant = 'nvim_tenant_' .. u.next_id();
+        tenant = 'nvim_tenant_' .. utils.next_id();
         handle = handle;
         callbacks = {};
         registered = self.__state.registered;
@@ -159,7 +162,7 @@ function client:send(msgs, cb, opts)
     -- callback to process
     local full_msg = {
         tenant = self.__state.tenant;
-        id = u.next_id();
+        id = utils.next_id();
         payload = payload;
     }
 
@@ -177,7 +180,7 @@ function client:send(msgs, cb, opts)
     end
     self.__state.callbacks[full_msg.id] = callback
 
-    local json = u.compress(vim.fn.json_encode(full_msg)) .. '\n'
+    local json = utils.compress(vim.fn.json_encode(full_msg)) .. '\n'
     self.__state.handle.write(json)
 end
 
@@ -187,9 +190,9 @@ end
 function client:send_wait(msgs, opts)
     opts = opts or {}
     log.fmt_trace('client:send_wait(%s, %s)', msgs, opts)
-    local tx, rx = u.oneshot_channel(
-        opts.timeout or s.settings.max_timeout,
-        opts.interval or s.settings.timeout_interval
+    local tx, rx = utils.oneshot_channel(
+        opts.timeout or state.settings.max_timeout,
+        opts.interval or state.settings.timeout_interval
     )
 
     self:send(msgs, function(data)
@@ -205,7 +208,7 @@ end
 function client:send_wait_ok(msgs, opts)
     opts = opts or {}
     log.fmt_trace('client:send_wait_ok(%s, %s)', msgs, opts)
-    local timeout = opts.timeout or s.settings.max_timeout
+    local timeout = opts.timeout or state.settings.max_timeout
     local result = self:send_wait(msgs, opts)
     if result == nil then
         log.fmt_error('Max timeout (%s) reached waiting for result', timeout)
@@ -223,7 +226,7 @@ end
 ---
 --- Returns an id tied to the registered callback
 function client:register_broadcast(cb)
-    local id = u.next_id()
+    local id = utils.next_id()
     self.__state.registered['cb_' .. id] = cb
     return id
 end

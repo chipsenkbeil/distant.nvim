@@ -4,6 +4,8 @@ local ui = require('distant.ui')
 
 --- Opens a new window to display system info
 ---
+--- @alias opts {timeout: number, interval: number}
+--- @param opts opts Options to use for displaying system info
 --- @param opts.timeout number Maximum time to wait for a response (optional)
 --- @param opts.interval number Time in milliseconds to wait between checks for a response (optional)
 return function(opts)

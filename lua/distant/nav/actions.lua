@@ -1,8 +1,8 @@
 local editor = require('distant.editor')
 local log = require('distant.log')
 local fn = require('distant.fn')
-local u = require('distant.utils')
-local v = require('distant.vars')
+local utils = require('distant.utils')
+local vars = require('distant.vars')
 
 local actions = {}
 
@@ -14,9 +14,9 @@ end
 
 --- Returns the full path under cursor by joining it with the base path
 local function full_path_under_cursor()
-    local base_path = v.buf.remote_path()
+    local base_path = vars.buf.remote_path()
     if base_path ~= nil then
-        return u.join_path(base_path, path_under_cursor())
+        return utils.join_path(base_path, path_under_cursor())
     end
 end
 
@@ -45,14 +45,14 @@ end
 actions.up = function(opts)
     opts = opts or {}
 
-    local base_path = v.buf.remote_path()
+    local base_path = vars.buf.remote_path()
     local reload = true
     if opts.reload ~= nil then
         reload = opts.reload
     end
 
     if base_path ~= nil then
-        local parent = u.parent_path(base_path)
+        local parent = utils.parent_path(base_path)
         if parent ~= nil then
             editor.open({path = parent, reload = reload})
         end
@@ -69,14 +69,14 @@ end
 actions.newfile = function(opts)
     opts = opts or {}
 
-    local base_path = v.buf.remote_path()
+    local base_path = vars.buf.remote_path()
     if base_path ~= nil then
         local name = opts.path or vim.fn.input('Name: ')
         if name == '' then
             return
         end
 
-        local path = u.join_path(base_path, name)
+        local path = utils.join_path(base_path, name)
         editor.open(path)
     end
 end
@@ -91,14 +91,14 @@ end
 actions.mkdir = function(opts)
     opts = opts or {}
 
-    local base_path = v.buf.remote_path()
+    local base_path = vars.buf.remote_path()
     if base_path ~= nil then
         local name = opts.path or vim.fn.input('Directory name: ')
         if name == '' then
             return
         end
 
-        local path = u.join_path(base_path, name)
+        local path = utils.join_path(base_path, name)
         local err = fn.create_dir({path = path, all = true})
 
         if not err then
@@ -119,7 +119,7 @@ end
 actions.rename = function(opts)
     opts = opts or {}
 
-    local base_path = v.buf.remote_path()
+    local base_path = vars.buf.remote_path()
     if base_path ~= nil then
         local old_path = full_path_under_cursor()
         if old_path ~= nil then
@@ -150,7 +150,7 @@ end
 actions.remove = function(opts)
     opts = opts or {}
 
-    local base_path = v.buf.remote_path()
+    local base_path = vars.buf.remote_path()
     if base_path ~= nil then
         local path = full_path_under_cursor()
         if path ~= nil then

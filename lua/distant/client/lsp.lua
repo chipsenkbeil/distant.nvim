@@ -1,6 +1,6 @@
-local s = require('distant.state')
-local u = require('distant.utils')
-local v = require('distant.vars')
+local state = require('distant.state')
+local utils = require('distant.utils')
+local vars = require('distant.vars')
 
 local log = require('distant.log')
 
@@ -32,10 +32,10 @@ lsp.start_client = function(config, opts)
         opts.quiet = true
     end
 
-    local session = assert(s.session, 'Session not yet established! Launch first!')
+    local session = assert(state.session, 'Session not yet established! Launch first!')
 
     -- Build our extra arguments for the distant binary
-    local args = vim.split(u.build_arg_str(opts), ' ', true)
+    local args = vim.split(utils.build_arg_str(opts), ' ', true)
 
     -- The command needs to be wrapped with a prefix that is our distant binary
     -- as we are running the actual lsp server remotely
@@ -58,7 +58,7 @@ lsp.start_client = function(config, opts)
 
     -- Provide our credentials as part of the initialization options so our proxy
     -- knows who to talk to and has access to do so
-    local init_options = u.merge(config.init_options or {}, {
+    local init_options = utils.merge(config.init_options or {}, {
         ['distant'] = {
             ['host'] = session.host;
             ['port'] = session.port;
@@ -69,7 +69,7 @@ lsp.start_client = function(config, opts)
     -- TODO: Followed this based on nvim-lspconfig, but don't yet understand
     --       the workspace configuration override
     local capabilities = config.capabilities or vim.lsp.protocol.make_client_capabilities();
-    capabilities = u.merge(capabilities, {
+    capabilities = utils.merge(capabilities, {
         workspace = {
           configuration = true,
         }
@@ -102,7 +102,7 @@ lsp.start_client = function(config, opts)
     -- Override the config's cmd, init_options, and capabilities
     -- as we take those existing config fields and alter them to work on
     -- a remote machine
-    local lsp_config = u.merge(
+    local lsp_config = utils.merge(
         config,
         {
             before_init = before_init;
@@ -124,7 +124,7 @@ end
 --- @param buf number Handle of the buffer where clients will attach
 lsp.connect = function(buf)
     log.fmt_trace('lsp.connect(%s)', buf)
-    local path = v.buf.remote_path(buf)
+    local path = vars.buf.remote_path(buf)
 
     -- Only perform a connection if we have connected
     -- and have a remote path
@@ -163,7 +163,7 @@ lsp.connect = function(buf)
                         -- Support lsp-specific opts
                         log.fmt_debug('Starting LSP %s', label)
                         local opts = config.opts or {}
-                        local id = lsp.start_client(u.merge(config, {on_exit = on_exit}), opts)
+                        local id = lsp.start_client(utils.merge(config, {on_exit = on_exit}), opts)
                         lsp.clients[label] = id
                     end
 

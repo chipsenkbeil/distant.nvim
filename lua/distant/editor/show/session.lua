@@ -1,13 +1,13 @@
 local log = require('distant.log')
 local state = require('distant.state')
 local ui = require('distant.ui')
-local u = require('distant.utils')
+local utils = require('distant.utils')
 
 --- Opens a new window to display session info
 return function()
     log.trace('editor.show.session()')
     local indent = '    '
-    local distant_buf_names = u.filter_map(vim.api.nvim_list_bufs(), function(buf)
+    local distant_buf_names = utils.filter_map(vim.api.nvim_list_bufs(), function(buf)
         local name = vim.api.nvim_buf_get_name(buf)
         if vim.startswith(name, 'distant://') then
             return indent .. '* ' .. string.sub(name, string.len('distant://') + 1)

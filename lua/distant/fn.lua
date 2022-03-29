@@ -1,4 +1,5 @@
 local log = require('distant.log')
+local msg = require('distant.client.msg')
 local state = require('distant.state')
 local u = require('distant.utils')
 
@@ -70,28 +71,27 @@ local function make_fn(name, obj, input_ty)
             cb = {cb, 'function'},
         })
 
-        with_lib_and_session(function(err, lib, session)
-            if err then
-                return cb(err)
+        local session = state.session
+        if not session then
+            return cb('Session not initialized')
+        end
+
+        local async_method = (obj or session)[name]
+        local async_method_type = type(async_method)
+        if async_method_type ~= 'function' then
+            return cb(string.format(
+                'type(%s.%s) should be function, but got %s',
+                obj and 'obj' or 'session', name, async_method_type
+            ))
+        end
+
+        local f = lib.utils.nvim_wrap_async(async_method, state.settings.poll_interval)
+        f(obj or session, opts, function(success, res)
+            if not success then
+                return cb(tostring(res) or 'Unknown error occurred')
             end
 
-            local async_method = (obj or session)[name]
-            local async_method_type = type(async_method)
-            if async_method_type ~= 'function' then
-                return cb(string.format(
-                    'type(%s.%s) should be function, but got %s',
-                    obj and 'obj' or 'session', name, async_method_type
-                ))
-            end
-
-            local f = lib.utils.nvim_wrap_async(async_method, state.settings.poll_interval)
-            f(obj or session, opts, function(success, res)
-                if not success then
-                    return cb(tostring(res) or 'Unknown error occurred')
-                end
-
-                return cb(false, res)
-            end)
+            return cb(false, res)
         end)
 
         -- If we have a receiver, this indicates that we are synchronous
@@ -166,6 +166,8 @@ end)({
     'spawn_lsp',
     'spawn_wait',
     'system_info',
+    'watch',
     'write_file',
     'write_file_text',
+    'unwatch',
 })
