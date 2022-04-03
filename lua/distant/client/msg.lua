@@ -319,7 +319,11 @@ local function convert_from_json_and_validate(value, info)
         tbl = vim.fn.json_decode(tbl)
     end
 
-    return tbl_validate(tbl, info)
+    if info ~= nil then
+        tbl = tbl_validate(tbl, info)
+    end
+
+    return tbl
 end
 
 --- Converts a msg into a JSON string (validates against info)
@@ -332,6 +336,26 @@ local function validate_and_convert_to_json(tbl, info)
 end
 
 local msg = {}
+
+--- Parses a response JSON string into a table
+---
+--- @param s string The JSON string to parse
+--- @return {tenant:string, id:number, origin_id:number, payload:{}}
+function msg.parse_response(s)
+    local tbl = s
+    if type(tbl) == 'string' then
+        tbl = vim.fn.json_decode(tbl)
+    end
+
+    vim.validate({
+        tenant={tbl['tenant'], 'string'},
+        id={tbl['id'], 'number'},
+        origin_id={tbl['origin_id'], 'number'},
+        payload={tbl['payload'], 'table'},
+    })
+
+    return tbl
+end
 
 -- Add specialty methods for each of the request types
 -- 1. Converting from JSON and then validating

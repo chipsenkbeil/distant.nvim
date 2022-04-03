@@ -1,0 +1,9 @@
+# Porting to distant 0.16+
+
+1. [ ] Re-add client
+2. [ ] Create a process wrapper for spawning a process and handling stdin, stdout, and stderr
+3. [ ] Create a watcher wrapper for watching a file and handling changes
+4. [ ] Add connect function (needs cli support)
+5. [ ] Add launch function that spawns new client
+5. [ ] Update editor.connect to use connect function
+6. [ ] Update editor.launch to use launch function

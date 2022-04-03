@@ -1,6 +1,12 @@
 local settings = require('distant.settings')
 
 local state = {
+    -- Contains active client
+    client = nil;
+
+    -- Contains all clients mapped by id
+    clients = {};
+
     -- Set default settings so we don't get nil access errors even when no
     -- launch call has been made yet
     settings = settings.default();
@@ -16,6 +22,9 @@ local state = {
 --- the given label
 state.load_settings = function(label)
     state.settings = settings.for_label(label)
+end
+
+state.load_client = function()
 end
 
 return state
