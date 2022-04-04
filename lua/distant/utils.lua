@@ -412,7 +412,7 @@ end
 ---
 --- @param timeout number is the milliseconds that rx will wait
 --- @param interval number is the milliseconds to wait inbetween checking for a message
---- @return function tx, function rx #tx sends the value and rx receives the value
+--- @return fun(...) tx, fun():string|nil, ... rx #tx sends the value and rx receives the value
 utils.oneshot_channel = function(timeout, interval)
     vim.validate({
         timeout = {timeout, 'number'},

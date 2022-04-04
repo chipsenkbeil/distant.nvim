@@ -24,7 +24,11 @@ state.load_settings = function(label)
     state.settings = settings.for_label(label)
 end
 
+--- Loads the active client, spawning a new client if one has not been started
+---
+--- @return Client
 state.load_client = function()
+    return state.client
 end
 
 return state

@@ -36,17 +36,18 @@ end
 --- `function(err|nil, data|nil)`. If no callback is provided, then this is
 --- will be invoked synchronously and return `err|nil, data|nil`
 ---
---- @param name string Name of the function on the session to call
+--- @param type string Type of request
 --- @param obj table|nil If provided, will wrap a function on the current obj
 ---        instead of the active session
 --- @param input_ty string|nil If provided, will be used to validate the input type
 ---        to the function, defaulting to 'function'
 --- @return function
-local function make_fn(name, obj, input_ty)
-    vim.validate({name = {name, 'string'}})
-    if not vim.endswith(name, '_async') then
-        name = name .. '_async'
-    end
+local function make_fn(params)
+    vim.validate({
+        name = {params.name, 'string', true},
+        type = {params.type, 'string'},
+        obj = {params.obj, 'table', true},
+    })
 
     return function(opts, cb)
         if type(opts) == 'function' and cb == nil then
@@ -67,7 +68,7 @@ local function make_fn(name, obj, input_ty)
         end
 
         vim.validate({
-            opts = {opts, input_ty or 'table'},
+            opts = {opts, 'table'},
             cb = {cb, 'function'},
         })
 
@@ -76,17 +77,19 @@ local function make_fn(name, obj, input_ty)
             return cb('Session not initialized')
         end
 
-        local async_method = (obj or session)[name]
+        local name = params.name or params.type
+        local async_method = (params.obj or session)[name]
         local async_method_type = type(async_method)
         if async_method_type ~= 'function' then
             return cb(string.format(
                 'type(%s.%s) should be function, but got %s',
-                obj and 'obj' or 'session', name, async_method_type
+                params.obj and 'obj' or 'session', name, async_method_type
             ))
         end
 
-        local f = lib.utils.nvim_wrap_async(async_method, state.settings.poll_interval)
-        f(obj or session, opts, function(success, res)
+        local client = state.load_client()
+        client:send()
+        f(params.obj or session, opts, function(success, res)
             if not success then
                 return cb(tostring(res) or 'Unknown error occurred')
             end
@@ -105,6 +108,28 @@ end
 -------------------------------------------------------------------------------
 -- FUNCTION API
 -------------------------------------------------------------------------------
+
+local api = {}
+
+api.append_file = make_fn('append_file')
+api.append_file_text = make_fn('append_file_text')
+api.copy = make_fn('copy')
+api.create_dir = make_fn('create_dir')
+api.exists = make_fn('exists')
+api.metadata = make_fn('metadata')
+api.read_dir = make_fn('read_dir')
+api.read_file = make_fn('read_file')
+api.read_file_text = make_fn('read_file_text')
+api.remove = make_fn('remove')
+api.rename = make_fn('rename')
+api.spawn = make_fn('spawn')
+api.spawn_lsp = make_fn('spawn_lsp')
+api.spawn_wait = make_fn('spawn_wait')
+api.system_info = make_fn('system_info')
+api.watch = make_fn('watch')
+api.write_file = make_fn('write_file')
+api.write_file_text = make_fn('write_file_text')
+api.unwatch = make_fn('unwatch')
 
 return (function(names)
     local api = {}

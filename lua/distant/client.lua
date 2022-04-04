@@ -3,6 +3,7 @@ local state = require('distant.state')
 local utils = require('distant.utils')
 
 --- Represents a client connected to a remote machine
+--- @class Client
 local client = {}
 client.__index = client
 
@@ -143,6 +144,10 @@ end
 --- Send one or more messages to the remote machine, invoking the provided callback with the
 --- response once it is received
 ---
+--- @param msgs table[]|table
+--- @param cb function
+--- @param opts? table
+---
 --- Supports the following options:
 ---
 --- * unaltered: when true, the callback will not be wrapped in the situation where there is
@@ -187,6 +192,10 @@ end
 --- Send one or more messages to the remote machine and wait synchronously for the result
 --- up to `timeout` milliseconds, checking every `interval` milliseconds for
 --- a result (default timeout = 1000, interval = 200)
+--
+--- @param msgs table[]|table
+--- @param opts? table
+--- @return table
 function client:send_wait(msgs, opts)
     opts = opts or {}
     log.fmt_trace('client:send_wait(%s, %s)', msgs, opts)
@@ -205,6 +214,10 @@ end
 --- Send one or more messages to the remote machine, wait synchronously for the result up
 --- to `timeout` milliseconds, checking every `interval` milliseconds for a
 --- result (default timeout = 1000, interval = 200), and report an error if not okay
+---
+--- @param msgs table[]|table
+--- @param opts? table
+--- @return table|nil
 function client:send_wait_ok(msgs, opts)
     opts = opts or {}
     log.fmt_trace('client:send_wait_ok(%s, %s)', msgs, opts)

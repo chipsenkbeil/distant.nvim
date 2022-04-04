@@ -335,7 +335,13 @@ local function validate_and_convert_to_json(tbl, info)
     return vim.fn.json_encode(tbl_validate(tbl, info))
 end
 
-local msg = {}
+--- @class Msg
+--- @field public req table<string, {from_json: function, to_json: function}>
+--- @field public res table<string, {from_json: function, to_json: function}>
+local msg = {
+    req = {},
+    res = {},
+}
 
 --- Parses a response JSON string into a table
 ---
@@ -361,14 +367,24 @@ end
 -- 1. Converting from JSON and then validating
 -- 2. Validating and converting into JSON
 for key, info in pairs(REQUEST) do
-    msg.req[key] = {
+    msg.req[key:lower()] = {
+        --- @param value string|table
+        --- @return table
         from_json = function(value) convert_from_json_and_validate(value, info) end,
+
+        --- @param tbl table
+        --- @return string
         to_json = function(tbl) validate_and_convert_to_json(tbl, info) end,
     }
 end
 for key, info in pairs(RESPONSE) do
-    msg.res[key] = {
+    msg.res[key:lower()] = {
+        --- @param value string|table
+        --- @return table
         from_json = function(value) convert_from_json_and_validate(value, info) end,
+
+        --- @param tbl table
+        --- @return string
         to_json = function(tbl) validate_and_convert_to_json(tbl, info) end,
     }
 end
