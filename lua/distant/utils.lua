@@ -38,25 +38,25 @@ utils.build_arg_str = function(args, ignore)
     return vim.trim(s)
 end
 
+--- @class JobHandle
+--- @field id function():string
+--- @field write function(data):void
+--- @field stop function():void
+
+--- @class JobStartOpts
+--- @field env? table<string, string> @a table of process environment variables
+--- @field on_stdout_line fun(line:string) @a function that is triggered once per line of stdout
+--- @field on_stderr_line fun(line:string) @a function that is triggered once per line of stderr
+--- @field on_success? fun() @a function that is triggered with no arguments once the job finishes successfully
+--- @field on_failure? fun(exit_code:number) @a function that is triggered with an exit code as the single argument once the job finishes unsuccessfully
+
 --- Start an async job using the given cmd and options
 ---
---- Options supports the following:
----
---- * env: table of process environment variables
---- * on_success: a function that is triggered with no arguments once the
----               job finishes successfully
---- * on_failure: a function that is triggered with an exit code as the single
----               argument once the job finishes unsuccessfully
---- * on_stdout_line: a function that is triggered once per line of stdout
---- * on_stderr_line: a function that is triggered once per line of stderr
----
---- Returned is a new table that contains two functions:
----
---- * id: a function that returns the id of the job
---- * write: a function that takes a string as the single argument to send to
----          the stdin of the running job
---- * stop: a function that takes no arguments and stops the running job
+--- @param cmd any
+--- @param opts? JobStartOpts
+--- @return JobHandle
 utils.job_start = function(cmd, opts)
+    --- @param cb fun(line:string)
     local function make_on_data(cb)
         local lines = {''}
         return function(_, data, _)
@@ -98,7 +98,7 @@ utils.job_start = function(cmd, opts)
         end
     end
 
-    local job_id =  vim.fn.jobstart(cmd, {
+    local job_id = vim.fn.jobstart(cmd, {
         env = opts.env;
         on_stdout = make_on_data(opts.on_stdout_line);
         on_stderr = make_on_data(opts.on_stderr_line);

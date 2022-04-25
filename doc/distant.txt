@@ -1104,20 +1104,7 @@ distant.fn.spawn({opts}, {cb})                              *distant.fn.spawn*
                                    otherwise acts as a blocking function,
                                    returning (err, text) where err is
                                    string|nil and text is string|nil
-        {status}       (function)  checks if process has completed, taking
-                                   taking optional callback as second arg
-                                   to return asynchronously when finished,
-                                   otherwise acts as a blocking function
-                                   returning (err, status) where err is
-                                   string|nil and status is Status|nil 
         {wait}         (function)  consumes process reference to wait for
-                                   the process to complete and yield its
-                                   exit status, taking an optional callback
-                                   to return asynchronously when finished,
-                                   yielding (err, res) where err is
-                                   string|nil and res is a table with two
-                                   values (success, optional exit code)
-        {output}       (function)  consumes process reference to wait for
                                    the process to complete and yield its
                                    output, taking an optional callback
                                    to return asynchronously when finished,
@@ -1130,10 +1117,6 @@ distant.fn.spawn({opts}, {cb})                              *distant.fn.spawn*
                                    where err is string|nil
         {abort}        (function)  aborts the process locally, meaning that
                                    the connection to the process is severed
-
-    Status: ~
-        {success}       (boolean)  true if process exited successfully
-        {exit_code}  (number|nil)  exit code if available
 
     Output: ~
         {success}       (boolean)  true if process exited successfully
