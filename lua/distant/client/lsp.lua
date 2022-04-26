@@ -3,15 +3,14 @@ local vars = require('distant.vars')
 
 local log = require('distant.log')
 
---- @class ClientLsp
---- @field start_client fun(config:table, opts:table):number
---- @field connect fun(buf:number)
-
 --- @param client Client
 --- @return ClientLsp
 return function(client)
+    --- @type ClientLsp
     local lsp = {
-        clients = {},
+        __state = {
+            clients = {}
+        }
     }
 
     --- Wraps `vim.lsp.start_client`, injecting necessary details to run the
@@ -153,10 +152,10 @@ return function(client)
                         log.fmt_trace('File %s of type %s applies to %s', path, buf_ft, label)
 
                         -- Start the client if it doesn't exist
-                        if lsp.clients[label] == nil then
+                        if lsp.__state.clients[label] == nil then
                             -- Wrap the exit so we can clear our id tracker
                             local on_exit = function(code, signal, client_id)
-                                lsp.clients[label] = nil
+                                lsp.__state.clients[label] = nil
 
                                 if code ~= 0 then
                                     log.fmt_error('Client terminated: %s', vim.lsp.client_errors[client_id])
@@ -171,11 +170,11 @@ return function(client)
                             log.fmt_debug('Starting LSP %s', label)
                             local opts = config.opts or {}
                             local id = lsp.start_client(utils.merge(config, {on_exit = on_exit}), opts)
-                            lsp.clients[label] = id
+                            lsp.__state.clients[label] = id
                         end
 
                         -- Attach to our buffer if it isn't already
-                        local client_id = lsp.clients[label]
+                        local client_id = lsp.__state.clients[label]
                         if not vim.lsp.buf_is_attached(client_id) then
                             log.fmt_debug('Attaching to buf %s for LSP %s', buf, label)
                             vim.lsp.buf_attach_client(buf, client_id)

@@ -46,11 +46,12 @@ local function msg_validate(msg, info)
 end
 
 --- @class ParseResponseOpts
---- @field payload table @The payload to parse
---- @field expected string|string[] @The type expected for the response
---- @field map? fun(payload:table, type:string, stop:fun()|nil):any @A function that takes the data from a matching result
+--- @field payload table #The payload to parse
+--- @field input table #The input used as the request to this response
+--- @field expected string|string[] #The type expected for the response
+--- @field map? fun(payload:table, type:string, input:table, stop:fun()|nil):any #A function that takes the data from a matching result
 ---             and returns a table in the form of {err, data}
---- @field stop? fun() @If called, will stop receiving future events for the origin of a response
+--- @field stop? fun() #If called, will stop receiving future events for the origin of a response
 
 --- Creates a table in the form of {err, data} when given a response with
 --- a singular payload entry
@@ -62,6 +63,7 @@ local function parse_response(opts)
     vim.validate({
         payload={opts.payload, 'table'},
         expected={opts.expected, {'string', 'table'}},
+        input={opts.input, 'table'},
         map={opts.map, 'function', true},
         stop={opts.stop, 'function', true},
     })
@@ -85,10 +87,10 @@ local function parse_response(opts)
 
     -- If just expecting an ok type, we just return true
     if expected and type == 'ok' then
-        return false, opts.map(true, type, opts.stop), opts.stop
+        return false, opts.map(true, type, opts.input, opts.stop), opts.stop
     -- For all other expected types, we return the payload data
     elseif expected then
-        return false, opts.map(data, type, opts.stop), opts.stop
+        return false, opts.map(data, type, opts.input, opts.stop), opts.stop
     -- If we get an error type, return its description if it has one
     elseif type == 'error' and data and data.description then
         return tostring(data.description), opts.stop
@@ -112,7 +114,7 @@ end
 --- @field client Client
 --- @field type string
 --- @field ret_type string|string[]
---- @field map? fun(data:table, type:string, stop:fun()):table #transform data before it is sent back through callback or return
+--- @field map? fun(data:table, type:string, input:table, stop:fun()):table #transform data before it is sent back through callback or return
 --- @field and_then? fun(args:AndThenArgs) #invoked with callback, giving control to trigger callback explicitly
 --- @field req_type? table #if provided, will use `vim.validate` on request client msg data
 --- @field res_type? table #if provided, will use `vim.validate` on resposne client msg data
@@ -261,6 +263,7 @@ return function(client)
     local api = {
         __state = {
             processes = {},
+            watchers = {},
         }
     }
 
@@ -422,7 +425,7 @@ return function(client)
             pty = {type = 'table', optional = true},
         },
         multi = true,
-        map = function(data, type, stop)
+        map = function(data, type, _, stop)
             -- NOTE: This callback will be triggered multiple times for
             --       different proc events; so, we need to handle them
             --       in specialized ways. The callback will only be
@@ -629,16 +632,18 @@ return function(client)
             except = {type = 'table', optional = true},
         },
         multi = true,
-        map = function(data, type, stop)
+        map = function(data, type, input, stop)
             return {
                 data = data,
                 type = type,
+                input = input,
                 stop = stop,
             }
         end,
         and_then = function(args)
             local err = args.err
             local data = args.data
+            local input = args.input
             local cb = args.cb
 
             if err then
@@ -646,13 +651,16 @@ return function(client)
             end
 
             -- If we get ok, that means the watch succeeded
-            -- and we want to store the stop function
+            -- and we want to create the watcher to return
             if data.type == 'ok' then
+                local watcher = {
+                    path = input.path,
+                }
 
             -- Otherwise, we got a changed event and want
-            -- to pass that along to our callback
+            -- to pass that along to our watcher
             else
-
+                return cb(false, data.data)
             end
         end,
     })

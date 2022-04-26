@@ -1,13 +1,24 @@
-local LIB_NAME = 'distant_lua'
+local utils = require('distant.utils')
+
 local REPO_URL = 'https://github.com/chipsenkbeil/distant'
 local RELEASE_API_ENDPOINT = 'https://api.github.com/repos/chipsenkbeil/distant/releases'
 local MAX_DOWNLOAD_CHOICES = 5
 
-local PLATFORM_LIB = {
-    ['windows:x86_64'] = LIB_NAME .. '-win64.dll',
-    ['linux:x86_64'] = LIB_NAME .. '-linux64-gnu.so',
-    ['macos:x86_64'] = LIB_NAME .. '-macos-intel.dylib',
-    ['macos:arm'] = LIB_NAME .. '-macos-arm.dylib',
+--- Mapping of {os}:{arch} to artifact under releases
+local PLATFORM_BIN = {
+    ['windows:x86_64']      = 'distant-win64.exe',
+    ['linux:x86_64']        = 'distant-linux64-gnu',
+    ['linux:x86_64:musl']   = 'distant-linux64-musl',
+    ['macos:x86_64']        = 'distant-macos',
+    ['macos:arm']           = 'distant-macos',
+}
+
+--- Mapping of downloaded binary to name we want to use on system
+local RENAME_BIN = {
+    ['distant-win64.exe']       = 'distant.exe',
+    ['distant-linux64-gnu']     = 'distant',
+    ['distant-linux64-musl']    = 'distant',
+    ['distant-macos']           = 'distant',
 }
 
 -- From https://stackoverflow.com/a/23535333/3164172
@@ -26,6 +37,13 @@ local make_path_parent_fn = function(sep)
     end
 end
 
+--- @class QueryReleaseApiOpts
+--- @field page? number #Page in release list to query, defaulting to first page
+--- @field per_page? number #Number of entries to query for a page
+
+--- @param opts QueryReleaseApiOpts
+--- @param cb fun(success:boolean, result:string|table)
+--- @return number #job-id on success, 0 on invalid arguments, -1 if unable to execute cmd
 local function query_release_api(opts, cb)
     if not cb then
         cb = opts
@@ -64,7 +82,7 @@ local function query_release_api(opts, cb)
     end
 
     local json_str, err
-    vim.fn.jobstart(cmd, {
+    return vim.fn.jobstart(cmd, {
         on_exit = function(_, exit_code)
             if exit_code ~= 0 then
                 cb(false, 'Exit ' .. tostring(exit_code) .. ': ' .. tostring(err))
@@ -83,9 +101,22 @@ local function query_release_api(opts, cb)
     })
 end
 
--- Retrieve entries in the form of
---
--- { url = '...', tag = '...', prerelease = false, description = '...' }
+--- @class QueryReleaseListOpts
+--- @field asset_name string #Name of the asset to look for in the release list
+--- @field page? number #Page in release list to query, defaulting to first page
+--- @field per_page? number #Number of entries to query for a page
+
+--- @class ReleaseEntry
+--- @field url string
+--- @field tag string
+--- @field description string
+--- @field draft boolean
+--- @field prerelease boolean
+
+--- Retrieve some subset of release entries
+--- @param opts QueryReleaseListOpts
+--- @param cb fun(success:boolean, res:string|ReleaseEntry[])
+--- @return number #job-id on success, 0 on invalid arguments, -1 if unable to execute cmd
 local function query_release_list(opts, cb)
     if not cb then
         cb = opts
@@ -96,11 +127,12 @@ local function query_release_list(opts, cb)
         error('opts.asset_name is required and must be a string')
     end
 
-    query_release_api(opts, function(success, res)
+    return query_release_api(opts, function(success, res)
         if not success then
             return cb(success, res)
         end
 
+        --- @type ReleaseEntry[]
         local entries = {}
         for _, item in ipairs(res) do
             local entry = {
@@ -143,7 +175,11 @@ local function query_release_list(opts, cb)
     end)
 end
 
--- Downloads src using curl, wget, or fetch and stores it at dst
+--- Downloads src using curl, wget, or fetch and stores it at dst
+--- @param src string
+--- @param dst string
+--- @param cb fun(success:boolean, err:string|nil)
+--- @return number #job-id on success, 0 on invalid arguments, -1 if unable to execute cmd
 local function download(src, dst, cb)
     local cmd
     if tonumber(vim.fn.executable('curl')) == 1 then
@@ -182,27 +218,12 @@ local function download(src, dst, cb)
     })
 end
 
--- Original from https://gist.github.com/soulik/82e9d02a818ce12498d1
---
--- Returns OS, arch
---
--- ### Operating Systems
---
--- * windows
--- * linux
--- * macos
--- * bsd
--- * solaris
--- * unknown
---
--- ### Architectures
---
--- * x86
--- * x86_64
--- * powerpc
--- * arm
--- * mips
--- * unknown
+--- @alias OperatingSystem 'windows'|'linux'|'macos'|'bsd'|'solaris'|'unknown'
+--- @alias Architecture 'x86'|'x86_64'|'powerpc'|'arm'|'mips'|'unknown'
+
+--- Original from https://gist.github.com/soulik/82e9d02a818ce12498d1
+---
+--- @return OperatingSystem, Architecture
 local function detect_os_arch()
     local raw_os_name, raw_arch_name = '', ''
 
@@ -271,6 +292,13 @@ local function detect_os_arch()
     return os_name, arch_name
 end
 
+--- @class PromptChoicesOpts
+--- @field prompt string
+--- @field choices string[]
+--- @field max_choices? number
+
+--- @param opts PromptChoicesOpts
+--- @return number|nil #Index of choice selected, or nil if quit
 local function prompt_choices(opts)
     vim.validate({opts = {opts, 'table'}})
     local prompt = opts.prompt
@@ -312,13 +340,17 @@ end
 -- Constants
 local HOST_OS, HOST_ARCH = detect_os_arch()
 local HOST_PLATFORM = HOST_OS .. ':' .. HOST_ARCH
-local SEP = HOST_OS == 'windows' and '\\' or '/'
+local SEP = utils.seperator()
 local ROOT_DIR = (function()
     -- script_path -> /path/to/lua/distant/
     -- up -> /path/to/lua
     local get_parent_path = make_path_parent_fn(SEP)
     return get_parent_path(script_path())
 end)()
+
+local function bin_path(opts)
+    return utils.data_path()
+end
 
 -- From https://www.lua.org/pil/19.3.html
 local function pair_by_keys(t, f)
@@ -335,57 +367,67 @@ local function pair_by_keys(t, f)
     return iter
 end
 
-local function download_library(cb)
-    local lib_name = PLATFORM_LIB[HOST_PLATFORM]
+--- @param bin_name? string #Name of binary artifact to download, defaulting to platform choice
+--- @param cb fun(success:boolean, err:string|nil)
+--- @return number #job-id on success, 0 on invalid arguments, -1 if unable to execute cmd
+local function download_binary(bin_name, cb)
+    if not cb then
+        cb = bin_name
+        bin_name = nil
+    end
 
-    if not lib_name then
+    bin_name = bin_name or PLATFORM_BIN[HOST_PLATFORM]
+
+    if not bin_name then
         local choices = {}
         local libs = {}
-        for platform, platform_lib in pair_by_keys(PLATFORM_LIB) do
+        for platform, platform_bin in pair_by_keys(PLATFORM_BIN) do
             table.insert(choices, platform)
-            table.insert(libs, platform_lib)
+            table.insert(libs, platform_bin)
         end
         local idx = prompt_choices({
             prompt = string.format('\nUnknown platform %s! Please select from the following:', HOST_PLATFORM),
             choices = choices,
         })
         if idx then
-            lib_name = libs[idx]
+            bin_name = libs[idx]
         end
     end
 
-    if not lib_name then
-        return cb(false, 'No library available for ' .. HOST_PLATFORM)
+    if not bin_name then
+        return cb(false, 'No binary available for ' .. HOST_PLATFORM)
     end
 
-    query_release_list({asset_name = lib_name}, function(success, res)
+    return query_release_list({asset_name = bin_name}, function(success, res)
         if not success then
             return cb(success, res)
         end
 
         local choices = vim.tbl_map(function(entry) return entry.description end, res)
         local choice = prompt_choices({
-            prompt = 'Which version of the library do you want?',
+            prompt = 'Which version of the binary do you want?',
             choices = choices,
             max_choices = MAX_DOWNLOAD_CHOICES,
         })
         local entry = res[choice]
         if not entry then
-            return cb(false, 'Cancelled selecting library version')
+            return cb(false, 'Cancelled selecting binary version')
         end
 
         local dst = ROOT_DIR
-        if vim.endswith(lib_name, 'dll') then
-            dst = dst .. SEP .. LIB_NAME .. '.dll'
+        if vim.endswith(bin_name, 'dll') then
+            dst = dst .. SEP .. bin_name .. '.dll'
         else
-            dst = dst .. SEP .. LIB_NAME .. '.so'
+            dst = dst .. SEP .. bin_name .. '.so'
         end
 
         return download(entry.url, dst, cb)
     end)
 end
 
-local function copy_library(path, cb)
+--- @param path? string
+--- @param cb fun(success:boolean, err:string|nil)
+local function copy_binary(path, cb)
     if not cb then
         cb = path
         path = nil
@@ -406,9 +448,9 @@ local function copy_library(path, cb)
     if path and #path > 0 then
         local dst = ROOT_DIR
         if vim.endswith(path, 'dll') then
-            dst = dst .. SEP .. LIB_NAME .. '.dll'
+            dst = dst .. SEP .. bin_name .. '.dll'
         else
-            dst = dst .. SEP .. LIB_NAME .. '.so'
+            dst = dst .. SEP .. bin_name .. '.so'
         end
 
         vim.loop.fs_copyfile(path, dst, function(err, success)
@@ -423,11 +465,13 @@ local function copy_library(path, cb)
             end)
         end)
     else
-        cb(false, 'Library path missing')
+        cb(false, 'binary path missing')
     end
 end
 
-local function clone_library(cb)
+--- @param cb fun(success:boolean, result:string)
+--- @return number #job-id on success, 0 on invalid arguments, -1 if unable to execute cmd
+local function clone_repository(cb)
     if tonumber(vim.fn.executable('git')) ~= 1 then
         return cb(false, 'git not found in path')
     end
@@ -460,8 +504,10 @@ local function clone_library(cb)
     })
 end
 
-local function build_library(cb)
-    return clone_library(function(success, tmpdir)
+--- @param cb fun(success:boolean, err:string|nil)
+--- @return number #job-id on success, 0 on invalid arguments, -1 if unable to execute cmd
+local function build_binary(cb)
+    return clone_repository(function(success, tmpdir)
         if not success then
             return vim.schedule(function()
                 cb(success, tmpdir)
@@ -480,14 +526,14 @@ local function build_library(cb)
         local cargo_toml = tmpdir .. SEP .. 'distant-lua' .. SEP .. 'Cargo.toml'
         local release_lib = tmpdir .. SEP .. 'target' .. SEP .. 'release' .. SEP
         if HOST_OS == 'windows' then
-            release_lib = release_lib .. LIB_NAME .. '.dll'
+            release_lib = release_lib .. bin_name .. '.dll'
         elseif HOST_OS == 'macos' then
-            release_lib = release_lib .. 'lib' .. LIB_NAME .. '.dylib'
+            release_lib = release_lib .. 'lib' .. bin_name .. '.dylib'
         else
-            release_lib = release_lib .. 'lib' .. LIB_NAME .. '.so'
+            release_lib = release_lib .. 'lib' .. bin_name .. '.so'
         end
 
-        -- Build release library
+        -- Build release binary
         local cmd = string.format('cargo build --release', cargo_toml)
         return vim.fn.termopen(cmd, {
             cwd = tmpdir .. SEP .. 'distant-lua',
@@ -503,7 +549,7 @@ local function build_library(cb)
                     vim.api.nvim_buf_delete(bufnr, {force = true})
 
                     vim.schedule(function()
-                        copy_library(release_lib, function(status, msg)
+                        copy_binary(release_lib, function(status, msg)
                             vim.fn.delete(tmpdir, 'rf')
                             cb(status, msg)
                         end)
@@ -514,21 +560,21 @@ local function build_library(cb)
     end)
 end
 
---- Get the library if it is available, otherwise returns nil
+--- Get the binary if it is available, otherwise returns nil
 local function get()
-    local success, lib = pcall(require, LIB_NAME)
+    local success, lib = pcall(require, bin_name)
     if success then
         return lib
     end
 end
 
---- Returns true if the library is loaded, otherwise return false
+--- Returns true if the binary is loaded, otherwise return false
 local function is_loaded()
-    return package.loaded[LIB_NAME] ~= nil
+    return package.loaded[bin_name] ~= nil
 end
 
 --- Returns object with loaded (bool) and errors (list of err strings)
---- when attempting to a load a library
+--- when attempting to a load a binary
 ---
 --- From https://stackoverflow.com/a/15434737
 local function try_load_lib(name)
@@ -552,11 +598,11 @@ local function try_load_lib(name)
     end
 end
 
---- Loads the library asynchronously, providing several options to install the library
+--- Loads the binary asynchronously, providing several options to install the binary
 --- if it is unavailable
 ---
 --- An option of `reload` can be provided to force prompts and remove any loaded instance
---- of the library.
+--- of the binary.
 ---
 --- @param opts table
 --- @param cb function (bool, lib|err) where bool = true on success and lib would be second arg
@@ -573,9 +619,9 @@ local function load(opts, cb)
     })
     opts.reload = not (not opts.reload)
 
-    -- If not reloading the library
+    -- If not reloading the binary
     if not opts.reload then
-        lib_status = try_load_lib(LIB_NAME)
+        lib_status = try_load_lib(bin_name)
         if not lib_status.loaded and not vim.tbl_isempty(lib_status.errors) then
             err_msg = ''
             for _, err in ipairs(lib_status.errors) do
@@ -584,19 +630,19 @@ local function load(opts, cb)
             return cb(false, err_msg)
         end
 
-        local success, lib = pcall(require, LIB_NAME)
+        local success, lib = pcall(require, bin_name)
         if success then
             return cb(success, lib)
         end
 
-    -- If reloading the library, clear it out
+    -- If reloading the binary, clear it out
     else
-        package.loaded[LIB_NAME] = nil
+        package.loaded[bin_name] = nil
     end
 
     local prompt = opts.reload and
-        'Reloading Rust library! What would you like to do?' or
-        'Rust library not found! What would you like to do?'
+        'Reloading Rust binary! What would you like to do?' or
+        'Rust binary not found! What would you like to do?'
 
     local choice = prompt_choices({
         prompt = prompt,
@@ -616,7 +662,7 @@ local function load(opts, cb)
             return cb(status, msg)
         end
 
-        lib_status = try_load_lib(LIB_NAME)
+        lib_status = try_load_lib(bin_name)
         if not lib_status.loaded and not vim.tbl_isempty(lib_status.errors) then
             err_msg = ''
             for _, err in ipairs(lib_status.errors) do
@@ -625,15 +671,15 @@ local function load(opts, cb)
             return cb(false, err_msg)
         end
 
-        return cb(pcall(require, LIB_NAME))
+        return cb(pcall(require, bin_name))
     end
 
     if choice == 1 then
-        return download_library(on_installed)
+        return download_binary(on_installed)
     elseif choice == 2 then
-        return build_library(on_installed)
+        return build_binary(on_installed)
     elseif choice == 3 then
-        return copy_library(on_installed)
+        return copy_binary(on_installed)
     end
 end
 

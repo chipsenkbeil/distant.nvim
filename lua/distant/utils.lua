@@ -2,6 +2,42 @@ local log = require('distant.log')
 
 local utils = {}
 
+local PLUGIN_NAME = 'distant.nvim'
+
+--- @return string
+utils.plugin_name = function() return PLUGIN_NAME end
+
+--- Represents the separator for use with local file system
+---
+--- From https://github.com/williamboman/nvim-lsp-installer/blob/main/lua/nvim-lsp-installer/path.lua
+local SEPARATOR = (function()
+    --- @diagnostic disable-next-line: undefined-global
+    if jit then
+        --- @diagnostic disable-next-line: undefined-global
+        local os = string.lower(jit.os)
+        if os == "linux" or os == "osx" or os == "bsd" then
+            return "/"
+        else
+            return "\\"
+        end
+    else
+        return package.config:sub(1, 1)
+    end
+end)()
+
+--- @return string
+utils.seperator = function() return SEPARATOR end
+
+--- Returns path to data directory for this plugin
+--- @return string
+utils.data_path = function()
+    return (
+        vim.fn.stdpath('data') ..
+        utils.seperator() ..
+        utils.plugin_name()
+    )
+end
+
 --- Builds an argument string by taking a table's keys and converting them
 --- into arguments:
 ---
