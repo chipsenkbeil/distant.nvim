@@ -1,5 +1,5 @@
 local log = require('distant.log')
-local u = require('distant.utils')
+local utils = require('distant.utils')
 
 --- @class Settings
 --- @field client ClientSettings
@@ -28,7 +28,9 @@ local DEFAULT_LABEL = '*'
 local DEFAULT_SETTINGS = {
     -- Settings to apply to the local distant binary used as a client
     client = {
-        bin = 'distant',
+        -- Will be filled in lazily
+        --- @type 'distant'|'distant.exe'
+        bin = nil,
     },
 
     -- Maximimum time to wait (in milliseconds) for requests to finish
@@ -61,12 +63,12 @@ local settings = {}
 --- settings to apply first before adding in server-specific settings
 ---
 --- @type table<string, Settings>
-local inner = { [DEFAULT_LABEL] = u.merge({}, DEFAULT_SETTINGS) }
+local inner = { [DEFAULT_LABEL] = utils.merge({}, DEFAULT_SETTINGS) }
 
 --- Merges current settings with provided, overwritting anything with provided
 --- @param other table<string, Settings> The other settings to include
 settings.merge = function(other)
-    inner = u.merge(inner, other)
+    inner = utils.merge(inner, other)
 end
 
 --- Returns a collection of labels contained by the settings
@@ -95,7 +97,7 @@ settings.for_label = function(label, no_default)
 
     local settings_for_label = specific
     if not no_default then
-        settings_for_label = u.merge(default, specific)
+        settings_for_label = utils.merge(default, specific)
     end
 
     return settings_for_label
@@ -104,7 +106,17 @@ end
 --- Retrieves settings that apply to any remote machine
 --- @return Settings @The settings to apply to any remote machine (or empty table)
 settings.default = function()
-    return inner[DEFAULT_LABEL] or {}
+    local tbl = inner[DEFAULT_LABEL] or {}
+
+    -- Lazily determine the default binary if not configured
+    if not tbl.client.bin then
+        local os_name = utils.detect_os_arch()
+        tbl.client.bin = os_name == 'windows' and
+            'distant.exe' or
+            'distant'
+    end
+
+    return tbl
 end
 
 --- Retrieve settings with opinionated configuration for Chip's usage

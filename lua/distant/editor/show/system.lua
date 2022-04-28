@@ -2,12 +2,12 @@ local fn = require('distant.fn')
 local log = require('distant.log')
 local ui = require('distant.ui')
 
+--- @class EditorShowSystemOpts
+--- @field timeout? number #Maximum time to wait for a response
+--- @field interval? number #Time in milliseconds to wait between checks for a response
+
 --- Opens a new window to display system info
----
---- @alias opts {timeout: number, interval: number}
---- @param opts opts Options to use for displaying system info
---- @param opts.timeout number Maximum time to wait for a response (optional)
---- @param opts.interval number Time in milliseconds to wait between checks for a response (optional)
+--- @param opts? EditorShowSystemOpts
 return function(opts)
     opts = opts or {}
     log.trace('editor.show.system(%s)', opts)

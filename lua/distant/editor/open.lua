@@ -41,11 +41,14 @@ local function apply_mappings(buf, mappings)
     end
 end
 
+--- @class EditorOpenCheckPathOpts
+--- @field timeout? number #Maximum time to wait for a response (optional)
+--- @field interval? number #Time in milliseconds to wait between checks for a response (optional)
+
 --- Checks a path to see if it exists, returning a table with information
 ---
 --- @param path string Path to directory to show
---- @param opts.timeout number Maximum time to wait for a response (optional)
---- @param opts.interval number Time in milliseconds to wait between checks for a response (optional)
+--- @param opts? EditorOpenCheckPathOpts
 --- @return table #Table containing `path`, `is_dir`, `is_file`, and `missing` fields
 local function check_path(path, opts)
     opts = opts or {}
@@ -221,17 +224,21 @@ local function configure_buf(args)
     end
 end
 
+--- @class EditorOpenOpts
+--- @field path string #Path to directory to show
+--- @field buf? number #If not -1 and number, will use this buffer number instead of looking for a buffer
+--- @field win? number #If not -1 and number, will use this window
+--- @field reload? boolean #If true, will reload the buffer even if already open
+--- @field timeout? number #Maximum time to wait for a response
+--- @field interval? number #Time in milliseconds to wait between checks for a response
+
 --- Opens the provided path in one of three ways:
 ---
 --- 1. If path points to a file, creates a new `distant` buffer with the contents
 --- 2. If path points to a directory, opens up a navigation interface
 --- 3. If path does not exist, opens a blank buffer that points to the file to be written
 ---
---- @param path string Path to directory to show
---- @param opts.buf number If not -1 and number, will use this buffer number instead of looking for a buffer
---- @param opts.reload boolean If true, will reload the buffer even if already open
---- @param opts.timeout number Maximum time to wait for a response (optional)
---- @param opts.interval number Time in milliseconds to wait between checks for a response (optional)
+--- @param opts? EditorOpenOpts
 --- @return number|nil #The handle of the created buffer for the remote file/directory, or nil if failed
 return function(opts)
     opts = opts or {}

@@ -656,6 +656,7 @@ return function(client)
                 local watcher = {
                     path = input.path,
                 }
+                api.__state.watchers[watcher.path] = watcher
 
             -- Otherwise, we got a changed event and want
             -- to pass that along to our watcher

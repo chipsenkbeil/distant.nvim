@@ -1,8 +1,16 @@
 local utils = require('distant.utils')
 
-local REPO_URL = 'https://github.com/chipsenkbeil/distant'
-local RELEASE_API_ENDPOINT = 'https://api.github.com/repos/chipsenkbeil/distant/releases'
-local MAX_DOWNLOAD_CHOICES = 5
+-------------------------------------------------------------------------------
+-- CONFIGURATION DEFAULTS
+-------------------------------------------------------------------------------
+
+local REPO_URL              = 'https://github.com/chipsenkbeil/distant'
+local RELEASE_API_ENDPOINT  = 'https://api.github.com/repos/chipsenkbeil/distant/releases'
+local MAX_DOWNLOAD_CHOICES  = 5
+
+-------------------------------------------------------------------------------
+-- MAPPINGS
+-------------------------------------------------------------------------------
 
 --- Mapping of {os}:{arch} to artifact under releases
 local PLATFORM_BIN = {
@@ -14,28 +22,22 @@ local PLATFORM_BIN = {
 }
 
 --- Mapping of downloaded binary to name we want to use on system
-local RENAME_BIN = {
+local DOWNLOAD_TO_LOCAL_BIN = {
     ['distant-win64.exe']       = 'distant.exe',
     ['distant-linux64-gnu']     = 'distant',
     ['distant-linux64-musl']    = 'distant',
     ['distant-macos']           = 'distant',
 }
 
--- From https://stackoverflow.com/a/23535333/3164172
---
--- Returns /abs/path/to/distant/lib/
-local function script_path()
-    local str = debug.getinfo(2, "S").source:sub(2)
-    return str:match("(.*[/\\])")
-end
+--- Mapping of type to local binary name we expect
+local BIN_NAME = {
+    WINDOWS = 'distant.exe',
+    UNIX    = 'distant',
+}
 
--- From https://github.com/nvim-lua/plenary.nvim/blob/master/lua/plenary/path.lua
-local make_path_parent_fn = function(sep)
-    local formatted = string.format("^(.+)%s[^%s]+", sep, sep)
-    return function(abs_path)
-        return abs_path:match(formatted)
-    end
-end
+-------------------------------------------------------------------------------
+-- INTERNAL GITHUB API
+-------------------------------------------------------------------------------
 
 --- @class QueryReleaseApiOpts
 --- @field page? number #Page in release list to query, defaulting to first page
@@ -176,9 +178,9 @@ local function query_release_list(opts, cb)
 end
 
 --- Downloads src using curl, wget, or fetch and stores it at dst
---- @param src string
---- @param dst string
---- @param cb fun(success:boolean, err:string|nil)
+--- @param src string #url to download from
+--- @param dst string #destination to store artifact
+--- @param cb fun(success:boolean, result:string) #where result is an error message or the binary path
 --- @return number #job-id on success, 0 on invalid arguments, -1 if unable to execute cmd
 local function download(src, dst, cb)
     local cmd
@@ -211,85 +213,11 @@ local function download(src, dst, cb)
                 vim.api.nvim_buf_delete(bufnr, {force = true})
 
                 vim.schedule(function()
-                    cb(true)
+                    cb(true, dst)
                 end)
             end
         end
     })
-end
-
---- @alias OperatingSystem 'windows'|'linux'|'macos'|'bsd'|'solaris'|'unknown'
---- @alias Architecture 'x86'|'x86_64'|'powerpc'|'arm'|'mips'|'unknown'
-
---- Original from https://gist.github.com/soulik/82e9d02a818ce12498d1
----
---- @return OperatingSystem, Architecture
-local function detect_os_arch()
-    local raw_os_name, raw_arch_name = '', ''
-
-    -- LuaJIT shortcut
-    if jit and jit.os and jit.arch then
-        raw_os_name = jit.os
-        raw_arch_name = jit.arch
-    else
-        -- is popen supported?
-        local popen_status, popen_result = pcall(io.popen, '')
-        if popen_status then
-            popen_result:close()
-            -- Unix-based OS
-            raw_os_name = io.popen('uname -s','r'):read('*l')
-            raw_arch_name = io.popen('uname -m','r'):read('*l')
-        else
-            -- Windows
-            local env_OS = os.getenv('OS')
-            local env_ARCH = os.getenv('PROCESSOR_ARCHITECTURE')
-            if env_OS and env_ARCH then
-                raw_os_name, raw_arch_name = env_OS, env_ARCH
-            end
-        end
-    end
-
-    raw_os_name = (raw_os_name):lower()
-    raw_arch_name = (raw_arch_name):lower()
-
-    local os_patterns = {
-        ['windows'] = 'windows',
-        ['linux'] = 'linux',
-        ['osx'] = 'macos',
-        ['mac'] = 'macos',
-        ['darwin'] = 'macos',
-        ['^mingw'] = 'windows',
-        ['^cygwin'] = 'windows',
-        ['bsd$'] = 'bsd',
-        ['SunOS'] = 'solaris',
-    }
-
-    local arch_patterns = {
-        ['^x86$'] = 'x86',
-        ['i[%d]86'] = 'x86',
-        ['amd64'] = 'x86_64',
-        ['x86_64'] = 'x86_64',
-        ['x64'] = 'x86_64',
-        ['Power Macintosh'] = 'powerpc',
-        ['^arm'] = 'arm',
-        ['^mips'] = 'mips',
-    }
-
-    local os_name, arch_name = 'unknown', 'unknown'
-
-    for pattern, name in pairs(os_patterns) do
-        if raw_os_name:match(pattern) then
-            os_name = name
-            break
-        end
-    end
-    for pattern, name in pairs(arch_patterns) do
-        if raw_arch_name:match(pattern) then
-            arch_name = name
-            break
-        end
-    end
-    return os_name, arch_name
 end
 
 --- @class PromptChoicesOpts
@@ -337,19 +265,26 @@ local function prompt_choices(opts)
     end
 end
 
--- Constants
-local HOST_OS, HOST_ARCH = detect_os_arch()
+-------------------------------------------------------------------------------
+-- CONSTANTS
+-------------------------------------------------------------------------------
+
+local HOST_OS, HOST_ARCH = utils.detect_os_arch()
 local HOST_PLATFORM = HOST_OS .. ':' .. HOST_ARCH
 local SEP = utils.seperator()
-local ROOT_DIR = (function()
-    -- script_path -> /path/to/lua/distant/
-    -- up -> /path/to/lua
-    local get_parent_path = make_path_parent_fn(SEP)
-    return get_parent_path(script_path())
+
+--- Represents the binary name to use based on the host operating system
+local HOST_BIN_NAME = (function()
+    if HOST_OS == 'windows' then
+        return BIN_NAME.WINDOWS
+    else
+        return BIN_NAME.UNIX
+    end
 end)()
 
-local function bin_path(opts)
-    return utils.data_path()
+--- @return string #Path to local binary
+local function bin_path()
+    return utils.data_path() .. SEP .. 'bin' .. SEP .. HOST_BIN_NAME
 end
 
 -- From https://www.lua.org/pil/19.3.html
@@ -367,8 +302,12 @@ local function pair_by_keys(t, f)
     return iter
 end
 
+-------------------------------------------------------------------------------
+-- INSTALL HELPERS
+-------------------------------------------------------------------------------
+
 --- @param bin_name? string #Name of binary artifact to download, defaulting to platform choice
---- @param cb fun(success:boolean, err:string|nil)
+--- @param cb fun(success:boolean, result:string) #where result is an error message or the binary path
 --- @return number #job-id on success, 0 on invalid arguments, -1 if unable to execute cmd
 local function download_binary(bin_name, cb)
     if not cb then
@@ -414,19 +353,12 @@ local function download_binary(bin_name, cb)
             return cb(false, 'Cancelled selecting binary version')
         end
 
-        local dst = ROOT_DIR
-        if vim.endswith(bin_name, 'dll') then
-            dst = dst .. SEP .. bin_name .. '.dll'
-        else
-            dst = dst .. SEP .. bin_name .. '.so'
-        end
-
-        return download(entry.url, dst, cb)
+        return download(entry.url, bin_path(), cb)
     end)
 end
 
 --- @param path? string
---- @param cb fun(success:boolean, err:string|nil)
+--- @param cb fun(success:boolean, result:string) #where result is an error message or the binary path
 local function copy_binary(path, cb)
     if not cb then
         cb = path
@@ -434,25 +366,11 @@ local function copy_binary(path, cb)
     end
 
     if not path then
-        local ext
-        if HOST_OS == 'windows' then
-            ext = 'dll'
-        elseif HOST_OS == 'macos' then
-            ext = 'dylib'
-        else
-            ext = 'so'
-        end
-        path = vim.fn.input('Path to "' .. ext .. '": ')
+        path = vim.fn.input('Path to binary: ')
     end
 
     if path and #path > 0 then
-        local dst = ROOT_DIR
-        if vim.endswith(path, 'dll') then
-            dst = dst .. SEP .. bin_name .. '.dll'
-        else
-            dst = dst .. SEP .. bin_name .. '.so'
-        end
-
+        local dst = bin_path()
         vim.loop.fs_copyfile(path, dst, function(err, success)
             vim.schedule(function()
                 if err then
@@ -460,16 +378,16 @@ local function copy_binary(path, cb)
                 elseif not success then
                     cb(false, 'Failed to copy ' .. path .. ' to ' .. dst)
                 else
-                    cb(true)
+                    cb(true, dst)
                 end
             end)
         end)
     else
-        cb(false, 'binary path missing')
+        cb(false, 'Binary path missing')
     end
 end
 
---- @param cb fun(success:boolean, result:string)
+--- @param cb fun(success:boolean, result:string) #where result is an error message or the repo path
 --- @return number #job-id on success, 0 on invalid arguments, -1 if unable to execute cmd
 local function clone_repository(cb)
     if tonumber(vim.fn.executable('git')) ~= 1 then
@@ -504,9 +422,18 @@ local function clone_repository(cb)
     })
 end
 
---- @param cb fun(success:boolean, err:string|nil)
+--- @class BuildBinaryOpts
+--- @field bin string
+
+--- @param opts BuildBinaryOpts
+--- @param cb fun(success:boolean, result:string) #where result is an error message or the binary path
 --- @return number #job-id on success, 0 on invalid arguments, -1 if unable to execute cmd
-local function build_binary(cb)
+local function build_binary(opts, cb)
+    if not cb then
+        cb = opts
+        opts = {}
+    end
+
     return clone_repository(function(success, tmpdir)
         if not success then
             return vim.schedule(function()
@@ -523,20 +450,21 @@ local function build_binary(cb)
         assert(bufnr ~= 0, 'Failed to create buffer')
         vim.api.nvim_win_set_buf(0, bufnr)
 
-        local cargo_toml = tmpdir .. SEP .. 'distant-lua' .. SEP .. 'Cargo.toml'
-        local release_lib = tmpdir .. SEP .. 'target' .. SEP .. 'release' .. SEP
+        -- $ROOT/distant/Cargo.toml
+        local cargo_toml = tmpdir .. SEP .. 'Cargo.toml'
+
+        -- $ROOT/distant/target/release/{bin}
+        local release_bin = tmpdir .. SEP .. 'target' .. SEP .. 'release' .. SEP
         if HOST_OS == 'windows' then
-            release_lib = release_lib .. bin_name .. '.dll'
-        elseif HOST_OS == 'macos' then
-            release_lib = release_lib .. 'lib' .. bin_name .. '.dylib'
+            release_bin = release_bin .. 'distant.exe'
         else
-            release_lib = release_lib .. 'lib' .. bin_name .. '.so'
+            release_bin = release_bin .. 'distant'
         end
 
         -- Build release binary
         local cmd = string.format('cargo build --release', cargo_toml)
         return vim.fn.termopen(cmd, {
-            cwd = tmpdir .. SEP .. 'distant-lua',
+            cwd = tmpdir,
             pty = true,
             on_exit = function(_, exit_code)
                 if exit_code ~= 0 then
@@ -549,9 +477,9 @@ local function build_binary(cb)
                     vim.api.nvim_buf_delete(bufnr, {force = true})
 
                     vim.schedule(function()
-                        copy_binary(release_lib, function(status, msg)
+                        copy_binary(release_bin, function(status, msg)
                             vim.fn.delete(tmpdir, 'rf')
-                            cb(status, msg)
+                            cb(status, msg or release_bin)
                         end)
                     end)
                 end
@@ -560,55 +488,40 @@ local function build_binary(cb)
     end)
 end
 
---- Get the binary if it is available, otherwise returns nil
-local function get()
-    local success, lib = pcall(require, bin_name)
-    if success then
-        return lib
-    end
-end
+-------------------------------------------------------------------------------
+-- PUBLIC API
+-------------------------------------------------------------------------------
 
 --- Returns true if the binary is loaded, otherwise return false
-local function is_loaded()
-    return package.loaded[bin_name] ~= nil
+--- @return boolean
+local function exists()
+    return vim.fn.executable(bin_path()) == 1
 end
 
---- Returns object with loaded (bool) and errors (list of err strings)
---- when attempting to a load a binary
----
---- From https://stackoverflow.com/a/15434737
-local function try_load_lib(name)
-    local errors = {}
-
-    if package.loaded[name] then
-        return { loaded = true, errors = errors }
-    else
-        for _, searcher in ipairs(package.searchers or package.loaders) do
-            local success, loader = pcall(searcher, name)
-            if success then
-                if type(loader) == 'function' then
-                    package.preload[name] = loader
-                    return { loaded = true, errors = errors }
-                end
-            else
-                table.insert(errors, tostring(loader))
-            end
-        end
-        return { loaded = false, errors = errors }
-    end
+--- Returns true if the binary is available on our path, even if not locally
+--- @return boolean
+local function available_on_path()
+    return vim.fn.executable(HOST_BIN_NAME) == 1
 end
 
---- Loads the binary asynchronously, providing several options to install the binary
---- if it is unavailable
----
---- An option of `reload` can be provided to force prompts and remove any loaded instance
---- of the binary.
----
---- @param opts table
---- @param cb function (bool, lib|err) where bool = true on success and lib would be second arg
-local function load(opts, cb)
-    local lib_status, err_msg
+--- Returns the name of the binary on the platform
+--- @return string
+local function bin_name()
+    return HOST_BIN_NAME
+end
 
+--- @class InstallOpts
+--- @field reinstall? boolean #If true, will force prompts and remove any previously-installed instance of the binary
+--- @field bin? string #If provided, will overwrite the name of the binary used
+--- @field prompt? string #If provided, used as prompt
+
+--- Installs the binary asynchronously if unavailable, providing several options to perform
+--- the installation
+---
+--- @param opts? InstallOpts
+--- @param cb fun(success:boolean, result:string)
+--- @return number #job-id on success, 0 on invalid arguments, -1 if unable to execute cmd
+local function install(opts, cb)
     if not cb then
         cb = opts
         opts = {}
@@ -617,39 +530,18 @@ local function load(opts, cb)
         opts={opts, 'table'},
         cb={cb, 'function'},
     })
-    opts.reload = not (not opts.reload)
+    opts.reinstall = not (not opts.reinstall)
 
-    -- If not reloading the binary
-    if not opts.reload then
-        lib_status = try_load_lib(bin_name)
-        if not lib_status.loaded and not vim.tbl_isempty(lib_status.errors) then
-            err_msg = ''
-            for _, err in ipairs(lib_status.errors) do
-                err_msg = err_msg .. err
-            end
-            return cb(false, err_msg)
-        end
-
-        local success, lib = pcall(require, bin_name)
-        if success then
-            return cb(success, lib)
-        end
-
-    -- If reloading the binary, clear it out
-    else
-        package.loaded[bin_name] = nil
-    end
-
-    local prompt = opts.reload and
-        'Reloading Rust binary! What would you like to do?' or
-        'Rust binary not found! What would you like to do?'
+    local prompt = opts.prompt or (opts.reinstall and
+        'Reinstalling local binary! What would you like to do?' or
+        'Local binary not found! What would you like to do?')
 
     local choice = prompt_choices({
         prompt = prompt,
         choices = {
-            'Download a prebuilt lib',
+            'Download a prebuilt binary',
             'Build from source',
-            'Copy local lib',
+            'Copy local binary',
         },
     })
 
@@ -657,34 +549,27 @@ local function load(opts, cb)
         return cb(false, 'Aborted choice prompt')
     end
 
-    local on_installed = function(status, msg)
-        if not status then
-            return cb(status, msg)
-        end
-
-        lib_status = try_load_lib(bin_name)
-        if not lib_status.loaded and not vim.tbl_isempty(lib_status.errors) then
-            err_msg = ''
-            for _, err in ipairs(lib_status.errors) do
-                err_msg = err_msg .. err
-            end
-            return cb(false, err_msg)
-        end
-
-        return cb(pcall(require, bin_name))
-    end
-
     if choice == 1 then
-        return download_binary(on_installed)
+        return download_binary(cb)
     elseif choice == 2 then
-        return build_binary(on_installed)
+        return build_binary(cb)
     elseif choice == 3 then
-        return copy_binary(on_installed)
+        return copy_binary(cb)
     end
 end
 
+--- @class ClientInstall
+--- @field available_on_path fun():boolean
+--- @field bin_name fun():string
+--- @field exists fun():boolean
+--- @field install fun(opts?: InstallOpts, cb:fun(success:boolean, err:string|nil)):number
+--- @field path fun():string
+
+--- @type ClientInstall
 return {
-    get = get,
-    is_loaded = is_loaded,
-    load = load,
+    available_on_path = available_on_path,
+    bin_name = bin_name,
+    exists = exists,
+    install = install,
+    path = bin_path,
 }

@@ -23,16 +23,22 @@ state.load_settings = function(label)
 end
 
 --- Loads the active client, spawning a new client if one has not been started
---- @param opts ClientNewOpts @Provided to newly-constructed client
---- @return Client
-state.load_client = function(opts)
+--- @param opts? ClientNewOpts #Provided to newly-constructed client
+--- @param cb fun(err:string|boolean, client:Client|nil)
+state.load_client = function(opts, cb)
     if not state.client then
-        local client = Client:new(opts)
-        state.clients[client.id] = client
-        state.client = client
+        return Client:install(opts, function(err, client)
+            if err then
+                return cb(err)
+            end
+
+            state.clients[client.id] = client
+            state.client = client
+            return cb(false, client)
+        end)
     end
 
-    return state.client
+    return cb(false, state.client)
 end
 
 return state

@@ -3,16 +3,17 @@ local state = require('distant.state')
 local utils = require('distant.utils')
 
 local api = require('distant.client.api')
+local install = require('distant.client.install')
 local lsp = require('distant.client.lsp')
 local term = require('distant.client.term')
 local errors = require('distant.client.errors')
 
 --- Represents a Client connected to a remote machine
 --- @class Client
---- @field id string @Represents an arbitrary unique id for the client
---- @field api ClientApi @General API to perform operations remotely
---- @field lsp ClientLsp @LSP API to spawn a process that behaves like an LSP server
---- @field term ClientTerm @Terminal API to spawn a process that behaves like a terminal
+--- @field id string #Represents an arbitrary unique id for the client
+--- @field api ClientApi #General API to perform operations remotely
+--- @field lsp ClientLsp #LSP API to spawn a process that behaves like an LSP server
+--- @field term ClientTerm #Terminal API to spawn a process that behaves like a terminal
 --- @field __state InternalState
 --- @field __settings InternalSettings
 local Client = {}
@@ -46,6 +47,7 @@ Client.__index = Client
 
 --- Creates a new instance of our client that is not yet connected
 --- @param opts? ClientNewOpts Options for use with our client
+--- @return Client
 function Client:new(opts)
     local instance = {}
     setmetatable(instance, Client)
@@ -68,6 +70,61 @@ function Client:new(opts)
         interval = opts.interval or state.settings.timeout_interval;
     }
     return instance
+end
+
+--- @class ClientInstallOpts
+--- @field bin? string
+--- @field timeout? number
+--- @field interval? number
+--- @field check_version? fun(version:ClientVersion):boolean
+
+--- Creates a client, checks if the binary is available on path, and
+--- installs the binary if it is not. Will also check the version and
+--- attempt to install the binary if the available version fails
+--- our check
+--- @param opts? ClientInstallOpts
+--- @param cb fun(err:string|boolean, client:Client|nil)
+function Client:install(opts, cb)
+    if not cb then
+        cb = opts
+        opts = {}
+    end
+
+    local client = Client:new(opts)
+    local has_bin = vim.fn.executable(client.__settings.bin) == 1
+    local check_version = opts.check_version
+
+    local function validate_client()
+        local ok = true
+        if check_version then
+            local version = client:version()
+            if not version then
+                return cb('Unable to detect binary version')
+            end
+            ok = check_version(version)
+        end
+
+
+        if ok then
+            vim.schedule(function() cb(false, client) end)
+        end
+
+        return ok
+    end
+
+    if has_bin and validate_client() then
+        return
+    end
+
+    return install.install(function(success, result)
+        if not success then
+            return cb(result)
+        else
+            -- Ensure that our client's internal binary has been set
+            client.__settings.bin = result
+            validate_client()
+        end
+    end)
 end
 
 --- Whether or not the client is connected to a remote server
@@ -106,10 +163,15 @@ function Client:session()
     return self.__state.session
 end
 
---- Retrieves the current version of the binary, returning it in the form
---- of {major, minor, patch, pre-release, pre-release-ver} or nil if not available.
----
---- Note that pre-release and pre-release ver are optional
+--- @class ClientVersion
+--- @field major number
+--- @field minor number
+--- @field patch number
+--- @field pre_release string|nil
+--- @field pre_release_version number
+
+--- Retrieves the current version of the binary, returning it  or nil if not available
+--- @return ClientVersion|nil
 function Client:version()
     local raw_version = vim.fn.system(self.__settings.bin .. ' --version')
     if not raw_version then
