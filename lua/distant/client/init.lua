@@ -211,7 +211,7 @@ end
 --- @field host string
 --- @field port? number
 --- @field on_exit? fun(exit_code:number)
---- @field connect? boolean | fun(exit_code:number) @If true, will connect after launching; if function, will be invoked when connection exits
+--- @field connect? boolean | fun(exit_code:number) #If true, will connect after launching; if function, will be invoked when connection exits
 
 --- Launches a server remotely and performs authentication with the remote server
 ---

@@ -2,7 +2,16 @@ local lib = require('distant.lib')
 local log = require('distant.log')
 local state = require('distant.state')
 
+--- @class EditorConnectOpts
+--- @field host string
+--- @field mode? 'distant'|'ssh'
+--- @field ssh? EditorLaunchSshOpts
+--- @field distant? EditorLaunchDistantOpts
+--- @field timeout? number
+--- @field interval? number
+
 --- Connects to a running distance binary on the remote machine
+--- @param opts EditorConnectOpts
 return function(opts, cb)
     opts = opts or {}
     cb = cb or function() end

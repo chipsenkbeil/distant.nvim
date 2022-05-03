@@ -18,8 +18,10 @@ local state = {
 }
 
 --- Loads into state the settings appropriate for the remote machine with the give label
+--- @return Settings
 state.load_settings = function(label)
     state.settings = settings.for_label(label)
+    return state.settings
 end
 
 --- Loads the active client, spawning a new client if one has not been started
