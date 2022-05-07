@@ -15,18 +15,10 @@ local MAX_DOWNLOAD_CHOICES  = 5
 --- Mapping of {os}:{arch} to artifact under releases
 local PLATFORM_BIN = {
     ['windows:x86_64']      = 'distant-win64.exe',
-    ['linux:x86_64']        = 'distant-linux64-gnu',
+    ['linux:x86_64:gnu']    = 'distant-linux64-gnu',
     ['linux:x86_64:musl']   = 'distant-linux64-musl',
     ['macos:x86_64']        = 'distant-macos',
     ['macos:arm']           = 'distant-macos',
-}
-
---- Mapping of downloaded binary to name we want to use on system
-local DOWNLOAD_TO_LOCAL_BIN = {
-    ['distant-win64.exe']       = 'distant.exe',
-    ['distant-linux64-gnu']     = 'distant',
-    ['distant-linux64-musl']    = 'distant',
-    ['distant-macos']           = 'distant',
 }
 
 --- Mapping of type to local binary name we expect
@@ -310,31 +302,47 @@ end
 --- @param cb fun(success:boolean, result:string) #where result is an error message or the binary path
 --- @return number #job-id on success, 0 on invalid arguments, -1 if unable to execute cmd
 local function download_binary(bin_name, cb)
+    --- @type string
+    local host_platform = HOST_PLATFORM
+
     if not cb then
         cb = bin_name
         bin_name = nil
     end
 
-    bin_name = bin_name or PLATFORM_BIN[HOST_PLATFORM]
-
-    if not bin_name then
-        local choices = {}
-        local libs = {}
-        for platform, platform_bin in pair_by_keys(PLATFORM_BIN) do
-            table.insert(choices, platform)
-            table.insert(libs, platform_bin)
-        end
+    -- If using linux and we don't have a bin_name, adjust our host platform
+    -- based on if they want gnu or musl
+    if HOST_OS == 'linux' then
+        local choices = {'gnu', 'musl'}
         local idx = prompt_choices({
-            prompt = string.format('\nUnknown platform %s! Please select from the following:', HOST_PLATFORM),
+            prompt = string.format('\nLinux detected! Please select from the following libc options:'),
             choices = choices,
         })
         if idx then
-            bin_name = libs[idx]
+            host_platform = host_platform .. ':' .. choices[idx]
+        end
+    end
+
+    bin_name = bin_name or PLATFORM_BIN[host_platform]
+
+    if not bin_name then
+        local choices = {}
+        local bins = {}
+        for platform, platform_bin in pair_by_keys(PLATFORM_BIN) do
+            table.insert(choices, platform)
+            table.insert(bins, platform_bin)
+        end
+        local idx = prompt_choices({
+            prompt = string.format('\nUnknown platform %s! Please select from the following:', host_platform),
+            choices = choices,
+        })
+        if idx then
+            bin_name = bins[idx]
         end
     end
 
     if not bin_name then
-        return cb(false, 'No binary available for ' .. HOST_PLATFORM)
+        return cb(false, 'No binary available for ' .. host_platform)
     end
 
     return query_release_list({asset_name = bin_name}, function(success, res)

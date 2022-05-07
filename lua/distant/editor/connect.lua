@@ -1,12 +1,10 @@
-local lib = require('distant.lib')
 local log = require('distant.log')
 local state = require('distant.state')
 
 --- @class EditorConnectOpts
 --- @field host string
---- @field mode? 'distant'|'ssh'
---- @field ssh? EditorLaunchSshOpts
---- @field distant? EditorLaunchDistantOpts
+--- @field port number
+--- @field key? string
 --- @field timeout? number
 --- @field interval? number
 
@@ -30,7 +28,7 @@ return function(opts, cb)
         error('opts.port should be number, but got ' .. port_type)
     end
 
-    local key = vim.fn.inputsecret('Enter distant key: ')
+    local key = opts.key or vim.fn.inputsecret('Enter distant key: ')
     if #key == 0 then
         error('key cannot be empty')
     end
@@ -40,34 +38,20 @@ return function(opts, cb)
     state.load_settings(opts.host)
     opts = vim.tbl_deep_extend('keep', opts, state.settings or {})
 
-    -- Clear any pre-existing session
-    state.session = nil
-
-    local first_time = not lib.is_loaded()
-    lib.load(function(success, res)
-        if not success then
-            local msg = tostring(res)
-            vim.api.nvim_err_writeln(msg)
-            cb(false, msg)
+    state.load_client(opts, function(err, client)
+        if err then
+            vim.api.nvim_err_writeln(err)
+            cb(err)
             return
         end
 
-        -- Initialize logging of rust module
-        if first_time then
-            log.init_lib(res)
-        end
-
-        local session
-        success, session = pcall(res.session.connect, opts)
-        if not success then
-            local msg = tostring(session)
-            vim.api.nvim_err_writeln(msg)
-            cb(false, msg)
-            return
-        end
-
-        state.session = session
-        state.sessions[opts.host] = session
-        cb(true)
+        client:connect({
+            session = {
+                host = opts.host,
+                port = opts.port,
+                key = opts.key,
+            }
+        })
+        cb(false, client)
     end)
 end

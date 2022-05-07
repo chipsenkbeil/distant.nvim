@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 anatolelucet/neovim:0.5.0
+FROM --platform=linux/amd64 anatolelucet/neovim:0.7.0
 
 # Install all of the packages we need
 #
@@ -60,19 +60,13 @@ RUN sudo apk add libc6-compat \
     && sudo ln -s /lib/libc.musl-x86_64.so.1 /lib/ld-linux-x86-64.so.2
 
 # Install distant binary and make sure its in a path for everyone
-ARG distant_release=https://github.com/chipsenkbeil/distant/releases/download/v0.15.0
+ARG distant_release=https://github.com/chipsenkbeil/distant/releases/download/v0.16.0
 RUN curl -L $distant_release/distant-linux64-musl > $cargo_bin_dir/distant \
     && chmod +x $cargo_bin_dir/distant \
     && sudo ln -s $cargo_bin_dir/distant /usr/local/bin/distant
 
-# Download the lua module so we can copy it into place
-RUN curl -fLo distant_lua.so --create-dirs $distant_release/distant_lua-linux64-musl.so
-
 # Install our repository within a subdirectory of home
 COPY --chown=$user . app/
-
-# Overwrite the distant_lua.so file to ensure it is the right format
-RUN mkdir -p app/lua/ && mv distant_lua.so app/lua/distant_lua.so
 
 # By default, this will run the ssh server
 CMD ["sudo", "/usr/sbin/sshd", "-D", "-e"]
