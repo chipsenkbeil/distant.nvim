@@ -5,7 +5,7 @@ local utils = require('distant.utils')
 local api = require('distant.client.api')
 local install = require('distant.client.install')
 local lsp = require('distant.client.lsp')
-local term = require('distant.client.term')
+-- local term = require('distant.client.term')
 local errors = require('distant.client.errors')
 
 --- Represents a Client connected to a remote machine
@@ -54,7 +54,7 @@ function Client:new(opts)
     instance.id = 'client_' .. tostring(utils.next_id())
     instance.api = api(instance)
     instance.lsp = lsp(instance)
-    instance.term = term(instance)
+    -- instance.term = term(instance)
 
     instance.__state = {
         tenant = nil;

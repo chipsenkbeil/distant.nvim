@@ -1,6 +1,5 @@
 local data = require('distant.data')
 local fn = require('distant.fn')
-local lsp = require('distant.lsp')
 local log = require('distant.log')
 local state = require('distant.state')
 local utils = require('distant.utils')
@@ -220,7 +219,11 @@ local function configure_buf(args)
         vim.cmd([[ filetype detect ]])
 
         -- Launch any associated LSP clients
-        lsp.connect(args.buf)
+        local err, client = state.load_client()
+        if err then
+            error(err)
+        end
+        client.lsp.connect(args.buf)
     end
 end
 

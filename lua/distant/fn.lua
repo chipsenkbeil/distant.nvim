@@ -4,9 +4,13 @@ local function make_fns(obj, names)
     for _, name in ipairs(names) do
         obj[name] = function(...)
             --- TODO: Support settings for load_client
-            local client = state.load_client()
-            local fn = client.api[name]
-            return fn(...)
+            local err, client = state.load_client()
+            if err then
+                error(err)
+            else
+                local fn = client.api[name]
+                return fn(...)
+            end
         end
     end
 

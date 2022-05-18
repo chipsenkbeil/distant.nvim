@@ -211,13 +211,13 @@ command.connect = function(input)
     end)
 end
 
---- DistantInstall [reload]
+--- DistantInstall [reinstall]
 command.install = function(input)
     input = command.parse_input(input)
-    local reload = input.args[1] == 'reload'
-    require('distant.lib').load({reload = reload}, function(success, msg)
+    local reinstall = input.args[1] == 'reinstall'
+    require('distant.client.install').install({reinstall = reinstall}, function(success, msg)
         if success then
-            print('Successfully installed Rust library')
+            print('Successfully installed Rust binary')
         else
             vim.api.nvim_err_writeln(tostring(msg) or 'Install failed without cause')
         end

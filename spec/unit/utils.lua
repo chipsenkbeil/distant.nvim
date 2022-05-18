@@ -1,5 +1,4 @@
 local c = require('spec.unit.config')
-local lib = require('distant.lib')
 local u = require('distant.utils')
 
 local utils = {}
@@ -18,13 +17,6 @@ utils.make_channel = function()
     end
 
     return done, wait
-end
-
--- Replaces `distant.lib.load(...)` such that it always returns the fake library
-utils.set_fake_lib = function(fake_lib)
-    lib.load = function(cb)
-        cb(true, fake_lib)
-    end
 end
 
 return utils

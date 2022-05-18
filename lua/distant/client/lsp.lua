@@ -139,7 +139,8 @@ return function(client)
         -- start an LSP client once per session as well as
         -- attach it to a buffer only once (not on enter)
         if path ~= nil then
-            for label, config in pairs(s.settings.lsp) do
+            local state = require('distant.state')
+            for label, config in pairs(state.settings.lsp) do
                 -- Only apply clients with a root directory that contains this file
                 if vim.startswith(path, config.root_dir) then
                     log.fmt_trace('File %s is within %s of %s', path, config.root_dir, label)

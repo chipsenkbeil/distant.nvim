@@ -1,5 +1,5 @@
-local Client = require('distant.client')
 local settings = require('distant.settings')
+local utils = require('distant.utils')
 
 --- @class State
 --- @field client Client|nil
@@ -26,10 +26,27 @@ end
 
 --- Loads the active client, spawning a new client if one has not been started
 --- @param opts? ClientNewOpts #Provided to newly-constructed client
---- @param cb fun(err:string|boolean, client:Client|nil)
+--- @param cb? fun(err:string|boolean, client:Client|nil)
+--- @return boolean|string|nil, Client|nil
 state.load_client = function(opts, cb)
+    if not cb and type(opts) == 'function' then
+        cb = opts
+        opts = {}
+    end
+
+    opts = opts or {}
+
+    local rx
+    if not cb then
+        cb, rx = utils.oneshot_channel(
+            opts.timeout or state.settings.max_timeout,
+            opts.interval or state.settings.timeout_interval
+        )
+    end
+
     if not state.client then
-        return Client:install(opts, function(err, client)
+        local Client = require('distant.client')
+        Client:install(opts, function(err, client)
             if err then
                 return cb(err)
             end
@@ -38,9 +55,16 @@ state.load_client = function(opts, cb)
             state.client = client
             return cb(false, client)
         end)
+    else
+        cb(false, state.client)
     end
 
-    return cb(false, state.client)
+
+    -- If we have a receiver, this indicates that we are synchronous
+    if rx then
+        local err1, err2, result = rx()
+        return err1 or err2, result
+    end
 end
 
 return state

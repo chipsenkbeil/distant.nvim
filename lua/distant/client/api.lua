@@ -187,7 +187,10 @@ local function make_fn(params)
 
         if params.req_type then
             for _, m in ipairs(msgs) do
-                local status, err = pcall(msg_validate, m, params.req_type)
+                local status, err = pcall(msg_validate, m, {
+                    type = params.type,
+                    data = params.req_type,
+                })
                 if not status then
                     -- Synchronous
                     if rx then
@@ -231,7 +234,10 @@ local function make_fn(params)
 
 
                 for _, m in ipairs(res_payload_data) do
-                    local status, err = pcall(msg_validate, m, params.res_type)
+                    local status, err = pcall(msg_validate, m, {
+                        type = params.type,
+                        data = params.res_type,
+                    })
                     if not status then
                         if stop then
                             stop()

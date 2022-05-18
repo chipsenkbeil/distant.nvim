@@ -1,6 +1,5 @@
 local config = require('spec.e2e.config')
 local editor = require('distant.editor')
-local lib = require('distant.lib')
 local state = require('distant.state')
 local settings = require('distant.settings')
 
@@ -52,33 +51,7 @@ local function initialize_session(opts)
     local timeout = opts.timeout or config.timeout
     local interval = opts.interval or config.timeout_interval
 
-    -- Verify that we have our C module library available as we will not be
-    -- interacting to acquire it during launch
-    local exists, err = pcall(require, 'distant_lua')
-    if not exists then
-        local msg = 'distant_lua library is not on path!'
-        if err then
-            msg = tostring(err)
-        end
-
-        error(msg)
-    end
-
-    -- Enable logging for the library
-    local log_file
-    lib.load(function(status, res)
-        if not status then
-            error(tostring(res))
-        end
-
-        local path = vim.fn.tempname()
-        res.log.init({
-            file = path,
-            level = 'trace',
-        })
-        log_file = path
-    end)
-    assert(vim.wait(10000, function() return log_file ~= nil end), 'Failed to initialize logging')
+    local log_file = vim.fn.tempname()
 
     -- Print out our log location and flush to ensure that it shows up in case we get stuck
     print('Logging initialized', log_file)
@@ -140,11 +113,11 @@ local function initialize_session(opts)
             ))
         end
     end)
-    local status = vim.fn.wait(timeout, function() return state.session ~= nil end, interval)
+    local status = vim.fn.wait(timeout, function() return state.client ~= nil end, interval)
 
     -- Validate that we were successful
     assert(status == 0, 'Session not received in time')
-    session = state.session
+    session = state.client:session()
     return session
 end
 
