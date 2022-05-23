@@ -176,6 +176,11 @@ local function make_fn(params)
             msgs = msg
         end
 
+        -- Inject our request type into the msg at root level
+        for _, m in ipairs(msgs) do
+            m['type'] = params.type
+        end
+
         -- Ensure that our parameters are actually the right type in case
         -- someone feeds in something weird like a string for opts or a
         -- boolean for the callback

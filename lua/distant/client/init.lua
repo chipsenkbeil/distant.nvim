@@ -2,6 +2,7 @@ local log = require('distant.log')
 local state = require('distant.state')
 local utils = require('distant.utils')
 
+local args = require('distant.client.args')
 local api = require('distant.client.api')
 local install = require('distant.client.install')
 local lsp = require('distant.client.lsp')
@@ -39,6 +40,8 @@ Client.__index = Client
 --- @field host string
 --- @field port number
 --- @field key string
+
+--- @alias LogLevel 'off'|'error'|'warn'|'info'|'debug'|'trace'
 
 --- @class ClientNewOpts
 --- @field bin? string
@@ -217,6 +220,7 @@ end
 ---
 --- @param opts LaunchOpts
 --- @param cb fun(err?:string, session?:Session)
+--- @return JobHandle|nil
 function Client:launch(opts, cb)
     log.fmt_debug('Authenticating with options: %s', opts)
     opts = opts or {}
@@ -230,6 +234,7 @@ function Client:launch(opts, cb)
         log.fmt_error('Executable %s is not on path', self.__settings.bin)
         return
     end
+
 
     --- @param ev table
     --- @param handle JobHandle
@@ -281,14 +286,17 @@ function Client:launch(opts, cb)
         return true
     end
 
+    -- TODO: opts contains a bunch of stuff that isn't valid for our CLI, so we need to
+    --       selectively build opts from things like "ssh", "mode", "distant", and "client"
+    print('opts ' .. vim.inspect(opts))
     local args = utils.build_arg_str(utils.merge(opts, {
-        interactive = true;
         format = 'json';
         session = 'pipe';
         port = tostring(opts.port);
-    }), {'host', 'port', 'on_exit'})
+    }), {'connect', 'host', 'port', 'on_exit'})
 
     local cmd = vim.trim(self.__settings.bin .. ' launch ' .. args .. ' ' .. opts.host)
+    print('cmd ' .. cmd)
     log.fmt_debug('Launch cmd: %s', cmd)
 
     local handle
@@ -310,6 +318,7 @@ function Client:launch(opts, cb)
             end
         end;
         on_stdout_line = function(line)
+            print('STDOUT LINE ' .. tostring(line))
             if line ~= nil and line ~= "" then
                 if vim.startswith(line, 'DISTANT CONNECT') then
                     local s = vim.trim(utils.strip_prefix(line, 'DISTANT CONNECT'))
@@ -334,16 +343,28 @@ function Client:launch(opts, cb)
             end
         end;
         on_stderr_line = function(line)
+            print('STDERR LINE ' .. tostring(line))
             if line ~= nil and line ~= "" then
                 log.error(line)
             end
         end
     })
+
+    return handle
 end
 
 --- @class ConnectOpts
 --- @field on_exit? fun(exit_code:number)
+--- @field method? 'distant'|'ssh'
 --- @field session Session
+--- @field ssh? ConnectSshOpts
+--- @field log_file? string
+--- @field log_level? LogLevel
+
+--- @class ConnectSshOpts
+--- @field host? string
+--- @field port? number
+--- @field user? string
 
 --- Connects this client to a remote server
 --- @param opts ConnectOpts
@@ -354,13 +375,24 @@ function Client:connect(opts)
 
     vim.validate({
         on_exit={opts.on_exit, 'function', true},
-        session={opts.session, 'table'}
+        session={opts.session, 'table'},
+        method={opts.method, 'string', true},
+        ssh={opts.ssh, 'table', true},
+        log_file={opts.log_file, 'string', true},
+        log_level={opts.log_level, 'string', true},
     })
     vim.validate({
         host={opts.session.host, 'string'},
         port={opts.session.port, 'number'},
         key={opts.session.key, 'string'},
     })
+    if opts.ssh then
+        vim.validate({
+            host={opts.ssh.host, 'string', true},
+            port={opts.ssh.port, 'number', true},
+            user={opts.ssh.user, 'string', true},
+        })
+    end
 
     if vim.fn.executable(self.__settings.bin) ~= 1 then
         log.fmt_error('Executable %s is not on path', self.__settings.bin)
@@ -369,6 +401,7 @@ function Client:connect(opts)
 
     local args = utils.build_arg_str(utils.merge(opts, {
         interactive = true;
+        method = opts.method or 'distant';
         format = 'json';
         session = 'pipe';
     }), {'on_exit', 'session'})
@@ -419,6 +452,7 @@ function Client:connect(opts)
 
     self.__state = {
         tenant = 'nvim_tenant_' .. utils.next_id();
+        session = opts.session;
         handle = handle;
         callbacks = {};
     }

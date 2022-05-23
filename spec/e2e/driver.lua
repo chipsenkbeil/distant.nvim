@@ -113,12 +113,15 @@ local function initialize_session(opts)
             ))
         end
     end)
-    local status = vim.fn.wait(timeout, function() return state.client ~= nil end, interval)
+    local status = vim.fn.wait(timeout, function()
+        return state.client ~= nil and state.client:is_connected()
+    end, interval)
+    assert(status == 0, 'Client not initialized in time')
 
-    -- Validate that we were successful
-    assert(status == 0, 'Session not received in time')
-    session = state.client:session()
-    return session
+    local client = state.client
+    assert(client:is_connected(), 'Client is not connected')
+
+    return client:session()
 end
 
 --- Initializes a driver for e2e tests
