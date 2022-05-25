@@ -101,15 +101,15 @@ local function initialize_session(opts)
         on_host_verify = function(_) return true end,
     }
     print('launch.mode', vim.inspect(launch_opts.mode))
-    editor.launch(launch_opts, function(status, msg)
-        if not status then
+    editor.launch(launch_opts, function(err, _)
+        if err then
             local desc = string.format(
                 'editor.launch({ host = %s, distant_bin = %s, distant_args = %s })',
                 host, distant_bin, vim.inspect(distant_args)
             )
             error(string.format(
                 'For %s, failed: %s',
-                desc, msg
+                desc, err
             ))
         end
     end)

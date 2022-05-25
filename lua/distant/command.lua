@@ -174,11 +174,11 @@ command.launch = function(input)
         return
     end
 
-    editor.launch(input.opts, function(success, msg)
-        if success then
+    editor.launch(input.opts, function(err, _)
+        if not err then
             print('Connected to ' .. host)
         else
-            vim.api.nvim_err_writeln(tostring(msg) or 'Launch failed without cause')
+            vim.api.nvim_err_writeln(tostring(err) or 'Launch failed without cause')
         end
     end)
 end
@@ -202,11 +202,11 @@ command.connect = function(input)
     local port = tonumber(input.args[2])
     input.opts.port = port
 
-    editor.connect(input.opts, function(success, msg)
-        if success then
+    editor.connect(input.opts, function(err)
+        if not err then
             print('Connected to ' .. host .. ':' .. tostring(port))
         else
-            vim.api.nvim_err_writeln(tostring(msg) or 'Connect failed without cause')
+            vim.api.nvim_err_writeln(tostring(err) or 'Connect failed without cause')
         end
     end)
 end

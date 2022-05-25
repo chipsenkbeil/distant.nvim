@@ -10,6 +10,7 @@ local state = require('distant.state')
 
 --- Connects to a running distance binary on the remote machine
 --- @param opts EditorConnectOpts
+--- @param cb fun(err:string|boolean, client:Client|nil)
 return function(opts, cb)
     opts = opts or {}
     cb = cb or function() end
