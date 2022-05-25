@@ -46,8 +46,27 @@ return function(opts, cb)
             return
         end
 
-        opts = vim.tbl_deep_extend('force', opts, {connect = true})
-        client:launch(opts, function(err2)
+        -- TODO: Use mode to distinguish distant and ssh
+        -- TODO: Support overriding on_authenticate and on_host_verify
+        client:launch({
+            connect             = true,
+
+            host                = opts.host,
+            port                = opts.ssh and opts.ssh.port,
+
+            no_shell            = not (opts.distant and opts.distant.use_login_shell),
+            distant             = opts.distant and opts.distant.bin,
+            extra_server_args   = opts.distant and opts.distant.args,
+            username            = opts.ssh and opts.ssh.user,
+
+            -- TODO: Support these extra settings
+            external_ssh        = nil,
+            identity_file       = nil,
+            log_file            = nil,
+            log_level           = nil,
+            shutdown_after      = nil,
+            ssh                 = nil,
+        }, function(err2)
             if err then
                 vim.api.nvim_err_writeln(err2)
                 cb(err2)

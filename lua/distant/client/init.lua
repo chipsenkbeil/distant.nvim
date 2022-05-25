@@ -2,7 +2,7 @@ local log = require('distant.log')
 local state = require('distant.state')
 local utils = require('distant.utils')
 
-local args = require('distant.client.args')
+local Args = require('distant.client.args')
 local api = require('distant.client.api')
 local install = require('distant.client.install')
 local lsp = require('distant.client.lsp')
@@ -215,6 +215,17 @@ end
 --- @field port? number
 --- @field on_exit? fun(exit_code:number)
 --- @field connect? boolean | fun(exit_code:number) #If true, will connect after launching; if function, will be invoked when connection exits
+---
+--- @field external_ssh? boolean
+--- @field no_shell? boolean
+--- @field distant? string
+--- @field extra_server_args? string
+--- @field identity_file? string
+--- @field log_file? string
+--- @field log_level? LogLevel
+--- @field shutdown_after? number
+--- @field ssh? string
+--- @field username? string
 
 --- Launches a server remotely and performs authentication with the remote server
 ---
@@ -235,71 +246,52 @@ function Client:launch(opts, cb)
         return
     end
 
-
-    --- @param ev table
-    --- @param handle JobHandle
-    --- @return boolean @true if okay, otherwise false
-    local on_event = function(ev, handle)
-        local type = ev.type
-        local msg = {}
-
-        if type == 'ssh_authenticate' then
-            if ev.username then
-                print('Authentication for ' .. ev.username)
-            end
-            if ev.instructions then
-                print(ev.instructions)
-            end
-
-            local answers = {}
-            for _, p in ipairs(ev.prompts) do
-                if p.echo then
-                    table.insert(answers, vim.fn.input(p.prompt))
-                else
-                    table.insert(answers, vim.fn.inputsecret(p.prompt))
-                end
-            end
-
-            msg = {
-                type = 'ssh_authenticate_answer',
-                answers = answers
-            }
-        elseif type == 'ssh_banner' then
-            print(ev.text)
-            return true
-        elseif type == 'ssh_host_verify' then
-            local answer = vim.fn.input(string.format('%s\nEnter [y/N]> ', ev.host))
-            msg = {
-                type = 'ssh_host_verify_answer',
-                answer = answer == 'y' or answer == 'Y' or answer == 'yes' or answer == 'YES'
-            }
-        elseif type == 'ssh_error' then
-            log.fmt_error('Authentication error: %s', ev)
-            return false
+    -- TODO: Support escaping single quotes in provided text
+    local wrap_args = function(text)
+        if vim.tbl_islist(text) then
+            text = table.concat(text, ' ')
         else
-            log.fmt_error('Unknown authentication event received: %s', ev.msg)
-            return false
+            text = tostring(text)
         end
 
-        local json = utils.compress(vim.fn.json_encode(msg)) .. '\n'
-        handle.write(json)
-        return true
+        local quote = '\''
+        text = vim.trim(text)
+
+        if not vim.startswith(text, quote) then
+            text = quote .. text
+        end
+
+        if not vim.endswith(text, quote) then
+            text = text .. quote
+        end
+
+        return text
     end
 
-    -- TODO: opts contains a bunch of stuff that isn't valid for our CLI, so we need to
-    --       selectively build opts from things like "ssh", "mode", "distant", and "client"
-    print('opts ' .. vim.inspect(opts))
-    local args = utils.build_arg_str(utils.merge(opts, {
-        format = 'json';
-        session = 'pipe';
-        port = tostring(opts.port);
-    }), {'connect', 'host', 'port', 'on_exit'})
+    local args = Args.launch(opts.host):set_from_tbl({
+        format              = 'json';
+        session             = 'pipe';
 
-    local cmd = vim.trim(self.__settings.bin .. ' launch ' .. args .. ' ' .. opts.host)
+        -- Optional user settings
+        external_ssh        = opts.external_ssh;
+        no_shell            = opts.no_shell;
+        distant             = opts.distant;
+        extra_server_args   = wrap_args(opts.extra_server_args);
+        identity_file       = opts.identity_file;
+        log_file            = opts.log_file;
+        log_level           = opts.log_level;
+        port                = opts.port and tostring(opts.port);
+        shutdown_after      = opts.shutdown_after;
+        ssh                 = opts.ssh;
+        username            = opts.username;
+    }):as_string()
+
+    local cmd = vim.trim(self.__settings.bin .. ' launch ' .. args)
     print('cmd ' .. cmd)
     log.fmt_debug('Launch cmd: %s', cmd)
 
-    local handle
+    local handle, is_connected
+    is_connected = false
     handle = utils.job_start(cmd, {
         on_success = function()
             if type(opts.on_exit) == 'function' then
@@ -320,7 +312,7 @@ function Client:launch(opts, cb)
         on_stdout_line = function(line)
             print('STDOUT LINE ' .. tostring(line))
             if line ~= nil and line ~= "" then
-                if vim.startswith(line, 'DISTANT CONNECT') then
+                if vim.startswith(line, 'DISTANT CONNECT') and not is_connected then
                     local s = vim.trim(utils.strip_prefix(line, 'DISTANT CONNECT'))
                     local tokens = vim.split(s, ' ', {plain = true, trimempty = true})
                     local session = {
@@ -336,9 +328,18 @@ function Client:launch(opts, cb)
                         self:connect({session = session, on_exit = opts.connect})
                     end
 
+                    -- NOTE: We have this flag for connection as for some reason the
+                    --       DISTANT CONNECT line shows up twice
+                    is_connected = true
+
                     cb(false, session)
                 else
-                    on_event(vim.fn.json_decode(line), handle)
+                    self:__auth_handler(
+                        vim.fn.json_decode(line),
+                        function(msg)
+                            handle.write(utils.compress(vim.fn.json_encode(msg)) .. '\n')
+                        end
+                    )
                 end
             end
         end;
@@ -399,16 +400,26 @@ function Client:connect(opts)
         return
     end
 
-    local args = utils.build_arg_str(utils.merge(opts, {
+    local args = Args.action():set_from_tbl({
         interactive = true;
-        method = opts.method or 'distant';
-        format = 'json';
-        session = 'pipe';
-    }), {'on_exit', 'session'})
+        method      = opts.method or 'distant';
+        format      = 'json';
+        session     = 'pipe';
+
+        -- Optional user settings
+        log_file    = opts.log_file;
+        log_level   = opts.log_level;
+        ssh_host    = opts.ssh and opts.ssh.host;
+        ssh_port    = opts.ssh and opts.ssh.port;
+        ssh_user    = opts.ssh and opts.ssh.user;
+    }):as_string()
 
     local cmd = vim.trim(self.__settings.bin .. ' action ' .. args)
     log.fmt_debug('Client cmd: %s', cmd)
-    local handle = utils.job_start(cmd, {
+
+    --- @type JobHandle
+    local handle
+    handle = utils.job_start(cmd, {
         on_success = function()
             if type(opts.on_exit) == 'function' then
                 opts.on_exit(0)
@@ -428,8 +439,16 @@ function Client:connect(opts)
             self:stop()
         end;
         on_stdout_line = function(line)
+            local msg
             if line ~= nil and line ~= "" then
-                self:__handler(vim.fn.json_decode(line))
+                msg = vim.fn.json_decode(line)
+                if self:__is_auth_msg(msg) then
+                    self:__auth_handler(msg, function(out)
+                        handle.write(utils.compress(vim.fn.json_encode(out)) .. '\n')
+                    end)
+                else
+                    self:__handler(msg)
+                end
             end
         end;
         on_stderr_line = function(line)
@@ -440,15 +459,20 @@ function Client:connect(opts)
     })
 
     -- Send our session initialization line
-    handle.write(
-        'DISTANT CONNECT '
-        .. opts.session.host
-        .. ' '
-        .. tostring(opts.session.port)
-        .. ' '
-        .. opts.session.key
-        .. '\n'
-    )
+    -- if we are using distant
+    --
+    -- TODO: Need to support ssh auth otherwise
+    if opts.method == 'distant' then
+        handle.write(
+            'DISTANT CONNECT '
+            .. opts.session.host
+            .. ' '
+            .. tostring(opts.session.port)
+            .. ' '
+            .. opts.session.key
+            .. '\n'
+        )
+    end
 
     self.__state = {
         tenant = 'nvim_tenant_' .. utils.next_id();
@@ -619,6 +643,71 @@ function Client:__handler(msg)
     else
         log.fmt_warn('Discarding message with origin %s as no callback exists', origin_id)
     end
+end
+
+--- Authentication event handler
+--- @param msg table
+--- @param reply fun(msg:table)
+--- @return boolean #true if okay, otherwise false
+function Client:__auth_handler(msg, reply)
+    local type = msg.type
+    local out
+
+    if type == 'ssh_authenticate' then
+        if msg.username then
+            print('Authentication for ' .. msg.username)
+        end
+        if msg.instructions then
+            print(msg.instructions)
+        end
+
+        local answers = {}
+        for _, p in ipairs(msg.prompts) do
+            if p.echo then
+                table.insert(answers, vim.fn.input(p.prompt))
+            else
+                table.insert(answers, vim.fn.inputsecret(p.prompt))
+            end
+        end
+
+        out = {
+            type = 'ssh_authenticate_answer',
+            answers = answers
+        }
+    elseif type == 'ssh_banner' then
+        print(msg.text)
+        return true
+    elseif type == 'ssh_host_verify' then
+        local answer = vim.fn.input(string.format('%s\nEnter [y/N]> ', msg.host))
+        out = {
+            type = 'ssh_host_verify_answer',
+            answer = answer == 'y' or answer == 'Y' or answer == 'yes' or answer == 'YES'
+        }
+    elseif type == 'ssh_error' then
+        log.fmt_error('Authentication error: %s', msg)
+        return false
+    else
+        log.fmt_error('Unknown authentication event received: %s', msg)
+        return false
+    end
+
+    if out then
+        reply(out)
+    end
+
+    return true
+end
+
+--- @param msg {type:string}
+--- @return boolean
+function Client:__is_auth_msg(msg)
+    return msg and type(msg.type) == 'string' and vim.tbl_contains({
+        'ssh_authenticate',
+        'ssh_banner',
+        'ssh_host_verify',
+        'ssh_host_verify_answer',
+        'ssh_error',
+    }, msg.type)
 end
 
 return Client

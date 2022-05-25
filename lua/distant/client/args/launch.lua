@@ -1,30 +1,69 @@
 local BaseArgs = require('distant.client.args.base')
 
 --- @class LaunchArgs: BaseArgs
-local LaunchArgs = BaseArgs:new()
+--- @field __host string
+local LaunchArgs = BaseArgs:new({allowed = {
+    'external-ssh',
+    'fail-if-socket-exists',
+    'foreground',
+    'no-shell',
+    'bind-server',
+    'distant',
+    'extra-server-args',
+    'format',
+    'identity-file',
+    'log-file',
+    'log-level',
+    'port',
+    'session',
+    'session-file',
+    'session-socket',
+    'shutdown-after',
+    'ssh',
+    'timeout',
+    'username',
+}})
+
+--- Creates new launch args
+--- @param host string
+--- @return LaunchArgs
+function LaunchArgs:new(host)
+    self.__host = host
+    return self
+end
+
+--- Returns args as a string for use in a cmd
+--- @return string
+function LaunchArgs:__tostring()
+    local s = BaseArgs.__tostring(self)
+    if #s > 0 then
+        s = s .. ' '
+    end
+    return s .. self.__host
+end
 
 --- Sets `--external-ssh`
 --- @return LaunchArgs
 function LaunchArgs:set_external_ssh()
-    return self:add('external-ssh')
+    return self:set('external-ssh')
 end
 
 --- Sets `--fail-if-socket-exists`
 --- @return LaunchArgs
 function LaunchArgs:set_fail_if_socket_exists()
-    return self:add('fail-if-socket-exists')
+    return self:set('fail-if-socket-exists')
 end
 
 --- Sets `--foreground`
 --- @return LaunchArgs
 function LaunchArgs:set_foreground()
-    return self:add('foreground')
+    return self:set('foreground')
 end
 
 --- Sets `--no-shell`
 --- @return LaunchArgs
 function LaunchArgs:set_no_shell()
-    return self:add('no-shell')
+    return self:set('no-shell')
 end
 
 --- Sets `--bind-server <value>`
@@ -32,7 +71,7 @@ end
 --- @return LaunchArgs
 function LaunchArgs:set_bind_server(value)
     vim.validate({value={value, 'string'}})
-    return self:add('bind-server', value)
+    return self:set('bind-server', value)
 end
 
 --- Sets `--distant <value>`
@@ -40,7 +79,7 @@ end
 --- @return LaunchArgs
 function LaunchArgs:set_distant(value)
     vim.validate({value={value, 'string'}})
-    return self:add('distant', value)
+    return self:set('distant', value)
 end
 
 --- Sets `--extra-server-args "<value> <sep> <by> <space>"`
@@ -54,7 +93,7 @@ function LaunchArgs:set_extra_server_args(value)
         svalue = tostring(value)
     end
 
-    return self:add('extra-server-args', svalue)
+    return self:set('extra-server-args', svalue)
 end
 
 --- Sets `--format <value>`
@@ -62,7 +101,7 @@ end
 --- @return LaunchArgs
 function LaunchArgs:set_format(value)
     vim.validate({value={value, 'string'}})
-    return self:add('format', value)
+    return self:set('format', value)
 end
 
 --- Sets `--identity-file <value>`
@@ -70,7 +109,7 @@ end
 --- @return LaunchArgs
 function LaunchArgs:set_identity_file(value)
     vim.validate({value={value, 'string'}})
-    return self:add('identity-file', value)
+    return self:set('identity-file', value)
 end
 
 --- Sets `--log-file <value>`
@@ -78,7 +117,7 @@ end
 --- @return LaunchArgs
 function LaunchArgs:set_log_file(value)
     vim.validate({value={value, 'string'}})
-    return self:add('log-file', value)
+    return self:set('log-file', value)
 end
 
 --- Sets `--log-level <value>`
@@ -86,7 +125,7 @@ end
 --- @return LaunchArgs
 function LaunchArgs:set_log_level(value)
     vim.validate({value={value, 'string'}})
-    return self:add('log-level', value)
+    return self:set('log-level', value)
 end
 
 --- Sets `--port <value>`
@@ -94,7 +133,7 @@ end
 --- @return LaunchArgs
 function LaunchArgs:set_port(value)
     vim.validate({value={value, 'number'}})
-    return self:add('port', tostring(value))
+    return self:set('port', tostring(value))
 end
 
 --- Sets `--session <value>`
@@ -102,7 +141,7 @@ end
 --- @return LaunchArgs
 function LaunchArgs:set_session(value)
     vim.validate({value={value, 'string'}})
-    return self:add('session', value)
+    return self:set('session', value)
 end
 
 --- Sets `--session-file <value>`
@@ -110,7 +149,7 @@ end
 --- @return LaunchArgs
 function LaunchArgs:set_session_file(value)
     vim.validate({value={value, 'string'}})
-    return self:add('session-file', value)
+    return self:set('session-file', value)
 end
 
 --- Sets `--session-socket <value>`
@@ -118,7 +157,7 @@ end
 --- @return LaunchArgs
 function LaunchArgs:set_session_socket(value)
     vim.validate({value={value, 'string'}})
-    return self:add('session-socket', value)
+    return self:set('session-socket', value)
 end
 
 --- Sets `--shutdown-after <value>`
@@ -126,7 +165,7 @@ end
 --- @return LaunchArgs
 function LaunchArgs:set_shutdown_after(value)
     vim.validate({value={value, 'number'}})
-    return self:add('shutdown-after', tostring(value))
+    return self:set('shutdown-after', tostring(value))
 end
 
 --- Sets `--ssh <value>`
@@ -134,7 +173,7 @@ end
 --- @return LaunchArgs
 function LaunchArgs:set_ssh(value)
     vim.validate({value={value, 'string'}})
-    return self:add('ssh', value)
+    return self:set('ssh', value)
 end
 
 --- Sets `--timeout <value>`
@@ -142,7 +181,7 @@ end
 --- @return LaunchArgs
 function LaunchArgs:set_timeout(value)
     vim.validate({value={value, 'number'}})
-    return self:add('timeout', tostring(value))
+    return self:set('timeout', tostring(value))
 end
 
 --- Sets `--username <value>`
@@ -150,7 +189,7 @@ end
 --- @return LaunchArgs
 function LaunchArgs:set_username(value)
     vim.validate({value={value, 'string'}})
-    return self:add('username', value)
+    return self:set('username', value)
 end
 
 return LaunchArgs
