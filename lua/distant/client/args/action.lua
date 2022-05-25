@@ -21,6 +21,7 @@ local ActionArgs = BaseArgs:new({allowed = {
 --- @param subcommand? string
 --- @return ActionArgs
 function ActionArgs:new(subcommand)
+    self.__internal = {}
     self.__subcommand = subcommand
     return self
 end

@@ -333,7 +333,7 @@ function Client:launch(opts, cb)
                     is_connected = true
 
                     cb(false, session)
-                else
+                elseif not is_connected then
                     self:__auth_handler(
                         vim.fn.json_decode(line),
                         function(msg)

@@ -18,6 +18,7 @@ local ListenArgs = BaseArgs:new({allowed = {
 --- Creates new lsp args
 --- @return ListenArgs
 function ListenArgs:new()
+    self.__internal = {}
     return self
 end
 

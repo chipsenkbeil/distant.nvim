@@ -1,9 +1,7 @@
 --- @class BaseArgs
 --- @field __internal string[]
 --- @field __allowed table<string, boolean>|nil
-local BaseArgs = {
-    __internal = {}
-}
+local BaseArgs = {}
 
 --- @class BaseArgsNewOpts
 --- @field allowed? string[] #if provided, will restrict args set to only those in allowed list
@@ -16,6 +14,7 @@ function BaseArgs:new(opts)
     local instance = {}
     setmetatable(instance, self)
     self.__index = self
+    self.__internal = {}
 
     if vim.tbl_islist(opts.allowed) then
         self.__allowed = {}

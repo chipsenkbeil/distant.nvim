@@ -21,6 +21,7 @@ local ShellArgs = BaseArgs:new({allowed = {
 --- @param cmd? string #optional cmd to run instead of $TERM
 --- @return ShellArgs
 function ShellArgs:new(cmd)
+    self.__internal = {}
     self.__cmd = cmd
     return self
 end

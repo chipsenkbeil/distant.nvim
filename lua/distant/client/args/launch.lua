@@ -28,6 +28,7 @@ local LaunchArgs = BaseArgs:new({allowed = {
 --- @param host string
 --- @return LaunchArgs
 function LaunchArgs:new(host)
+    self.__internal = {}
     self.__host = host
     return self
 end

@@ -22,6 +22,7 @@ local LspArgs = BaseArgs:new({allowed = {
 --- @param cmd string
 --- @return LspArgs
 function LspArgs:new(cmd)
+    self.__internal = {}
     self.__cmd = cmd
     return self
 end
