@@ -49,10 +49,10 @@ local REQUEST = {
         type = 'dir_read',
         data = {
             path = 'string',
-            depth = {type = 'number', optional = true},
-            absolute = {type = 'boolean', optional = true},
-            canonicalize = {type = 'boolean', optional = true},
-            include_root = {type = 'boolean', optional = true},
+            depth = { type = 'number', optional = true },
+            absolute = { type = 'boolean', optional = true },
+            canonicalize = { type = 'boolean', optional = true },
+            include_root = { type = 'boolean', optional = true },
         },
     },
 
@@ -60,14 +60,14 @@ local REQUEST = {
         type = 'dir_create',
         data = {
             path = 'string',
-            all = {type = 'boolean', optional = true},
+            all = { type = 'boolean', optional = true },
         },
     },
 
     REMOVE = {
         type = 'remove',
         data = {
-            force = {type = 'boolean', optional = true},
+            force = { type = 'boolean', optional = true },
         },
     },
 
@@ -91,9 +91,9 @@ local REQUEST = {
         type = 'watch',
         data = {
             path = 'string',
-            recursive = {type = 'boolean', optional = true},
-            only = {type = 'table', optional = true},
-            except = {type = 'table', optional = true},
+            recursive = { type = 'boolean', optional = true },
+            only = { type = 'table', optional = true },
+            except = { type = 'table', optional = true },
         },
     },
 
@@ -115,8 +115,8 @@ local REQUEST = {
         type = 'metadata',
         data = {
             path = 'string',
-            canonicalize = {type = 'boolean', optional = true},
-            resolve_file_type = {type = 'boolean', optional = true},
+            canonicalize = { type = 'boolean', optional = true },
+            resolve_file_type = { type = 'boolean', optional = true },
         },
     },
 
@@ -124,9 +124,9 @@ local REQUEST = {
         type = 'proc_spawn',
         data = {
             cmd = 'string',
-            args = {type = 'table', optional = true},
-            persist = {type = 'boolean', optional = true},
-            pty = {type = 'table', optional = true},
+            args = { type = 'table', optional = true },
+            persist = { type = 'boolean', optional = true },
+            pty = { type = 'table', optional = true },
         },
     },
 
@@ -218,15 +218,15 @@ local RESPONSE = {
     METADATA = {
         type = 'metadata',
         data = {
-            canonicalized_path = {type = 'string', optional = true},
+            canonicalized_path = { type = 'string', optional = true },
             file_type = 'string',
             len = 'number',
             readonly = 'boolean',
-            accessed = {type = 'number', optional = true},
-            created = {type = 'number', optional = true},
-            modified = {type = 'number', optional = true},
-            unix = {type = 'table', optional = true},
-            windows = {type = 'table', optional = true},
+            accessed = { type = 'number', optional = true },
+            created = { type = 'number', optional = true },
+            modified = { type = 'number', optional = true },
+            unix = { type = 'table', optional = true },
+            windows = { type = 'table', optional = true },
         },
     },
 
@@ -258,7 +258,7 @@ local RESPONSE = {
         data = {
             id = 'number',
             success = 'boolean',
-            code = {type = 'number', optional = true},
+            code = { type = 'number', optional = true },
         },
     },
 
@@ -283,7 +283,7 @@ local RESPONSE = {
 
 local function tbl_validate(tbl, info)
     local opts = {
-        type = {tbl.type, 'string'},
+        type = { tbl.type, 'string' },
     }
 
     for key, value in pairs(info.data) do
@@ -294,7 +294,7 @@ local function tbl_validate(tbl, info)
             optional = value.optional
         end
 
-        opts[key] = {tbl[key], vtype, optional}
+        opts[key] = { tbl[key], vtype, optional }
     end
 
     -- Validate input types
@@ -354,10 +354,10 @@ function msg.parse_response(s)
     end
 
     vim.validate({
-        tenant={tbl['tenant'], 'string'},
-        id={tbl['id'], 'number'},
-        origin_id={tbl['origin_id'], 'number'},
-        payload={tbl['payload'], 'table'},
+        tenant = { tbl['tenant'], 'string' },
+        id = { tbl['id'], 'number' },
+        origin_id = { tbl['origin_id'], 'number' },
+        payload = { tbl['payload'], 'table' },
     })
 
     return tbl

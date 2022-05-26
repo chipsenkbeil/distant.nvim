@@ -126,22 +126,22 @@ settings.chip_default = function()
 
     return vim.tbl_deep_extend('keep', {
         distant = {
-            args = {'--shutdown-after', '60'},
+            args = { '--shutdown-after', '60' },
         },
         file = {
-          mappings = {
-            ['-']         = actions.up,
-          },
+            mappings = {
+                ['-'] = actions.up,
+            },
         },
         dir = {
-          mappings = {
-            ['<Return>']  = actions.edit,
-            ['-']         = actions.up,
-            ['K']         = actions.mkdir,
-            ['N']         = actions.newfile,
-            ['R']         = actions.rename,
-            ['D']         = actions.remove,
-          }
+            mappings = {
+                ['<Return>'] = actions.edit,
+                ['-']        = actions.up,
+                ['K']        = actions.mkdir,
+                ['N']        = actions.newfile,
+                ['R']        = actions.rename,
+                ['D']        = actions.remove,
+            }
         },
     }, settings.default())
 end

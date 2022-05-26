@@ -108,7 +108,7 @@ end
 local function load_buf_from_file(path, buf, opts)
     opts = opts or {}
     log.fmt_trace('load_buf_from_file(%s, %s, %s)', path, buf, opts)
-    local err, text = fn.read_file_text(vim.tbl_extend('keep', {path = path}, opts))
+    local err, text = fn.read_file_text(vim.tbl_extend('keep', { path = path }, opts))
     assert(not err, err)
 
     local lines
@@ -126,7 +126,7 @@ local function load_buf_from_dir(path, buf, opts)
     opts = opts or {}
     log.fmt_trace('load_buf_from_dir(%s, %s, %s)', path, buf, opts)
 
-    local err, res = fn.read_dir(vim.tbl_extend('keep', {path = path}, opts))
+    local err, res = fn.read_dir(vim.tbl_extend('keep', { path = path }, opts))
     assert(not err, err)
 
     local lines = utils.filter_map(res.entries, function(entry)
@@ -152,11 +152,11 @@ local function load_content(p, buf, opts)
     if p.is_dir then
         return load_buf_from_dir(p.path, buf, opts)
 
-    -- If path points to a file, load its contents as lines
+        -- If path points to a file, load its contents as lines
     elseif p.is_file then
         return load_buf_from_file(p.path, buf, opts)
 
-    -- Otherwise, we set ourselves up to create a new, empty file
+        -- Otherwise, we set ourselves up to create a new, empty file
     else
         return create_or_populate_buf(buf, {})
     end
@@ -186,7 +186,7 @@ local function configure_buf(args)
 
         apply_mappings(args.buf, state.settings.dir.mappings)
 
-    -- Otherwise, in all other cases we treat this as a remote file
+        -- Otherwise, in all other cases we treat this as a remote file
     else
         -- Mark the buftype as acwrite as you can still write to it, but we
         -- control where it is going
@@ -255,7 +255,7 @@ return function(opts)
         path = opts.path
     end
 
-    vim.validate({opts = {opts, 'table'}})
+    vim.validate({ opts = { opts, 'table' } })
 
     local local_path = utils.strip_prefix(path, 'distant://')
 

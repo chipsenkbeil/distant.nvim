@@ -4,9 +4,9 @@ local utils = require('distant.utils')
 -- CONFIGURATION DEFAULTS
 -------------------------------------------------------------------------------
 
-local REPO_URL              = 'https://github.com/chipsenkbeil/distant'
-local RELEASE_API_ENDPOINT  = 'https://api.github.com/repos/chipsenkbeil/distant/releases'
-local MAX_DOWNLOAD_CHOICES  = 5
+local REPO_URL             = 'https://github.com/chipsenkbeil/distant'
+local RELEASE_API_ENDPOINT = 'https://api.github.com/repos/chipsenkbeil/distant/releases'
+local MAX_DOWNLOAD_CHOICES = 5
 
 -------------------------------------------------------------------------------
 -- MAPPINGS
@@ -14,11 +14,11 @@ local MAX_DOWNLOAD_CHOICES  = 5
 
 --- Mapping of {os}:{arch} to artifact under releases
 local PLATFORM_BIN = {
-    ['windows:x86_64']      = 'distant-win64.exe',
-    ['linux:x86_64:gnu']    = 'distant-linux64-gnu',
-    ['linux:x86_64:musl']   = 'distant-linux64-musl',
-    ['macos:x86_64']        = 'distant-macos',
-    ['macos:arm']           = 'distant-macos',
+    ['windows:x86_64']    = 'distant-win64.exe',
+    ['linux:x86_64:gnu']  = 'distant-linux64-gnu',
+    ['linux:x86_64:musl'] = 'distant-linux64-musl',
+    ['macos:x86_64']      = 'distant-macos',
+    ['macos:arm']         = 'distant-macos',
 }
 
 --- Mapping of type to local binary name we expect
@@ -43,7 +43,7 @@ local function query_release_api(opts, cb)
         cb = opts
         opts = {}
     end
-    vim.validate({opts = {opts, 'table'}, cb = {cb, 'function'}})
+    vim.validate({ opts = { opts, 'table' }, cb = { cb, 'function' } })
 
     -- Build our query string of ?page=N&per_page=N
     local query = ''
@@ -116,7 +116,7 @@ local function query_release_list(opts, cb)
         cb = opts
         opts = {}
     end
-    vim.validate({opts = {opts, 'table'}, cb = {cb, 'function'}})
+    vim.validate({ opts = { opts, 'table' }, cb = { cb, 'function' } })
     if type(opts.asset_name) ~= 'string' then
         error('opts.asset_name is required and must be a string')
     end
@@ -202,7 +202,7 @@ local function download(src, dst, cb)
                 end)
             else
                 -- Close out the terminal window
-                vim.api.nvim_buf_delete(bufnr, {force = true})
+                vim.api.nvim_buf_delete(bufnr, { force = true })
 
                 vim.schedule(function()
                     cb(true, dst)
@@ -220,12 +220,12 @@ end
 --- @param opts PromptChoicesOpts
 --- @return number|nil #Index of choice selected, or nil if quit
 local function prompt_choices(opts)
-    vim.validate({opts = {opts, 'table'}})
+    vim.validate({ opts = { opts, 'table' } })
     local prompt = opts.prompt
     local choices = opts.choices
     local max_choices = opts.max_choices or 999
 
-    local choices_list = {{}}
+    local choices_list = { {} }
     for i, choice in ipairs(choices) do
         -- If current selection is maxed out in size, start a new one
         if #choices_list[#choices_list] == max_choices then
@@ -313,7 +313,7 @@ local function download_binary(bin_name, cb)
     -- If using linux and we don't have a bin_name, adjust our host platform
     -- based on if they want gnu or musl
     if HOST_OS == 'linux' then
-        local choices = {'gnu', 'musl'}
+        local choices = { 'gnu', 'musl' }
         local idx = prompt_choices({
             prompt = string.format('\nLinux detected! Please select from the following libc options:'),
             choices = choices,
@@ -345,7 +345,7 @@ local function download_binary(bin_name, cb)
         return cb(false, 'No binary available for ' .. host_platform)
     end
 
-    return query_release_list({asset_name = bin_name}, function(success, res)
+    return query_release_list({ asset_name = bin_name }, function(success, res)
         if not success then
             return cb(success, res)
         end
@@ -420,7 +420,7 @@ local function clone_repository(cb)
                 end)
             else
                 -- Close out the terminal window
-                vim.api.nvim_buf_delete(bufnr, {force = true})
+                vim.api.nvim_buf_delete(bufnr, { force = true })
 
                 vim.schedule(function()
                     cb(true, tmpdir)
@@ -482,7 +482,7 @@ local function build_binary(opts, cb)
                     end)
                 else
                     -- Close out the terminal window
-                    vim.api.nvim_buf_delete(bufnr, {force = true})
+                    vim.api.nvim_buf_delete(bufnr, { force = true })
 
                     vim.schedule(function()
                         copy_binary(release_bin, function(status, msg)
@@ -535,8 +535,8 @@ local function install(opts, cb)
         opts = {}
     end
     vim.validate({
-        opts={opts, 'table'},
-        cb={cb, 'function'},
+        opts = { opts, 'table' },
+        cb = { cb, 'function' },
     })
     opts.reinstall = not (not opts.reinstall)
 

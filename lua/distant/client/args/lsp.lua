@@ -2,7 +2,7 @@ local BaseArgs = require('distant.client.args.base')
 
 --- @class LspArgs: BaseArgs
 --- @field __cmd string
-local LspArgs = BaseArgs:new({allowed = {
+local LspArgs = BaseArgs:new({ allowed = {
     'persist',
     'pty',
     'format',
@@ -16,7 +16,7 @@ local LspArgs = BaseArgs:new({allowed = {
     'ssh-port',
     'ssh-user',
     'timeout',
-}})
+} })
 
 --- Creates new lsp args
 --- @param cmd string
@@ -53,7 +53,7 @@ end
 --- @param value 'json'|'shell'
 --- @return LspArgs
 function LspArgs:set_format(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('format', value)
 end
 
@@ -61,7 +61,7 @@ end
 --- @param value string
 --- @return LspArgs
 function LspArgs:set_log_file(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('log-file', value)
 end
 
@@ -69,7 +69,7 @@ end
 --- @param value 'off'|'error'|'warn'|'info'|'debug'|'trace'
 --- @return LspArgs
 function LspArgs:set_log_level(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('log-level', value)
 end
 
@@ -77,7 +77,7 @@ end
 --- @param value 'distant'|'ssh'
 --- @return LspArgs
 function LspArgs:set_method(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('method', value)
 end
 
@@ -85,7 +85,7 @@ end
 --- @param value 'environment'|'file'|'keep'|'pipe'|'socket'
 --- @return LspArgs
 function LspArgs:set_session(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('session', value)
 end
 
@@ -93,7 +93,7 @@ end
 --- @param value string
 --- @return LspArgs
 function LspArgs:set_session_file(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('session-file', value)
 end
 
@@ -101,7 +101,7 @@ end
 --- @param value string
 --- @return LspArgs
 function LspArgs:set_session_socket(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('session-socket', value)
 end
 
@@ -109,7 +109,7 @@ end
 --- @param value string
 --- @return LspArgs
 function LspArgs:set_ssh_host(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('ssh-host', value)
 end
 
@@ -117,7 +117,7 @@ end
 --- @param value number
 --- @return LspArgs
 function LspArgs:set_ssh_port(value)
-    vim.validate({value={value, 'number'}})
+    vim.validate({ value = { value, 'number' } })
     return self:set('ssh-port', tostring(value))
 end
 
@@ -125,7 +125,7 @@ end
 --- @param value string
 --- @return LspArgs
 function LspArgs:set_ssh_user(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('ssh-user', value)
 end
 
@@ -133,7 +133,7 @@ end
 --- @param value number #maximum timeout in seconds for network requests (0 is infinite)
 --- @return LspArgs
 function LspArgs:set_timeout(value)
-    vim.validate({value={value, 'number'}})
+    vim.validate({ value = { value, 'number' } })
     return self:set('timeout', tostring(value))
 end
 

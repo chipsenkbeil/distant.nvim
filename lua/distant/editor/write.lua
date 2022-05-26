@@ -12,11 +12,11 @@ local v = require('distant.vars')
 return function(opts)
     opts = opts or {}
     if type(opts) == 'number' then
-        opts = {buf = opts}
+        opts = { buf = opts }
     end
 
     log.fmt_trace('editor.write(%s)', opts)
-    vim.validate({opts = {opts, 'table'}})
+    vim.validate({ opts = { opts, 'table' } })
 
     local buf = opts.buf
     if not buf then

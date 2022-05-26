@@ -13,7 +13,7 @@ ui.show_msg = function(msg, ty, width, height, closing_keys)
     local buf = vim.api.nvim_create_buf(false, true)
     assert(buf ~= 0, 'Failed to create buffer for msg')
 
-    local info = vim.api.nvim_list_uis()[1] or {width = 80, height = 8}
+    local info = vim.api.nvim_list_uis()[1] or { width = 80, height = 8 }
 
     -- Get lines as a list
     if type(msg) == 'table' then
@@ -52,7 +52,7 @@ ui.show_msg = function(msg, ty, width, height, closing_keys)
     vim.api.nvim_buf_set_option(buf, 'modified', false)
 
     -- Set bindings to exit
-    closing_keys = closing_keys or {'<Esc>', '<CR>', '<Leader>'}
+    closing_keys = closing_keys or { '<Esc>', '<CR>', '<Leader>' }
     for _, key in ipairs(closing_keys) do
         vim.api.nvim_buf_set_keymap(
             buf,

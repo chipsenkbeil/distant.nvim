@@ -165,7 +165,7 @@
 --- @field kind DistantChangeKind
 --- @field paths FilePath[]
 
---- @alias DistantChangeKind 
+--- @alias DistantChangeKind
 ---| 'access'               # something about a file or directory was accessed, but no specific details were known
 ---| 'access_close_execute' # a file was closed for executing
 ---| 'access_close_read'    # a file was closed for reading

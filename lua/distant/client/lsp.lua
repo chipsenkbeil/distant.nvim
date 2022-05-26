@@ -52,7 +52,7 @@ return function(client)
             '--session', 'lsp',
         }
         cmd = vim.list_extend(cmd, args)
-        cmd = vim.list_extend(cmd, {'--'})
+        cmd = vim.list_extend(cmd, { '--' })
 
         -- Finally add the config command that we are wrapping, transforming a string
         -- into a list split by space if needed
@@ -77,7 +77,7 @@ return function(client)
         local capabilities = config.capabilities or vim.lsp.protocol.make_client_capabilities();
         capabilities = utils.merge(capabilities, {
             workspace = {
-              configuration = true,
+                configuration = true,
             }
         })
 
@@ -92,10 +92,10 @@ return function(client)
             params.rootUri = vim.uri_from_fname(config.root_dir)
 
             if not config.workspace_folders then
-                params.workspaceFolders = {{
+                params.workspaceFolders = { {
                     uri = vim.uri_from_fname(config.root_dir);
                     name = string.format('%s', config.root_dir);
-                }}
+                } }
             else
                 params.workspaceFolders = config.workspace_folders
             end
@@ -170,7 +170,7 @@ return function(client)
                             -- Support lsp-specific opts
                             log.fmt_debug('Starting LSP %s', label)
                             local opts = config.opts or {}
-                            local id = lsp.start_client(utils.merge(config, {on_exit = on_exit}), opts)
+                            local id = lsp.start_client(utils.merge(config, { on_exit = on_exit }), opts)
                             lsp.__state.clients[label] = id
                         end
 

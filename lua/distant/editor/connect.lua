@@ -13,8 +13,12 @@ local state = require('distant.state')
 --- @param cb fun(err:string|boolean, client:Client|nil)
 return function(opts, cb)
     opts = opts or {}
-    cb = cb or function() end
-    vim.validate({opts = {opts, 'table'}, cb = {cb, 'function'}})
+    cb = cb or function(err)
+        if err then
+            log.error(err)
+        end
+    end
+    vim.validate({ opts = { opts, 'table' }, cb = { cb, 'function' } })
     log.fmt_trace('editor.connect(%s)', opts)
 
     -- Verify that we were provided a host

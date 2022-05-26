@@ -1,7 +1,7 @@
 local BaseArgs = require('distant.client.args.base')
 
 --- @class ListenArgs: BaseArgs
-local ListenArgs = BaseArgs:new({allowed = {
+local ListenArgs = BaseArgs:new({ allowed = {
     'foreground',
     'key-from-stdin',
     'use-ipv6',
@@ -13,7 +13,7 @@ local ListenArgs = BaseArgs:new({allowed = {
     'port',
     'shutdown-after',
     'timeout',
-}})
+} })
 
 --- Creates new lsp args
 --- @return ListenArgs
@@ -44,7 +44,7 @@ end
 --- @param value string
 --- @return ListenArgs
 function ListenArgs:set_current_dir(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('current-dir', value)
 end
 
@@ -52,7 +52,7 @@ end
 --- @param value 'ssh'|'any'|string
 --- @return ListenArgs
 function ListenArgs:set_host(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('host', value)
 end
 
@@ -60,7 +60,7 @@ end
 --- @param value string
 --- @return ListenArgs
 function ListenArgs:set_log_file(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('log-file', value)
 end
 
@@ -68,7 +68,7 @@ end
 --- @param value 'off'|'error'|'warn'|'info'|'debug'|'trace'
 --- @return ListenArgs
 function ListenArgs:set_log_level(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('log-level', value)
 end
 
@@ -76,7 +76,7 @@ end
 --- @param value number
 --- @return ListenArgs
 function ListenArgs:set_max_msg_capacity(value)
-    vim.validate({value={value, 'number'}})
+    vim.validate({ value = { value, 'number' } })
     return self:set('max-msg-capacity', tostring(value))
 end
 
@@ -85,7 +85,7 @@ end
 --- @param n? number #if provided, tries a range of ports from <value> to <n>
 --- @return ListenArgs
 function ListenArgs:set_port(value, n)
-    vim.validate({value={value, 'number'}, n={n, 'number', true}})
+    vim.validate({ value = { value, 'number' }, n = { n, 'number', true } })
 
     local port = tostring(value)
     if type(n) == 'number' then
@@ -99,7 +99,7 @@ end
 --- @param value number #time in seconds
 --- @return ListenArgs
 function ListenArgs:set_shutdown_after(value)
-    vim.validate({value={value, 'number'}})
+    vim.validate({ value = { value, 'number' } })
     return self:set('shutdown-after', tostring(value))
 end
 
@@ -107,7 +107,7 @@ end
 --- @param value number #maximum timeout in seconds for network requests (0 is infinite)
 --- @return ListenArgs
 function ListenArgs:set_timeout(value)
-    vim.validate({value={value, 'number'}})
+    vim.validate({ value = { value, 'number' } })
     return self:set('timeout', tostring(value))
 end
 

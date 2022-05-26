@@ -33,9 +33,9 @@ utils.seperator = function() return SEPARATOR end
 utils.data_path = function()
     return (
         vim.fn.stdpath('data') ..
-        utils.seperator() ..
-        utils.plugin_name()
-    )
+            utils.seperator() ..
+            utils.plugin_name()
+        )
 end
 
 --- @alias OperatingSystem 'windows'|'linux'|'macos'|'bsd'|'solaris'|'unknown'
@@ -57,8 +57,8 @@ utils.detect_os_arch = function()
         if popen_status then
             popen_result:close()
             -- Unix-based OS
-            raw_os_name = io.popen('uname -s','r'):read('*l')
-            raw_arch_name = io.popen('uname -m','r'):read('*l')
+            raw_os_name = io.popen('uname -s', 'r'):read('*l')
+            raw_arch_name = io.popen('uname -m', 'r'):read('*l')
         else
             -- Windows
             local env_OS = os.getenv('OS')
@@ -168,7 +168,7 @@ end
 utils.job_start = function(cmd, opts)
     --- @param cb fun(line:string)
     local function make_on_data(cb)
-        local lines = {''}
+        local lines = { '' }
         return function(_, data, _)
             local send_back = function() end
             if type(cb) == 'function' then
@@ -193,8 +193,8 @@ utils.job_start = function(cmd, opts)
             if #data == 1 and data[1] == '' then
                 send_back(lines[1])
 
-            -- Otherwise, we want to report all of our lines except the last one
-            -- which may be partial
+                -- Otherwise, we want to report all of our lines except the last one
+                -- which may be partial
             else
                 for i, v in ipairs(lines) do
                     if i < #data then
@@ -203,7 +203,7 @@ utils.job_start = function(cmd, opts)
                 end
 
                 -- Remove all lines but the last one
-                lines = {lines[#lines]}
+                lines = { lines[#lines] }
             end
         end
     end
@@ -383,7 +383,7 @@ utils.merge = function(...)
 
     -- For each vararg, process it and merge items if it is a table;
     -- otherwise, skip it
-    for _, tbl in ipairs({...}) do
+    for _, tbl in ipairs({ ... }) do
         if type(tbl) == 'table' then
             -- For each item in the table, we merge in one of three ways:
             -- 1. If the dst does not have a matching key, we assign the current
@@ -504,7 +504,7 @@ end
 utils.join_path = function(...)
     local path = ''
 
-    for _, component in ipairs({...}) do
+    for _, component in ipairs({ ... }) do
         -- If we already have a partial path, we need to add the separator
         if path ~= '' and not vim.endswith(path, '/') then
             path = path .. '/'
@@ -525,15 +525,15 @@ end
 --- @return fun(...) tx, fun():string|nil, ... rx #tx sends the value and rx receives the value
 utils.oneshot_channel = function(timeout, interval)
     vim.validate({
-        timeout = {timeout, 'number'},
-        interval = {interval, 'number'},
+        timeout = { timeout, 'number' },
+        interval = { interval, 'number' },
     })
 
     -- Will store our result
     local data
 
     local tx = function(...)
-        data = {...}
+        data = { ... }
     end
 
     local rx = function()
@@ -551,9 +551,9 @@ utils.oneshot_channel = function(timeout, interval)
         -- Add our error to beginning of the result list
         if not vim.tbl_islist(result) then
             local err = 'Timeout of ' .. tostring(timeout) .. ' exceeded!'
-            result = {err, result}
+            result = { err, result }
 
-        -- Otherwise, add our error argument to the front
+            -- Otherwise, add our error argument to the front
         else
             table.insert(result, 1, false)
         end

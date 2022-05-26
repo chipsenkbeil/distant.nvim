@@ -221,7 +221,7 @@ DistantLaunch {host} {opts}                                    *DistantLaunch*
                                    (default: "")
         {distant.use_login_shell}
                         (boolean)  if true, will spawn the distant server
-                                   using a login shell (default: false)
+                                   using a login shell (default: true)
         {timeout}        (number)  maximum time in milliseconds before failing
                                    (default: settings.max_timeout)
         {interval}       (number)  approximate time in milliseconds between

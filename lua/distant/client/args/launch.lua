@@ -2,7 +2,7 @@ local BaseArgs = require('distant.client.args.base')
 
 --- @class LaunchArgs: BaseArgs
 --- @field __host string
-local LaunchArgs = BaseArgs:new({allowed = {
+local LaunchArgs = BaseArgs:new({ allowed = {
     'external-ssh',
     'fail-if-socket-exists',
     'foreground',
@@ -22,7 +22,7 @@ local LaunchArgs = BaseArgs:new({allowed = {
     'ssh',
     'timeout',
     'username',
-}})
+} })
 
 --- Creates new launch args
 --- @param host string
@@ -71,7 +71,7 @@ end
 --- @param value 'ssh'|'any'|string
 --- @return LaunchArgs
 function LaunchArgs:set_bind_server(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('bind-server', value)
 end
 
@@ -79,7 +79,7 @@ end
 --- @param value string
 --- @return LaunchArgs
 function LaunchArgs:set_distant(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('distant', value)
 end
 
@@ -101,7 +101,7 @@ end
 --- @param value 'json'|'shell'
 --- @return LaunchArgs
 function LaunchArgs:set_format(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('format', value)
 end
 
@@ -109,7 +109,7 @@ end
 --- @param value string
 --- @return LaunchArgs
 function LaunchArgs:set_identity_file(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('identity-file', value)
 end
 
@@ -117,7 +117,7 @@ end
 --- @param value string
 --- @return LaunchArgs
 function LaunchArgs:set_log_file(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('log-file', value)
 end
 
@@ -125,7 +125,7 @@ end
 --- @param value 'off'|'error'|'warn'|'info'|'debug'|'trace'
 --- @return LaunchArgs
 function LaunchArgs:set_log_level(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('log-level', value)
 end
 
@@ -133,7 +133,7 @@ end
 --- @param value number
 --- @return LaunchArgs
 function LaunchArgs:set_port(value)
-    vim.validate({value={value, 'number'}})
+    vim.validate({ value = { value, 'number' } })
     return self:set('port', tostring(value))
 end
 
@@ -141,7 +141,7 @@ end
 --- @param value 'environment'|'file'|'keep'|'pipe'|'socket'
 --- @return LaunchArgs
 function LaunchArgs:set_session(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('session', value)
 end
 
@@ -149,7 +149,7 @@ end
 --- @param value string
 --- @return LaunchArgs
 function LaunchArgs:set_session_file(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('session-file', value)
 end
 
@@ -157,7 +157,7 @@ end
 --- @param value string
 --- @return LaunchArgs
 function LaunchArgs:set_session_socket(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('session-socket', value)
 end
 
@@ -165,7 +165,7 @@ end
 --- @param value number #time in seconds
 --- @return LaunchArgs
 function LaunchArgs:set_shutdown_after(value)
-    vim.validate({value={value, 'number'}})
+    vim.validate({ value = { value, 'number' } })
     return self:set('shutdown-after', tostring(value))
 end
 
@@ -173,7 +173,7 @@ end
 --- @param value string
 --- @return LaunchArgs
 function LaunchArgs:set_ssh(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('ssh', value)
 end
 
@@ -181,7 +181,7 @@ end
 --- @param value number #maximum timeout in seconds for network requests (0 is infinite)
 --- @return LaunchArgs
 function LaunchArgs:set_timeout(value)
-    vim.validate({value={value, 'number'}})
+    vim.validate({ value = { value, 'number' } })
     return self:set('timeout', tostring(value))
 end
 
@@ -189,7 +189,7 @@ end
 --- @param value string #username to use when ssh'ing into machine
 --- @return LaunchArgs
 function LaunchArgs:set_username(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('username', value)
 end
 

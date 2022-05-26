@@ -2,7 +2,7 @@ local BaseArgs = require('distant.client.args.base')
 
 --- @class ShellArgs: BaseArgs
 --- @field __cmd string
-local ShellArgs = BaseArgs:new({allowed = {
+local ShellArgs = BaseArgs:new({ allowed = {
     'persist',
     'format',
     'log-file',
@@ -15,7 +15,7 @@ local ShellArgs = BaseArgs:new({allowed = {
     'ssh-port',
     'ssh-user',
     'timeout',
-}})
+} })
 
 --- Creates new shell args
 --- @param cmd? string #optional cmd to run instead of $TERM
@@ -46,7 +46,7 @@ end
 --- @param value 'json'|'shell'
 --- @return ShellArgs
 function ShellArgs:set_format(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('format', value)
 end
 
@@ -54,7 +54,7 @@ end
 --- @param value string
 --- @return ShellArgs
 function ShellArgs:set_log_file(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('log-file', value)
 end
 
@@ -62,7 +62,7 @@ end
 --- @param value 'off'|'error'|'warn'|'info'|'debug'|'trace'
 --- @return ShellArgs
 function ShellArgs:set_log_level(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('log-level', value)
 end
 
@@ -70,7 +70,7 @@ end
 --- @param value 'distant'|'ssh'
 --- @return ShellArgs
 function ShellArgs:set_method(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('method', value)
 end
 
@@ -78,7 +78,7 @@ end
 --- @param value 'environment'|'file'|'keep'|'pipe'|'socket'
 --- @return ShellArgs
 function ShellArgs:set_session(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('session', value)
 end
 
@@ -86,7 +86,7 @@ end
 --- @param value string
 --- @return ShellArgs
 function ShellArgs:set_session_file(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('session-file', value)
 end
 
@@ -94,7 +94,7 @@ end
 --- @param value string
 --- @return ShellArgs
 function ShellArgs:set_session_socket(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('session-socket', value)
 end
 
@@ -102,7 +102,7 @@ end
 --- @param value string
 --- @return ShellArgs
 function ShellArgs:set_ssh_host(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('ssh-host', value)
 end
 
@@ -110,7 +110,7 @@ end
 --- @param value number
 --- @return ShellArgs
 function ShellArgs:set_ssh_port(value)
-    vim.validate({value={value, 'number'}})
+    vim.validate({ value = { value, 'number' } })
     return self:set('ssh-port', tostring(value))
 end
 
@@ -118,7 +118,7 @@ end
 --- @param value string
 --- @return ShellArgs
 function ShellArgs:set_ssh_user(value)
-    vim.validate({value={value, 'string'}})
+    vim.validate({ value = { value, 'string' } })
     return self:set('ssh-user', value)
 end
 
@@ -126,7 +126,7 @@ end
 --- @param value number #maximum timeout in seconds for network requests (0 is infinite)
 --- @return ShellArgs
 function ShellArgs:set_timeout(value)
-    vim.validate({value={value, 'number'}})
+    vim.validate({ value = { value, 'number' } })
     return self:set('timeout', tostring(value))
 end
 

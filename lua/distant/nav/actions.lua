@@ -31,7 +31,7 @@ actions.edit = function(opts)
 
     local path = full_path_under_cursor()
     if path ~= nil then
-        editor.open(vim.tbl_deep_extend('keep', {path = path}, opts))
+        editor.open(vim.tbl_deep_extend('keep', { path = path }, opts))
     end
 end
 
@@ -54,7 +54,7 @@ actions.up = function(opts)
     if base_path ~= nil then
         local parent = utils.parent_path(base_path)
         if parent ~= nil then
-            editor.open({path = parent, reload = reload})
+            editor.open({ path = parent, reload = reload })
         end
     end
 end
@@ -99,10 +99,10 @@ actions.mkdir = function(opts)
         end
 
         local path = utils.join_path(base_path, name)
-        local err = fn.create_dir({path = path, all = true})
+        local err = fn.create_dir({ path = path, all = true })
 
         if not err then
-            editor.open({path = base_path, reload = true})
+            editor.open({ path = base_path, reload = true })
         else
             log.error(string.format('Failed to create %s: %s', path, err))
         end
@@ -128,10 +128,10 @@ actions.rename = function(opts)
                 return
             end
 
-            local err = fn.rename({src = old_path, dst = new_path})
+            local err = fn.rename({ src = old_path, dst = new_path })
 
             if not err then
-                editor.open({path = base_path, reload = true})
+                editor.open({ path = base_path, reload = true })
             else
                 log.error(string.format('Failed to rename %s to %s: %s', old_path, new_path, err))
             end
@@ -161,10 +161,10 @@ actions.remove = function(opts)
                 end
             end
 
-            local err = fn.remove(vim.tbl_extend('keep', {path = path}, opts))
+            local err = fn.remove(vim.tbl_extend('keep', { path = path }, opts))
 
             if not err then
-                editor.open({path = base_path, reload = true})
+                editor.open({ path = base_path, reload = true })
             else
                 log.error(string.format('Failed to remove %s: %s', path, err))
             end

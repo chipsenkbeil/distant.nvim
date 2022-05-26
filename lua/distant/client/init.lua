@@ -305,9 +305,9 @@ function Client:launch(opts, cb)
     log.fmt_debug('Authenticating with options: %s', opts)
     opts = opts or {}
     vim.validate({
-        host={opts.host, 'string'},
-        port={opts.port, 'number', true},
-        on_exit={opts.on_exit, 'function', true},
+        host = { opts.host, 'string' },
+        port = { opts.port, 'number', true },
+        on_exit = { opts.on_exit, 'function', true },
     })
 
     if vim.fn.executable(self.__settings.bin) ~= 1 then
@@ -338,21 +338,21 @@ function Client:launch(opts, cb)
     end
 
     local args = Args.launch(opts.host):set_from_tbl({
-        format              = 'json';
-        session             = 'pipe';
+        format  = 'json';
+        session = 'pipe';
 
         -- Optional user settings
-        external_ssh        = opts.external_ssh;
-        no_shell            = opts.no_shell;
-        distant             = opts.distant;
-        extra_server_args   = wrap_args(opts.extra_server_args);
-        identity_file       = opts.identity_file;
-        log_file            = opts.log_file;
-        log_level           = opts.log_level;
-        port                = opts.port and tostring(opts.port);
-        shutdown_after      = opts.shutdown_after;
-        ssh                 = opts.ssh;
-        username            = opts.username;
+        external_ssh      = opts.external_ssh;
+        no_shell          = opts.no_shell;
+        distant           = opts.distant;
+        extra_server_args = wrap_args(opts.extra_server_args);
+        identity_file     = opts.identity_file;
+        log_file          = opts.log_file;
+        log_level         = opts.log_level;
+        port              = opts.port and tostring(opts.port);
+        shutdown_after    = opts.shutdown_after;
+        ssh               = opts.ssh;
+        username          = opts.username;
     }):as_string()
 
     local cmd = vim.trim(self.__settings.bin .. ' launch ' .. args)
@@ -382,7 +382,7 @@ function Client:launch(opts, cb)
             if line ~= nil and line ~= "" then
                 if vim.startswith(line, 'DISTANT CONNECT') and not is_connected then
                     local s = vim.trim(utils.strip_prefix(line, 'DISTANT CONNECT'))
-                    local tokens = vim.split(s, ' ', {plain = true, trimempty = true})
+                    local tokens = vim.split(s, ' ', { plain = true, trimempty = true })
                     local session = {
                         host = vim.trim(tokens[1]),
                         port = tonumber(tokens[2]),
@@ -391,9 +391,9 @@ function Client:launch(opts, cb)
 
                     -- If we want to connect after launching, do so
                     if type(opts.connect) == 'boolean' and opts.connect then
-                        self:connect({session = session})
+                        self:connect({ session = session })
                     elseif type(opts.connect) == 'function' then
-                        self:connect({session = session, on_exit = opts.connect})
+                        self:connect({ session = session, on_exit = opts.connect })
                     end
 
                     -- NOTE: We have this flag for connection as for some reason the
@@ -444,23 +444,23 @@ function Client:connect(opts)
     opts = opts or {}
 
     vim.validate({
-        on_exit={opts.on_exit, 'function', true},
-        session={opts.session, 'table'},
-        method={opts.method, 'string', true},
-        ssh={opts.ssh, 'table', true},
-        log_file={opts.log_file, 'string', true},
-        log_level={opts.log_level, 'string', true},
+        on_exit = { opts.on_exit, 'function', true },
+        session = { opts.session, 'table' },
+        method = { opts.method, 'string', true },
+        ssh = { opts.ssh, 'table', true },
+        log_file = { opts.log_file, 'string', true },
+        log_level = { opts.log_level, 'string', true },
     })
     vim.validate({
-        host={opts.session.host, 'string'},
-        port={opts.session.port, 'number'},
-        key={opts.session.key, 'string'},
+        host = { opts.session.host, 'string' },
+        port = { opts.session.port, 'number' },
+        key = { opts.session.key, 'string' },
     })
     if opts.ssh then
         vim.validate({
-            host={opts.ssh.host, 'string', true},
-            port={opts.ssh.port, 'number', true},
-            user={opts.ssh.user, 'string', true},
+            host = { opts.ssh.host, 'string', true },
+            port = { opts.ssh.port, 'number', true },
+            user = { opts.ssh.user, 'string', true },
         })
     end
 
@@ -478,11 +478,11 @@ function Client:connect(opts)
         session     = 'pipe';
 
         -- Optional user settings
-        log_file    = opts.log_file;
-        log_level   = opts.log_level;
-        ssh_host    = opts.ssh and opts.ssh.host;
-        ssh_port    = opts.ssh and opts.ssh.port;
-        ssh_user    = opts.ssh and opts.ssh.user;
+        log_file  = opts.log_file;
+        log_level = opts.log_level;
+        ssh_host  = opts.ssh and opts.ssh.host;
+        ssh_port  = opts.ssh and opts.ssh.port;
+        ssh_user  = opts.ssh and opts.ssh.user;
     }):as_string()
 
     local cmd = vim.trim(self.__settings.bin .. ' action ' .. args)
@@ -533,7 +533,7 @@ function Client:connect(opts)
     -- if we are using distant
     if method == 'distant' then
         local session_line =
-            'DISTANT CONNECT '
+        'DISTANT CONNECT '
             .. opts.session.host
             .. ' '
             .. tostring(opts.session.port)
@@ -595,7 +595,7 @@ function Client:send(msgs, opts, cb)
 
     local payload = msgs
     if not vim.tbl_islist(payload) then
-        payload = {payload}
+        payload = { payload }
     end
 
     -- Build a full message that wraps the provided message as the payload and

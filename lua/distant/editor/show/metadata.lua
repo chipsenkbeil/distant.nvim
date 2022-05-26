@@ -13,7 +13,7 @@ return function(opts)
 
     local err, metadata = fn.metadata(opts)
     if metadata == nil then
-        local msg = {path .. ' does not exist'}
+        local msg = { path .. ' does not exist' }
         if err then
             table.insert(msg, err)
         end

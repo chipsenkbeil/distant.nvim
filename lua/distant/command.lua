@@ -39,16 +39,17 @@ command.parse_input = function(input)
         -- If in a key=value pair, we update the last item which is the key
         -- to be {key, value}
         if in_pair and (s ~= '' or ty ~= TYPES.QUOTE) then
-            segments[#segments] = {segments[#segments], s}
+            segments[#segments] = { segments[#segments], s }
             in_pair = false
 
-        -- Otherwise, this is a new segment and we add it to the list
+            -- Otherwise, this is a new segment and we add it to the list
         elseif s ~= '' then
             table.insert(segments, s)
         end
 
         s = ''
     end
+
     local ty
     for i = 1, #input do
         local char = string.sub(input, i, i)
@@ -153,7 +154,7 @@ end
 --- DistantOpen path [opt1=... opt2=...]
 command.open = function(input)
     input = command.parse_input(input)
-    paths_to_number(input.opts, {'buf', 'win'})
+    paths_to_number(input.opts, { 'buf', 'win' })
 
     local path = input.args[1]
     input.opts.path = path
@@ -164,7 +165,7 @@ end
 --- DistantLaunch host [opt1=..., opt2=...]
 command.launch = function(input)
     input = command.parse_input(input)
-    paths_to_number(input.opts, {'ssh.port', 'timeout', 'interval'})
+    paths_to_number(input.opts, { 'ssh.port', 'timeout', 'interval' })
 
     local host = input.args[1]
     input.opts.host = host
@@ -186,7 +187,7 @@ end
 --- DistantConnect host port [opt1=..., opt2=...]
 command.connect = function(input)
     input = command.parse_input(input)
-    paths_to_number(input.opts, {'timeout', 'interval'})
+    paths_to_number(input.opts, { 'timeout', 'interval' })
 
     if #input.args == 0 then
         vim.api.nvim_err_writeln('Missing host and port')
@@ -215,7 +216,7 @@ end
 command.install = function(input)
     input = command.parse_input(input)
     local reinstall = input.args[1] == 'reinstall'
-    require('distant.client.install').install({reinstall = reinstall}, function(success, msg)
+    require('distant.client.install').install({ reinstall = reinstall }, function(success, msg)
         if success then
             print('Successfully installed Rust binary')
         else
@@ -227,7 +228,7 @@ end
 --- DistantMetadata path [opt1=... opt2=...]
 command.metadata = function(input)
     input = command.parse_input(input)
-    paths_to_number(input.opts, {'timeout', 'interval'})
+    paths_to_number(input.opts, { 'timeout', 'interval' })
 
     local path = input.args[1]
     input.opts.path = path
@@ -248,7 +249,7 @@ end
 --- DistantCopy src dst [opt1=... opt2=...]
 command.copy = function(input)
     input = command.parse_input(input)
-    paths_to_number(input.opts, {'timeout', 'interval'})
+    paths_to_number(input.opts, { 'timeout', 'interval' })
 
     local src = input.args[1]
     local dst = input.args[2]
@@ -261,7 +262,7 @@ end
 --- DistantMkdir path [opt1=... opt2=...]
 command.mkdir = function(input)
     input = command.parse_input(input)
-    paths_to_number(input.opts, {'timeout', 'interval'})
+    paths_to_number(input.opts, { 'timeout', 'interval' })
 
     local path = input.args[1]
     input.opts.path = path
@@ -272,7 +273,7 @@ end
 --- DistantRemove path [opt1=... opt2=...]
 command.remove = function(input)
     input = command.parse_input(input)
-    paths_to_number(input.opts, {'timeout', 'interval'})
+    paths_to_number(input.opts, { 'timeout', 'interval' })
 
     local path = input.args[1]
     input.opts.path = path
@@ -283,7 +284,7 @@ end
 --- DistantRename src dst [opt1=... opt2=...]
 command.rename = function(input)
     input = command.parse_input(input)
-    paths_to_number(input.opts, {'timeout', 'interval'})
+    paths_to_number(input.opts, { 'timeout', 'interval' })
 
     local src = input.args[1]
     local dst = input.args[2]
@@ -296,7 +297,7 @@ end
 --- DistantRun cmd [arg1 arg2 ...]
 command.run = function(input)
     input = command.parse_input(input)
-    paths_to_number(input.opts, {'timeout', 'interval'})
+    paths_to_number(input.opts, { 'timeout', 'interval' })
 
     local cmd = input.args[1]
     local cmd_args = vim.list_slice(input.args, 2, #input.args)

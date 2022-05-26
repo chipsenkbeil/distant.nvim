@@ -4,7 +4,7 @@ local function make_fns(obj, names)
     for _, name in ipairs(names) do
         obj[name] = function(...)
             local client = assert(
-                state.client, 
+                state.client,
                 'Client must be initialized before invoking fn'
             )
             local fn = client.api[name]

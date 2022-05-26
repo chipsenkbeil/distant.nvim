@@ -20,7 +20,7 @@ end
 --- @return ClientMsg
 local function msg_validate(msg, info)
     local opts = {
-        type = {msg.type, 'string'},
+        type = { msg.type, 'string' },
     }
 
     for key, value in pairs(info.data) do
@@ -31,7 +31,7 @@ local function msg_validate(msg, info)
             optional = value.optional
         end
 
-        opts[key] = {msg[key], vtype, optional}
+        opts[key] = { msg[key], vtype, optional }
     end
 
     -- Validate input types
@@ -61,11 +61,11 @@ end
 local function parse_response(opts)
     opts = opts or {}
     vim.validate({
-        payload={opts.payload, 'table'},
-        expected={opts.expected, {'string', 'table'}},
-        input={opts.input, 'table'},
-        map={opts.map, 'function', true},
-        stop={opts.stop, 'function', true},
+        payload = { opts.payload, 'table' },
+        expected = { opts.expected, { 'string', 'table' } },
+        input = { opts.input, 'table' },
+        map = { opts.map, 'function', true },
+        stop = { opts.stop, 'function', true },
     })
     opts.map = opts.map or function(data) return data end
 
@@ -88,19 +88,19 @@ local function parse_response(opts)
     -- If just expecting an ok type, we just return true
     if expected and ptype == 'ok' then
         return false, opts.map(true, ptype, opts.input, opts.stop), opts.stop
-    -- For all other expected types, we return the payload data
+        -- For all other expected types, we return the payload data
     elseif expected then
         return false, opts.map(data, ptype, opts.input, opts.stop), opts.stop
-    -- If we get an error type, return its description if it has one
+        -- If we get an error type, return its description if it has one
     elseif ptype == 'error' and data and data.description then
         return tostring(data.description), opts.stop
-    -- Otherwise, if the error is returned but without a description, report it
+        -- Otherwise, if the error is returned but without a description, report it
     elseif ptype == 'error' and data then
         return 'Error response received without description', opts.stop
-    -- Otherwise, if the error is returned but without a payload, report it
+        -- Otherwise, if the error is returned but without a payload, report it
     elseif ptype == 'error' then
         return 'Error response received without data payload', opts.stop
-    -- Otherwise, if we got an unexpected type, report it
+        -- Otherwise, if we got an unexpected type, report it
     else
         return 'Received invalid response of type ' .. ptype .. ', wanted ' .. vim.inspect(opts.expected), opts.stop
     end
@@ -130,14 +130,14 @@ end
 --- @return fun(msgs:OneOrMoreMsgs, opts?:table, cb?:ApiCallback):ApiFnReturn
 local function make_fn(params)
     vim.validate({
-        client = {params.client, 'table'},
-        type = {params.type, 'string'},
-        ret_type = {params.ret_type, {'string', 'table'}},
-        map = {params.map, 'function', true},
-        and_then = {params.and_then, 'function', true},
-        req_type = {params.req_type, 'table', true},
-        res_type = {params.res_type, 'table', true},
-        multi = {params.multi, 'boolean', true},
+        client = { params.client, 'table' },
+        type = { params.type, 'string' },
+        ret_type = { params.ret_type, { 'string', 'table' } },
+        map = { params.map, 'function', true },
+        and_then = { params.and_then, 'function', true },
+        req_type = { params.req_type, 'table', true },
+        res_type = { params.res_type, 'table', true },
+        multi = { params.multi, 'boolean', true },
     })
 
     --- @param msg OneOrMoreMsgs
@@ -171,7 +171,7 @@ local function make_fn(params)
         -- @type ClientMsg[]
         local msgs
         if not vim.tbl_islist(msg) then
-            msgs = {msg}
+            msgs = { msg }
         else
             msgs = msg
         end
@@ -185,9 +185,9 @@ local function make_fn(params)
         -- someone feeds in something weird like a string for opts or a
         -- boolean for the callback
         vim.validate({
-            msgs = {msgs, 'table'},
-            opts = {opts, 'table'},
-            cb = {cb, 'function'},
+            msgs = { msgs, 'table' },
+            opts = { opts, 'table' },
+            cb = { cb, 'function' },
         })
 
         if params.req_type then
@@ -201,7 +201,7 @@ local function make_fn(params)
                     if rx then
                         return err
 
-                    -- Asynchronous
+                        -- Asynchronous
                     else
                         return cb(err)
                     end
@@ -210,7 +210,7 @@ local function make_fn(params)
         end
 
         -- Configure whether or not we are a multi send
-        opts = vim.tbl_extend('keep', {multi = params.multi}, opts)
+        opts = vim.tbl_extend('keep', { multi = params.multi }, opts)
 
         params.client:send(msgs, opts, function(res, stop)
             local reply = cb
@@ -234,7 +234,7 @@ local function make_fn(params)
                 -- @type ClientMsg[]
                 local res_payload_data = res.payload.data
                 if not vim.tbl_islist(res_payload_data) then
-                    msgs = {res_payload_data}
+                    msgs = { res_payload_data }
                 end
 
 
@@ -265,8 +265,8 @@ local function make_fn(params)
         if rx then
             local err1, err2, result, stop = rx()
             print(
-                'sync -- ' 
-                .. '\n  err    = ' .. vim.inspect(err1 or err2) 
+                'sync -- '
+                .. '\n  err    = ' .. vim.inspect(err1 or err2)
                 .. '\n  result = ' .. vim.inspect(result)
                 .. '\n  stop   = ' .. vim.inspect(stop)
             )
@@ -325,7 +325,7 @@ return function(client)
         ret_type = 'ok',
         req_type = {
             path = 'string',
-            all = {type = 'boolean', optional = true},
+            all = { type = 'boolean', optional = true },
         },
     })
 
@@ -349,19 +349,19 @@ return function(client)
         ret_type = 'metadata',
         req_type = {
             path = 'string',
-            canonicalize = {type = 'boolean', optional = true},
-            resolve_file_type = {type = 'boolean', optional = true},
+            canonicalize = { type = 'boolean', optional = true },
+            resolve_file_type = { type = 'boolean', optional = true },
         },
         res_type = {
-            canonicalized_path = {type = 'string', optional = true},
+            canonicalized_path = { type = 'string', optional = true },
             file_type = 'string',
             len = 'number',
             readonly = 'boolean',
-            accessed = {type = 'number', optional = true},
-            created = {type = 'number', optional = true},
-            modified = {type = 'number', optional = true},
-            unix = {type = 'table', optional = true},
-            windows = {type = 'table', optional = true},
+            accessed = { type = 'number', optional = true },
+            created = { type = 'number', optional = true },
+            modified = { type = 'number', optional = true },
+            unix = { type = 'table', optional = true },
+            windows = { type = 'table', optional = true },
         },
     })
 
@@ -372,10 +372,10 @@ return function(client)
         ret_type = 'dir_entries',
         req_type = {
             path = 'string',
-            depth = {type = 'number', optional = true},
-            absolute = {type = 'boolean', optional = true},
-            canonicalize = {type = 'boolean', optional = true},
-            include_root = {type = 'boolean', optional = true},
+            depth = { type = 'number', optional = true },
+            absolute = { type = 'boolean', optional = true },
+            canonicalize = { type = 'boolean', optional = true },
+            include_root = { type = 'boolean', optional = true },
         },
         res_type = {
             entries = 'table',
@@ -416,7 +416,7 @@ return function(client)
         ret_type = 'ok',
         req_type = {
             path = 'string',
-            force = {type = 'boolean', optional = true },
+            force = { type = 'boolean', optional = true },
         },
     })
 
@@ -435,12 +435,12 @@ return function(client)
     api.spawn = make_fn({
         client = client,
         type = 'proc_spawn',
-        ret_type = {'proc_spawned', 'proc_stdout', 'proc_stderr', 'proc_done'},
+        ret_type = { 'proc_spawned', 'proc_stdout', 'proc_stderr', 'proc_done' },
         req_type = {
             cmd = 'string',
-            args = {type = 'table', optional = true},
-            persist = {type = 'boolean', optional = true},
-            pty = {type = 'table', optional = true},
+            args = { type = 'table', optional = true },
+            persist = { type = 'boolean', optional = true },
+            pty = { type = 'table', optional = true },
         },
         multi = true,
         map = function(data, type, _, stop)
@@ -486,7 +486,7 @@ return function(client)
                     if not cb then
                         cb, rx = utils.oneshot_channel(
                             opts.timeout or state.settings.max_timeout,
-                           interval
+                            interval
                         )
                     end
 
@@ -565,7 +565,7 @@ return function(client)
                     end,
 
                     kill = function(opts, cb)
-                        return kill({id = id}, opts, cb)
+                        return kill({ id = id }, opts, cb)
                     end,
                 }
 
@@ -642,12 +642,12 @@ return function(client)
     api.watch = make_fn({
         client = client,
         type = 'watch',
-        ret_type = {'ok', 'changed'},
+        ret_type = { 'ok', 'changed' },
         req_type = {
             path = 'string',
-            recursive = {type = 'boolean', optional = true},
-            only = {type = 'table', optional = true},
-            except = {type = 'table', optional = true},
+            recursive = { type = 'boolean', optional = true },
+            only = { type = 'table', optional = true },
+            except = { type = 'table', optional = true },
         },
         multi = true,
         map = function(data, type, input, stop)
@@ -676,8 +676,8 @@ return function(client)
                 }
                 api.__state.watchers[watcher.path] = watcher
 
-            -- Otherwise, we got a changed event and want
-            -- to pass that along to our watcher
+                -- Otherwise, we got a changed event and want
+                -- to pass that along to our watcher
             else
                 return cb(false, data.data)
             end
