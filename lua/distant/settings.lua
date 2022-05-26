@@ -19,6 +19,9 @@ local utils = require('distant.utils')
 --- @field mappings table<string, fun()>
 
 --- @class LspSettings
+--- @field root_dir string
+--- @field filetypes? string[]
+--- @field opts? table
 
 -- Represents the label used to signify default/global settings
 local DEFAULT_LABEL = '*'
@@ -53,6 +56,7 @@ local DEFAULT_SETTINGS = {
     };
 
     -- Settings to use to start LSP instances
+    --- @type LspSettings
     lsp = {};
 }
 

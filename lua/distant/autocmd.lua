@@ -8,7 +8,10 @@ local function _initialize()
     -- Assign appropriate handlers for distant:// scheme
     u.augroup('distant', function()
         u.autocmd('BufReadCmd', 'distant://*', function()
+            --- @diagnostic disable-next-line:missing-parameter
             local buf = tonumber(vim.fn.expand('<abuf>'))
+
+            --- @diagnostic disable-next-line:missing-parameter
             local fname = vim.fn.expand('<amatch>')
             local path = u.strip_prefix(fname, 'distant://')
 
@@ -21,6 +24,7 @@ local function _initialize()
         end)
 
         u.autocmd('BufWriteCmd', 'distant://*', function()
+            --- @diagnostic disable-next-line:missing-parameter
             local buf = tonumber(vim.fn.expand('<abuf>'))
 
             if type(buf) == 'number' and buf ~= -1 then

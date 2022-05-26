@@ -35,6 +35,7 @@ local BIN_NAME = {
 --- @field page? number #Page in release list to query, defaulting to first page
 --- @field per_page? number #Number of entries to query for a page
 
+--- @overload fun(cb:fun(success:boolean, result:string|table)):number
 --- @param opts QueryReleaseApiOpts
 --- @param cb fun(success:boolean, result:string|table)
 --- @return number #job-id on success, 0 on invalid arguments, -1 if unable to execute cmd
@@ -108,6 +109,7 @@ end
 --- @field prerelease boolean
 
 --- Retrieve some subset of release entries
+--- @overload fun(cb:fun(success:boolean, res:string|ReleaseEntry[])):number
 --- @param opts QueryReleaseListOpts
 --- @param cb fun(success:boolean, res:string|ReleaseEntry[])
 --- @return number #job-id on success, 0 on invalid arguments, -1 if unable to execute cmd
@@ -298,7 +300,8 @@ end
 -- INSTALL HELPERS
 -------------------------------------------------------------------------------
 
---- @param bin_name? string #Name of binary artifact to download, defaulting to platform choice
+--- @overload fun(cb:fun(success:boolean, result:string)):number
+--- @param bin_name string #Name of binary artifact to download, defaulting to platform choice
 --- @param cb fun(success:boolean, result:string) #where result is an error message or the binary path
 --- @return number #job-id on success, 0 on invalid arguments, -1 if unable to execute cmd
 local function download_binary(bin_name, cb)
@@ -365,7 +368,8 @@ local function download_binary(bin_name, cb)
     end)
 end
 
---- @param path? string
+--- @overload fun(cb:fun(success:boolean, result:string))
+--- @param path string
 --- @param cb fun(success:boolean, result:string) #where result is an error message or the binary path
 local function copy_binary(path, cb)
     if not cb then
@@ -433,6 +437,7 @@ end
 --- @class BuildBinaryOpts
 --- @field bin string
 
+--- @overload fun(cb:fun(success:boolean, result:string)):number
 --- @param opts BuildBinaryOpts
 --- @param cb fun(success:boolean, result:string) #where result is an error message or the binary path
 --- @return number #job-id on success, 0 on invalid arguments, -1 if unable to execute cmd
@@ -526,7 +531,8 @@ end
 --- Installs the binary asynchronously if unavailable, providing several options to perform
 --- the installation
 ---
---- @param opts? InstallOpts
+--- @overload fun(cb:fun(success:boolean, result:string)):number
+--- @param opts InstallOpts
 --- @param cb fun(success:boolean, result:string)
 --- @return number #job-id on success, 0 on invalid arguments, -1 if unable to execute cmd
 local function install(opts, cb)
@@ -534,6 +540,10 @@ local function install(opts, cb)
         cb = opts
         opts = {}
     end
+    if not opts then
+        opts = {}
+    end
+
     vim.validate({
         opts = { opts, 'table' },
         cb = { cb, 'function' },

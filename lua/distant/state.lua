@@ -25,9 +25,12 @@ state.load_settings = function(label)
 end
 
 --- Loads the active client, spawning a new client if one has not been started
---- @param opts? ClientNewOpts #Provided to newly-constructed client
---- @param cb? fun(err:string|boolean, client:Client|nil)
---- @return boolean|string|nil, Client|nil
+--- @overload fun():boolean|string, Client|nil
+--- @overload fun(opts:ClientNewOpts):boolean|string, Client|nil
+--- @overload fun(cb:fun(err:string|boolean, client:Client|nil))
+---
+--- @param opts ClientNewOpts #Provided to newly-constructed client
+--- @param cb fun(err:string|boolean, client:Client|nil)
 state.load_client = function(opts, cb)
     if not cb and type(opts) == 'function' then
         cb = opts

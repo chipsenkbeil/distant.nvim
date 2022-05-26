@@ -1,5 +1,8 @@
 local state = require('distant.state')
 
+--- @param obj table<string, function>
+--- @param names string[]
+--- @return table<string, function>
 local function make_fns(obj, names)
     for _, name in ipairs(names) do
         obj[name] = function(...)
