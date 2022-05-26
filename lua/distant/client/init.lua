@@ -13,12 +13,73 @@ local errors = require('distant.client.errors')
 --- @class Client
 --- @field id string #Represents an arbitrary unique id for the client
 --- @field api ClientApi #General API to perform operations remotely
+--- @field auth ClientAuth #Authentication-based handlers
 --- @field lsp ClientLsp #LSP API to spawn a process that behaves like an LSP server
 --- @field term ClientTerm #Terminal API to spawn a process that behaves like a terminal
 --- @field __state InternalState
 --- @field __settings InternalSettings
 local Client = {}
 Client.__index = Client
+
+--- @class ClientAuth
+--- @field on_authenticate? fun(msg:ClientAuthMsg):string[]
+--- @field on_verify_host? fun(host:string):boolean
+--- @field on_info? fun(text:string)
+--- @field on_error? fun(err:string)
+--- @field on_unknown? fun(x:any)
+
+--- @class ClientAuthMsg
+--- @field username? string
+--- @field instructions? string
+--- @field prompts {prompt:string, echo:boolean}[]
+
+--- @return ClientAuth
+local function make_client_auth()
+    return {
+        --- @param msg ClientAuthMsg
+        --- @return string[]
+        on_authenticate = function(msg)
+            if msg.username then
+                print('Authentication for ' .. msg.username)
+            end
+            if msg.instructions then
+                print(msg.instructions)
+            end
+
+            local answers = {}
+            for _, p in ipairs(msg.prompts) do
+                if p.echo then
+                    table.insert(answers, vim.fn.input(p.prompt))
+                else
+                    table.insert(answers, vim.fn.inputsecret(p.prompt))
+                end
+            end
+            return answers
+        end,
+
+        --- @param host string
+        --- @return boolean
+        on_verify_host = function(host)
+            local answer = vim.fn.input(string.format('%s\nEnter [y/N]> ', host))
+            return answer == 'y' or answer == 'Y' or answer == 'yes' or answer == 'YES'
+        end,
+
+        --- @param text string
+        on_info = function(text)
+            print(text)
+        end,
+
+        --- @param err string
+        on_error = function(err)
+            log.fmt_error('Authentication error: %s', err)
+        end,
+
+        --- @param x any
+        on_unknown = function(x)
+            log.fmt_error('Unknown authentication event received: %s', x)
+        end,
+    }
+end
 
 --- @class InternalState
 --- @field tenant? string
@@ -44,6 +105,7 @@ Client.__index = Client
 --- @alias LogLevel 'off'|'error'|'warn'|'info'|'debug'|'trace'
 
 --- @class ClientNewOpts
+--- @field auth? ClientAuth
 --- @field bin? string
 --- @field timeout? number
 --- @field interval? number
@@ -52,12 +114,20 @@ Client.__index = Client
 --- @param opts? ClientNewOpts Options for use with our client
 --- @return Client
 function Client:new(opts)
+    opts = opts or {}
+
     local instance = {}
     setmetatable(instance, Client)
     instance.id = 'client_' .. tostring(utils.next_id())
     instance.api = api(instance)
     instance.lsp = lsp(instance)
     -- instance.term = term(instance)
+
+    instance.auth = vim.tbl_deep_extend(
+        'keep',
+        opts.auth or {},
+        make_client_auth()
+    )
 
     instance.__state = {
         tenant = nil;
@@ -66,7 +136,6 @@ function Client:new(opts)
         session = nil;
     }
 
-    opts = opts or {}
     instance.__settings = {
         bin = opts.bin or state.settings.client.bin;
         timeout = opts.timeout or state.settings.max_timeout;
@@ -310,7 +379,6 @@ function Client:launch(opts, cb)
             end
         end;
         on_stdout_line = function(line)
-            print('STDOUT LINE ' .. tostring(line))
             if line ~= nil and line ~= "" then
                 if vim.startswith(line, 'DISTANT CONNECT') and not is_connected then
                     local s = vim.trim(utils.strip_prefix(line, 'DISTANT CONNECT'))
@@ -340,11 +408,12 @@ function Client:launch(opts, cb)
                             handle.write(utils.compress(vim.fn.json_encode(msg)) .. '\n')
                         end
                     )
+                else
+                    log.fmt_error('Unexpected msg: %s', line)
                 end
             end
         end;
         on_stderr_line = function(line)
-            print('STDERR LINE ' .. tostring(line))
             if line ~= nil and line ~= "" then
                 log.error(line)
             end
@@ -400,9 +469,11 @@ function Client:connect(opts)
         return
     end
 
+    --- @type 'distant'|'ssh'
+    local method = opts.method or 'distant'
     local args = Args.action():set_from_tbl({
         interactive = true;
-        method      = opts.method or 'distant';
+        method      = method;
         format      = 'json';
         session     = 'pipe';
 
@@ -460,18 +531,17 @@ function Client:connect(opts)
 
     -- Send our session initialization line
     -- if we are using distant
-    --
-    -- TODO: Need to support ssh auth otherwise
-    if opts.method == 'distant' then
-        handle.write(
+    if method == 'distant' then
+        local session_line =
             'DISTANT CONNECT '
             .. opts.session.host
             .. ' '
             .. tostring(opts.session.port)
             .. ' '
             .. opts.session.key
-            .. '\n'
-        )
+
+        print('Writing "' .. session_line .. '"')
+        handle.write(session_line .. '\n')
     end
 
     self.__state = {
@@ -651,51 +721,29 @@ end
 --- @return boolean #true if okay, otherwise false
 function Client:__auth_handler(msg, reply)
     local type = msg.type
-    local out
 
     if type == 'ssh_authenticate' then
-        if msg.username then
-            print('Authentication for ' .. msg.username)
-        end
-        if msg.instructions then
-            print(msg.instructions)
-        end
-
-        local answers = {}
-        for _, p in ipairs(msg.prompts) do
-            if p.echo then
-                table.insert(answers, vim.fn.input(p.prompt))
-            else
-                table.insert(answers, vim.fn.inputsecret(p.prompt))
-            end
-        end
-
-        out = {
+        reply({
             type = 'ssh_authenticate_answer',
-            answers = answers
-        }
+            answers = self.auth.on_authenticate(msg)
+        })
+        return true
     elseif type == 'ssh_banner' then
-        print(msg.text)
+        self.auth.on_info(msg.text)
         return true
     elseif type == 'ssh_host_verify' then
-        local answer = vim.fn.input(string.format('%s\nEnter [y/N]> ', msg.host))
-        out = {
+        reply({
             type = 'ssh_host_verify_answer',
-            answer = answer == 'y' or answer == 'Y' or answer == 'yes' or answer == 'YES'
-        }
+            answer = self.auth.on_verify_host(msg.host)
+        })
+        return true
     elseif type == 'ssh_error' then
-        log.fmt_error('Authentication error: %s', msg)
+        self.auth.on_error(vim.inspect(msg))
         return false
     else
-        log.fmt_error('Unknown authentication event received: %s', msg)
+        self.auth.on_unknown(msg)
         return false
     end
-
-    if out then
-        reply(out)
-    end
-
-    return true
 end
 
 --- @param msg {type:string}

@@ -70,7 +70,7 @@ local function parse_response(opts)
     opts.map = opts.map or function(data) return data end
 
     local payload = opts.payload
-    local type = payload.type
+    local ptype = payload.type
     local data = payload.data
 
     local is_expected = function(t)
@@ -83,26 +83,26 @@ local function parse_response(opts)
         end
     end
 
-    local expected = is_expected(type)
+    local expected = is_expected(ptype)
 
     -- If just expecting an ok type, we just return true
-    if expected and type == 'ok' then
-        return false, opts.map(true, type, opts.input, opts.stop), opts.stop
+    if expected and ptype == 'ok' then
+        return false, opts.map(true, ptype, opts.input, opts.stop), opts.stop
     -- For all other expected types, we return the payload data
     elseif expected then
-        return false, opts.map(data, type, opts.input, opts.stop), opts.stop
+        return false, opts.map(data, ptype, opts.input, opts.stop), opts.stop
     -- If we get an error type, return its description if it has one
-    elseif type == 'error' and data and data.description then
+    elseif ptype == 'error' and data and data.description then
         return tostring(data.description), opts.stop
     -- Otherwise, if the error is returned but without a description, report it
-    elseif type == 'error' and data then
+    elseif ptype == 'error' and data then
         return 'Error response received without description', opts.stop
     -- Otherwise, if the error is returned but without a payload, report it
-    elseif type == 'error' then
+    elseif ptype == 'error' then
         return 'Error response received without data payload', opts.stop
     -- Otherwise, if we got an unexpected type, report it
     else
-        return 'Received invalid response of type ' .. type .. ', wanted ' .. vim.inspect(opts.expected), opts.stop
+        return 'Received invalid response of type ' .. ptype .. ', wanted ' .. vim.inspect(opts.expected), opts.stop
     end
 end
 
@@ -253,6 +253,7 @@ local function make_fn(params)
             end
 
             return reply(parse_response({
+                input = msg,
                 payload = clean_data(res),
                 expected = params.ret_type,
                 map = params.map,
