@@ -3,14 +3,12 @@ local state = require('distant.state')
 local function make_fns(obj, names)
     for _, name in ipairs(names) do
         obj[name] = function(...)
-            --- TODO: Support settings for load_client
-            local err, client = state.load_client()
-            if err then
-                error(err)
-            else
-                local fn = client.api[name]
-                return fn(...)
-            end
+            local client = assert(
+                state.client, 
+                'Client must be initialized before invoking fn'
+            )
+            local fn = client.api[name]
+            return fn(...)
         end
     end
 
