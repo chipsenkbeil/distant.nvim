@@ -264,12 +264,6 @@ local function make_fn(params)
         -- If we have a receiver, this indicates that we are synchronous
         if rx then
             local err1, err2, result, stop = rx()
-            print(
-                'sync -- '
-                .. '\n  err    = ' .. vim.inspect(err1 or err2)
-                .. '\n  result = ' .. vim.inspect(result)
-                .. '\n  stop   = ' .. vim.inspect(stop)
-            )
             return err1 or err2, result, stop
         end
     end

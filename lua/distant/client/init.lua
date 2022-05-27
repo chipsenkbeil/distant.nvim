@@ -202,7 +202,7 @@ end
 --- Whether or not the client is connected to a remote server
 --- @return boolean
 function Client:is_connected()
-    return not (not self.__state.session)
+    return not (not self.__state.tenant)
 end
 
 --- Represents the tenant name used by the client when communicating with the server
@@ -295,6 +295,8 @@ end
 --- @field shutdown_after? number
 --- @field ssh? string
 --- @field username? string
+---
+--- @field auth? ClientAuth
 
 --- Launches a server remotely and performs authentication with the remote server
 ---
@@ -357,6 +359,7 @@ function Client:launch(opts, cb)
 
     local cmd = vim.trim(self.__settings.bin .. ' launch ' .. args)
     print('cmd ' .. cmd)
+    print(debug.traceback())
     log.fmt_debug('Launch cmd: %s', cmd)
 
     local handle, is_connected
@@ -406,7 +409,8 @@ function Client:launch(opts, cb)
                         vim.fn.json_decode(line),
                         function(msg)
                             handle.write(utils.compress(vim.fn.json_encode(msg)) .. '\n')
-                        end
+                        end,
+                        opts.auth
                     )
                 else
                     log.fmt_error('Unexpected msg: %s', line)
@@ -426,10 +430,11 @@ end
 --- @class ConnectOpts
 --- @field on_exit? fun(exit_code:number)
 --- @field method? 'distant'|'ssh'
---- @field session Session
---- @field ssh? ConnectSshOpts
+--- @field session? Session #Used when method is distant
+--- @field ssh? ConnectSshOpts #Used when method is ssh
 --- @field log_file? string
 --- @field log_level? LogLevel
+--- @field auth? ClientAuth
 
 --- @class ConnectSshOpts
 --- @field host? string
@@ -445,17 +450,19 @@ function Client:connect(opts)
 
     vim.validate({
         on_exit = { opts.on_exit, 'function', true },
-        session = { opts.session, 'table' },
+        session = { opts.session, 'table', true },
         method = { opts.method, 'string', true },
         ssh = { opts.ssh, 'table', true },
         log_file = { opts.log_file, 'string', true },
         log_level = { opts.log_level, 'string', true },
     })
-    vim.validate({
-        host = { opts.session.host, 'string' },
-        port = { opts.session.port, 'number' },
-        key = { opts.session.key, 'string' },
-    })
+    if opts.session then
+        vim.validate({
+            host = { opts.session.host, 'string' },
+            port = { opts.session.port, 'number' },
+            key = { opts.session.key, 'string' },
+        })
+    end
     if opts.ssh then
         vim.validate({
             host = { opts.ssh.host, 'string', true },
@@ -516,7 +523,7 @@ function Client:connect(opts)
                 if self:__is_auth_msg(msg) then
                     self:__auth_handler(msg, function(out)
                         handle.write(utils.compress(vim.fn.json_encode(out)) .. '\n')
-                    end)
+                    end, opts.auth)
                 else
                     self:__handler(msg)
                 end
@@ -540,7 +547,6 @@ function Client:connect(opts)
             .. ' '
             .. opts.session.key
 
-        print('Writing "' .. session_line .. '"')
         handle.write(session_line .. '\n')
     end
 
@@ -688,7 +694,7 @@ function Client:__handler(msg)
         return
     end
 
-    --- @type fun(payload:table)|nil
+    --- @type fun(payload:table, stop:fun()|nil)|nil
     local cb
 
     --- @type fun()|nil
@@ -702,8 +708,10 @@ function Client:__handler(msg)
             stop = cb_state.stop
 
             -- If we are not marked to receive multiple events, clear our callback
+            -- and set the stop function to nil since we don't want it to exist
             if not cb_state.multi then
                 self.__state.callbacks[origin_id] = nil
+                stop = nil
             end
         end
     end
@@ -716,32 +724,37 @@ function Client:__handler(msg)
 end
 
 --- Authentication event handler
+--- @overload fun(msg:table, reply:fun(msg:table)):boolean
 --- @param msg table
 --- @param reply fun(msg:table)
+--- @param auth? ClientAuth
 --- @return boolean #true if okay, otherwise false
-function Client:__auth_handler(msg, reply)
+function Client:__auth_handler(msg, reply, auth)
     local type = msg.type
+
+    --- @type ClientAuth
+    auth = vim.tbl_deep_extend('keep', auth or {}, self.auth)
 
     if type == 'ssh_authenticate' then
         reply({
             type = 'ssh_authenticate_answer',
-            answers = self.auth.on_authenticate(msg)
+            answers = auth.on_authenticate(msg)
         })
         return true
     elseif type == 'ssh_banner' then
-        self.auth.on_info(msg.text)
+        auth.on_info(msg.text)
         return true
     elseif type == 'ssh_host_verify' then
         reply({
             type = 'ssh_host_verify_answer',
-            answer = self.auth.on_verify_host(msg.host)
+            answer = auth.on_verify_host(msg.host)
         })
         return true
     elseif type == 'ssh_error' then
-        self.auth.on_error(vim.inspect(msg))
+        auth.on_error(vim.inspect(msg))
         return false
     else
-        self.auth.on_unknown(msg)
+        auth.on_unknown(msg)
         return false
     end
 end

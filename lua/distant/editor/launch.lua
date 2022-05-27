@@ -8,6 +8,7 @@ local state = require('distant.state')
 --- @field distant? EditorLaunchDistantOpts
 --- @field timeout? number
 --- @field interval? number
+--- @field auth? ClientAuth
 
 --- @class EditorLaunchSshOpts
 --- @field user? string
@@ -57,27 +58,31 @@ return function(opts, cb)
             return
         end
 
+        --- NOTE: At this point, we can assume the client is not nil
+        --- @type Client
+        client = client
+
         -- ssh mode means that launching is actually just connecting underneath
         if opts.mode == 'ssh' then
-            client:connect({}, function(err2)
-                if err then
-                    vim.api.nvim_err_writeln(err2)
-                    cb(err2)
-                    return
-                end
-
-                cb(false, client)
-            end)
+            client:connect({
+                auth = opts.auth,
+                method = opts.mode,
+                ssh = {
+                    host = opts.host,
+                    port = opts.ssh and opts.ssh.port,
+                    user = opts.ssh and opts.ssh.user,
+                },
+            })
+            cb(false, client)
 
             -- otherwise, we are actually launching a server on a remote machine
         else
-            -- TODO: Use mode to distinguish distant and ssh
-            -- TODO: Support overriding on_authenticate and on_host_verify
             client:launch({
                 connect = true,
 
                 host = opts.host,
                 port = opts.ssh and opts.ssh.port,
+                auth = opts.auth,
 
                 no_shell          = not use_login_shell,
                 distant           = opts.distant and opts.distant.bin,
