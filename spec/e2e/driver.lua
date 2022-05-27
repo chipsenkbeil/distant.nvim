@@ -39,13 +39,15 @@ end
 -- DRIVER SETUP & TEARDOWN
 -------------------------------------------------------------------------------
 
-local session = nil
+--- @type Client|nil
+local client = nil
 
---- Initialize a session if one has not been initialized yet
-local function initialize_session(opts)
+--- Initialize a client if one has not been initialized yet
+--- @return Client
+local function initialize_client(opts)
     opts = opts or {}
-    if session ~= nil then
-        return session
+    if client ~= nil then
+        return client
     end
 
     local timeout = opts.timeout or config.timeout
@@ -102,9 +104,7 @@ local function initialize_session(opts)
             on_host_verify = function(_) return true end,
         },
     }
-    print('launch.mode', vim.inspect(launch_opts.mode))
-    print('launch_opts', vim.inspect(launch_opts))
-    editor.launch(launch_opts, function(err, _)
+    editor.launch(launch_opts, function(err, c)
         if err then
             local desc = string.format(
                 'editor.launch({ host = %s, distant_bin = %s, distant_args = %s })',
@@ -114,17 +114,19 @@ local function initialize_session(opts)
                 'For %s, failed: %s',
                 desc, err
             ))
+        else
+            client = c
         end
     end)
     local status = vim.fn.wait(timeout, function()
-        return state.client ~= nil and state.client:is_connected()
+        --- @diagnostic disable-next-line:need-check-nil
+        return client ~= nil and client:is_connected()
     end, interval)
     assert(status == 0, 'Client not initialized in time')
 
-    local client = state.client
+    --- @diagnostic disable-next-line:need-check-nil
     assert(client:is_connected(), 'Client is not connected')
-
-    return client:session()
+    return client
 end
 
 --- Initializes a driver for e2e tests
@@ -139,7 +141,7 @@ function Driver:setup(opts)
     local obj = {}
     setmetatable(obj, Driver)
     obj.__state = {
-        session = nil,
+        client = nil,
         fixtures = {},
         mode = launch_mode(opts),
     }
@@ -151,7 +153,7 @@ function Driver:setup(opts)
     return obj
 end
 
---- Initializes the session of the driver
+--- Initializes the client of the driver
 function Driver:initialize(opts)
     opts = opts or {}
 
@@ -159,13 +161,13 @@ function Driver:initialize(opts)
         settings.merge(opts.settings)
     end
 
-    self.__state.session = initialize_session(opts)
+    self.__state.client = initialize_client(opts)
     return self
 end
 
 --- Tears down driver, cleaning up resources
 function Driver:teardown()
-    self.__state.session = nil
+    self.__state.client = nil
 
     for _, fixture in ipairs(self.__state.fixtures) do
         fixture.remove({ ignore_errors = true })

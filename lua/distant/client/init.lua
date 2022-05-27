@@ -359,7 +359,6 @@ function Client:launch(opts, cb)
 
     local cmd = vim.trim(self.__settings.bin .. ' launch ' .. args)
     print('cmd ' .. cmd)
-    print(debug.traceback())
     log.fmt_debug('Launch cmd: %s', cmd)
 
     local handle, is_connected

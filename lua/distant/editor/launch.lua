@@ -51,7 +51,8 @@ return function(opts, cb)
         use_login_shell = opts.distant.use_login_shell
     end
 
-    state.load_client(opts, function(err, client)
+    -- Create a new client to be used as our active client
+    state.new_client(opts, function(err, client)
         if err then
             vim.api.nvim_err_writeln(err)
             cb(err)
