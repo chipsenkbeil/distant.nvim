@@ -17,8 +17,8 @@ describe('fn', function()
             return {
                 success = res.success,
                 exit_code = res.exit_code,
-                stdout = res.stdout,
-                stderr = res.stderr,
+                stdout = string.char(unpack(res.stdout)),
+                stderr = string.char(unpack(res.stderr)),
             }
         end
 

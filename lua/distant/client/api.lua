@@ -71,7 +71,6 @@ local function parse_response(opts)
 
     local payload = opts.payload
     local ptype = payload.type
-    local data = payload.data
 
     local is_expected = function(t)
         if type(opts.expected) == 'string' then
@@ -90,16 +89,13 @@ local function parse_response(opts)
         return false, opts.map(true, ptype, opts.input, opts.stop), opts.stop
         -- For all other expected types, we return the payload data
     elseif expected then
-        return false, opts.map(data, ptype, opts.input, opts.stop), opts.stop
+        return false, opts.map(payload, ptype, opts.input, opts.stop), opts.stop
         -- If we get an error type, return its description if it has one
-    elseif ptype == 'error' and data and data.description then
-        return tostring(data.description), opts.stop
+    elseif ptype == 'error' and payload.description then
+        return tostring(payload.description), opts.stop
         -- Otherwise, if the error is returned but without a description, report it
-    elseif ptype == 'error' and data then
-        return 'Error response received without description', opts.stop
-        -- Otherwise, if the error is returned but without a payload, report it
     elseif ptype == 'error' then
-        return 'Error response received without data payload', opts.stop
+        return 'Error response received without description', opts.stop
         -- Otherwise, if we got an unexpected type, report it
     else
         return 'Received invalid response of type ' .. ptype .. ', wanted ' .. vim.inspect(opts.expected), opts.stop
@@ -127,7 +123,6 @@ end
 --- will be invoked synchronously and return `err|nil, data|nil`
 ---
 --- @param params MakeFnParams
---- @return fun(msgs:OneOrMoreMsgs, opts?:table, cb?:ApiCallback):ApiFnReturn
 local function make_fn(params)
     vim.validate({
         client = { params.client, 'table' },
@@ -140,10 +135,12 @@ local function make_fn(params)
         multi = { params.multi, 'boolean', true },
     })
 
+    --- @overload fun(msg:OneOrMoreMsgs, cb:ApiCallback)
+    --- @overload fun(msg:OneOrMoreMsgs, opts:table):ApiFnReturn
+    --- @overload fun(msg:OneOrMoreMsgs):ApiFnReturn
     --- @param msg OneOrMoreMsgs
-    --- @param opts? table
-    --- @param cb? ApiCallback
-    --- @return ApiFnReturn
+    --- @param opts table
+    --- @param cb ApiCallback
     return function(msg, opts, cb)
         -- If we are provided just the msgs and callback (not opts), move
         -- the arguments around to correctly assign cb as callback
@@ -437,14 +434,14 @@ return function(client)
             pty = { type = 'table', optional = true },
         },
         multi = true,
-        map = function(data, type, _, stop)
+        map = function(data, ptype, _, stop)
             -- NOTE: This callback will be triggered multiple times for
             --       different proc events; so, we need to handle them
             --       in specialized ways. The callback will only be
             --       triggered once when we first get the proc spawned
             --       event whereas all other events will be mapped to
             --       the created process
-            if type == 'proc_spawned' then
+            if ptype == 'proc_spawned' then
                 local id = tostring(data.id)
                 local write_stdin = make_fn({
                     client = client,
@@ -465,6 +462,11 @@ return function(client)
                 })
 
                 --- Poll some value from the process for changes
+                --- @generic T
+                --- @param check fun():T
+                --- @param opts {interval?:number, timeout?:number}
+                --- @param cb fun(err:boolean|string, value:T|nil)
+                --- @return boolean|string|nil, T|nil
                 local function poll(check, opts, cb)
                     if type(opts) == 'function' and cb == nil then
                         cb = opts
@@ -499,11 +501,12 @@ return function(client)
                     end
                 end
 
-                local proc = {
+                local proc
+                proc = {
                     __state = {
                         stdout = {},
                         stderr = {},
-                        status = nil,
+                        success = nil,
                         exit_code = nil,
                     },
 
@@ -523,7 +526,6 @@ return function(client)
 
                     read_stdout = function(opts, cb)
                         return poll(function()
-                            local proc = api.__state.processes[id]
                             local stdout = proc.__state.stdout
                             if not vim.tbl_isempty(stdout) then
                                 proc.__state.stdout = {}
@@ -532,9 +534,18 @@ return function(client)
                         end, opts, cb)
                     end,
 
+                    read_stdout_string = function(opts, cb)
+                        return poll(function()
+                            local stdout = proc.__state.stdout
+                            if not vim.tbl_isempty(stdout) then
+                                proc.__state.stdout = {}
+                                return string.char(unpack(stdout))
+                            end
+                        end, opts, cb)
+                    end,
+
                     read_stderr = function(opts, cb)
                         return poll(function()
-                            local proc = api.__state.processes[id]
                             local stderr = proc.__state.stderr
                             if not vim.tbl_isempty(stderr) then
                                 proc.__state.stderr = {}
@@ -543,17 +554,32 @@ return function(client)
                         end, opts, cb)
                     end,
 
+                    read_stderr_string = function(opts, cb)
+                        return poll(function()
+                            local stderr = proc.__state.stderr
+                            if not vim.tbl_isempty(stderr) then
+                                proc.__state.stderr = {}
+                                return string.char(unpack(stderr))
+                            end
+                        end, opts, cb)
+                    end,
+
                     is_done = function()
-                        local proc = api.__state.processes[id]
-                        return proc and proc.__state.status ~= nil
+                        return proc.__state.success ~= nil
                     end,
 
                     wait = function(opts, cb)
                         return poll(function()
-                            local proc = api.__state.processes[id]
-                            if proc.__state.status ~= nil then
-                                api.__state.processes[id] = nil
-                                return proc
+                            if proc.__state.success ~= nil then
+                                return proc.__state.success, proc.__state.exit_code
+                            end
+                        end, opts, cb)
+                    end,
+
+                    output = function(opts, cb)
+                        return poll(function()
+                            if proc.__state.success ~= nil then
+                                return proc.__state
                             end
                         end, opts, cb)
                     end,
@@ -564,46 +590,88 @@ return function(client)
                 }
 
                 api.__state.processes[id] = proc
+
+                -- Check once a second to see if the process is complete
+                -- and, if so, remove it from the active list
+                local timer = vim.loop.new_timer()
+                timer:start(0, 1000, function()
+                    if proc:is_done() then
+                        timer:close()
+                        api.__state.processes[id] = nil
+                    end
+                end)
+
                 return {
-                    type = type,
+                    type = ptype,
                     proc = proc,
                 }
             else
                 return {
-                    type = type,
+                    type = ptype,
                     data = data,
                 }
             end
         end,
         and_then = function(args)
             local err = args.err
-            local data = args.data
+            local data = (args.data and args.data.data) or args.data
             local stop = args.stop
             local cb = args.cb
 
-            if data.type == 'proc_spawned' then
+            if err then
+                return cb(err)
+            elseif data.type == 'proc_spawned' then
                 return cb(err, data.proc)
             elseif data.type == 'proc_done' then
                 local id = tostring(data.id)
                 local p = api.__state.processes[id]
-                p.__state.status = data.status
-                p.__state.exit_code = data.code
+                if p then
+                    p.__state.success = data.success
+                    p.__state.exit_code = data.code
+                end
                 stop()
             elseif data.type == 'proc_stdout' then
                 local id = tostring(data.id)
                 local p = api.__state.processes[id]
-                vim.list_extend(p.__state.stdout, data.data)
+                if p then
+                    vim.list_extend(p.__state.stdout, data.data)
+                end
             elseif data.type == 'proc_stderr' then
                 local id = tostring(data.id)
                 local p = api.__state.processes[id]
-                vim.list_extend(p.__state.stderr, data.data)
+                if p then
+                    vim.list_extend(p.__state.stderr, data.data)
+                end
             end
         end,
     })
 
     --- @type ApiSpawnWait
     api.spawn_wait = function(msgs, opts, cb)
-        return api.spawn(msgs, opts, function(err, proc)
+        -- If we are provided just the msgs and callback (not opts), move
+        -- the arguments around to correctly assign cb as callback
+        if type(opts) == 'function' and cb == nil then
+            cb = opts
+            opts = {}
+        end
+
+        -- If we are provided a filler value for opts or nothing at all,
+        -- ensure that it is an empty table instead
+        if not opts then
+            opts = {}
+        end
+
+        -- If no callback provided, then this is synchronous and we want
+        -- to use a oneshot channel so we can block waiting for the result
+        local rx
+        if not cb then
+            cb, rx = utils.oneshot_channel(
+                opts.timeout or state.settings.max_timeout,
+                opts.interval or state.settings.timeout_interval
+            )
+        end
+
+        api.spawn(msgs, opts, function(err, proc)
             if err then
                 return cb(err)
             end
@@ -616,6 +684,11 @@ return function(client)
                 return cb(false, output)
             end)
         end)
+
+        if rx then
+            local err1, err2, result = rx()
+            return err1 or err2, result
+        end
     end
 
     --- @type ApiSystemInfo
