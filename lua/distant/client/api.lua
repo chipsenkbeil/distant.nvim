@@ -16,7 +16,7 @@ local function clean_data(data)
 end
 
 --- @param msg ClientMsg
---- @param info {type:string, data:table<string, string|{type:string, optional:boolean}>}
+--- @param info {type:string, data:table<string, string|{type:string, optional:boolean}>, strict:boolean}
 --- @return ClientMsg
 local function msg_validate(msg, info)
     local opts = {
@@ -42,6 +42,17 @@ local function msg_validate(msg, info)
         error('[INVALID MSG] Expected ' .. info.type .. ' but got ' .. msg.type, 2)
     end
 
+    -- If strict, we will remove all keys not in data (or type)
+    if info.strict then
+        local new_msg = {type = msg.type}
+
+        for key, _ in pairs(info.data) do
+            new_msg[key] = msg[key]
+        end
+
+        msg = new_msg
+    end
+
     return msg
 end
 
@@ -63,7 +74,7 @@ local function parse_response(opts)
     vim.validate({
         payload = { opts.payload, 'table' },
         expected = { opts.expected, { 'string', 'table' } },
-        input = { opts.input, 'table' },
+        input = { opts.input, 'table', true },
         map = { opts.map, 'function', true },
         stop = { opts.stop, 'function', true },
     })
@@ -89,6 +100,10 @@ local function parse_response(opts)
         return false, opts.map(true, ptype, opts.input, opts.stop), opts.stop
         -- For all other expected types, we return the payload data
     elseif expected then
+        -- Clear the type as we include it separately and just want
+        -- this to represent data
+        payload.type = nil
+
         return false, opts.map(payload, ptype, opts.input, opts.stop), opts.stop
         -- If we get an error type, return its description if it has one
     elseif ptype == 'error' and payload.description then
@@ -155,6 +170,10 @@ local function make_fn(params)
             opts = {}
         end
 
+        if not msg then
+            msg = {}
+        end
+
         -- If no callback provided, then this is synchronous and we want
         -- to use a oneshot channel so we can block waiting for the result
         local rx
@@ -167,7 +186,7 @@ local function make_fn(params)
 
         -- @type ClientMsg[]
         local msgs
-        if not vim.tbl_islist(msg) then
+        if not vim.tbl_islist(msg) or vim.tbl_isempty(msg) then
             msgs = { msg }
         else
             msgs = msg
@@ -188,10 +207,11 @@ local function make_fn(params)
         })
 
         if params.req_type then
-            for _, m in ipairs(msgs) do
+            for i, m in ipairs(msgs) do
                 local status, err = pcall(msg_validate, m, {
                     type = params.type,
                     data = params.req_type,
+                    strict = true,
                 })
                 if not status then
                     -- Synchronous
@@ -202,6 +222,9 @@ local function make_fn(params)
                     else
                         return cb(err)
                     end
+                else
+                    -- Otherwise, update the msg to the clean version
+                    msgs[i] = err
                 end
             end
         end
@@ -235,16 +258,20 @@ local function make_fn(params)
                 end
 
 
-                for _, m in ipairs(res_payload_data) do
+                for i, m in ipairs(res_payload_data) do
                     local status, err = pcall(msg_validate, m, {
                         type = params.type,
                         data = params.res_type,
+                        strict = true,
                     })
                     if not status then
                         if stop then
                             stop()
                         end
                         return reply(err)
+                    else
+                        -- Otherwise, update the msg to the clean version
+                        res_payload_data[i] = err
                     end
                 end
             end
@@ -331,6 +358,9 @@ return function(client)
         res_type = {
             value = 'boolean',
         },
+        map = function(payload)
+            return payload.value
+        end,
     })
 
     --- @type ApiMetadata
@@ -385,6 +415,9 @@ return function(client)
         res_type = {
             data = 'table',
         },
+        map = function(payload)
+            return payload.data
+        end,
     })
 
     --- @type ApiReadFileText
@@ -398,6 +431,9 @@ return function(client)
         res_type = {
             data = 'string',
         },
+        map = function(payload)
+            return payload.data
+        end,
     })
 
     --- @type ApiRemove
@@ -442,7 +478,7 @@ return function(client)
             --       event whereas all other events will be mapped to
             --       the created process
             if ptype == 'proc_spawned' then
-                local id = tostring(data.id)
+                local id = string.format('%.f', data.id)
                 local write_stdin = make_fn({
                     client = client,
                     type = 'proc_stdin',
@@ -614,30 +650,34 @@ return function(client)
         end,
         and_then = function(args)
             local err = args.err
-            local data = (args.data and args.data.data) or args.data
+            local data = args.data
             local stop = args.stop
             local cb = args.cb
+            local dtype = data and data.type
 
             if err then
                 return cb(err)
-            elseif data.type == 'proc_spawned' then
+            elseif dtype == 'proc_spawned' then
                 return cb(err, data.proc)
-            elseif data.type == 'proc_done' then
-                local id = tostring(data.id)
+            elseif dtype == 'proc_done' then
+                data = data.data
+                local id = string.format('%.f', data.id)
                 local p = api.__state.processes[id]
                 if p then
                     p.__state.success = data.success
                     p.__state.exit_code = data.code
                 end
                 stop()
-            elseif data.type == 'proc_stdout' then
-                local id = tostring(data.id)
+            elseif dtype == 'proc_stdout' then
+                data = data.data
+                local id = string.format('%.f', data.id)
                 local p = api.__state.processes[id]
                 if p then
                     vim.list_extend(p.__state.stdout, data.data)
                 end
-            elseif data.type == 'proc_stderr' then
-                local id = tostring(data.id)
+            elseif dtype == 'proc_stderr' then
+                data = data.data
+                local id = string.format('%.f', data.id)
                 local p = api.__state.processes[id]
                 if p then
                     vim.list_extend(p.__state.stderr, data.data)

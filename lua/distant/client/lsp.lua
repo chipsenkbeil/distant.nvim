@@ -45,8 +45,9 @@ return function(client)
 
         -- The command needs to be wrapped with a prefix that is our distant binary
         -- as we are running the actual lsp server remotely
+        local state = require('distant.state')
         local cmd = {
-            s.settings.client.bin,
+            state.settings.client.bin,
             'lsp',
             '--format', 'shell',
             '--session', 'lsp',
