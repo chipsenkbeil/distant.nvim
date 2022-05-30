@@ -1,6 +1,6 @@
-local utils = require('distant.utils')
 local vars = require('distant.vars')
 
+local Cmd = require('distant.client.cmd')
 local log = require('distant.log')
 
 --- @param client Client
@@ -40,32 +40,25 @@ return function(client)
         assert(client:is_connected(), 'Client not yet connected!')
         local session = assert(client:session(), 'Client has not established session!')
 
-        -- Build our extra arguments for the distant binary
-        local args = vim.split(utils.build_arg_str(opts), ' ', true)
-
         -- The command needs to be wrapped with a prefix that is our distant binary
         -- as we are running the actual lsp server remotely
-        local state = require('distant.state')
-        local cmd = {
-            state.settings.client.bin,
-            'lsp',
-            '--format', 'shell',
-            '--session', 'lsp',
-        }
-        cmd = vim.list_extend(cmd, args)
-        cmd = vim.list_extend(cmd, { '--' })
-
-        -- Finally add the config command that we are wrapping, transforming a string
-        -- into a list split by space if needed
         local config_cmd = config.cmd
-        if type(config_cmd) == 'string' then
-            config_cmd = vim.split(config_cmd, ' ', true)
+        if type(config_cmd) == 'table' then
+            config_cmd = table.concat(config_cmd, ' ')
         end
-        cmd = vim.list_extend(cmd, config_cmd)
+
+        --- @type string[]
+        local cmd = client:build_cmd(
+            Cmd.lsp(config_cmd):set_from_tbl(vim.tbl_extend('force', opts, {
+                format = 'shell',
+                session = 'lsp',
+            })),
+            { list = true }
+        )
 
         -- Provide our credentials as part of the initialization options so our proxy
         -- knows who to talk to and has access to do so
-        local init_options = utils.merge(config.init_options or {}, {
+        local init_options = vim.tbl_deep_extend('force', config.init_options or {}, {
             ['distant'] = {
                 ['host'] = session.host;
                 ['port'] = session.port;
@@ -76,7 +69,7 @@ return function(client)
         -- TODO: Followed this based on nvim-lspconfig, but don't yet understand
         --       the workspace configuration override
         local capabilities = config.capabilities or vim.lsp.protocol.make_client_capabilities();
-        capabilities = utils.merge(capabilities, {
+        capabilities = vim.tbl_deep_extend('force', capabilities, {
             workspace = {
                 configuration = true,
             }
@@ -109,7 +102,8 @@ return function(client)
         -- Override the config's cmd, init_options, and capabilities
         -- as we take those existing config fields and alter them to work on
         -- a remote machine
-        local lsp_config = utils.merge(
+        local lsp_config = vim.tbl_deep_extend(
+            'force',
             config,
             {
                 before_init = before_init;
@@ -171,7 +165,7 @@ return function(client)
                             -- Support lsp-specific opts
                             log.fmt_debug('Starting LSP %s', label)
                             local opts = config.opts or {}
-                            local id = lsp.start_client(utils.merge(config, { on_exit = on_exit }), opts)
+                            local id = lsp.start_client(vim.tbl_deep_extend('force', config, { on_exit = on_exit }), opts)
                             lsp.__state.clients[label] = id
                         end
 

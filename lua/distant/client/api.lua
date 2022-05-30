@@ -44,7 +44,7 @@ local function msg_validate(msg, info)
 
     -- If strict, we will remove all keys not in data (or type)
     if info.strict then
-        local new_msg = {type = msg.type}
+        local new_msg = { type = msg.type }
 
         for key, _ in pairs(info.data) do
             new_msg[key] = msg[key]
@@ -220,6 +220,7 @@ local function make_fn(params)
 
                         -- Asynchronous
                     else
+                        --- @diagnostic disable-next-line:need-check-nil
                         return cb(err)
                     end
                 else
@@ -268,6 +269,7 @@ local function make_fn(params)
                         if stop then
                             stop()
                         end
+                        --- @diagnostic disable-next-line:need-check-nil
                         return reply(err)
                     else
                         -- Otherwise, update the msg to the clean version
@@ -276,6 +278,7 @@ local function make_fn(params)
                 end
             end
 
+            --- @diagnostic disable-next-line:need-check-nil
             return reply(parse_response({
                 input = msg,
                 payload = clean_data(res),
@@ -527,6 +530,7 @@ return function(client)
                         local value = check()
                         if value then
                             timer:close()
+                            --- @diagnostic disable-next-line:need-check-nil
                             cb(false, value)
                         end
                     end)
@@ -713,14 +717,17 @@ return function(client)
 
         api.spawn(msgs, opts, function(err, proc)
             if err then
+                --- @diagnostic disable-next-line:need-check-nil
                 return cb(err)
             end
 
             return proc:output(function(err2, output)
                 if err2 then
+                    --- @diagnostic disable-next-line:need-check-nil
                     return cb(err2)
                 end
 
+                --- @diagnostic disable-next-line:need-check-nil
                 return cb(false, output)
             end)
         end)

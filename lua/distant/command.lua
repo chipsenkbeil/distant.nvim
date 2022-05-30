@@ -3,6 +3,8 @@ local fn = require('distant.fn')
 
 local command = {}
 
+--- @param input string
+--- @return {args:string[], opts:table<string, string|table>}
 command.parse_input = function(input)
     local args = {}
     local opts = {}
@@ -129,12 +131,16 @@ end
 ---
 --- Paths are split by period, meaning `path.to.field` becomes
 --- `tbl.path.to.field = tonumber(tbl.path.to.field)`
+--- @param tbl table
+--- @param paths string[]
 local function paths_to_number(tbl, paths)
     tbl = tbl or {}
 
     local parts, inner
     for _, path in ipairs(paths) do
+        --- @type string[]
         parts = vim.split(path, '.', true)
+
         inner = tbl
         for i, part in ipairs(parts) do
             if inner == nil then
@@ -315,6 +321,36 @@ command.run = function(input)
 
     if #res.stderr > 0 then
         vim.api.nvim_err_writeln(res.stderr)
+    end
+end
+
+--- DistantShell [cmd arg1 arg2 ...]
+command.shell = function(input)
+    input = command.parse_input(input)
+    paths_to_number(input.opts, { 'timeout', 'interval' })
+
+    local cmd = nil
+    local cmd_prog = nil
+    if not vim.tbl_isempty(input.args) then
+        cmd_prog = input.args[1]
+        cmd = vim.list_slice(input.args, 2, #input.args)
+        table.insert(cmd, 1, cmd_prog)
+    end
+
+    local state = require('distant.state')
+
+    --- @type Client
+    local client = assert(state.client, 'No client established')
+
+    local job_id = client.term.spawn({ cmd = cmd })
+    if job_id == 0 then
+        error('Invalid arguments: ' .. table.concat(cmd or {}, ' '))
+    elseif job_id == -1 then
+        if cmd_prog then
+            error(cmd_prog .. ' is not executable')
+        else
+            error('Default shell is not executable')
+        end
     end
 end
 

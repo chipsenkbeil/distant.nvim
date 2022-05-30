@@ -1,13 +1,13 @@
-local log = require('distant.log')
+local log   = require('distant.log')
 local state = require('distant.state')
 local utils = require('distant.utils')
 
-local Args = require('distant.client.args')
-local api = require('distant.client.api')
+local Cmd     = require('distant.client.cmd')
+local api     = require('distant.client.api')
+local errors  = require('distant.client.errors')
 local install = require('distant.client.install')
-local lsp = require('distant.client.lsp')
--- local term = require('distant.client.term')
-local errors = require('distant.client.errors')
+local lsp     = require('distant.client.lsp')
+local term    = require('distant.client.term')
 
 --- Represents a Client connected to a remote machine
 --- @class Client
@@ -121,7 +121,7 @@ function Client:new(opts)
     instance.id = 'client_' .. tostring(utils.next_id())
     instance.api = api(instance)
     instance.lsp = lsp(instance)
-    -- instance.term = term(instance)
+    instance.term = term(instance)
 
     instance.auth = vim.tbl_deep_extend(
         'keep',
@@ -144,6 +144,25 @@ function Client:new(opts)
     return instance
 end
 
+--- Builds a new client command to execute using the given cmd as input
+--- @overload fun(cmd:BaseCmd):string
+--- @param cmd BaseCmd
+--- @param opts {list:boolean}
+--- @return string|string[]
+function Client:build_cmd(cmd, opts)
+    if not opts then
+        opts = {}
+    end
+
+    if opts.list then
+        local lst = cmd:as_list()
+        table.insert(lst, 1, self:binary())
+        return lst
+    else
+        return self:binary() .. ' ' .. cmd:as_string()
+    end
+end
+
 --- @class ClientInstallOpts
 --- @field bin? string
 --- @field timeout? number
@@ -159,6 +178,10 @@ end
 function Client:install(opts, cb)
     if not cb then
         cb = opts
+        opts = {}
+    end
+
+    if not opts then
         opts = {}
     end
 
@@ -339,7 +362,7 @@ function Client:launch(opts, cb)
         return text
     end
 
-    local args = Args.launch(opts.host):set_from_tbl({
+    local cmd = self:build_cmd(Cmd.launch(opts.host):set_from_tbl({
         format  = 'json';
         session = 'pipe';
 
@@ -355,9 +378,8 @@ function Client:launch(opts, cb)
         shutdown_after    = opts.shutdown_after;
         ssh               = opts.ssh;
         username          = opts.username;
-    }):as_string()
+    }))
 
-    local cmd = vim.trim(self.__settings.bin .. ' launch ' .. args)
     print('cmd ' .. cmd)
     log.fmt_debug('Launch cmd: %s', cmd)
 
@@ -477,7 +499,7 @@ function Client:connect(opts)
 
     --- @type 'distant'|'ssh'
     local method = opts.method or 'distant'
-    local args = Args.action():set_from_tbl({
+    local cmd = self:build_cmd(Cmd.action():set_from_tbl({
         interactive = true;
         method      = method;
         format      = 'json';
@@ -489,9 +511,8 @@ function Client:connect(opts)
         ssh_host  = opts.ssh and opts.ssh.host;
         ssh_port  = opts.ssh and opts.ssh.port;
         ssh_user  = opts.ssh and opts.ssh.user;
-    }):as_string()
+    }))
 
-    local cmd = vim.trim(self.__settings.bin .. ' action ' .. args)
     log.fmt_debug('Client cmd: %s', cmd)
 
     --- @type JobHandle
@@ -594,7 +615,10 @@ function Client:send(msgs, opts, cb)
         opts = {}
     end
 
-    opts = opts or {}
+    if not opts then
+        opts = {}
+    end
+
     log.fmt_trace('Client:send(%s, %s, _)', msgs, opts)
     assert(self:is_connected(), 'Client is not connected!')
 

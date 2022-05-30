@@ -1,6 +1,5 @@
 local config = require('spec.e2e.config')
 local editor = require('distant.editor')
-local state = require('distant.state')
 local settings = require('distant.settings')
 
 local Driver = {}

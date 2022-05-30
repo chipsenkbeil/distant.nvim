@@ -1,0 +1,2 @@
+--- @class ClientTerm
+--- @field spawn fun(opts?:{cmd?:string}):number

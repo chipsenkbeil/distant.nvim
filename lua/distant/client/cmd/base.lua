@@ -1,19 +1,22 @@
---- @class BaseArgs
+--- @class BaseCmd
+--- @field __cmd string
 --- @field __internal string[]
 --- @field __allowed table<string, boolean>|nil
-local BaseArgs = {}
+local BaseCmd = {}
 
---- @class BaseArgsNewOpts
---- @field allowed? string[] #if provided, will restrict args set to only those in allowed list
+--- @class BaseCmdNewOpts
+--- @field allowed? string[] #if provided, will restrict cmd set to only those in allowed list
 
---- Creates a new instance of args
---- @param opts? BaseArgsNewOpts
-function BaseArgs:new(opts)
+--- Creates a new instance of cmd
+--- @param cmd string
+--- @param opts? BaseCmdNewOpts
+function BaseCmd:new(cmd, opts)
     opts = opts or {}
 
     local instance = {}
     setmetatable(instance, self)
     self.__index = self
+    self.__cmd = cmd
     self.__internal = {}
 
     if vim.tbl_islist(opts.allowed) then
@@ -28,8 +31,8 @@ end
 
 --- Sets multiple arguments using the given table
 --- @param tbl table<string, boolean|string>
---- @return BaseArgs #reference to self
-function BaseArgs:set_from_tbl(tbl)
+--- @return BaseCmd #reference to self
+function BaseCmd:set_from_tbl(tbl)
     for key, value in pairs(tbl) do
         if value then
             self:set(key, value)
@@ -43,8 +46,8 @@ end
 --- @param key string #the key to add
 --- @param value? string #optional value for argument
 --- @param verbatim? boolean #if true, does not transform key casing and uses as is
---- @return BaseArgs #reference to self
-function BaseArgs:set(key, value, verbatim)
+--- @return BaseCmd #reference to self
+function BaseCmd:set(key, value, verbatim)
     if not key then
         return self
     end
@@ -72,8 +75,8 @@ end
 --- Removes an argument
 --- @param key string #the key to add
 --- @param verbatim? boolean #if true, does not transform key casing and uses as is
---- @return BaseArgs #reference to self
-function BaseArgs:clear(key, verbatim)
+--- @return BaseCmd #reference to self
+function BaseCmd:clear(key, verbatim)
     if not key then
         return self
     end
@@ -86,25 +89,33 @@ function BaseArgs:clear(key, verbatim)
     self.__internal[key_label] = nil
 end
 
---- Returns args as a string for use in a cmd
---- @return string
-function BaseArgs:__tostring()
-    local args = {}
+--- Converts cmd into a list of string
+--- @return string[]
+function BaseCmd:as_list()
+    local lst = {}
+
+    table.insert(lst, self.__cmd)
 
     for k, v in pairs(self.__internal) do
-        table.insert(args, '--' .. k)
+        table.insert(lst, '--' .. k)
         if type(v) == 'string' then
-            table.insert(args, v)
+            table.insert(lst, v)
         end
     end
 
-    return table.concat(args, ' ')
+    return lst
 end
 
---- Same as __tostring
+--- Returns cmd as a string
 --- @return string
-function BaseArgs:as_string()
-    return self:__tostring()
+function BaseCmd:as_string()
+    return vim.trim(table.concat(self:as_list(), ' '))
 end
 
-return BaseArgs
+--- Returns cmd as a string
+--- @return string
+function BaseCmd:__tostring()
+    return self:as_string()
+end
+
+return BaseCmd
