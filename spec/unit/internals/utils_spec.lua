@@ -1,52 +1,6 @@
 local u = require('distant.utils')
 
 describe('utils', function()
-    describe('build_arg_str', function()
-        it('should fail if args is not a table', function()
-            assert.has.errors(function()
-                u.build_arg_str('text')
-            end)
-        end)
-
-        it('should return an empty string if args is empty', function()
-            assert.are.equal('', u.build_arg_str({}))
-        end)
-
-        it('should convert keys with value == true into --key', function()
-            assert.are.equal('--key1', u.build_arg_str({
-                key1 = true,
-                key2 = false,
-            }))
-        end)
-
-        it('should convert keys with value == string into --key value', function()
-            assert.are.equal('--key1 some value', u.build_arg_str({
-                key1 = 'some value',
-                key2 = '',
-            }))
-        end)
-
-        it('should convert keys with value == number into --key value', function()
-            -- TODO: Is there a luassert way of doing this?
-            local result = u.build_arg_str({
-                key1 = 123,
-                key2 = 0,
-            })
-            assert.is.truthy(
-                (vim.startswith(result, '--key1 123') and vim.endswith(result, '--key2 0'))
-                or
-                (vim.startswith(result, '--key2 0') and vim.endswith(result, '--key1 123'))
-            )
-        end)
-
-        it('should support excluding keys contained in the exclusion list', function()
-            assert.are.equal('--key2 0', u.build_arg_str({
-                key1 = 123,
-                key2 = 0,
-            }, { 'key1' }))
-        end)
-    end)
-
     describe('clean_term_line', function()
         it('should remove carriage return characters', function()
             assert.are.equal('sometext', u.clean_term_line('some\rtext'))
