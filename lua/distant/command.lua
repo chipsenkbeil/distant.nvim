@@ -342,16 +342,7 @@ command.shell = function(input)
     --- @type Client
     local client = assert(state.client, 'No client established')
 
-    local job_id = client.term.spawn({ cmd = cmd })
-    if job_id == 0 then
-        error('Invalid arguments: ' .. table.concat(cmd or {}, ' '))
-    elseif job_id == -1 then
-        if cmd_prog then
-            error(cmd_prog .. ' is not executable')
-        else
-            error('Default shell is not executable')
-        end
-    end
+    client.term.spawn({ cmd = cmd })
 end
 
 return command

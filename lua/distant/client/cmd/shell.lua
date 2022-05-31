@@ -2,7 +2,7 @@ local BaseCmd = require('distant.client.cmd.base')
 
 --- @class ShellCmd: BaseCmd
 --- @field __cmd string
-local ShellCmd = BaseCmd:new({ allowed = {
+local ShellCmd = BaseCmd:new('shell', { allowed = {
     'persist',
     'format',
     'log-file',
@@ -30,8 +30,10 @@ end
 --- @return string[]
 function ShellCmd:as_list()
     local lst = BaseCmd.as_list(self)
-    table.insert(lst, '--')
-    table.insert(lst, self.__prog)
+    if self.__prog then
+        table.insert(lst, '--')
+        table.insert(lst, self.__prog)
+    end
     return lst
 end
 

@@ -14,26 +14,40 @@ return function()
         end
     end)
 
-    local session = state.session
-    local msg = {}
-    vim.list_extend(msg, {
-        '= Session ' .. (session and 'Connected' or 'Disconnected') .. ' =';
-        '';
-    })
+    local client = state.client
 
-    if session then
-        local details = session.details
+    local msg = {}
+    if client and client:is_connected() then
+        vim.list_extend(msg, {
+            '= Client Connected =';
+            '';
+        })
+    else
+        vim.list_extend(msg, {
+            '= Client Disconnected =';
+            '';
+        })
+    end
+
+    if client and client:details() then
+        --- @type ClientDetails
+        local details = client:details()
+
+        local host, port
         if details.tcp then
+            host = details.tcp.host
+            port = tostring(details.tcp.port)
+
             table.insert(msg, indent .. ' * Type = "tcp"')
-            table.insert(msg, indent .. ' * Address = "' .. details.tcp.addr .. '"')
-            table.insert(msg, indent .. ' * Tag = "' .. details.tcp.tag .. '"')
-        elseif details.socket then
-            table.insert(msg, indent .. ' * Type = "socket"')
-            table.insert(msg, indent .. ' * Path = "' .. details.socket.path .. '"')
-            table.insert(msg, indent .. ' * Tag = "' .. details.socket.tag .. '"')
-        elseif details.inmemory then
-            table.insert(msg, indent .. ' * Type = "inmemory"')
-            table.insert(msg, indent .. ' * Tag = "' .. details.inmemory.tag .. '"')
+            table.insert(msg, indent .. ' * Host = "' .. host .. '"')
+            table.insert(msg, indent .. ' * Port = "' .. port .. '"')
+        elseif details.ssh then
+            host = details.ssh.host or '???'
+            port = tostring(details.ssh.port or 22)
+
+            table.insert(msg, indent .. ' * Type = "ssh"')
+            table.insert(msg, indent .. ' * Host = "' .. host .. '"')
+            table.insert(msg, indent .. ' * Port = "' .. port .. '"')
         else
             table.insert(msg, indent .. ' * Type = "unknown"')
         end

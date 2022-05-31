@@ -22,6 +22,8 @@ command! -nargs=* DistantMetadata
       \ lua require('distant.command').metadata(vim.fn.expand('<args>'))
 command! -nargs=* DistantInstall
       \ lua require('distant.command').install(vim.fn.expand('<args>'))
+command! -nargs=* DistantShell
+      \ lua require('distant.command').shell(vim.fn.expand('<args>'))
 command! -nargs=0 DistantSessionInfo
       \ lua require('distant.command').session_info()
 command! -nargs=0 DistantSystemInfo

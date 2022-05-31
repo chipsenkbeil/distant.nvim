@@ -85,7 +85,12 @@ end
 --- @field tenant? string
 --- @field handle? JobHandle
 --- @field callbacks table<string, InternalCallback>
---- @field session? Session
+--- @field details? ClientDetails
+
+--- @class ClientDetails
+--- @field type 'distant'|'ssh'
+--- @field tcp? TcpSession
+--- @field ssh? SshSession
 
 --- @class InternalSettings
 --- @field bin string
@@ -97,10 +102,15 @@ end
 --- @field multi boolean @If true, will not clear the callback after first invocation
 --- @field stop fun() @When called, will stop the callback from being invoked and clear it
 
---- @class Session
+--- @class TcpSession
 --- @field host string
 --- @field port number
 --- @field key string
+
+--- @class SshSession
+--- @field host string
+--- @field port? number #Defaults to 22
+--- @field user? string #Explicit user
 
 --- @alias LogLevel 'off'|'error'|'warn'|'info'|'debug'|'trace'
 
@@ -133,7 +143,7 @@ function Client:new(opts)
         tenant = nil;
         handle = nil;
         callbacks = {};
-        session = nil;
+        details = nil;
     }
 
     instance.__settings = {
@@ -252,10 +262,24 @@ function Client:timeout_interval()
     return self.__settings.interval
 end
 
---- Returns the active session of the client, if it has one
---- @return Session|nil
-function Client:session()
-    return self.__state.session
+--- Returns the details of the client, if it is active
+--- @return ClientDetails|nil
+function Client:details()
+    return self.__state.details
+end
+
+function Client:tcp_session()
+    local details = self:details()
+    if details then
+        return details.tcp
+    end
+end
+
+function Client:ssh_session()
+    local details = self:details()
+    if details then
+        return details.ssh
+    end
 end
 
 --- @class ClientVersion
@@ -324,7 +348,7 @@ end
 --- Launches a server remotely and performs authentication with the remote server
 ---
 --- @param opts LaunchOpts
---- @param cb fun(err?:string, session?:Session)
+--- @param cb fun(err?:string, session?:TcpSession)
 --- @return JobHandle|nil
 function Client:launch(opts, cb)
     log.fmt_debug('Authenticating with options: %s', opts)
@@ -451,7 +475,7 @@ end
 --- @class ConnectOpts
 --- @field on_exit? fun(exit_code:number)
 --- @field method? 'distant'|'ssh'
---- @field session? Session #Used when method is distant
+--- @field session? TcpSession #Used when method is distant
 --- @field ssh? ConnectSshOpts #Used when method is ssh
 --- @field log_file? string
 --- @field log_level? LogLevel
@@ -572,9 +596,13 @@ function Client:connect(opts)
 
     self.__state = {
         tenant = 'nvim_tenant_' .. utils.next_id();
-        session = opts.session;
         handle = handle;
         callbacks = {};
+        details = {
+            type = method,
+            tcp = opts.session,
+            ssh = opts.ssh,
+        };
     }
 end
 
@@ -587,7 +615,7 @@ function Client:stop()
     self.__state.tenant = nil
     self.__state.handle = nil
     self.__state.callbacks = {}
-    self.__state.session = nil
+    self.__state.details = nil
 end
 
 --- @class ClientMsg

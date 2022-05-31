@@ -1,7 +1,7 @@
 local BaseCmd = require('distant.client.cmd.base')
 
 --- @class ListenCmd: BaseCmd
-local ListenCmd = BaseCmd:new({ allowed = {
+local ListenCmd = BaseCmd:new('listen', { allowed = {
     'foreground',
     'key-from-stdin',
     'use-ipv6',

@@ -38,7 +38,7 @@ return function(client)
         end
 
         assert(client:is_connected(), 'Client not yet connected!')
-        local session = assert(client:session(), 'Client has not established session!')
+        local session = assert(client:tcp_session(), 'Client has not established TCP session!')
 
         -- The command needs to be wrapped with a prefix that is our distant binary
         -- as we are running the actual lsp server remotely

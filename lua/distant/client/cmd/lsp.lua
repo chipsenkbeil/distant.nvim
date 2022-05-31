@@ -23,7 +23,7 @@ local LspCmd = BaseCmd:new('lsp', { allowed = {
 --- @return LspCmd
 function LspCmd:new(prog)
     self.__internal = {}
-    self.__prog = prog
+    self.__prog = assert(prog, 'Missing prog argument')
     return self
 end
 
