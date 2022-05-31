@@ -67,12 +67,12 @@ local settings = {}
 --- settings to apply first before adding in server-specific settings
 ---
 --- @type table<string, Settings>
-local inner = { [DEFAULT_LABEL] = utils.merge({}, DEFAULT_SETTINGS) }
+local inner = { [DEFAULT_LABEL] = vim.tbl_deep_extend('force', {}, DEFAULT_SETTINGS) }
 
 --- Merges current settings with provided, overwritting anything with provided
 --- @param other table<string, Settings> The other settings to include
 settings.merge = function(other)
-    inner = utils.merge(inner, other)
+    inner = vim.tbl_deep_extend('force', inner, other)
 end
 
 --- Returns a collection of labels contained by the settings
@@ -101,7 +101,7 @@ settings.for_label = function(label, no_default)
 
     local settings_for_label = specific
     if not no_default then
-        settings_for_label = utils.merge(default, specific)
+        settings_for_label = vim.tbl_deep_extend('force', default, specific)
     end
 
     return settings_for_label
