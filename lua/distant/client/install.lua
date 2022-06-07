@@ -1,12 +1,11 @@
 local utils = require('distant.utils')
-
 -------------------------------------------------------------------------------
 -- CONFIGURATION DEFAULTS
 -------------------------------------------------------------------------------
 
 local REPO_URL             = 'https://github.com/chipsenkbeil/distant'
 local RELEASE_API_ENDPOINT = 'https://api.github.com/repos/chipsenkbeil/distant/releases'
-local MAX_DOWNLOAD_CHOICES = 5
+local MAX_DOWNLOAD_CHOICES = 10
 
 -------------------------------------------------------------------------------
 -- MAPPINGS
@@ -30,6 +29,12 @@ local BIN_NAME = {
 -------------------------------------------------------------------------------
 -- INTERNAL GITHUB API
 -------------------------------------------------------------------------------
+
+--- @param tag string
+--- @return Version|nil
+local function parse_tag_into_version(tag)
+    return utils.parse_version(utils.strip_prefix(vim.trim(tag), 'v'))
+end
 
 --- @class QueryReleaseApiOpts
 --- @field page? number #Page in release list to query, defaulting to first page
@@ -276,9 +281,14 @@ local HOST_BIN_NAME = (function()
     end
 end)()
 
+--- @return string #Path to directory that would contain the binary
+local function bin_dir()
+    return utils.data_path() .. SEP .. 'bin'
+end
+
 --- @return string #Path to local binary
 local function bin_path()
-    return utils.data_path() .. SEP .. 'bin' .. SEP .. HOST_BIN_NAME
+    return bin_dir() .. SEP .. HOST_BIN_NAME
 end
 
 -- From https://www.lua.org/pil/19.3.html
@@ -300,18 +310,29 @@ end
 -- INSTALL HELPERS
 -------------------------------------------------------------------------------
 
+--- @class DownloadBinaryOpts
+--- @field bin_name? string #Name of binary artifact to download, defaulting to platform choice
+--- @field min_version? Version #Minimum version to list as a download choice
+
 --- @overload fun(cb:fun(success:boolean, result:string)):number
---- @param bin_name string #Name of binary artifact to download, defaulting to platform choice
+--- @param opts DownloadBinaryOpts
 --- @param cb fun(success:boolean, result:string) #where result is an error message or the binary path
 --- @return number #job-id on success, 0 on invalid arguments, -1 if unable to execute cmd
-local function download_binary(bin_name, cb)
+local function download_binary(opts, cb)
     --- @type string
     local host_platform = HOST_PLATFORM
 
     if not cb then
-        cb = bin_name
-        bin_name = nil
+        cb = opts
+        opts = {}
     end
+
+    if not opts then
+        opts = {}
+    end
+
+    local bin_name = opts.bin_name
+    local min_version = opts.min_version
 
     -- If using linux and we don't have a bin_name, adjust our host platform
     -- based on if they want gnu or musl
@@ -353,7 +374,20 @@ local function download_binary(bin_name, cb)
             return cb(success, res)
         end
 
-        local choices = vim.tbl_map(function(entry) return entry.description end, res)
+        --- @type ReleaseEntry[]
+        res = res
+
+        local choices = vim.tbl_map(
+            function(entry) return entry.description end,
+            vim.tbl_filter(function(entry)
+                local version = parse_tag_into_version(entry.tag)
+                return not min_version or utils.can_upgrade_version(
+                    min_version,
+                    version,
+                    { allow_unstable_upgrade = true }
+                )
+            end, res)
+        )
         local choice = prompt_choices({
             prompt = 'Which version of the binary do you want?',
             choices = choices,
@@ -527,6 +561,7 @@ end
 --- @field reinstall? boolean #If true, will force prompts and remove any previously-installed instance of the binary
 --- @field bin? string #If provided, will overwrite the name of the binary used
 --- @field prompt? string #If provided, used as prompt
+--- @field min_version? Version #If provided, filters download options to only those that meet specified version
 
 --- Installs the binary asynchronously if unavailable, providing several options to perform
 --- the installation
@@ -550,9 +585,45 @@ local function install(opts, cb)
     })
     opts.reinstall = not (not opts.reinstall)
 
-    local prompt = opts.prompt or (opts.reinstall and
-        'Reinstalling local binary! What would you like to do?' or
-        'Local binary not found! What would you like to do?')
+    local local_bin = bin_path()
+    local has_bin = vim.fn.executable(local_bin) == 1
+    local min_version = opts.min_version
+
+    local prompt = opts.prompt
+    if not prompt then
+        if opts.reinstall then
+            prompt = 'Reinstalling local binary! What would you like to do?'
+        else
+            prompt = 'Local binary not found! What would you like to do?'
+        end
+    end
+
+    -- If we are given a minimum version and have a pre-existing binary,
+    -- we want to check the version to see if we can return it
+    if has_bin and min_version and not opts.reinstall then
+        local version = has_bin and utils.exec_version(local_bin)
+        local valid_version = version and utils.can_upgrade_version(
+            min_version,
+            version,
+            { allow_unstable_upgrade = true }
+        )
+
+        if valid_version then
+            return cb(true, local_bin)
+        elseif version then
+            prompt = string.format(
+                'Installed client version is %s, which is not backwards-compatible with %s! '
+                .. 'What would you like to do?',
+                utils.version_to_string(version),
+                utils.version_to_string(min_version)
+            )
+        end
+
+        -- Otherwise, if we have a binary and no minimum required version,
+        -- then we're good to go and can exit immediately
+    elseif has_bin and not opts.reinstall then
+        return cb(true, local_bin)
+    end
 
     local choice = prompt_choices({
         prompt = prompt,
@@ -567,12 +638,73 @@ local function install(opts, cb)
         return cb(false, 'Aborted choice prompt')
     end
 
-    if choice == 1 then
-        return download_binary(cb)
-    elseif choice == 2 then
-        return build_binary(cb)
-    elseif choice == 3 then
-        return copy_binary(cb)
+    local do_action = function()
+        local cb_wrapper = vim.schedule_wrap(function(success, res)
+            if not success then
+                return cb(success, res)
+            else
+                local path = res
+
+                -- If we succeeded, we need to make sure the binary is executable on Unix systems
+                -- and we do this by getting the pre-existing mode and ensuring that it is
+                -- executable
+                vim.loop.fs_stat(path, vim.schedule_wrap(function(err, stat)
+                    if err then
+                        return cb(false, err)
+                    end
+
+                    -- Mode comes in as a decimal representing octal value
+                    -- and we want to ensure that it has executable permissions
+                    local mode = utils.bitmask(
+                        stat.mode or 493, -- 0o755 -> 493
+                        73, -- 0o111 -> 73
+                        'or'
+                    )
+
+                    vim.loop.fs_chmod(path, mode, vim.schedule_wrap(function(err, success)
+                        if err then
+                            return cb(false, err)
+                        elseif not success then
+                            return cb(false, 'Failed to change binary permissions')
+                        else
+                            return cb(true, path)
+                        end
+                    end))
+                end))
+            end
+        end)
+
+        -- Perform action to get binary
+        if choice == 1 then
+            return download_binary({ min_version = opts.min_version }, cb_wrapper)
+        elseif choice == 2 then
+            return build_binary(cb_wrapper)
+        elseif choice == 3 then
+            return copy_binary(cb_wrapper)
+        end
+    end
+
+    -- If we have a bin and were given a choice, we want to delete the old binary
+    -- before installing the new one to avoid weird corruption
+    if has_bin then
+        return vim.loop.fs_unlink(local_bin, vim.schedule_wrap(function(err, success)
+            if err then
+                return cb(false, 'Failed to remove old binary: ' .. err)
+            elseif not success then
+                return cb(false, 'Failed to remove old binary: ???')
+            end
+
+            return do_action()
+        end))
+    else
+        -- Ensure that the directory to house the binary exists
+        return utils.mkdir({ path = bin_dir(), parents = true }, function(err)
+            if err then
+                return cb(false, 'Unable to create directory for binary: ' .. err)
+            end
+
+            return do_action()
+        end)
     end
 end
 

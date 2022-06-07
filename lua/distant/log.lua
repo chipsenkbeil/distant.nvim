@@ -6,6 +6,7 @@
 -- This library is free software; you can redistribute it and/or modify it
 -- under the terms of the MIT license. See LICENSE for details.
 
+--- @type 'trace'|'debug'|'info'|'warn'|'error'|'fatal'
 local d_log_level = vim.fn.getenv('DISTANT_LOG_LEVEL')
 if d_log_level == vim.NIL then
     d_log_level = 'info'
@@ -181,21 +182,5 @@ end
 
 log.new(default_config, true)
 -- }}}
-
--- Special function to initialize the Rust lib's logger
-log.init_lib = function(lib, opts)
-    opts = opts or {}
-
-    local file = opts.file or string.format(
-        '%s/%s.mod.log',
-        vim.api.nvim_call_function('stdpath', { 'cache' }),
-        default_config.plugin
-    )
-    local level = opts.level or default_config.level
-    lib.log.init({
-        file = file,
-        level = level,
-    })
-end
 
 return log

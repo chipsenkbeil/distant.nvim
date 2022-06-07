@@ -9,6 +9,11 @@ local install = require('distant.client.install')
 local lsp     = require('distant.client.lsp')
 local term    = require('distant.client.term')
 
+--- Minimum version supported by the client, also enforcing
+--- version upgrades such that 0.16.x would not allow 0.17.0+
+--- @type Version
+local MIN_VERSION = assert(utils.parse_version('0.16.4'))
+
 --- Represents a Client connected to a remote machine
 --- @class Client
 --- @field id string #Represents an arbitrary unique id for the client
@@ -175,9 +180,9 @@ end
 
 --- @class ClientInstallOpts
 --- @field bin? string
+--- @field reinstall? boolean
 --- @field timeout? number
 --- @field interval? number
---- @field check_version? fun(version:ClientVersion):boolean
 
 --- Creates a client, checks if the binary is available on path, and
 --- installs the binary if it is not. Will also check the version and
@@ -197,18 +202,17 @@ function Client:install(opts, cb)
 
     local client = Client:new(opts)
     local has_bin = vim.fn.executable(client.__settings.bin) == 1
-    local check_version = opts.check_version
 
     local function validate_client()
-        local ok = true
-        if check_version then
-            local version = client:version()
-            if not version then
-                return cb('Unable to detect binary version')
-            end
-            ok = check_version(version)
+        local version = client:version()
+        if not version then
+            return cb('Unable to detect binary version')
         end
-
+        local ok = utils.can_upgrade_version(
+            MIN_VERSION,
+            version,
+            { allow_unstable_upgrade = true }
+        )
 
         if ok then
             vim.schedule(function() cb(false, client) end)
@@ -217,11 +221,17 @@ function Client:install(opts, cb)
         return ok
     end
 
+    -- If the client's binary is available, check if it's valid and
+    -- if so we can exit
     if has_bin and validate_client() then
         return
     end
 
-    return install.install(function(success, result)
+    -- Otherwise, try to install to our internal location and use it
+    return install.install({
+        min_version = MIN_VERSION,
+        reinstall = opts.reinstall,
+    }, function(success, result)
         if not success then
             return cb(result)
         else
@@ -282,48 +292,10 @@ function Client:ssh_session()
     end
 end
 
---- @class ClientVersion
---- @field major number
---- @field minor number
---- @field patch number
---- @field pre_release string|nil
---- @field pre_release_version number
-
 --- Retrieves the current version of the binary, returning it  or nil if not available
---- @return ClientVersion|nil
+--- @return Version|nil
 function Client:version()
-    local raw_version = vim.fn.system(self.__settings.bin .. ' --version')
-    if not raw_version then
-        return nil
-    end
-
-    local version_string = vim.trim(utils.strip_prefix(
-        vim.trim(raw_version),
-        self.__settings.bin
-    ))
-    if not version_string then
-        return nil
-    end
-
-    local semver, ext = unpack(vim.split(version_string, '-', true))
-    local major, minor, patch = unpack(vim.split(semver, '.', true))
-
-    local pre_release, pre_release_version
-    if ext then
-        pre_release, pre_release_version = unpack(vim.split(ext, '.', true))
-    end
-
-    local version = {
-        major = major,
-        minor = minor,
-        patch = patch,
-        pre_release = pre_release,
-        pre_release_version = pre_release_version,
-    }
-
-    return utils.filter_map(version, (function(v)
-        return tonumber(v) or v
-    end))
+    return utils.exec_version(self.__settings.bin)
 end
 
 --- @class LaunchOpts
@@ -549,14 +521,25 @@ function Client:connect(opts)
             self:stop()
         end;
         on_failure = function(code)
-            log.fmt_error(
-                'Connect failed (%s): %s',
-                tostring(code),
-                errors.description_by_code(code) or '???'
-            )
+            -- This is a termination signal which happens
+            -- when neovim exits and kills a child process,
+            -- which we don't want to print out as part
+            -- of our logging, so we skip this by treating
+            -- it as a success instead
+            if code == 143 then
+                if type(opts.on_exit) == 'function' then
+                    opts.on_exit(0)
+                end
+            else
+                log.fmt_error(
+                    'Connect failed (%s): %s',
+                    tostring(code),
+                    errors.description_by_code(code) or '???'
+                )
 
-            if type(opts.on_exit) == 'function' then
-                opts.on_exit(code)
+                if type(opts.on_exit) == 'function' then
+                    opts.on_exit(code)
+                end
             end
             self:stop()
         end;

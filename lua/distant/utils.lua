@@ -10,6 +10,8 @@ utils.plugin_name = function() return PLUGIN_NAME end
 --- Represents the separator for use with local file system
 ---
 --- From https://github.com/williamboman/nvim-lsp-installer/blob/main/lua/nvim-lsp-installer/path.lua
+---
+--- @type '\\'|'/'
 local SEPARATOR = (function()
     --- @diagnostic disable-next-line: undefined-global
     if jit then
@@ -208,7 +210,102 @@ utils.job_start = function(cmd, opts)
     end
 end
 
+--- @class Version
+--- @field major number
+--- @field minor number
+--- @field patch number
+--- @field pre_release string|nil
+--- @field pre_release_version number
+
+--- @param vstr string
+--- @return Version|nil #Returns version if valid, otherwise nil
+utils.parse_version = function(vstr)
+    local semver, ext = unpack(vim.split(vstr, '-', true))
+    local major, minor, patch = unpack(vim.split(semver, '.', true))
+
+    local pre_release, pre_release_version
+    if ext then
+        pre_release, pre_release_version = unpack(vim.split(ext, '.', true))
+    end
+
+    local version = {
+        major = major,
+        minor = minor,
+        patch = patch,
+        pre_release = pre_release,
+        pre_release_version = pre_release_version,
+    }
+
+    for key, value in pairs(version) do
+        version[key] = tonumber(value) or value
+    end
+
+    return version
+end
+
+--- Determines if safe to upgrade from version a to version b.
+---
+--- @param a Version
+--- @param b Version
+--- @param opts nil|{allow_unstable_upgrade:boolean}
+--- @return boolean
+utils.can_upgrade_version = function(a, b, opts)
+    opts = opts or {}
+    local unstable = a.major == 0
+
+    -- If we allow for unstable upgrades, then the patch number
+    -- is significant
+    if unstable and opts.allow_unstable_upgrade then
+        -- Pre-release version is ignored for precedence in semver 2.0.0
+        return a.major == b.major and
+            a.minor == b.minor and
+            a.patch <= b.patch and
+            a.pre_release == b.pre_release
+    elseif unstable then
+        -- Pre-release version is ignored for precedence in semver 2.0.0
+        return a.major == b.major and
+            a.minor == b.minor and
+            a.patch == b.patch and
+            a.pre_release == b.pre_release
+    else
+        return a.major == b.major and a.minor <= b.minor
+    end
+end
+
+--- Run some binary with `--version` and parse the result.
+--- @param bin string
+--- @return Version|nil
+utils.exec_version = function(bin)
+    local raw_version = vim.fn.system(bin .. ' --version')
+    if not raw_version then
+        return nil
+    end
+
+    local version_string = vim.trim(utils.strip_prefix(
+        vim.trim(raw_version),
+        'distant'
+    ))
+    if not version_string then
+        return nil
+    end
+
+    return utils.parse_version(version_string)
+end
+
+--- @param version Version
+--- @return string
+utils.version_to_string = function(version)
+    local vstr = tostring(version.major) .. '.' .. tostring(version.minor) .. '.' .. tostring(version.patch)
+    if version.pre_release then
+        vstr = vstr .. '-' .. version.pre_release .. '.' .. version.pre_release_version
+    end
+    return vstr
+end
+
 --- Returns a string with the given prefix removed if it is found in the string
+--- @param s string
+--- @param prefix string
+--- @return string
 utils.strip_prefix = function(s, prefix)
     local offset = string.find(s, prefix, 1, true)
     if offset == 1 then
@@ -401,6 +498,7 @@ utils.clean_term_line = function(text)
 end
 
 --- Returns the parent path of the given path, or nil if there is no parent
+--- @return string|nil
 utils.parent_path = function(path)
     -- Pattern from https://stackoverflow.com/a/12191225/3164172
     local parent = string.match(path, '(.-)([^\\/]-%.?([^%.\\/]*))$')
@@ -424,6 +522,90 @@ utils.join_path = function(...)
     end
 
     return path
+end
+
+--- @class MkdirOpts
+--- @field path string
+--- @field parents? boolean
+--- @field mode? number
+
+--- @param opts MkdirOpts
+--- @param cb fun(err:string|nil)
+utils.mkdir = function(opts, cb)
+    opts = opts or {}
+
+    local path = opts.path
+    local parents = opts.parents
+    local mode = opts.mode or 448 -- 0o700
+
+    cb = vim.schedule_wrap(cb)
+
+    vim.loop.fs_stat(path, function(err, stat)
+        local exists = not err and not (not stat)
+        local is_dir = exists and stat.type == 'directory'
+        local is_file = exists and stat.type == 'file'
+
+        if is_dir then
+            return cb(nil)
+        elseif is_file then
+            return cb(string.format('Cannot create dir: %s is file', path))
+        else
+            return vim.loop.fs_mkdir(path, mode, function(err, success)
+                if success then
+                    return cb(nil)
+                elseif parents then
+                    local parent_path = utils.parent_path(path)
+                    if not parent_path then
+                        return cb('Cannot create parent directory: reached top!')
+                    end
+
+                    -- If cannot create directory on its own, we try to
+                    -- recursively create it until we succeed or fail
+                    return utils.mkdir({
+                        path = parent_path,
+                        parents = parents,
+                        mode = mode
+                    }, function(err)
+                        return vim.loop.fs_mkdir(path, mode, function(err, success)
+                            if not err and not success then
+                                err = 'Something went wrong creating ' .. path
+                            end
+                            return cb(err)
+                        end)
+                    end)
+                else
+                    return cb(string.format('Cannot create dir: %s', err or '???'))
+                end
+            end)
+        end
+    end)
+end
+
+--- From https://stackoverflow.com/a/32389020
+--- @param a integer #number to be masked
+--- @param b integer #mask
+--- @param op 'or'|'xor'|'and'
+--- @return integer
+utils.bitmask = function(a, b, op)
+    --- @type number
+    local oper
+    if op == 'or' then
+        oper = 1
+    elseif op == 'xor' then
+        oper = 3
+    elseif op == 'and' then
+        oper = 4
+    else
+        error('op must be any of "or", "xor", "and"')
+    end
+
+    local r, m = 0, 2 ^ 31
+    local s = nil
+    repeat
+        s, a, b = a + b + m, a % m, b % m
+        r, m = r + m * oper % (s - a - b), m / 2
+    until m < 1
+    return r
 end
 
 --- Produces a send/receive pair in the form of {tx, rx} where
