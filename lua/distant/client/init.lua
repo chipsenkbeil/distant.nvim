@@ -376,7 +376,6 @@ function Client:launch(opts, cb)
         username          = opts.username;
     }))
 
-    print('cmd ' .. cmd)
     log.fmt_debug('Launch cmd: %s', cmd)
 
     local handle, is_connected
