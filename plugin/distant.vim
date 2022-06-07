@@ -28,6 +28,8 @@ command! -nargs=0 DistantSessionInfo
       \ lua require('distant.command').session_info()
 command! -nargs=0 DistantSystemInfo
       \ lua require('distant.command').system_info()
+command! -nargs=0 DistantClientVersion
+      \ lua require('distant.command').client_version()
 
 " Define our purely-functional commands that wrap the lua calls
 command! -nargs=* DistantCopy

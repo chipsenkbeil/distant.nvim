@@ -255,17 +255,17 @@ DistantConnect {host} {port} {opts}                           *DistantConnect*
         :DistantConnect example.com 2222 timeout=5000
 <
 
-DistantInstall [reload]                                       *DistantInstall*
+DistantInstall [reinstall]                                    *DistantInstall*
 
     Triggers installation process for the C library.
 
-    If the word "reload" appears after `:DistantInstall`, then the
-    installation dialog will appear even if the library is already installed.
+    If the word "reinstall" appears after `:DistantInstall`, then the
+    installation dialog will appear even if the binary is already installed.
 
     Examples: ~
 >
         :DistantInstall
-        :DistantInstall reload
+        :DistantInstall reinstall
 <
 
 DistantMetadata {path} {opts}                                *DistantMetadata*
@@ -296,6 +296,18 @@ DistantMetadata {path} {opts}                                *DistantMetadata*
         :DistantMetadata /path/to/file resolve_file_type=true
 <
 
+DistantShell [{cmd} {arg1} {arg2} ...]                          *DistantShell*
+
+    Spawns a new terminal connected to the remote machine. Defaults to using
+    the shell of the user on the remote machine, but can use an alternative
+    command if provided.
+
+    Examples: ~
+>
+        :DistantShell
+        :DistantShell /bin/bash -l
+<
+
 DistantSessionInfo                                        *DistantSessionInfo*
 
     Presents information related to the remote connection.
@@ -303,6 +315,11 @@ DistantSessionInfo                                        *DistantSessionInfo*
 DistantSystemInfo                                          *DistantSystemInfo*
 
     Presents information about the remote machine.
+
+DistantClientVersion                                    *DistantClientVersion*
+
+    Prints the version of the `distant` client binary that would be used
+    for establishing connections to a remote machine.
 
 Function commands~
 
@@ -1272,6 +1289,14 @@ How does this plugin differ from using neovim with sshfs?  *distant-faq-sshfs*
 CHANGELOG                                                  *distant-changelog*
 
 Latest ~
+
+v0.2.0 ~
+
+  * Change plugin to use `distant` binary instead of Lua library
+  * Add |DistantShell| command to launch a remote shell
+  * Add |DistantClientVersion| command to print the version of the client
+  * Change |DistantInstall| parameter from `reload` to `reinstall`
+  * Update minimum `distant` version to `0.16.4`
 
 v0.1.2 ~
 

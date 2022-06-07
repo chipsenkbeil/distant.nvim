@@ -346,4 +346,14 @@ command.shell = function(input)
     client.term.spawn({ cmd = cmd })
 end
 
+--- DistantClientVersion
+command.client_version = function()
+    local Client = require('distant.client')
+    local client = Client:new()
+    local utils = require('distant.utils')
+
+    local version = assert(client:version(), 'Could not get client version')
+    print(utils.version_to_string(version))
+end
+
 return command

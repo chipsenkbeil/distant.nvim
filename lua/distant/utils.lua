@@ -276,6 +276,7 @@ end
 --- @param bin string
 --- @return Version|nil
 utils.exec_version = function(bin)
+    assert(vim.fn.executable(bin) == 1, tostring(bin) .. ' is not executable')
     local raw_version = vim.fn.system(bin .. ' --version')
     if not raw_version then
         return nil

@@ -124,6 +124,7 @@ end
 --- @field bin? string
 --- @field timeout? number
 --- @field interval? number
+--- @field no_install_fallback? boolean #if true, will not inject install bin path if no other works
 
 --- Creates a new instance of our client that is not yet connected
 --- @param opts? ClientNewOpts Options for use with our client
@@ -151,8 +152,18 @@ function Client:new(opts)
         details = nil;
     }
 
+    -- If we are not given a custom bin path, the settings bin path
+    -- hasn't changed (from distant/distant.exe), and the current
+    -- bin path isn't executable, then check if the install path
+    -- exists and is executable and use it
+    local bin = opts.bin or state.settings.client.bin
+    local is_bin_generic = bin == 'distant' or bin == 'distant.exe'
+    if not opts.no_install_fallback and is_bin_generic and vim.fn.executable(bin) ~= 1 then
+        bin = install.path()
+    end
+
     instance.__settings = {
-        bin = opts.bin or state.settings.client.bin;
+        bin = bin;
         timeout = opts.timeout or state.settings.max_timeout;
         interval = opts.interval or state.settings.timeout_interval;
     }
@@ -176,6 +187,11 @@ function Client:build_cmd(cmd, opts)
     else
         return self:binary() .. ' ' .. cmd:as_string()
     end
+end
+
+--- @return boolean #true if the binary used by this client exists and is executable
+function Client:is_executable()
+    return vim.fn.executable(self.__settings.bin) == 1
 end
 
 --- @class ClientInstallOpts

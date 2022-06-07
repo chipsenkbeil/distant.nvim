@@ -552,7 +552,7 @@ local function available_on_path()
 end
 
 --- Returns the name of the binary on the platform
---- @return string
+--- @return 'distant'|'distant.exe'
 local function bin_name()
     return HOST_BIN_NAME
 end
@@ -709,11 +709,12 @@ local function install(opts, cb)
 end
 
 --- @class ClientInstall
---- @field available_on_path fun():boolean
---- @field bin_name fun():string
---- @field exists fun():boolean
+--- @field available_on_path fun():boolean #???
+--- @field bin_name fun():'distant'|'distant.exe' #returns the name of the binary (distant or distant.exe)
+--- @field exists fun():boolean #returns true if binary exists and is executable
 --- @field install fun(opts?: InstallOpts, cb:fun(success:boolean, err:string|nil)):number
---- @field path fun():string
+--- @field path fun():string #returns path to binary
+--- @field dir fun():string #returns path to directory containing binary
 
 --- @type ClientInstall
 return {
@@ -722,4 +723,5 @@ return {
     exists = exists,
     install = install,
     path = bin_path,
+    dir = bin_dir,
 }
