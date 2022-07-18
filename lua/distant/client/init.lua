@@ -10,9 +10,9 @@ local lsp     = require('distant.client.lsp')
 local term    = require('distant.client.term')
 
 --- Minimum version supported by the client, also enforcing
---- version upgrades such that 0.16.x would not allow 0.17.0+
+--- version upgrades such that 0.17.x would not allow 0.18.0+
 --- @type Version
-local MIN_VERSION = assert(utils.parse_version('0.16.4'))
+local MIN_VERSION = assert(utils.parse_version('0.17.0'))
 
 --- Represents a Client connected to a remote machine
 --- @class Client
