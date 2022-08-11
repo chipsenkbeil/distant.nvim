@@ -94,7 +94,10 @@ end
 function BaseCmd:as_list()
     local lst = {}
 
-    table.insert(lst, self.__cmd)
+    -- Break up cmd by whitespace and add each piece individually
+    for _, arg in ipairs(vim.split(self.__cmd, ' ', { plain = true, trimempty = true })) do
+        table.insert(lst, arg)
+    end
 
     for k, v in pairs(self.__internal) do
         table.insert(lst, '--' .. k)

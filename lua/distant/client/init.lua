@@ -9,6 +9,9 @@ local install = require('distant.client.install')
 local lsp     = require('distant.client.lsp')
 local term    = require('distant.client.term')
 
+--- @alias Destination string
+--- @alias Connection string
+
 --- Minimum version supported by the client, also enforcing
 --- version upgrades such that 0.17.x would not allow 0.18.0+
 --- @type Version
@@ -87,15 +90,10 @@ local function make_client_auth()
 end
 
 --- @class InternalState
---- @field tenant? string
 --- @field handle? JobHandle
 --- @field callbacks table<string, InternalCallback>
---- @field details? ClientDetails
-
---- @class ClientDetails
---- @field type 'distant'|'ssh'
---- @field tcp? TcpSession
---- @field ssh? SshSession
+--- @field destination Destination #URI representing target server
+--- @field connection? Connection #ID of established connection
 
 --- @class InternalSettings
 --- @field bin string
@@ -106,16 +104,6 @@ end
 --- @field callback fun(payload:table) @Invoked with payload from received event
 --- @field multi boolean @If true, will not clear the callback after first invocation
 --- @field stop fun() @When called, will stop the callback from being invoked and clear it
-
---- @class TcpSession
---- @field host string
---- @field port number
---- @field key string
-
---- @class SshSession
---- @field host string
---- @field port? number #Defaults to 22
---- @field user? string #Explicit user
 
 --- @alias LogLevel 'off'|'error'|'warn'|'info'|'debug'|'trace'
 
@@ -146,7 +134,6 @@ function Client:new(opts)
     )
 
     instance.__state = {
-        tenant = nil;
         handle = nil;
         callbacks = {};
         details = nil;
@@ -261,13 +248,7 @@ end
 --- Whether or not the client is connected to a remote server
 --- @return boolean
 function Client:is_connected()
-    return not (not self.__state.tenant)
-end
-
---- Represents the tenant name used by the client when communicating with the server
---- @return string|nil
-function Client:tenant()
-    return self.__state.tenant
+    return not (not self.__state.connection)
 end
 
 --- Returns the binary used by the client
@@ -288,24 +269,10 @@ function Client:timeout_interval()
     return self.__settings.interval
 end
 
---- Returns the details of the client, if it is active
---- @return ClientDetails|nil
-function Client:details()
-    return self.__state.details
-end
-
-function Client:tcp_session()
-    local details = self:details()
-    if details then
-        return details.tcp
-    end
-end
-
-function Client:ssh_session()
-    local details = self:details()
-    if details then
-        return details.ssh
-    end
+--- Returns the id of the client's connection, if it is active
+--- @return Connection|nil
+function Client:connection()
+    return self.__state.connection
 end
 
 --- Retrieves the current version of the binary, returning it  or nil if not available
@@ -315,8 +282,7 @@ function Client:version()
 end
 
 --- @class LaunchOpts
---- @field host string
---- @field port? number
+--- @field destination Destination
 --- @field on_exit? fun(exit_code:number)
 --- @field connect? boolean | fun(exit_code:number) #If true, will connect after launching; if function, will be invoked when connection exits
 ---
@@ -336,14 +302,13 @@ end
 --- Launches a server remotely and performs authentication with the remote server
 ---
 --- @param opts LaunchOpts
---- @param cb fun(err?:string, session?:TcpSession)
+--- @param cb fun(err?:string, connection?:Connection)
 --- @return JobHandle|nil
 function Client:launch(opts, cb)
     log.fmt_debug('Authenticating with options: %s', opts)
     opts = opts or {}
     vim.validate({
-        host = { opts.host, 'string' },
-        port = { opts.port, 'number', true },
+        destination = { opts.destination, 'string' },
         on_exit = { opts.on_exit, 'function', true },
     })
 
@@ -374,22 +339,19 @@ function Client:launch(opts, cb)
         return text
     end
 
-    local cmd = self:build_cmd(Cmd.launch(opts.host):set_from_tbl({
-        format  = 'json';
-        session = 'pipe';
-
+    local destination = opts.destination
+    local cmd = self:build_cmd(Cmd.client.launch(destination):set_from_tbl({
         -- Optional user settings
-        external_ssh      = opts.external_ssh;
-        no_shell          = opts.no_shell;
         distant           = opts.distant;
-        extra_server_args = wrap_args(opts.extra_server_args);
-        identity_file     = opts.identity_file;
+        distant_args      = wrap_args(opts.distant_args);
         log_file          = opts.log_file;
         log_level         = opts.log_level;
-        port              = opts.port and tostring(opts.port);
-        shutdown_after    = opts.shutdown_after;
+        no_shell          = opts.no_shell;
         ssh               = opts.ssh;
-        username          = opts.username;
+        ssh_external      = opts.ssh_external;
+        ssh_identity_file = opts.ssh_identity_file;
+        ssh_port          = opts.ssh_port and tostring(opts.ssh_port);
+        ssh_username      = opts.ssh_username;
     }))
 
     log.fmt_debug('Launch cmd: %s', cmd)
@@ -416,26 +378,18 @@ function Client:launch(opts, cb)
         on_stdout_line = function(line)
             if line ~= nil and line ~= "" then
                 if vim.startswith(line, 'DISTANT CONNECT') and not is_connected then
-                    local s = vim.trim(utils.strip_prefix(line, 'DISTANT CONNECT'))
-                    local tokens = vim.split(s, ' ', { plain = true, trimempty = true })
-                    local session = {
-                        host = vim.trim(tokens[1]),
-                        port = tonumber(tokens[2]),
-                        key = vim.trim(tokens[3]),
-                    }
-
                     -- If we want to connect after launching, do so
                     if type(opts.connect) == 'boolean' and opts.connect then
-                        self:connect({ session = session })
+                        self:connect({ destination = destination })
                     elseif type(opts.connect) == 'function' then
-                        self:connect({ session = session, on_exit = opts.connect })
+                        self:connect({ destination = destination, on_exit = opts.connect })
                     end
 
                     -- NOTE: We have this flag for connection as for some reason the
                     --       DISTANT CONNECT line shows up twice
                     is_connected = true
 
-                    cb(false, session)
+                    cb(false, destination)
                 elseif not is_connected then
                     self:__auth_handler(
                         vim.fn.json_decode(line),
@@ -460,10 +414,9 @@ function Client:launch(opts, cb)
 end
 
 --- @class ConnectOpts
+--- @field destination Destination #URI representing the connection destination
 --- @field on_exit? fun(exit_code:number)
 --- @field method? 'distant'|'ssh'
---- @field session? TcpSession #Used when method is distant
---- @field ssh? ConnectSshOpts #Used when method is ssh
 --- @field log_file? string
 --- @field log_level? LogLevel
 --- @field auth? ClientAuth
@@ -481,27 +434,12 @@ function Client:connect(opts)
     opts = opts or {}
 
     vim.validate({
+        destination = { opts.destination, 'string' },
         on_exit = { opts.on_exit, 'function', true },
-        session = { opts.session, 'table', true },
         method = { opts.method, 'string', true },
-        ssh = { opts.ssh, 'table', true },
         log_file = { opts.log_file, 'string', true },
         log_level = { opts.log_level, 'string', true },
     })
-    if opts.session then
-        vim.validate({
-            host = { opts.session.host, 'string' },
-            port = { opts.session.port, 'number' },
-            key = { opts.session.key, 'string' },
-        })
-    end
-    if opts.ssh then
-        vim.validate({
-            host = { opts.ssh.host, 'string', true },
-            port = { opts.ssh.port, 'number', true },
-            user = { opts.ssh.user, 'string', true },
-        })
-    end
 
     if vim.fn.executable(self.__settings.bin) ~= 1 then
         log.fmt_error('Executable %s is not on path', self.__settings.bin)
@@ -519,9 +457,6 @@ function Client:connect(opts)
         -- Optional user settings
         log_file  = opts.log_file;
         log_level = opts.log_level;
-        ssh_host  = opts.ssh and opts.ssh.host;
-        ssh_port  = opts.ssh and opts.ssh.port;
-        ssh_user  = opts.ssh and opts.ssh.user;
     }))
 
     log.fmt_debug('Client cmd: %s', cmd)
@@ -593,7 +528,6 @@ function Client:connect(opts)
     end
 
     self.__state = {
-        tenant = 'nvim_tenant_' .. utils.next_id();
         handle = handle;
         callbacks = {};
         details = {
@@ -610,7 +544,6 @@ function Client:stop()
     if self.__state.handle ~= nil then
         self.__state.handle.stop()
     end
-    self.__state.tenant = nil
     self.__state.handle = nil
     self.__state.callbacks = {}
     self.__state.details = nil
@@ -657,7 +590,6 @@ function Client:send(msgs, opts, cb)
     -- includes an id that our client uses when relaying a response for the
     -- callback to process
     local full_msg = {
-        tenant = self.__state.tenant;
         id = utils.next_id();
         payload = payload;
     }
@@ -784,22 +716,22 @@ function Client:__auth_handler(msg, reply, auth)
     --- @type ClientAuth
     auth = vim.tbl_deep_extend('keep', auth or {}, self.auth)
 
-    if type == 'ssh_authenticate' then
+    if type == 'challenge' then
         reply({
-            type = 'ssh_authenticate_answer',
+            type = 'challenge',
             answers = auth.on_authenticate(msg)
         })
         return true
-    elseif type == 'ssh_banner' then
+    elseif type == 'info' then
         auth.on_info(msg.text)
         return true
-    elseif type == 'ssh_host_verify' then
+    elseif type == 'verify' then
         reply({
-            type = 'ssh_host_verify_answer',
+            type = 'verify',
             answer = auth.on_verify_host(msg.host)
         })
         return true
-    elseif type == 'ssh_error' then
+    elseif type == 'error' then
         auth.on_error(vim.inspect(msg))
         return false
     else
@@ -812,11 +744,10 @@ end
 --- @return boolean
 function Client:__is_auth_msg(msg)
     return msg and type(msg.type) == 'string' and vim.tbl_contains({
-        'ssh_authenticate',
-        'ssh_banner',
-        'ssh_host_verify',
-        'ssh_host_verify_answer',
-        'ssh_error',
+        'challenge',
+        'verify',
+        'info',
+        'error',
     }, msg.type)
 end
 

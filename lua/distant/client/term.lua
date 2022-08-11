@@ -53,7 +53,7 @@ return function(client)
         end
 
         --- @type ClientDetails
-        local details = assert(client:details(), 'No client details available')
+        local details = assert(client:connection(), 'No client details available')
 
         --- @type TcpSession
         local session = assert(details.tcp, 'No client session available')

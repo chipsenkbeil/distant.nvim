@@ -49,10 +49,7 @@ return function(client)
 
         --- @type string[]
         local cmd = client:build_cmd(
-            Cmd.lsp(config_cmd):set_from_tbl(vim.tbl_extend('force', opts, {
-                format = 'shell',
-                session = 'lsp',
-            })),
+            Cmd.lsp(config_cmd):set_from_tbl(opts),
             { list = true }
         )
 

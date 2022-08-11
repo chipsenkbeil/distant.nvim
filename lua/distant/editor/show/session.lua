@@ -29,9 +29,9 @@ return function()
         })
     end
 
-    if client and client:details() then
+    if client and client:connection() then
         --- @type ClientDetails
-        local details = client:details()
+        local details = client:connection()
 
         local host, port
         if details.tcp then
