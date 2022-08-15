@@ -122,7 +122,7 @@ end
 --- @alias AndThenArgs {err:string|nil, data:table|nil, cb:ApiCallback}
 
 --- @class MakeFnParams
---- @field connection ClientConnection
+--- @field repl Repl
 --- @field type string
 --- @field ret_type string|string[]
 --- @field map? fun(data:table, type:string, input:table, stop:fun()):table #transform data before it is sent back through callback or return
@@ -140,7 +140,7 @@ end
 --- @param params MakeFnParams
 local function make_fn(params)
     vim.validate({
-        connection = { params.connection, 'table' },
+        repl = { params.repl, 'table' },
         type = { params.type, 'string' },
         ret_type = { params.ret_type, { 'string', 'table' } },
         map = { params.map, 'function', true },
@@ -233,7 +233,7 @@ local function make_fn(params)
         -- Configure whether or not we are a multi send
         opts = vim.tbl_extend('keep', { multi = params.multi }, opts)
 
-        params.connection:send(msgs, opts, function(res, stop)
+        params.repl:send(msgs, opts, function(res, stop)
             local reply = cb
             if params.and_then then
                 reply = function(err, data, f)
@@ -296,9 +296,10 @@ local function make_fn(params)
     end
 end
 
---- @param connection ClientConnection
+--- Wrap a REPL in a higher-level API
+--- @param repl Repl
 --- @return ClientApi
-return function(connection)
+return function(repl)
     local api = {
         __state = {
             processes = {},
@@ -308,7 +309,7 @@ return function(connection)
 
     --- @type ApiAppendFile
     api.append_file = make_fn({
-        connection = connection,
+        repl = repl,
         type = 'file_append',
         ret_type = 'ok',
         req_type = {
@@ -319,7 +320,7 @@ return function(connection)
 
     --- @type ApiAppendFileText
     api.append_file_text = make_fn({
-        connection = connection,
+        repl = repl,
         type = 'file_append_text',
         ret_type = 'ok',
         req_type = {
@@ -330,7 +331,7 @@ return function(connection)
 
     --- @type ApiCopy
     api.copy = make_fn({
-        connection = connection,
+        repl = repl,
         type = 'copy',
         ret_type = 'ok',
         req_type = {
@@ -341,7 +342,7 @@ return function(connection)
 
     --- @type ApiCreateDir
     api.create_dir = make_fn({
-        connection = connection,
+        repl = repl,
         type = 'dir_create',
         ret_type = 'ok',
         req_type = {
@@ -352,7 +353,7 @@ return function(connection)
 
     --- @type ApiExists
     api.exists = make_fn({
-        connection = connection,
+        repl = repl,
         type = 'exists',
         ret_type = 'exists',
         req_type = {
@@ -368,7 +369,7 @@ return function(connection)
 
     --- @type ApiMetadata
     api.metadata = make_fn({
-        connection = connection,
+        repl = repl,
         type = 'metadata',
         ret_type = 'metadata',
         req_type = {
@@ -391,7 +392,7 @@ return function(connection)
 
     --- @type ApiReadDir
     api.read_dir = make_fn({
-        connection = connection,
+        repl = repl,
         type = 'dir_read',
         ret_type = 'dir_entries',
         req_type = {
@@ -409,7 +410,7 @@ return function(connection)
 
     --- @type ApiReadFile
     api.read_file = make_fn({
-        connection = connection,
+        repl = repl,
         type = 'file_read',
         ret_type = 'blob',
         req_type = {
@@ -425,7 +426,7 @@ return function(connection)
 
     --- @type ApiReadFileText
     api.read_file_text = make_fn({
-        connection = connection,
+        repl = repl,
         type = 'file_read_text',
         ret_type = 'text',
         req_type = {
@@ -441,7 +442,7 @@ return function(connection)
 
     --- @type ApiRemove
     api.remove = make_fn({
-        connection = connection,
+        repl = repl,
         type = 'remove',
         ret_type = 'ok',
         req_type = {
@@ -452,7 +453,7 @@ return function(connection)
 
     --- @type ApiRename
     api.rename = make_fn({
-        connection = connection,
+        repl = repl,
         type = 'rename',
         ret_type = 'ok',
         req_type = {
@@ -463,7 +464,7 @@ return function(connection)
 
     --- @type ApiSpawn
     api.spawn = make_fn({
-        connection = connection,
+        repl = repl,
         type = 'proc_spawn',
         ret_type = { 'proc_spawned', 'proc_stdout', 'proc_stderr', 'proc_done' },
         req_type = {
@@ -483,7 +484,7 @@ return function(connection)
             if ptype == 'proc_spawned' then
                 local id = string.format('%.f', data.id)
                 local write_stdin = make_fn({
-                    connection = connection,
+                    repl = repl,
                     type = 'proc_stdin',
                     ret_type = 'ok',
                     req_type = {
@@ -492,7 +493,7 @@ return function(connection)
                     },
                 })
                 local kill = make_fn({
-                    connection = connection,
+                    repl = repl,
                     type = 'proc_kill',
                     ret_type = 'ok',
                     req_type = {
@@ -740,7 +741,7 @@ return function(connection)
 
     --- @type ApiSystemInfo
     api.system_info = make_fn({
-        connection = connection,
+        repl = repl,
         type = 'system_info',
         ret_type = 'system_info',
         res_type = {
@@ -754,7 +755,7 @@ return function(connection)
 
     --- @type ApiWatch
     api.watch = make_fn({
-        connection = connection,
+        repl = repl,
         type = 'watch',
         ret_type = { 'ok', 'changed' },
         req_type = {
@@ -800,7 +801,7 @@ return function(connection)
 
     --- @type ApiWriteFile
     api.write_file = make_fn({
-        connection = connection,
+        repl = repl,
         type = 'file_write',
         ret_type = 'ok',
         req_type = {
@@ -811,7 +812,7 @@ return function(connection)
 
     --- @type ApiWriteFileText
     api.write_file_text = make_fn({
-        connection = connection,
+        repl = repl,
         type = 'file_write_text',
         ret_type = 'ok',
         req_type = {
@@ -822,7 +823,7 @@ return function(connection)
 
     --- @type ApiUnwatch
     api.unwatch = make_fn({
-        connection = connection,
+        repl = repl,
         type = 'unwatch',
         ret_type = 'ok',
         req_type = {

@@ -1,13 +1,12 @@
 local log   = require('distant.log')
 local utils = require('distant.utils')
 
---- Represents communication handler
---- @class Comm
+--- Represents a JSON-formatted REPL
+--- @class Repl
 --- @field __auth AuthHandler #Authentication-based handlers
---- @field __state CommInternalState
---- @field __settings CommInternalSettings
-local Comm = {}
-Comm.__index = Comm
+--- @field __state ReplInternalState
+local Repl = {}
+Repl.__index = Repl
 
 --- @class AuthHandler
 --- @field on_authenticate? fun(msg:AuthHandlerMsg):string[]
@@ -69,30 +68,30 @@ local function make_auth_handler()
     }
 end
 
---- @class CommInternalState
+--- @class ReplInternalState
 --- @field handle? JobHandle
 --- @field callbacks table<string, InternalCallback>
 
---- @class CommInternalCallback
+--- @class ReplInternalCallback
 --- @field callback fun(payload:table) @Invoked with payload from received event
 --- @field multi boolean @If true, will not clear the callback after first invocation
 --- @field stop fun() @When called, will stop the callback from being invoked and clear it
 
---- @class CommNewOpts
+--- @class ReplNewOpts
 --- @field auth? AuthHandler
 --- @field bin? string
 --- @field timeout? number
 --- @field interval? number
 
---- Creates a new instance of our comm that is not yet connected
+--- Creates a new instance of our repl that wraps a job
 --- @param handle JobHandle #Handle to the underlying process
---- @param opts? CommNewOpts Options for use with our comm
---- @return Comm
-function Comm:new(handle, opts)
+--- @param opts? ReplNewOpts Options for use with our repl
+--- @return Repl
+function Repl:new(handle, opts)
     opts = opts or {}
 
     local instance = {}
-    setmetatable(instance, Comm)
+    setmetatable(instance, Repl)
 
     instance.__auth = vim.tbl_deep_extend(
         'keep',
@@ -108,15 +107,15 @@ function Comm:new(handle, opts)
     return instance
 end
 
---- Whether or not the comm is connected to a remote server
+--- Whether or not the repl is connected to a remote server
 --- @return boolean
-function Comm:is_connected()
+function Repl:is_connected()
     return self.__state.handle ~= nil and self.__state.handle:running()
 end
 
 --- Stops an instance of distant if running by killing the process
 --- and resetting state
-function Comm:stop()
+function Repl:stop()
     if self.__state.handle ~= nil then
         self.__state.handle.stop()
     end
@@ -124,17 +123,17 @@ function Comm:stop()
     self.__state.callbacks = {}
 end
 
---- @class CommMsg
+--- @class ReplMsg
 --- @field type string
 --- @field data table
 
---- @alias OneOrMoreMsgs CommMsg|CommMsg[]
+--- @alias OneOrMoreMsgs ReplMsg|ReplMsg[]
 
 --- @class SendOpts
 --- @field unaltered? boolean @when true, the callback will not be wrapped in the situation where there is
 ---                           a single request payload entry to then return a single response payload entry
 --- @field multi? boolean @when true, the callback may be triggered multiple times and will not be cleared
----                       within the Comm upon receiving an event. Instead, a function is returned that will
+---                       within the Repl upon receiving an event. Instead, a function is returned that will
 ---                       be called when we want to stop receiving events whose origin is this message
 
 --- Send one or more messages to the remote machine, invoking the provided callback with the
@@ -143,7 +142,7 @@ end
 --- @param msgs OneOrMoreMsgs
 --- @param opts? SendOpts
 --- @param cb fun(data:table, stop:fun()|nil)
-function Comm:send(msgs, opts, cb)
+function Repl:send(msgs, opts, cb)
     if type(cb) ~= 'function' then
         cb = opts
         opts = {}
@@ -153,8 +152,8 @@ function Comm:send(msgs, opts, cb)
         opts = {}
     end
 
-    log.fmt_trace('Comm:send(%s, %s, _)', msgs, opts)
-    assert(self:is_connected(), 'Comm is not connected!')
+    log.fmt_trace('Repl:send(%s, %s, _)', msgs, opts)
+    assert(self:is_connected(), 'Repl is not connected!')
 
     local payload = msgs
     if not vim.tbl_islist(payload) then
@@ -162,7 +161,7 @@ function Comm:send(msgs, opts, cb)
     end
 
     -- Build a full message that wraps the provided message as the payload and
-    -- includes an id that our comm uses when relaying a response for the
+    -- includes an id that our repl uses when relaying a response for the
     -- callback to process
     local full_msg = {
         id = utils.next_id();
@@ -200,9 +199,9 @@ end
 --- @param msgs OneOrMoreMsgs
 --- @param opts? table
 --- @return table
-function Comm:send_wait(msgs, opts)
+function Repl:send_wait(msgs, opts)
     opts = opts or {}
-    log.fmt_trace('Comm:send_wait(%s, %s)', msgs, opts)
+    log.fmt_trace('Repl:send_wait(%s, %s)', msgs, opts)
     local tx, rx = utils.oneshot_channel(
         opts.timeout or self.__settings.timeout,
         opts.interval or self.__settings.interval
@@ -222,9 +221,9 @@ end
 --- @param msgs OneOrMoreMsgs
 --- @param opts? table
 --- @return table|nil
-function Comm:send_wait_ok(msgs, opts)
+function Repl:send_wait_ok(msgs, opts)
     opts = opts or {}
-    log.fmt_trace('Comm:send_wait_ok(%s, %s)', msgs, opts)
+    log.fmt_trace('Repl:send_wait_ok(%s, %s)', msgs, opts)
     local timeout = opts.timeout or self.__settings.timeout
     local result = self:send_wait(msgs, opts)
     if result == nil then
@@ -237,9 +236,9 @@ function Comm:send_wait_ok(msgs, opts)
 end
 
 --- Primary event handler, routing received events to the corresponding callbacks
-function Comm:__handler(msg)
+function Repl:__handler(msg)
     assert(type(msg) == 'table', 'msg must be a table')
-    log.fmt_trace('Comm:__handler(%s)', msg)
+    log.fmt_trace('Repl:__handler(%s)', msg)
 
     -- {"id": ..., "origin_id": ..., "payload": ...}
     local origin_id = msg.origin_id
@@ -285,7 +284,7 @@ end
 --- @param reply fun(msg:table)
 --- @param auth? AuthHandler
 --- @return boolean #true if okay, otherwise false
-function Comm:__auth_handler(msg, reply, auth)
+function Repl:__auth_handler(msg, reply, auth)
     local type = msg.type
 
     --- @type AuthHandler
@@ -317,7 +316,7 @@ end
 
 --- @param msg {type:string}
 --- @return boolean
-function Comm:__is_auth_msg(msg)
+function Repl:__is_auth_msg(msg)
     return msg and type(msg.type) == 'string' and vim.tbl_contains({
         'challenge',
         'verify',
@@ -326,4 +325,4 @@ function Comm:__is_auth_msg(msg)
     }, msg.type)
 end
 
-return Comm
+return Repl

@@ -65,6 +65,14 @@ function cli.build_cmd(cmd, opts)
 
     local settings = cli.settings(opts)
 
+    -- Supply connection, unix socket, and windows pipe name if
+    -- command can take them
+    cmd = cmd:set_from_tbl({
+        connection = '',
+        unix_socket = '',
+        windows_pipe = '',
+    })
+
     if opts.list then
         local lst = cmd:as_list()
         table.insert(lst, 1, settings.bin)
