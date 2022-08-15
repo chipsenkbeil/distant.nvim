@@ -15,9 +15,9 @@ local function clean_data(data)
     end
 end
 
---- @param msg ClientMsg
+--- @param msg CliMsg
 --- @param info {type:string, data:table<string, string|{type:string, optional:boolean}>, strict:boolean}
---- @return ClientMsg
+--- @return CliMsg
 local function msg_validate(msg, info)
     local opts = {
         type = { msg.type, 'string' },
@@ -122,13 +122,13 @@ end
 --- @alias AndThenArgs {err:string|nil, data:table|nil, cb:ApiCallback}
 
 --- @class MakeFnParams
---- @field client Client
+--- @field connection ClientConnection
 --- @field type string
 --- @field ret_type string|string[]
 --- @field map? fun(data:table, type:string, input:table, stop:fun()):table #transform data before it is sent back through callback or return
 --- @field and_then? fun(args:AndThenArgs) #invoked with callback, giving control to trigger callback explicitly
---- @field req_type? table #if provided, will use `vim.validate` on request client msg data
---- @field res_type? table #if provided, will use `vim.validate` on resposne client msg data
+--- @field req_type? table #if provided, will use `vim.validate` on request cli msg data
+--- @field res_type? table #if provided, will use `vim.validate` on resposne cli msg data
 --- @field multi? boolean #if true, will expect multiple messages in response to request
 
 --- Creates a function that when invoked will synchronously or asynchronously
@@ -140,7 +140,7 @@ end
 --- @param params MakeFnParams
 local function make_fn(params)
     vim.validate({
-        client = { params.client, 'table' },
+        connection = { params.connection, 'table' },
         type = { params.type, 'string' },
         ret_type = { params.ret_type, { 'string', 'table' } },
         map = { params.map, 'function', true },
@@ -184,7 +184,7 @@ local function make_fn(params)
             )
         end
 
-        -- @type ClientMsg[]
+        -- @type CliMsg[]
         local msgs
         if not vim.tbl_islist(msg) or vim.tbl_isempty(msg) then
             msgs = { msg }
@@ -233,7 +233,7 @@ local function make_fn(params)
         -- Configure whether or not we are a multi send
         opts = vim.tbl_extend('keep', { multi = params.multi }, opts)
 
-        params.client:send(msgs, opts, function(res, stop)
+        params.connection:send(msgs, opts, function(res, stop)
             local reply = cb
             if params.and_then then
                 reply = function(err, data, f)
@@ -252,7 +252,7 @@ local function make_fn(params)
             end
 
             if params.res_type and res and res.payload and res.payload.data then
-                -- @type ClientMsg[]
+                -- @type CliMsg[]
                 local res_payload_data = res.payload.data
                 if not vim.tbl_islist(res_payload_data) then
                     msgs = { res_payload_data }
@@ -296,9 +296,9 @@ local function make_fn(params)
     end
 end
 
---- @param client Client
+--- @param connection ClientConnection
 --- @return ClientApi
-return function(client)
+return function(connection)
     local api = {
         __state = {
             processes = {},
@@ -308,7 +308,7 @@ return function(client)
 
     --- @type ApiAppendFile
     api.append_file = make_fn({
-        client = client,
+        connection = connection,
         type = 'file_append',
         ret_type = 'ok',
         req_type = {
@@ -319,7 +319,7 @@ return function(client)
 
     --- @type ApiAppendFileText
     api.append_file_text = make_fn({
-        client = client,
+        connection = connection,
         type = 'file_append_text',
         ret_type = 'ok',
         req_type = {
@@ -330,7 +330,7 @@ return function(client)
 
     --- @type ApiCopy
     api.copy = make_fn({
-        client = client,
+        connection = connection,
         type = 'copy',
         ret_type = 'ok',
         req_type = {
@@ -341,7 +341,7 @@ return function(client)
 
     --- @type ApiCreateDir
     api.create_dir = make_fn({
-        client = client,
+        connection = connection,
         type = 'dir_create',
         ret_type = 'ok',
         req_type = {
@@ -352,7 +352,7 @@ return function(client)
 
     --- @type ApiExists
     api.exists = make_fn({
-        client = client,
+        connection = connection,
         type = 'exists',
         ret_type = 'exists',
         req_type = {
@@ -368,7 +368,7 @@ return function(client)
 
     --- @type ApiMetadata
     api.metadata = make_fn({
-        client = client,
+        connection = connection,
         type = 'metadata',
         ret_type = 'metadata',
         req_type = {
@@ -391,7 +391,7 @@ return function(client)
 
     --- @type ApiReadDir
     api.read_dir = make_fn({
-        client = client,
+        connection = connection,
         type = 'dir_read',
         ret_type = 'dir_entries',
         req_type = {
@@ -409,7 +409,7 @@ return function(client)
 
     --- @type ApiReadFile
     api.read_file = make_fn({
-        client = client,
+        connection = connection,
         type = 'file_read',
         ret_type = 'blob',
         req_type = {
@@ -425,7 +425,7 @@ return function(client)
 
     --- @type ApiReadFileText
     api.read_file_text = make_fn({
-        client = client,
+        connection = connection,
         type = 'file_read_text',
         ret_type = 'text',
         req_type = {
@@ -441,7 +441,7 @@ return function(client)
 
     --- @type ApiRemove
     api.remove = make_fn({
-        client = client,
+        connection = connection,
         type = 'remove',
         ret_type = 'ok',
         req_type = {
@@ -452,7 +452,7 @@ return function(client)
 
     --- @type ApiRename
     api.rename = make_fn({
-        client = client,
+        connection = connection,
         type = 'rename',
         ret_type = 'ok',
         req_type = {
@@ -463,7 +463,7 @@ return function(client)
 
     --- @type ApiSpawn
     api.spawn = make_fn({
-        client = client,
+        connection = connection,
         type = 'proc_spawn',
         ret_type = { 'proc_spawned', 'proc_stdout', 'proc_stderr', 'proc_done' },
         req_type = {
@@ -483,7 +483,7 @@ return function(client)
             if ptype == 'proc_spawned' then
                 local id = string.format('%.f', data.id)
                 local write_stdin = make_fn({
-                    client = client,
+                    connection = connection,
                     type = 'proc_stdin',
                     ret_type = 'ok',
                     req_type = {
@@ -492,7 +492,7 @@ return function(client)
                     },
                 })
                 local kill = make_fn({
-                    client = client,
+                    connection = connection,
                     type = 'proc_kill',
                     ret_type = 'ok',
                     req_type = {
@@ -740,7 +740,7 @@ return function(client)
 
     --- @type ApiSystemInfo
     api.system_info = make_fn({
-        client = client,
+        connection = connection,
         type = 'system_info',
         ret_type = 'system_info',
         res_type = {
@@ -754,7 +754,7 @@ return function(client)
 
     --- @type ApiWatch
     api.watch = make_fn({
-        client = client,
+        connection = connection,
         type = 'watch',
         ret_type = { 'ok', 'changed' },
         req_type = {
@@ -800,7 +800,7 @@ return function(client)
 
     --- @type ApiWriteFile
     api.write_file = make_fn({
-        client = client,
+        connection = connection,
         type = 'file_write',
         ret_type = 'ok',
         req_type = {
@@ -811,7 +811,7 @@ return function(client)
 
     --- @type ApiWriteFileText
     api.write_file_text = make_fn({
-        client = client,
+        connection = connection,
         type = 'file_write_text',
         ret_type = 'ok',
         req_type = {
@@ -822,7 +822,7 @@ return function(client)
 
     --- @type ApiUnwatch
     api.unwatch = make_fn({
-        client = client,
+        connection = connection,
         type = 'unwatch',
         ret_type = 'ok',
         req_type = {

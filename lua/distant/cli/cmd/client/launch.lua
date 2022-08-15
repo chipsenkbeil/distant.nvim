@@ -1,4 +1,4 @@
-local BaseCmd = require('distant.client.cmd.base')
+local BaseCmd = require('distant.cli.cmd.base')
 
 --- @class ClientLaunchCmd: BaseCmd
 --- @field __destination string

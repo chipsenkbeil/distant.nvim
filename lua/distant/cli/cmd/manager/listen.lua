@@ -1,4 +1,4 @@
-local BaseCmd = require('distant.client.cmd.base')
+local BaseCmd = require('distant.cli.cmd.base')
 
 --- @class ManagerListenCmd: BaseCmd
 local ManagerListenCmd = BaseCmd:new('manager listen', { allowed = {

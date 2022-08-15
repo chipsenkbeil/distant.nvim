@@ -1,15 +1,15 @@
-local Cmd = require('distant.client.cmd')
+local Cmd = require('distant.cli.cmd')
 
---- @param client Client
---- @return ClientTerm
-return function(client)
-    local term = {
+--- @param connection ClientConnection
+--- @return ClientShell
+return function(connection)
+    local shell = {
         __state = {}
     }
 
     --- @overload fun():number
     --- @type fun(opts:{cmd?:string|string[]}, buf?:number, win?:number):number
-    term.spawn = function(opts)
+    shell.spawn = function(opts)
         local c = opts.cmd
         local is_table = type(c) == 'table'
         local is_string = type(c) == 'string'
@@ -20,7 +20,7 @@ return function(client)
         end
 
         --- @type string[]
-        local cmd = client:build_cmd(
+        local cmd = connection:build_cmd(
             Cmd.shell(c):set_from_tbl(vim.tbl_deep_extend('force', opts, {
                 format = 'shell',
                 session = 'pipe',
@@ -52,11 +52,11 @@ return function(client)
             end
         end
 
-        --- @type ClientDetails
-        local details = assert(client:connection(), 'No client details available')
+        --- @type CliDetails
+        local details = assert(connection:connection(), 'No cli details available')
 
         --- @type TcpSession
-        local session = assert(details.tcp, 'No client session available')
+        local session = assert(details.tcp, 'No cli session available')
 
         local session_str = string.format(
             'DISTANT CONNECT %s %s %s',
@@ -81,5 +81,5 @@ return function(client)
         return job_id
     end
 
-    return term
+    return shell
 end

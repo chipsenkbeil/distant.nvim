@@ -1,4 +1,4 @@
---- @class ClientApi
+--- @class CliApi
 --- @field append_file ApiAppendFile
 --- @field append_file_text ApiAppendFileText
 --- @field copy ApiCopy

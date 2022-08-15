@@ -118,6 +118,7 @@ end
 --- @field id function():string
 --- @field write function(data):void
 --- @field stop function():void
+--- @field running function():boolean
 
 --- @class JobStartOpts
 --- @field env? table<string, string> @a table of process environment variables
@@ -132,6 +133,8 @@ end
 --- @param opts? JobStartOpts
 --- @return JobHandle
 utils.job_start = function(cmd, opts)
+    opts = opts or {}
+
     --- @param cb fun(line:string)
     local function make_on_data(cb)
         local lines = { '' }
@@ -205,7 +208,10 @@ utils.job_start = function(cmd, opts)
             end,
             stop = function()
                 vim.fn.jobstop(job_id)
-            end
+            end,
+            running = function()
+                return vim.fn.job_status(job_id) == 'run'
+            end,
         }
     end
 end

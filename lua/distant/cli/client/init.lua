@@ -2,49 +2,48 @@ local log   = require('distant.log')
 local state = require('distant.state')
 local utils = require('distant.utils')
 
-local Cmd     = require('distant.client.cmd')
-local api     = require('distant.client.api')
-local errors  = require('distant.client.errors')
-local install = require('distant.client.install')
-local lsp     = require('distant.client.lsp')
-local term    = require('distant.client.term')
+local Cmd     = require('distant.cli.cmd')
+local api     = require('distant.cli.api')
+local install = require('distant.cli.install')
+local lsp     = require('distant.cli.lsp')
+local term    = require('distant.cli.term')
 
 --- @alias Destination string
 --- @alias Connection string
 
---- Minimum version supported by the client, also enforcing
+--- Minimum version supported by the cli, also enforcing
 --- version upgrades such that 0.17.x would not allow 0.18.0+
 --- @type Version
 local MIN_VERSION = assert(utils.parse_version('0.17.0'))
 
---- Represents a Client connected to a remote machine
---- @class Client
---- @field id string #Represents an arbitrary unique id for the client
---- @field api ClientApi #General API to perform operations remotely
---- @field auth ClientAuth #Authentication-based handlers
---- @field lsp ClientLsp #LSP API to spawn a process that behaves like an LSP server
---- @field term ClientTerm #Terminal API to spawn a process that behaves like a terminal
+--- Represents a Cli connected to a remote machine
+--- @class Cli
+--- @field id string #Represents an arbitrary unique id for the cli
+--- @field api CliApi #General API to perform operations remotely
+--- @field auth CliAuth #Authentication-based handlers
+--- @field lsp CliLsp #LSP API to spawn a process that behaves like an LSP server
+--- @field term CliTerm #Terminal API to spawn a process that behaves like a terminal
 --- @field __state InternalState
 --- @field __settings InternalSettings
 local Client = {}
 Client.__index = Client
 
---- @class ClientAuth
---- @field on_authenticate? fun(msg:ClientAuthMsg):string[]
+--- @class CliAuth
+--- @field on_authenticate? fun(msg:CliAuthMsg):string[]
 --- @field on_verify_host? fun(host:string):boolean
 --- @field on_info? fun(text:string)
 --- @field on_error? fun(err:string)
 --- @field on_unknown? fun(x:any)
 
---- @class ClientAuthMsg
+--- @class CliAuthMsg
 --- @field username? string
 --- @field instructions? string
 --- @field prompts {prompt:string, echo:boolean}[]
 
---- @return ClientAuth
-local function make_client_auth()
+--- @return CliAuth
+local function make_cli_auth()
     return {
-        --- @param msg ClientAuthMsg
+        --- @param msg CliAuthMsg
         --- @return string[]
         on_authenticate = function(msg)
             if msg.username then
@@ -107,22 +106,22 @@ end
 
 --- @alias LogLevel 'off'|'error'|'warn'|'info'|'debug'|'trace'
 
---- @class ClientNewOpts
---- @field auth? ClientAuth
+--- @class CliNewOpts
+--- @field auth? CliAuth
 --- @field bin? string
 --- @field timeout? number
 --- @field interval? number
 --- @field no_install_fallback? boolean #if true, will not inject install bin path if no other works
 
---- Creates a new instance of our client that is not yet connected
---- @param opts? ClientNewOpts Options for use with our client
---- @return Client
-function Client:new(opts)
+--- Creates a new instance of our cli that is not yet connected
+--- @param opts? CliNewOpts Options for use with our cli
+--- @return Cli
+function Cli:new(opts)
     opts = opts or {}
 
     local instance = {}
-    setmetatable(instance, Client)
-    instance.id = 'client_' .. tostring(utils.next_id())
+    setmetatable(instance, Cli)
+    instance.id = 'cli_' .. tostring(utils.next_id())
     instance.api = api(instance)
     instance.lsp = lsp(instance)
     instance.term = term(instance)
@@ -130,7 +129,7 @@ function Client:new(opts)
     instance.auth = vim.tbl_deep_extend(
         'keep',
         opts.auth or {},
-        make_client_auth()
+        make_cli_auth()
     )
 
     instance.__state = {
@@ -143,7 +142,7 @@ function Client:new(opts)
     -- hasn't changed (from distant/distant.exe), and the current
     -- bin path isn't executable, then check if the install path
     -- exists and is executable and use it
-    local bin = opts.bin or state.settings.client.bin
+    local bin = opts.bin or state.settings.cli.bin
     local is_bin_generic = bin == 'distant' or bin == 'distant.exe'
     if not opts.no_install_fallback and is_bin_generic and vim.fn.executable(bin) ~= 1 then
         bin = install.path()
@@ -157,12 +156,12 @@ function Client:new(opts)
     return instance
 end
 
---- Builds a new client command to execute using the given cmd as input
+--- Builds a new cli command to execute using the given cmd as input
 --- @overload fun(cmd:BaseCmd):string
 --- @param cmd BaseCmd
 --- @param opts {list:boolean}
 --- @return string|string[]
-function Client:build_cmd(cmd, opts)
+function Cli:build_cmd(cmd, opts)
     if not opts then
         opts = {}
     end
@@ -176,24 +175,24 @@ function Client:build_cmd(cmd, opts)
     end
 end
 
---- @return boolean #true if the binary used by this client exists and is executable
-function Client:is_executable()
+--- @return boolean #true if the binary used by this cli exists and is executable
+function Cli:is_executable()
     return vim.fn.executable(self.__settings.bin) == 1
 end
 
---- @class ClientInstallOpts
+--- @class CliInstallOpts
 --- @field bin? string
 --- @field reinstall? boolean
 --- @field timeout? number
 --- @field interval? number
 
---- Creates a client, checks if the binary is available on path, and
+--- Creates a cli, checks if the binary is available on path, and
 --- installs the binary if it is not. Will also check the version and
 --- attempt to install the binary if the available version fails
 --- our check
---- @param opts? ClientInstallOpts
---- @param cb fun(err:string|boolean, client:Client|nil)
-function Client:install(opts, cb)
+--- @param opts? CliInstallOpts
+--- @param cb fun(err:string|boolean, cli:Cli|nil)
+function Cli:install(opts, cb)
     if not cb then
         cb = opts
         opts = {}
@@ -203,11 +202,11 @@ function Client:install(opts, cb)
         opts = {}
     end
 
-    local client = Client:new(opts)
-    local has_bin = vim.fn.executable(client.__settings.bin) == 1
+    local cli = Cli:new(opts)
+    local has_bin = vim.fn.executable(cli.__settings.bin) == 1
 
-    local function validate_client()
-        local version = client:version()
+    local function validate_cli()
+        local version = cli:version()
         if not version then
             return cb('Unable to detect binary version')
         end
@@ -218,15 +217,15 @@ function Client:install(opts, cb)
         )
 
         if ok then
-            vim.schedule(function() cb(false, client) end)
+            vim.schedule(function() cb(false, cli) end)
         end
 
         return ok
     end
 
-    -- If the client's binary is available, check if it's valid and
+    -- If the cli's binary is available, check if it's valid and
     -- if so we can exit
-    if has_bin and validate_client() then
+    if has_bin and validate_cli() then
         return
     end
 
@@ -238,47 +237,41 @@ function Client:install(opts, cb)
         if not success then
             return cb(result)
         else
-            -- Ensure that our client's internal binary has been set
-            client.__settings.bin = result
-            validate_client()
+            -- Ensure that our cli's internal binary has been set
+            cli.__settings.bin = result
+            validate_cli()
         end
     end)
 end
 
---- Whether or not the client is connected to a remote server
+--- Whether or not the cli is connected to a remote server
 --- @return boolean
-function Client:is_connected()
+function Cli:is_connected()
     return not (not self.__state.connection)
 end
 
---- Returns the binary used by the client
+--- Returns the binary used by the cli
 --- @return string path to the binary
-function Client:binary()
+function Cli:binary()
     return self.__settings.bin
 end
 
 --- Returns the maximum timeout in milliseconds for a request
 --- @return number timeout for a request in milliseconds
-function Client:max_timeout()
+function Cli:max_timeout()
     return self.__settings.timeout
 end
 
 --- Returns the time in milliseconds to wait between checking for a request to complete
 --- @return number interval for a timeout for a request in milliseconds
-function Client:timeout_interval()
+function Cli:timeout_interval()
     return self.__settings.interval
 end
 
---- Returns the id of the client's connection, if it is active
+--- Returns the id of the cli's connection, if it is active
 --- @return Connection|nil
-function Client:connection()
+function Cli:connection()
     return self.__state.connection
-end
-
---- Retrieves the current version of the binary, returning it  or nil if not available
---- @return Version|nil
-function Client:version()
-    return utils.exec_version(self.__settings.bin)
 end
 
 --- @class LaunchOpts
@@ -297,14 +290,14 @@ end
 --- @field ssh? string
 --- @field username? string
 ---
---- @field auth? ClientAuth
+--- @field auth? CliAuth
 
 --- Launches a server remotely and performs authentication with the remote server
 ---
 --- @param opts LaunchOpts
 --- @param cb fun(err?:string, connection?:Connection)
 --- @return JobHandle|nil
-function Client:launch(opts, cb)
+function Cli:launch(opts, cb)
     log.fmt_debug('Authenticating with options: %s', opts)
     opts = opts or {}
     vim.validate({
@@ -340,7 +333,7 @@ function Client:launch(opts, cb)
     end
 
     local destination = opts.destination
-    local cmd = self:build_cmd(Cmd.client.launch(destination):set_from_tbl({
+    local cmd = self:build_cmd(Cmd.cli.launch(destination):set_from_tbl({
         -- Optional user settings
         distant           = opts.distant;
         distant_args      = wrap_args(opts.distant_args);
@@ -419,18 +412,18 @@ end
 --- @field method? 'distant'|'ssh'
 --- @field log_file? string
 --- @field log_level? LogLevel
---- @field auth? ClientAuth
+--- @field auth? CliAuth
 
 --- @class ConnectSshOpts
 --- @field host? string
 --- @field port? number
 --- @field user? string
 
---- Connects this client to a remote server
+--- Connects this cli to a remote server
 --- @param opts ConnectOpts
-function Client:connect(opts)
-    log.fmt_debug('Starting client with options: %s', opts)
-    assert(not self:is_connected(), 'Client is already connected!')
+function Cli:connect(opts)
+    log.fmt_debug('Starting cli with options: %s', opts)
+    assert(not self:is_connected(), 'Cli is already connected!')
     opts = opts or {}
 
     vim.validate({
@@ -459,7 +452,7 @@ function Client:connect(opts)
         log_level = opts.log_level;
     }))
 
-    log.fmt_debug('Client cmd: %s', cmd)
+    log.fmt_debug('Cli cmd: %s', cmd)
 
     --- @type JobHandle
     local handle
@@ -540,7 +533,7 @@ end
 
 --- Stops an instance of distant if running by killing the process
 --- and resetting state
-function Client:stop()
+function Cli:stop()
     if self.__state.handle ~= nil then
         self.__state.handle.stop()
     end
@@ -549,17 +542,17 @@ function Client:stop()
     self.__state.details = nil
 end
 
---- @class ClientMsg
+--- @class CliMsg
 --- @field type string
 --- @field data table
 
---- @alias OneOrMoreMsgs ClientMsg|ClientMsg[]
+--- @alias OneOrMoreMsgs CliMsg|CliMsg[]
 
 --- @class SendOpts
 --- @field unaltered? boolean @when true, the callback will not be wrapped in the situation where there is
 ---                           a single request payload entry to then return a single response payload entry
 --- @field multi? boolean @when true, the callback may be triggered multiple times and will not be cleared
----                       within the Client upon receiving an event. Instead, a function is returned that will
+---                       within the Cli upon receiving an event. Instead, a function is returned that will
 ---                       be called when we want to stop receiving events whose origin is this message
 
 --- Send one or more messages to the remote machine, invoking the provided callback with the
@@ -568,7 +561,7 @@ end
 --- @param msgs OneOrMoreMsgs
 --- @param opts? SendOpts
 --- @param cb fun(data:table, stop:fun()|nil)
-function Client:send(msgs, opts, cb)
+function Cli:send(msgs, opts, cb)
     if type(cb) ~= 'function' then
         cb = opts
         opts = {}
@@ -578,8 +571,8 @@ function Client:send(msgs, opts, cb)
         opts = {}
     end
 
-    log.fmt_trace('Client:send(%s, %s, _)', msgs, opts)
-    assert(self:is_connected(), 'Client is not connected!')
+    log.fmt_trace('Cli:send(%s, %s, _)', msgs, opts)
+    assert(self:is_connected(), 'Cli is not connected!')
 
     local payload = msgs
     if not vim.tbl_islist(payload) then
@@ -587,7 +580,7 @@ function Client:send(msgs, opts, cb)
     end
 
     -- Build a full message that wraps the provided message as the payload and
-    -- includes an id that our client uses when relaying a response for the
+    -- includes an id that our cli uses when relaying a response for the
     -- callback to process
     local full_msg = {
         id = utils.next_id();
@@ -625,9 +618,9 @@ end
 --- @param msgs OneOrMoreMsgs
 --- @param opts? table
 --- @return table
-function Client:send_wait(msgs, opts)
+function Cli:send_wait(msgs, opts)
     opts = opts or {}
-    log.fmt_trace('Client:send_wait(%s, %s)', msgs, opts)
+    log.fmt_trace('Cli:send_wait(%s, %s)', msgs, opts)
     local tx, rx = utils.oneshot_channel(
         opts.timeout or self.__settings.timeout,
         opts.interval or self.__settings.interval
@@ -647,9 +640,9 @@ end
 --- @param msgs OneOrMoreMsgs
 --- @param opts? table
 --- @return table|nil
-function Client:send_wait_ok(msgs, opts)
+function Cli:send_wait_ok(msgs, opts)
     opts = opts or {}
-    log.fmt_trace('Client:send_wait_ok(%s, %s)', msgs, opts)
+    log.fmt_trace('Cli:send_wait_ok(%s, %s)', msgs, opts)
     local timeout = opts.timeout or self.__settings.timeout
     local result = self:send_wait(msgs, opts)
     if result == nil then
@@ -662,9 +655,9 @@ function Client:send_wait_ok(msgs, opts)
 end
 
 --- Primary event handler, routing received events to the corresponding callbacks
-function Client:__handler(msg)
+function Cli:__handler(msg)
     assert(type(msg) == 'table', 'msg must be a table')
-    log.fmt_trace('Client:__handler(%s)', msg)
+    log.fmt_trace('Cli:__handler(%s)', msg)
 
     -- {"id": ..., "origin_id": ..., "payload": ...}
     local origin_id = msg.origin_id
@@ -708,12 +701,12 @@ end
 --- @overload fun(msg:table, reply:fun(msg:table)):boolean
 --- @param msg table
 --- @param reply fun(msg:table)
---- @param auth? ClientAuth
+--- @param auth? CliAuth
 --- @return boolean #true if okay, otherwise false
-function Client:__auth_handler(msg, reply, auth)
+function Cli:__auth_handler(msg, reply, auth)
     local type = msg.type
 
-    --- @type ClientAuth
+    --- @type CliAuth
     auth = vim.tbl_deep_extend('keep', auth or {}, self.auth)
 
     if type == 'challenge' then
@@ -742,7 +735,7 @@ end
 
 --- @param msg {type:string}
 --- @return boolean
-function Client:__is_auth_msg(msg)
+function Cli:__is_auth_msg(msg)
     return msg and type(msg.type) == 'string' and vim.tbl_contains({
         'challenge',
         'verify',
@@ -751,4 +744,4 @@ function Client:__is_auth_msg(msg)
     }, msg.type)
 end
 
-return Client
+return Cli

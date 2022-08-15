@@ -612,7 +612,7 @@ local function install(opts, cb)
             return cb(true, local_bin)
         elseif version then
             prompt = string.format(
-                'Installed client version is %s, which is not backwards-compatible with %s! '
+                'Installed cli version is %s, which is not backwards-compatible with %s! '
                 .. 'What would you like to do?',
                 utils.version_to_string(version),
                 utils.version_to_string(min_version)
@@ -708,7 +708,7 @@ local function install(opts, cb)
     end
 end
 
---- @class ClientInstall
+--- @class CliInstall
 --- @field available_on_path fun():boolean #???
 --- @field bin_name fun():'distant'|'distant.exe' #returns the name of the binary (distant or distant.exe)
 --- @field exists fun():boolean #returns true if binary exists and is executable
@@ -716,7 +716,7 @@ end
 --- @field path fun():string #returns path to binary
 --- @field dir fun():string #returns path to directory containing binary
 
---- @type ClientInstall
+--- @type CliInstall
 return {
     available_on_path = available_on_path,
     bin_name = bin_name,

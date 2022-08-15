@@ -1,12 +1,12 @@
 local vars = require('distant.vars')
 
-local Cmd = require('distant.client.cmd')
+local Cmd = require('distant.cli.cmd')
 local log = require('distant.log')
 
---- @param client Client
---- @return ClientLsp
-return function(client)
-    --- @type ClientLsp
+--- @param connection ClientConnection
+--- @return CliLsp
+return function(connection)
+    --- @type CliLsp
     local lsp = {
         __state = {
             clients = {}
@@ -29,16 +29,8 @@ return function(client)
         opts = opts or {}
         log.fmt_trace('lsp_start_client(%s, %s)', config, opts)
 
-        -- TODO: If no log file is specified for output, we need to make our process quiet
-        --       otherwise invalid data can be fed to the LSP client somehow; this shouldn't
-        --       be the case as our proxy outputs logs into stderr and not stdout, but
-        --       maybe the client is reading both
-        if not opts.log_file then
-            opts.quiet = true
-        end
-
-        assert(client:is_connected(), 'Client not yet connected!')
-        local session = assert(client:tcp_session(), 'Client has not established TCP session!')
+        assert(connection:is_connected(), 'Cli not yet connected!')
+        local session = assert(connection:tcp_session(), 'Cli has not established TCP session!')
 
         -- The command needs to be wrapped with a prefix that is our distant binary
         -- as we are running the actual lsp server remotely
@@ -48,7 +40,7 @@ return function(client)
         end
 
         --- @type string[]
-        local cmd = client:build_cmd(
+        local cmd = connection:build_cmd(
             Cmd.lsp(config_cmd):set_from_tbl(opts),
             { list = true }
         )
@@ -117,9 +109,9 @@ return function(client)
         return vim.lsp.start_client(lsp_config)
     end
 
-    --- Connects relevant LSP clients to the provided buffer, optionally
+    --- Connects relevant LSP client to the provided buffer, optionally
     --- starting clients if needed
-    --- @param buf number Handle of the buffer where clients will attach
+    --- @param buf number Handle of the buffer where client will attach
     lsp.connect = function(buf)
         log.fmt_trace('lsp.connect(%s)', buf)
         local path = vars.buf.remote_path(buf)
@@ -133,7 +125,7 @@ return function(client)
         if path ~= nil then
             local state = require('distant.state')
             for label, config in pairs(state.settings.lsp) do
-                -- Only apply clients with a root directory that contains this file
+                -- Only apply client with a root directory that contains this file
                 if vim.startswith(path, config.root_dir) then
                     log.fmt_trace('File %s is within %s of %s', path, config.root_dir, label)
 
@@ -168,7 +160,7 @@ return function(client)
 
                         -- Attach to our buffer if it isn't already
                         local client_id = lsp.__state.clients[label]
-                        if not vim.lsp.buf_is_attached(client_id) then
+                        if not vim.lsp.buf_is_attached(buf, client_id) then
                             log.fmt_debug('Attaching to buf %s for LSP %s', buf, label)
                             vim.lsp.buf_attach_client(buf, client_id)
                         end

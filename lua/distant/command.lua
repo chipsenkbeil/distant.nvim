@@ -222,7 +222,7 @@ end
 command.install = function(input)
     input = command.parse_input(input)
     local reinstall = input.args[1] == 'reinstall'
-    local Client = require('distant.client')
+    local Client = require('distant.cli')
     Client:install({ reinstall = reinstall }, function(err, _)
         if err then
             vim.api.nvim_err_writeln(err)
@@ -348,7 +348,7 @@ end
 
 --- DistantClientVersion
 command.client_version = function()
-    local Client = require('distant.client')
+    local Client = require('distant.cli')
     local client = Client:new()
     local utils = require('distant.utils')
 

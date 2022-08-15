@@ -47,7 +47,7 @@ state.new_client = function(opts, cb)
         )
     end
 
-    local Client = require('distant.client')
+    local Client = require('distant.cli')
     Client:install(opts, function(err, client)
         if err then
             return cb(err)

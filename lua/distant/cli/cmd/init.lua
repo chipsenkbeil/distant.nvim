@@ -18,37 +18,37 @@ return {
     client = {
         --- @type fun(subcommand:string|nil):ClientActionCmd
         action = function(...)
-            local Cmd = require('distant.client.cmd.client.action')
+            local Cmd = require('distant.cli.cmd.client.action')
             return Cmd:new(...)
         end,
 
         --- @type fun(destination:string):ClientConnectCmd
         connect = function(...)
-            local Cmd = require('distant.client.cmd.client.connect')
+            local Cmd = require('distant.cli.cmd.client.connect')
             return Cmd:new(...)
         end,
 
         --- @type fun(destination:string):ClientLaunchCmd
         launch = function(...)
-            local Cmd = require('distant.client.cmd.client.launch')
+            local Cmd = require('distant.cli.cmd.client.launch')
             return Cmd:new(...)
         end,
 
         --- @type fun(cmd:string):ClientLspCmd
         lsp = function(...)
-            local Cmd = require('distant.client.cmd.client.lsp')
+            local Cmd = require('distant.cli.cmd.client.lsp')
             return Cmd:new(...)
         end,
 
         --- @type fun(cmd:string|nil):ClientReplCmd
         repl = function()
-            local Cmd = require('distant.client.cmd.client.repl')
+            local Cmd = require('distant.cli.cmd.client.repl')
             return Cmd:new()
         end,
 
         --- @type fun(cmd:string|nil):ClientShellCmd
         shell = function(...)
-            local Cmd = require('distant.client.cmd.client.shell')
+            local Cmd = require('distant.cli.cmd.client.shell')
             return Cmd:new(...)
         end,
     },
@@ -58,7 +58,7 @@ return {
     manager = {
         --- @type fun():ManagerListenCmd
         listen = function()
-            local Cmd = require('distant.client.cmd.manager.listen')
+            local Cmd = require('distant.cli.cmd.manager.listen')
             return Cmd:new()
         end,
     },
@@ -68,7 +68,7 @@ return {
     server = {
         --- @type fun():ServerListenCmd
         listen = function()
-            local Cmd = require('distant.client.cmd.server.listen')
+            local Cmd = require('distant.cli.cmd.server.listen')
             return Cmd:new()
         end,
     },
