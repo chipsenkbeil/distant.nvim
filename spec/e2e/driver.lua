@@ -83,9 +83,7 @@ local function initialize_client(opts)
     if config.user and mode ~= 'ssh' then
         destination = config.user .. '@' .. destination
     end
-    if mode ~= 'distant' then
-        destination = mode .. '//' .. destination
-    end
+    destination = mode .. '://' .. destination
     local launch_opts = {
         destination = destination,
         distant = {
