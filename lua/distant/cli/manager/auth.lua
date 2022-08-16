@@ -4,16 +4,15 @@ local utils = require('distant.utils')
 local M = {}
 
 --- @class AuthHandler
---- @field on_authenticate? fun(msg:AuthHandlerMsg):string[]
---- @field on_verify_host? fun(host:string):boolean
---- @field on_info? fun(text:string)
---- @field on_error? fun(err:string)
---- @field on_unknown? fun(x:any)
+--- @field on_authenticate fun(msg:AuthHandlerMsg):string[]|nil
+--- @field on_verify_host fun(host:string):boolean|nil
+--- @field on_info fun(text:string)|nil
+--- @field on_error fun(err:string)|nil
+--- @field on_unknown fun(x:any)|nil
 
 --- @class AuthHandlerMsg
---- @field username? string
---- @field instructions? string
---- @field prompts {prompt:string, echo:boolean}[]
+--- @field extra table<string, string>|nil
+--- @field questions {text:string, extra:table<string, string>|nil}[]
 
 --- @return AuthHandler
 local function make_auth_handler()
@@ -21,19 +20,22 @@ local function make_auth_handler()
         --- @param msg AuthHandlerMsg
         --- @return string[]
         on_authenticate = function(msg)
-            if msg.username then
-                print('Authentication for ' .. msg.username)
-            end
-            if msg.instructions then
-                print(msg.instructions)
+            print('msg = ' .. vim.inspect(msg))
+            if msg.extra then
+                if msg.extra.username then
+                    print('Authentication for ' .. msg.extra.username)
+                end
+                if msg.extra.instructions then
+                    print(msg.extra.instructions)
+                end
             end
 
             local answers = {}
-            for _, p in ipairs(msg.prompts) do
-                if p.echo then
-                    table.insert(answers, vim.fn.input(p.prompt))
+            for _, question in ipairs(msg.questions) do
+                if question.extra and question.extra.echo == 'true' then
+                    table.insert(answers, vim.fn.input(question.text))
                 else
-                    table.insert(answers, vim.fn.inputsecret(p.prompt))
+                    table.insert(answers, vim.fn.inputsecret(question.text))
                 end
             end
             return answers
@@ -43,6 +45,9 @@ local function make_auth_handler()
         --- @return boolean
         on_verify_host = function(host)
             local answer = vim.fn.input(string.format('%s\nEnter [y/N]> ', host))
+            if answer ~= nil then
+                answer = vim.trim(answer)
+            end
             return answer == 'y' or answer == 'Y' or answer == 'yes' or answer == 'YES'
         end,
 
@@ -83,7 +88,7 @@ local function handle_auth_msg(auth, msg, reply)
     elseif type == 'verify' then
         reply({
             type = 'verify',
-            answer = auth.on_verify_host(msg.host)
+            valid = auth.on_verify_host(msg.text)
         })
         return true
     elseif type == 'error' then
