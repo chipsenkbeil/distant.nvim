@@ -68,7 +68,7 @@ end
 --- @param msg table
 --- @param reply fun(msg:table)
 --- @return boolean #true if okay, otherwise false
-local function handle_auth_msg(msg, reply, auth)
+local function handle_auth_msg(auth, msg, reply)
     local type = msg.type
 
     if type == 'challenge' then
