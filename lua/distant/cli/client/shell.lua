@@ -15,6 +15,8 @@ function ClientShell:new(opts)
     local instance = {}
     setmetatable(instance, ClientShell)
     instance.config = opts
+    assert(instance.config.binary, 'Shell missing binary')
+    assert(instance.config.network, 'Shell missing network')
 
     return instance
 end
@@ -38,7 +40,7 @@ function ClientShell:spawn(opts)
 
     --- @type string[]
     local cmd = Cmd.client.shell(c):set_from_tbl(self.config.network):as_list()
-    table.insert(cmd, 0, self.config.binary)
+    table.insert(cmd, 1, self.config.binary)
 
     -- Get or create the buffer we will be using with this terminal,
     -- ensure it is no longer modifiable, switch to it, and then

@@ -148,7 +148,11 @@ function M.spawn(opts, cb)
                         handle.write(utils.compress(vim.fn.json_encode(msg)) .. '\n')
                     end)
                 elseif msg.type == 'launched' or msg.type == 'connected' then
-                    connection = msg.id
+                    -- NOTE: Lua 5.1 cannot handle an unsigned 64-bit integer as it loses
+                    --       some of the precision resulting in the wrong connection id
+                    --       being captured during json_decode. Because of this, we have
+                    --       to parse by hand the connection id from a string
+                    connection = utils.parse_json_str_for_value(line, 'id')
                 else
                     log.fmt_error('Unexpected msg: %s', msg)
                 end

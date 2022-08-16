@@ -50,6 +50,8 @@ function ClientRepl:new(opts)
     local instance = {}
     setmetatable(instance, ClientRepl)
     instance.config = opts
+    assert(instance.config.binary, 'Repl missing binary')
+    assert(instance.config.network, 'Repl missing network')
     instance.config.timeout = instance.config.timeout or DEFAULT_TIMEOUT
     instance.config.interval = instance.config.interval or DEFAULT_INTERVAL
 
@@ -71,8 +73,8 @@ end
 --- @param cb fun(code:number)|nil #optional callback when the repl exits
 function ClientRepl:start(cb)
     if not self:is_running() then
-        local cmd = Cmd.client.repl():set_from_tbl(self.config.network):as_list()
-        table.insert(cmd, 0, self.config.binary)
+        local cmd = Cmd.client.repl():set_format('json'):set_from_tbl(self.config.network):as_list()
+        table.insert(cmd, 1, self.config.binary)
 
         local handle
         handle = utils.job_start(cmd, {

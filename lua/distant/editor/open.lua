@@ -54,11 +54,15 @@ local function check_path(path, opts)
     log.fmt_trace('check_path(%s, %s)', path, opts)
 
     -- We need to figure out if we are working with a file or directory
-    local _, metadata = fn.metadata(vim.tbl_extend('keep', {
+    local err, metadata = fn.metadata(vim.tbl_extend('keep', {
         path = path,
         canonicalize = true,
         resolve_file_type = true,
     }, opts))
+
+    if err then
+        error(vim.inspect(err))
+    end
 
     local missing = metadata == nil
     local is_dir = not missing and metadata.file_type == 'dir'

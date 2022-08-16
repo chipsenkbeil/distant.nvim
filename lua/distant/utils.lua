@@ -245,7 +245,7 @@ utils.job_start = function(cmd, opts)
                 vim.fn.jobstop(job_id)
             end,
             running = function()
-                return vim.fn.job_status(job_id) == 'run'
+                return vim.fn.jobwait({ job_id }, 0)[1] == -1
             end,
         }
     end
@@ -700,6 +700,88 @@ utils.oneshot_channel = function(timeout, interval)
     end
 
     return tx, rx
+end
+
+--- @param s string #json string
+--- @param key string #key whose value to retrieve
+--- @return string|nil #value of key if exists
+utils.parse_json_str_for_value = function(s, key)
+    s = vim.trim(s)
+
+    -- Ensure is an object string
+    if not vim.startswith(s, '{') or not vim.endswith(s, '}') then
+        return
+    end
+
+    -- Look for each match of key in json
+    local indexes = {}
+    local i = 0
+    while true do
+        i = string.find(s, key, i + 1)
+        if i == nil then break end
+        table.insert(indexes, i)
+    end
+
+    local char_at = function(str, idx) return str:sub(idx, idx) end
+
+    -- We expect a quote to follow immediately after key,
+    -- then at some point a colon (spaces are allowed),
+    -- and then the value
+    local c, value
+    for _, idx in ipairs(indexes) do
+        -- Get position after key
+        i = idx + #key
+        c = char_at(s, i)
+
+        -- If next character is a quote, we assume this is a key
+        if c == '"' then
+            value = ''
+
+            -- Now, skip ahead to the colon
+            while c ~= ':' do
+                i = i + 1
+                c = char_at(s, i)
+            end
+
+            -- Now skip the colon
+            i = i + 1
+            c = char_at(s, i)
+
+            -- Now capture everything until the next key or end of json
+            while c ~= ',' and c ~= '}' do
+                -- Add the current character and move past it
+                value = value .. c
+                i = i + 1
+
+                -- Character was a quote - entering a quoted value - so read everything until the end quote
+                if c == '"' then
+                    local old_c = c
+
+                    -- Update our referenced character to the next one
+                    c = char_at(s, i)
+
+                    -- Read while we don't have an unescaped double quote, read and add each character to value
+                    while true do
+                        -- If our current character is not an escaped quote, keep reading,
+                        -- but if we run out of characters then exit
+                        if old_c ~= '\\' and (c == '"' or c == nil) then
+                            break
+                        end
+
+                        value = value .. c
+                        i = i + 1
+                        c = char_at(s, i)
+                    end
+                end
+
+                -- Update our referenced character to the next one
+                c = char_at(s, i)
+            end
+
+            -- Finally, trim our value to remove whitespace
+            return vim.trim(value)
+        end
+    end
 end
 
 return utils

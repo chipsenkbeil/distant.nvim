@@ -1,4 +1,4 @@
-local ClientApi   = require('distant.cli.client.api')
+local make_api    = require('distant.cli.client.api')
 local ClientLsp   = require('distant.cli.client.lsp')
 local ClientRepl  = require('distant.cli.client.repl')
 local ClientShell = require('distant.cli.client.shell')
@@ -37,13 +37,15 @@ function Client:new(opts)
         binary = opts.binary,
         network = vim.deepcopy(opts.network) or {},
     }
+    assert(instance.config.binary, 'Client missing binary')
+    assert(instance.config.network, 'Client missing network')
 
-    local repl = ClientRepl:new(self.config)
+    local repl = ClientRepl:new(instance.config)
     instance.__state = {
-        api = ClientApi:new(repl),
-        lsp = ClientLsp:new(self.config),
+        api = make_api(repl),
+        lsp = ClientLsp:new(instance.config),
         repl = repl,
-        shell = ClientShell:new(self.config),
+        shell = ClientShell:new(instance.config),
     }
 
     return instance

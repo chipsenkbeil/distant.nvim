@@ -22,6 +22,8 @@ function ClientLsp:new(opts)
     local instance = {}
     setmetatable(instance, ClientLsp)
     instance.config = opts
+    assert(instance.config.binary, 'Lsp missing binary')
+    assert(instance.config.network, 'Lsp missing network')
     instance.__state = {
         clients = {}
     }
@@ -51,7 +53,7 @@ function ClientLsp:__lsp_start_client(config, opts)
 
     --- @type string[]
     local cmd = Cmd.client.lsp(config_cmd):set_from_tbl(opts):set_from_tbl(self.config.network):as_list()
-    table.insert(cmd, 0, self.config.binary)
+    table.insert(cmd, 1, self.config.binary)
 
     -- TODO: Followed this based on nvim-lspconfig, but don't yet understand
     --       the workspace configuration override

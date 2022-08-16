@@ -1,4 +1,3 @@
-local state = require('distant.state')
 local utils = require('distant.utils')
 
 local Client = require('distant.cli.client')
@@ -42,6 +41,9 @@ end
 --- @return {bin:string, timeout:number, interval:number}
 function cli.settings(opts)
     opts = opts or {}
+
+    -- NOTE: Must load state lazily here, otherwise we get a loop
+    local state = require('distant.state')
 
     -- If we are not given a custom bin path, the settings bin path
     -- hasn't changed (from distant/distant.exe), and the current

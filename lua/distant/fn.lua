@@ -1,20 +1,15 @@
-local state = require('distant.state')
-
 --- @param obj table<string, function>
 --- @param names string[]
 --- @return table<string, function>
 local function make_fns(obj, names)
     for _, name in ipairs(names) do
         obj[name] = function(...)
+            local state = require('distant.state')
             local client = assert(
                 state.client,
                 'Client must be initialized before invoking fn'
             )
-            local api = client:api()
-            local fn = api[name]
-            local args = { ... }
-            table.insert(args, 0, api)
-            return fn(unpack(args))
+            return client:api()[name](...)
         end
     end
 

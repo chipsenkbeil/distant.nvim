@@ -19,10 +19,12 @@ return function()
 
     local msg = {}
     if client and manager then
-        local destination = state.manager.connections[client.config.network.connection]
+        local connection = client.config.network.connection
+        local destination = state.manager:connection_destination(connection)
         vim.list_extend(msg, {
             '= Client =';
             '';
+            '* Connection = ' .. connection;
             '* Destination = ' .. destination;
         })
     else

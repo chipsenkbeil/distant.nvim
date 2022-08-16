@@ -1,4 +1,4 @@
-local cli = require('distant.cli')
+local log = require('distant.log')
 local settings = require('distant.settings')
 local utils = require('distant.utils')
 
@@ -9,6 +9,7 @@ local utils = require('distant.utils')
 local State = {}
 State.__index = State
 
+--- @return State
 function State:new()
     local instance = {}
     setmetatable(instance, State)
@@ -43,6 +44,9 @@ function State:load_manager(opts, cb)
     end
 
     if not self.manager then
+        -- NOTE: Lazily load cli to prevent loop
+        local cli = require('distant.cli')
+
         cli.install(opts, function(err, path)
             if err then
                 return cb(err)
@@ -63,7 +67,12 @@ function State:load_manager(opts, cb)
             }))
 
             if not self.manager:is_listening({}) then
-                self.manager:listen({}, nil)
+                --- @diagnostic disable-next-line:redefined-local
+                self.manager:listen({}, function(err)
+                    if err then
+                        log.fmt_error('Manager failed: %s', err)
+                    end
+                end)
             end
 
             return cb(nil, self.manager)
@@ -129,4 +138,5 @@ function State:connect(opts, cb)
     end)
 end
 
-return State:new()
+local GLOBAL_STATE = State:new()
+return GLOBAL_STATE

@@ -1,3 +1,4 @@
+local log = require('distant.log')
 local state = require('distant.state')
 local utils = require('distant.utils')
 
@@ -233,7 +234,18 @@ local function make_fn(params)
         -- Configure whether or not we are a multi send
         opts = vim.tbl_extend('keep', { multi = params.multi }, opts)
 
-        params.repl:send(msgs, opts, function(res, stop)
+        local repl = params.repl
+
+        -- Ensure that the repl is running before attempting to send a message
+        if not repl:is_running() then
+            repl:start(function(code)
+                if code ~= 0 and code ~= 143 then
+                    log.error('Distant api repl failed with code ' .. tostring(code))
+                end
+            end)
+        end
+
+        repl:send(msgs, opts, function(res, stop)
             local reply = cb
             if params.and_then then
                 reply = function(err, data, f)

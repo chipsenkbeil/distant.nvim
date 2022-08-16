@@ -11,7 +11,7 @@ local DEFAULT_INTERVAL = 100
 --- Represents a distant manager
 --- @class Manager
 --- @field config ManagerConfig
---- @field connections table<string, string> #mapping of id -> destination
+--- @field connections table<string, {destination:string}> #mapping of id -> destination
 local Manager = {}
 Manager.__index = Manager
 
@@ -47,6 +47,15 @@ function Manager:has_connection(connection)
 end
 
 --- @param connection string #id of the connection being managed
+--- @return string|nil #destination if connection exists
+function Manager:connection_destination(connection)
+    local c = self.connections[connection]
+    if c then
+        return c.destination
+    end
+end
+
+--- @param connection string #id of the connection being managed
 --- @return Client|nil #client wrapper around connection if it exists, or nil
 function Manager:client(connection)
     if self:has_connection(connection) then
@@ -66,8 +75,8 @@ end
 --- @param opts {timeout:number|nil, interval:number|nil}
 --- @return boolean
 function Manager:is_listening(opts)
-    local cmd = Cmd.manager.list():set_from_tbl(self.config.network)
-    table.insert(cmd, 0, self.config.binary)
+    local cmd = Cmd.manager.list():set_from_tbl(self.config.network):as_list()
+    table.insert(cmd, 1, self.config.binary)
 
     local tx, rx = utils.oneshot_channel(
         opts.timeout or DEFAULT_TIMEOUT,
@@ -111,13 +120,15 @@ function Manager:listen(opts, cb)
         log_level = opts.log_level,
         user      = opts.user,
     }):as_list()
-    table.insert(cmd, 0, self.config.binary)
+    table.insert(cmd, 1, self.config.binary)
 
     local handle, error_lines
     error_lines = {}
     handle = utils.job_start(cmd, {
         on_success = function()
-            return cb(nil)
+            if cb then
+                return cb(nil)
+            end
         end,
         on_failure = function(code)
             local error_msg = '???'
@@ -126,12 +137,16 @@ function Manager:listen(opts, cb)
             end
 
             error_msg = 'Failed (' .. tostring(code) .. '): ' .. error_msg
-            return cb(error_msg)
+
+            -- NOTE: Don't trigger if code is 143 as that is neovim terminating the manager on exit
+            if cb and code ~= 143 then
+                return cb(error_msg)
+            end
         end,
         on_stdout_line = function()
         end,
         on_stderr_line = function(line)
-            if line ~= nil then
+            if line ~= nil and cb then
                 table.insert(error_lines, line)
             end
         end,
@@ -180,6 +195,11 @@ function Manager:launch(opts, cb)
         local quote = '\''
         text = vim.trim(text)
 
+        -- If text empty, exit
+        if #text == 0 then
+            return text
+        end
+
         if not vim.startswith(text, quote) then
             text = quote .. text
         end
@@ -213,7 +233,7 @@ function Manager:launch(opts, cb)
         ssh_port          = opts.ssh_port and tostring(opts.ssh_port),
         ssh_username      = opts.ssh_username,
     }):as_list()
-    table.insert(cmd, 0, self.config.binary)
+    table.insert(cmd, 1, self.config.binary)
 
     log.fmt_debug('Launch cmd: %s', cmd)
     return auth.spawn({
@@ -269,7 +289,7 @@ function Manager:connect(opts, cb)
         log_file  = opts.log_file,
         log_level = opts.log_level,
     }):as_list()
-    table.insert(cmd, 0, self.config.binary)
+    table.insert(cmd, 1, self.config.binary)
 
     log.fmt_debug('Connect cmd: %s', cmd)
     return auth.spawn({
