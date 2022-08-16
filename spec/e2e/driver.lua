@@ -68,7 +68,8 @@ local function initialize_client(opts)
     local distant_bin = config.bin
     local distant_args = vim.list_extend({
         '--current-dir', config.root_dir,
-        '--shutdown-after', '60',
+        -- TODO: Re-add the shutdown feature when it is available
+        -- '--shutdown-after', '60',
         '--port', '8080:8999',
     }, opts.args or {})
     local ssh = {
@@ -77,21 +78,27 @@ local function initialize_client(opts)
             ['StrictHostKeyChecking'] = 'no'
         },
     }
+    local destination = host
+    local mode = launch_mode(opts)
+    if config.user and mode ~= 'ssh' then
+        destination = config.user .. '@' .. destination
+    end
+    if mode ~= 'distant' then
+        destination = mode .. '//' .. destination
+    end
     local launch_opts = {
-        host = host,
+        destination = destination,
         distant = {
             bin = distant_bin,
             args = distant_args,
         },
-        mode = launch_mode(opts),
         ssh = ssh,
-
         auth = {
             -- All password challenges return the same password
             on_authenticate = function(ev)
                 local answers = {}
                 local i = 1
-                local n = tonumber(#ev.prompts)
+                local n = tonumber(#ev.questions)
                 while i <= n do
                     table.insert(answers, config.password or '')
                     i = i + 1
@@ -106,8 +113,8 @@ local function initialize_client(opts)
     editor.launch(launch_opts, function(err, c)
         if err then
             local desc = string.format(
-                'editor.launch({ host = %s, distant_bin = %s, distant_args = %s })',
-                host, distant_bin, vim.inspect(distant_args)
+                'editor.launch({ destination = %s, distant_bin = %s, distant_args = %s })',
+                destination, distant_bin, vim.inspect(distant_args)
             )
             error(string.format(
                 'For %s, failed: %s',
@@ -118,13 +125,9 @@ local function initialize_client(opts)
         end
     end)
     local status = vim.fn.wait(timeout, function()
-        --- @diagnostic disable-next-line:need-check-nil
-        return client ~= nil and client:is_connected()
+        return client ~= nil
     end, interval)
-    assert(status == 0, 'Client not initialized in time')
-
-    --- @diagnostic disable-next-line:need-check-nil
-    assert(client:is_connected(), 'Client is not connected')
+    assert(status == 0, 'Client not initialized in time (status == ' .. status .. ')')
     return client
 end
 

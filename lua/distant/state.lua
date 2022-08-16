@@ -67,12 +67,18 @@ function State:load_manager(opts, cb)
             }))
 
             if not self.manager:is_listening({}) then
+                log.debug('Manager not listening, so starting proess')
+
                 --- @diagnostic disable-next-line:redefined-local
                 self.manager:listen({}, function(err)
                     if err then
                         log.fmt_error('Manager failed: %s', err)
                     end
                 end)
+
+                if not self.manager:wait_for_listening({}) then
+                    log.error('Manager still does not appear to be listening')
+                end
             end
 
             return cb(nil, self.manager)
@@ -89,6 +95,9 @@ function State:load_manager(opts, cb)
 end
 
 function State:launch(opts, cb)
+    --- @type string
+    local destination = assert(opts.destination, 'Destination is missing')
+
     self:load_manager(opts, function(err, manager)
         if err then
             return cb(err)
@@ -96,7 +105,6 @@ function State:launch(opts, cb)
 
         assert(manager, 'Impossible: manager is nil')
 
-        local destination = opts.destination
         if vim.startswith(destination, 'ssh://') then
             --- @diagnostic disable-next-line:redefined-local
             manager:connect(opts, function(err, client)
@@ -120,6 +128,8 @@ function State:launch(opts, cb)
 end
 
 function State:connect(opts, cb)
+    assert(opts.destination, 'Destination is missing')
+
     self:load_manager(opts, function(err, manager)
         if err then
             return cb(err)
@@ -128,7 +138,7 @@ function State:connect(opts, cb)
         assert(manager, 'Impossible: manager is nil')
 
         --- @diagnostic disable-next-line:redefined-local
-        manager:launch(opts, function(err, client)
+        manager:connect(opts, function(err, client)
             if client then
                 self.client = client
             end

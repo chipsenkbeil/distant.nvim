@@ -5,7 +5,7 @@ local auth = require('distant.cli.manager.auth')
 local Client = require('distant.cli.client')
 local Cmd = require('distant.cli.cmd')
 
-local DEFAULT_TIMEOUT = 15000
+local DEFAULT_TIMEOUT = 1000
 local DEFAULT_INTERVAL = 100
 
 --- Represents a distant manager
@@ -73,26 +73,54 @@ end
 --- Check if defined manager is listening. Note that this can be the case even when
 --- we have not spawned the manager ourselves
 --- @param opts {timeout:number|nil, interval:number|nil}
---- @return boolean
-function Manager:is_listening(opts)
+--- @param cb fun(value:boolean)|nil
+--- @return boolean|nil
+function Manager:is_listening(opts, cb)
     local cmd = Cmd.manager.list():set_from_tbl(self.config.network):as_list()
     table.insert(cmd, 1, self.config.binary)
 
-    local tx, rx = utils.oneshot_channel(
-        opts.timeout or DEFAULT_TIMEOUT,
-        opts.interval or DEFAULT_INTERVAL
-    )
+    local rx
+    if not cb then
+        cb, rx = utils.oneshot_channel(
+            opts.timeout or DEFAULT_TIMEOUT,
+            opts.interval or DEFAULT_INTERVAL
+        )
+    end
+
+    assert(cb, 'Impossible: cb cannot be nil at this point')
+
     utils.job_start(cmd, {
         on_success = function()
-            tx(true)
+            cb(true)
         end,
         on_failure = function()
-            tx(false)
+            cb(false)
         end
     })
 
-    local err, result = rx()
-    return (not err) and result
+    if rx then
+        local err, result = rx()
+        return (not err) and result
+    end
+end
+
+--- Waits until the manager is listening, up to timeout
+--- @param opts {timeout:number|nil, interval:number|nil}
+--- @return boolean
+function Manager:wait_for_listening(opts)
+    local timeout = opts.timeout or DEFAULT_TIMEOUT
+    local interval = opts.interval or DEFAULT_INTERVAL
+
+    -- Continually check listening status until timeout
+    local status = vim.fn.wait(
+        timeout,
+        function()
+            return self:is_listening({ timeout = timeout, interval = interval })
+        end,
+        interval
+    )
+
+    return status == 0
 end
 
 --- @class ManagerListenOpts
@@ -212,6 +240,7 @@ function Manager:launch(opts, cb)
     end
 
     local destination = opts.destination
+    log.fmt_trace('Launch destination: %s', destination)
     local cmd = Cmd.client.launch(destination):set_from_tbl({
         -- Explicitly set to use JSON for communication and point to
         -- manager's unix socket or windows pipe
