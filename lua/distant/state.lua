@@ -48,7 +48,19 @@ function State:load_manager(opts, cb)
                 return cb(err)
             end
 
-            self.manager = cli.manager(vim.tbl_extend('keep', opts, { binary = path }))
+            -- Create a neovim-local manager
+            local os = utils.detect_os_arch()
+            local network = {}
+            if os == 'windows' then
+                network.windows_pipe = 'nvim-' .. utils.next_id()
+            else
+                network.unix_socket = utils.cache_path('nvim-' .. utils.next_id() .. '.sock')
+            end
+
+            self.manager = cli.manager(vim.tbl_extend('keep', opts, {
+                binary = path,
+                network = network,
+            }))
 
             if not self.manager:is_listening({}) then
                 self.manager:listen({}, nil)

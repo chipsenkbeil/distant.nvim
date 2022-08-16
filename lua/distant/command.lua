@@ -170,50 +170,44 @@ command.open = function(input)
     editor.open(input.opts)
 end
 
---- DistantLaunch host [opt1=..., opt2=...]
+--- DistantLaunch destination [opt1=..., opt2=...]
 command.launch = function(input)
     input = command.parse_input(input)
     paths_to_number(input.opts, { 'ssh.port', 'timeout', 'interval' })
 
-    local host = input.args[1]
-    input.opts.host = host
+    local destination = input.args[1]
+    input.opts.destination = destination
 
-    if type(host) ~= 'string' then
-        vim.api.nvim_err_writeln('Missing host')
+    if type(destination) ~= 'string' then
+        vim.api.nvim_err_writeln('Missing destination')
         return
     end
 
     editor.launch(input.opts, function(err, _)
         if not err then
-            print('Connected to ' .. host)
+            print('Connected to ' .. destination)
         else
             vim.api.nvim_err_writeln(tostring(err) or 'Launch failed without cause')
         end
     end)
 end
 
---- DistantConnect host port [opt1=..., opt2=...]
+--- DistantConnect destination [opt1=..., opt2=...]
 command.connect = function(input)
     input = command.parse_input(input)
     paths_to_number(input.opts, { 'timeout', 'interval' })
 
-    if #input.args == 0 then
-        vim.api.nvim_err_writeln('Missing host and port')
-        return
-    elseif #input.args == 1 then
-        vim.api.nvim_err_writeln('Missing port')
+    local destination = input.args[1]
+    input.opts.destination = destination
+
+    if type(destination) ~= 'string' then
+        vim.api.nvim_err_writeln('Missing destination')
         return
     end
 
-    local host = input.args[1]
-    input.opts.host = host
-
-    local port = tonumber(input.args[2])
-    input.opts.port = port
-
     editor.connect(input.opts, function(err)
         if not err then
-            print('Connected to ' .. host .. ':' .. tostring(port))
+            print('Connected to ' .. destination)
         else
             vim.api.nvim_err_writeln(tostring(err) or 'Connect failed without cause')
         end
@@ -224,11 +218,11 @@ end
 command.install = function(input)
     input = command.parse_input(input)
     local reinstall = input.args[1] == 'reinstall'
-    cli.install({ reinstall = reinstall }, function(err, _)
+    cli.install({ reinstall = reinstall }, function(err, path)
         if err then
             vim.api.nvim_err_writeln(err)
         else
-            print('Successfully installed Rust binary')
+            print('Installed to ' .. path)
         end
     end)
 end

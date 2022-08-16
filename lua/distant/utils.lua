@@ -30,14 +30,46 @@ end)()
 --- @return string
 utils.seperator = function() return SEPARATOR end
 
---- Returns path to data directory for this plugin
+--- Returns path to cache directory for this plugin
+--- @param path string|string[]|nil #if provided, will be appended to path
 --- @return string
-utils.data_path = function()
-    return (
+utils.cache_path = function(path)
+    local full_path = (
+        vim.fn.stdpath('cache') ..
+            utils.seperator() ..
+            utils.plugin_name()
+        )
+
+    if vim.tbl_islist(full_path) then
+        for _, component in ipairs(path) do
+            full_path = full_path .. utils.seperator() .. component
+        end
+    else
+        full_path = full_path .. utils.seperator() .. path
+    end
+
+    return full_path
+end
+
+--- Returns path to data directory for this plugin
+--- @param path string|string[]|nil #if provided, will be appended to path
+--- @return string
+utils.data_path = function(path)
+    local full_path = (
         vim.fn.stdpath('data') ..
             utils.seperator() ..
             utils.plugin_name()
         )
+
+    if vim.tbl_islist(full_path) then
+        for _, component in ipairs(path) do
+            full_path = full_path .. utils.seperator() .. component
+        end
+    else
+        full_path = full_path .. utils.seperator() .. path
+    end
+
+    return full_path
 end
 
 --- @alias OperatingSystem 'windows'|'linux'|'macos'|'bsd'|'solaris'|'unknown'
@@ -256,7 +288,7 @@ end
 ---
 --- @param a Version
 --- @param b Version
---- @param opts nil|{allow_unstable_upgrade:boolean}
+--- @param opts {allow_unstable_upgrade:boolean}|nil
 --- @return boolean
 utils.can_upgrade_version = function(a, b, opts)
     opts = opts or {}

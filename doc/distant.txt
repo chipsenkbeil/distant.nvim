@@ -41,9 +41,9 @@ Welcome to the neovim plugin built around the Lua bindings for distant, a set
 of tooling and libraries dedicated to interaction with remote machines.
 
 In order to operate against a remote machine, you first need to establish a
-connection to it. To do this, you run `:DistantLaunch {host}` where the host
-points to the remote machine and can be an IP address like `127.0.0.1` or a
-domain like `example.com`.
+connection to it. To do this, you run `:DistantLaunch {destination}` where the
+destination points to the remote machine and can be an IP address like
+`127.0.0.1` or a domain like `example.com`.
 
 The launch command will attempt to SSH into the remote machine using port 22
 by default and start an instance of the distant server.
@@ -226,10 +226,10 @@ DistantLaunch {destination} {opts}                             *DistantLaunch*
         :DistantLaunch example.com ssh.port=2222 distant.bin=/path/to/distant
 <
 
-DistantConnect {host} {port} {opts}                           *DistantConnect*
+DistantConnect {destination} {opts}                           *DistantConnect*
 
     Attempts to connect to a running distant server at the specified
-    host and port.
+    destination.
 
     Will prompt for the secret key used to communicate with the server.
 
@@ -242,8 +242,8 @@ DistantConnect {host} {port} {opts}                           *DistantConnect*
 
     Examples: ~
 >
-        :DistantConnect example.com 2222
-        :DistantConnect example.com 2222 timeout=5000
+        :DistantConnect example.com:2222
+        :DistantConnect example.com:2222 timeout=5000
 <
 
 DistantInstall [reinstall]                                    *DistantInstall*
