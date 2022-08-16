@@ -143,7 +143,7 @@ function ClientRepl:send(msgs, opts, cb)
     -- includes an id that our repl uses when relaying a response for the
     -- callback to process
     local full_msg = {
-        id = utils.next_id();
+        id = tostring(utils.next_id());
         payload = payload;
     }
 
