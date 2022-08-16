@@ -219,11 +219,10 @@ local function configure_buf(args)
         vim.cmd([[ filetype detect ]])
 
         -- Launch any associated LSP clients
-        local err, client = state.load_client()
-        if err then
-            error(err)
+        if not state.client then
+            error('Not connection has been established!')
         end
-        client.lsp.connect(args.buf)
+        state.client:lsp():connect(args.buf)
     end
 end
 

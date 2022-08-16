@@ -15,9 +15,9 @@ local function clean_data(data)
     end
 end
 
---- @param msg CliMsg
+--- @param msg ClientReplMsg
 --- @param info {type:string, data:table<string, string|{type:string, optional:boolean}>, strict:boolean}
---- @return CliMsg
+--- @return ClientReplMsg
 local function msg_validate(msg, info)
     local opts = {
         type = { msg.type, 'string' },
@@ -122,7 +122,7 @@ end
 --- @alias AndThenArgs {err:string|nil, data:table|nil, cb:ApiCallback}
 
 --- @class MakeFnParams
---- @field repl Repl
+--- @field repl ClientRepl
 --- @field type string
 --- @field ret_type string|string[]
 --- @field map? fun(data:table, type:string, input:table, stop:fun()):table #transform data before it is sent back through callback or return
@@ -297,7 +297,7 @@ local function make_fn(params)
 end
 
 --- Wrap a REPL in a higher-level API
---- @param repl Repl
+--- @param repl ClientRepl
 --- @return ClientApi
 return function(repl)
     local api = {
@@ -716,6 +716,7 @@ return function(repl)
             )
         end
 
+        --- @diagnostic disable-next-line:redundant-parameter
         api.spawn(msgs, opts, function(err, proc)
             if err then
                 --- @diagnostic disable-next-line:need-check-nil

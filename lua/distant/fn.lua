@@ -10,8 +10,11 @@ local function make_fns(obj, names)
                 state.client,
                 'Client must be initialized before invoking fn'
             )
-            local fn = client.api[name]
-            return fn(...)
+            local api = client:api()
+            local fn = api[name]
+            local args = { ... }
+            table.insert(args, 0, api)
+            return fn(unpack(args))
         end
     end
 

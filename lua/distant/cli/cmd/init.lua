@@ -40,7 +40,7 @@ return {
             return Cmd:new(...)
         end,
 
-        --- @type fun(cmd:string|nil):ClientReplCmd
+        --- @type fun():ClientReplCmd
         repl = function()
             local Cmd = require('distant.cli.cmd.client.repl')
             return Cmd:new()
@@ -56,6 +56,12 @@ return {
     --- @type ManagerCmd
     --- For commands like `distant manager ...`
     manager = {
+        --- @type fun():ManagerListCmd
+        list = function()
+            local Cmd = require('distant.cli.cmd.manager.list')
+            return Cmd:new()
+        end,
+
         --- @type fun():ManagerListenCmd
         listen = function()
             local Cmd = require('distant.cli.cmd.manager.listen')

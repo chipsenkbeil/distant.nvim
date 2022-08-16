@@ -193,24 +193,15 @@ DistantOpen {path} {opts}                                        *DistantOpen*
         :DistantOpen /path/to/file reload=true
 <
 
-DistantLaunch {host} {opts}                                    *DistantLaunch*
+DistantLaunch {destination} {opts}                             *DistantLaunch*
 
     Opens a dialog to launch distant on a remote machine.
 
-    The launch command accepts a host as its first argument and then an
+    The launch command accepts a destination as its first argument and then an
     optional series of named parameters in the form of `name=value`.
+    Destination is in the form of scheme://[user@]host[:port]
 
     Options: ~
-        {mode}           (string)  execution mode to use as a client, being
-                                   either "distant" or "ssh". When distant,
-                                   this command will ssh into the host,
-                                   spawn `distant listen`, and connect to
-                                   the server over TCP to communicate requests
-                                   like reading and writing. When ssh, this
-                                   command will ssh into the host and maintain
-                                   the ssh connection, using an sftp channel
-                                   alongside exec channels to read and write
-                                   (default: "distant")
         {ssh.user}       (string)  alternative user for connecting to the ssh
                                    server (default: "<neovim user>")
         {ssh.port}       (number)  port of the ssh server (default: 22)
@@ -446,28 +437,19 @@ Defining settings is done by calling `require('distant').setup({opts})`:
 
 distant.setup({opts})                                        *distant.setup()*
 
-    Defines the global settings for use with this plugin.
+    Defines the global settings for use with this plugin. Each destination is
+    in the form of [scheme://][username@]host[:port] where the scheme will
+    default to distant if none is provided.
 
     Parameters: ~
         {opts}   (string) -> (table)  settings associated with this plugin,
-                                      keyed by host name whose value is
-                                      the associated options for that host
-                                      (default: {})
+                                      keyed by destination whose value is
+                                      the associated options for that
+                                      destination (default: {})
 
     Options: ~
         {ssh}              (SshOpts)  ssh settings (default: {})
         {distant}      (DistantOpts)  distant server settings (default: {})
-        {mode}              (string)  execution mode to use as a client, being
-                                      either "distant" or "ssh". When distant,
-                                      this command will ssh into the host,
-                                      spawn `distant listen`, and connect to
-                                      the server over TCP to communicate
-                                      requests like reading and writing.
-                                      When ssh, this command will ssh into
-                                      the host and maintain the ssh
-                                      connection, using an sftp channel
-                                      alongside exec channels to read and write
-                                      (default: "distant")
         {file}            (FileOpts)  settings that apply when editing remote
                                       files (default: {})
         {dir}              (DirOpts)  settings that apply when editing remote
@@ -1304,6 +1286,9 @@ v0.2.0 ~
     * `port` -> `ssh_port`
     * `username` -> `ssh_username`
     * `shutdown_after` has been removed until support is re-added to `distant`
+  * Update launch and connection functionality to use a destination in the
+    form of `[scheme://][username@]host[:port]` instead of individually
+    providing a host, port, and mode for defining servers
 
 v0.1.2 ~
 

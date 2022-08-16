@@ -21,6 +21,7 @@ local utils = require('distant.utils')
 --- @class LspSettings
 --- @field root_dir string
 --- @field filetypes? string[]
+--- @field on_exit? fun(code:number, signal:number|nil, client_id:string)
 --- @field opts? table
 
 -- Represents the label used to signify default/global settings

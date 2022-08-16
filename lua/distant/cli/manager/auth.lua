@@ -1,0 +1,167 @@
+local log = require('distant.log')
+local utils = require('distant.utils')
+
+local M = {}
+
+--- @class AuthHandler
+--- @field on_authenticate? fun(msg:AuthHandlerMsg):string[]
+--- @field on_verify_host? fun(host:string):boolean
+--- @field on_info? fun(text:string)
+--- @field on_error? fun(err:string)
+--- @field on_unknown? fun(x:any)
+
+--- @class AuthHandlerMsg
+--- @field username? string
+--- @field instructions? string
+--- @field prompts {prompt:string, echo:boolean}[]
+
+--- @return AuthHandler
+local function make_auth_handler()
+    return {
+        --- @param msg AuthHandlerMsg
+        --- @return string[]
+        on_authenticate = function(msg)
+            if msg.username then
+                print('Authentication for ' .. msg.username)
+            end
+            if msg.instructions then
+                print(msg.instructions)
+            end
+
+            local answers = {}
+            for _, p in ipairs(msg.prompts) do
+                if p.echo then
+                    table.insert(answers, vim.fn.input(p.prompt))
+                else
+                    table.insert(answers, vim.fn.inputsecret(p.prompt))
+                end
+            end
+            return answers
+        end,
+
+        --- @param host string
+        --- @return boolean
+        on_verify_host = function(host)
+            local answer = vim.fn.input(string.format('%s\nEnter [y/N]> ', host))
+            return answer == 'y' or answer == 'Y' or answer == 'yes' or answer == 'YES'
+        end,
+
+        --- @param text string
+        on_info = function(text)
+            print(text)
+        end,
+
+        --- @param err string
+        on_error = function(err)
+            log.fmt_error('Authentication error: %s', err)
+        end,
+
+        --- @param x any
+        on_unknown = function(x)
+            log.fmt_error('Unknown authentication event received: %s', x)
+        end,
+    }
+end
+
+--- Authentication event handler
+--- @param auth AuthHandler
+--- @param msg table
+--- @param reply fun(msg:table)
+--- @return boolean #true if okay, otherwise false
+local function handle_auth_msg(msg, reply, auth)
+    local type = msg.type
+
+    if type == 'challenge' then
+        reply({
+            type = 'challenge',
+            answers = auth.on_authenticate(msg)
+        })
+        return true
+    elseif type == 'info' then
+        auth.on_info(msg.text)
+        return true
+    elseif type == 'verify' then
+        reply({
+            type = 'verify',
+            answer = auth.on_verify_host(msg.host)
+        })
+        return true
+    elseif type == 'error' then
+        auth.on_error(vim.inspect(msg))
+        return false
+    else
+        auth.on_unknown(msg)
+        return false
+    end
+end
+
+--- @param msg {type:string}
+--- @return boolean
+local function is_auth_msg(msg)
+    return msg and type(msg.type) == 'string' and vim.tbl_contains({
+        'challenge',
+        'verify',
+        'info',
+        'error',
+    }, msg.type)
+end
+
+--- Spawn a command that does some authentication and eventually returns an id upon success
+--- @param opts {cmd:string|string[], auth:AuthHandler|nil}
+--- @param cb fun(err:string|nil, connection:string|nil)
+--- @return JobHandle
+function M.spawn(opts, cb)
+    local handle, connection, error_lines
+    connection = nil
+    error_lines = {}
+
+    -- Use any custom auth methods, defaulting to standard handler methods if missing
+    local auth = vim.tbl_deep_extend('keep', opts.auth or {}, make_auth_handler())
+
+    handle = utils.job_start(opts.cmd, {
+        on_success = function()
+            if not vim.tbl_isempty(error_lines) then
+                log.error(table.concat(error_lines, '\n'))
+            end
+
+            if not connection then
+                return cb('Completed, but missing connection')
+            else
+                return cb(nil, connection)
+            end
+        end;
+        on_failure = function(code)
+            local error_msg = '???'
+            if not vim.tbl_isempty(error_lines) then
+                error_msg = table.concat(error_lines, '\n')
+            end
+
+            error_msg = 'Failed (' .. tostring(code) .. '): ' .. error_msg
+            return cb(error_msg)
+        end;
+        on_stdout_line = function(line)
+            if line ~= nil and line ~= "" then
+                local msg = vim.fn.json_decode(line)
+                if is_auth_msg(msg) then
+                    --- @diagnostic disable-next-line:redefined-local
+                    handle_auth_msg(auth, msg, function(msg)
+                        handle.write(utils.compress(vim.fn.json_encode(msg)) .. '\n')
+                    end)
+                elseif msg.type == 'launched' or msg.type == 'connected' then
+                    connection = msg.id
+                else
+                    log.fmt_error('Unexpected msg: %s', msg)
+                end
+            end
+        end;
+        on_stderr_line = function(line)
+            if line ~= nil then
+                table.insert(error_lines, line)
+            end
+        end
+    })
+
+    return handle
+end
+
+return M

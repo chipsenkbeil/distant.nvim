@@ -1,110 +1,120 @@
+local cli = require('distant.cli')
 local settings = require('distant.settings')
 local utils = require('distant.utils')
 
 --- @class State
---- @field client Client|nil
---- @field clients table<string, Client>
---- @field settings Settings
-local state = {
-    -- Contains active client
-    client = nil;
+--- @field client Client|nil #active client
+--- @field manager Manager|nil #active manager
+--- @field settings Settings #user settings
+local State = {}
+State.__index = State
 
-    -- Contains all clients mapped by id
-    clients = {};
+function State:new()
+    local instance = {}
+    setmetatable(instance, State)
+    instance.client = nil
+    instance.manager = nil
 
     -- Set default settings so we don't get nil access errors even when no
     -- launch call has been made yet
-    settings = settings.default();
-}
+    instance.settings = settings.default()
+
+    return instance
+end
 
 --- Loads into state the settings appropriate for the remote machine with the give label
 --- @return Settings
-state.load_settings = function(label)
-    state.settings = settings.for_label(label)
-    return state.settings
+function State:load_settings(label)
+    self.settings = settings.for_label(label)
+    return self.settings
 end
 
---- Spawns new client and sets it as the active client
---- @overload fun():boolean|string, Client|nil
---- @overload fun(opts:ClientNewOpts):boolean|string, Client|nil
---- @overload fun(cb:fun(err:string|boolean, client:Client|nil))
----
---- @param opts ClientNewOpts #Provided to newly-constructed client
---- @param cb fun(err:string|boolean, client:Client|nil)
-state.new_client = function(opts, cb)
-    if not cb and type(opts) == 'function' then
-        cb = opts
-        opts = {}
-    end
-
-    opts = opts or {}
-
+--- Loads the manager using the specified config, installing the underlying cli if necessary
+--- @param opts ManagerConfig
+--- @param cb fun(err:string|nil, manager:Manager|nil) #if provided, will asynchronously return manager
+--- @return Manager|nil #if synchronous, returns manager
+function State:load_manager(opts, cb)
     local rx
     if not cb then
         cb, rx = utils.oneshot_channel(
-            opts.timeout or state.settings.max_timeout,
-            opts.interval or state.settings.timeout_interval
+            self.settings.max_timeout,
+            self.settings.timeout_interval
         )
     end
 
-    local Client = require('distant.cli')
-    Client:install(opts, function(err, client)
+    if not self.manager then
+        cli.install(opts, function(err, path)
+            if err then
+                return cb(err)
+            end
+
+            self.manager = cli.manager(vim.tbl_extend('keep', opts, { binary = path }))
+
+            if not self.manager:is_listening({}) then
+                self.manager:listen({}, nil)
+            end
+
+            return cb(nil, self.manager)
+        end)
+    else
+        cb(nil, self.manager)
+    end
+
+    -- If we have a receiver, this indicates that we are synchronous
+    if rx then
+        local err1, err2, result = rx()
+        return err1 or err2, result
+    end
+end
+
+function State:launch(opts, cb)
+    self:load_manager(opts, function(err, manager)
         if err then
             return cb(err)
         end
 
-        --- NOTE: At this point, we can assume the client is not nil
-        --- @type Client
-        client = client
+        assert(manager, 'Impossible: manager is nil')
 
-        state.clients[client.id] = client
-        state.client = client
-        return cb(false, client)
+        local destination = opts.destination
+        if vim.startswith(destination, 'ssh://') then
+            --- @diagnostic disable-next-line:redefined-local
+            manager:connect(opts, function(err, client)
+                if client then
+                    self.client = client
+                end
+
+                return cb(err, client)
+            end)
+        else
+            --- @diagnostic disable-next-line:redefined-local
+            manager:launch(opts, function(err, client)
+                if client then
+                    self.client = client
+                end
+
+                return cb(err, client)
+            end)
+        end
     end)
-
-
-    -- If we have a receiver, this indicates that we are synchronous
-    if rx then
-        local err1, err2, result = rx()
-        return err1 or err2, result
-    end
 end
 
---- Loads the active client, spawning a new client if one has not been started
---- @overload fun():boolean|string, Client|nil
---- @overload fun(opts:ClientNewOpts):boolean|string, Client|nil
---- @overload fun(cb:fun(err:string|boolean, client:Client|nil))
----
---- @param opts ClientNewOpts #Provided to newly-constructed client
---- @param cb fun(err:string|boolean, client:Client|nil)
-state.load_client = function(opts, cb)
-    if not cb and type(opts) == 'function' then
-        cb = opts
-        opts = {}
-    end
+function State:connect(opts, cb)
+    self:load_manager(opts, function(err, manager)
+        if err then
+            return cb(err)
+        end
 
-    opts = opts or {}
+        assert(manager, 'Impossible: manager is nil')
 
-    local rx
-    if not cb then
-        cb, rx = utils.oneshot_channel(
-            opts.timeout or state.settings.max_timeout,
-            opts.interval or state.settings.timeout_interval
-        )
-    end
+        --- @diagnostic disable-next-line:redefined-local
+        manager:launch(opts, function(err, client)
+            if client then
+                self.client = client
+            end
 
-    if not state.client then
-        state.new_client(opts, cb)
-    else
-        cb(false, state.client)
-    end
-
-
-    -- If we have a receiver, this indicates that we are synchronous
-    if rx then
-        local err1, err2, result = rx()
-        return err1 or err2, result
-    end
+            return cb(err, client)
+        end)
+    end)
 end
 
-return state
+return State:new()

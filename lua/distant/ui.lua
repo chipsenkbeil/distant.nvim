@@ -4,11 +4,12 @@ local ui = {}
 
 --- Displays a popup window with the provided message
 ---
---- @param msg string|table contains the message to display
---- @param ty string The type of window to show ('msg', 'err')
---- @param width number width of the window (optional)
---- @param height number height of the window (optional)
---- @return number handle returns the handle of the buffer containing the message
+--- @overload fun(msg:string|table):number
+--- @param msg string|table c#ontains the message to display
+--- @param ty string|nil #The type of window to show ('msg', 'err'), defaulting to 'msg'
+--- @param width number|nil #width of the window (optional)
+--- @param height number|nil #height of the window (optional)
+--- @return number handle #returns the handle of the buffer containing the message
 ui.show_msg = function(msg, ty, width, height, closing_keys)
     local buf = vim.api.nvim_create_buf(false, true)
     assert(buf ~= 0, 'Failed to create buffer for msg')

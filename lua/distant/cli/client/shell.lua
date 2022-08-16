@@ -1,17 +1,32 @@
-local cli = require('distant.cli')
 local Cmd = require('distant.cli.cmd')
 
-local shell = {}
+--- Represents a distant client shell
+--- @class ClientShell
+--- @field config ClientConfig
+local ClientShell = {}
+ClientShell.__index = ClientShell
 
---- @class ShellSpawnOpts
---- @field connection Connection #Connection
---- @field cmd? string|string[] #Optional command to use instead of default shell
---- @field buf? number #Optional buffer to assign to shell, defaulting to current buffer
---- @field win? number #Optional window to assign to shell, default to current window
+--- Creates a new instance of distant client shell
+--- @param opts ClientConfig
+--- @return ClientShell
+function ClientShell:new(opts)
+    opts = opts or {}
 
---- @param opts ShellSpawnOpts
+    local instance = {}
+    setmetatable(instance, ClientShell)
+    instance.config = opts
+
+    return instance
+end
+
+--- @class ClientShellSpawnOpts
+--- @field cmd string|string[]|nil #Optional command to use instead of default shell
+--- @field buf number|nil #Optional buffer to assign to shell, defaulting to current buffer
+--- @field win number|nil #Optional window to assign to shell, default to current window
+
+--- @param opts ClientShellSpawnOpts
 --- @return number #Job id, or 0 if invalid arguments or -1 if cli is not executable
-function shell.spawn(opts)
+function ClientShell:spawn(opts)
     local c = opts.cmd
     local is_table = type(c) == 'table'
     local is_string = type(c) == 'string'
@@ -22,10 +37,8 @@ function shell.spawn(opts)
     end
 
     --- @type string[]
-    local cmd = cli.build_cmd(
-        Cmd.client.shell(c),
-        { list = true }
-    )
+    local cmd = Cmd.client.shell(c):set_from_tbl(self.config.network):as_list()
+    table.insert(cmd, 0, self.config.binary)
 
     -- Get or create the buffer we will be using with this terminal,
     -- ensure it is no longer modifiable, switch to it, and then
@@ -43,15 +56,10 @@ function shell.spawn(opts)
     if job_id == 0 then
         error('Invalid arguments: ' .. table.concat(cmd or {}, ' '))
     elseif job_id == -1 then
-        local cmd_prog = c and vim.split(c, ' ', true)[1]
-        if cmd_prog then
-            error(cmd_prog .. ' is not executable')
-        else
-            error('Default shell is not executable')
-        end
+        error(self.config.binary .. ' is not executable')
     end
 
     return job_id
 end
 
-return shell
+return ClientShell

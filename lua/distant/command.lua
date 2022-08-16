@@ -1,5 +1,7 @@
+local cli = require('distant.cli')
 local editor = require('distant.editor')
 local fn = require('distant.fn')
+local state = require('distant.state')
 
 local command = {}
 
@@ -222,8 +224,7 @@ end
 command.install = function(input)
     input = command.parse_input(input)
     local reinstall = input.args[1] == 'reinstall'
-    local Client = require('distant.cli')
-    Client:install({ reinstall = reinstall }, function(err, _)
+    cli.install({ reinstall = reinstall }, function(err, _)
         if err then
             vim.api.nvim_err_writeln(err)
         else
@@ -338,12 +339,10 @@ command.shell = function(input)
         table.insert(cmd, 1, cmd_prog)
     end
 
-    local state = require('distant.state')
-
     --- @type Client
     local client = assert(state.client, 'No client established')
 
-    client.term.spawn({ cmd = cmd })
+    client:shell():spawn({ cmd = cmd })
 end
 
 --- DistantClientVersion

@@ -1,14 +1,36 @@
 local state = require('distant.state')
 local utils = require('distant.utils')
 
+local Client = require('distant.cli.client')
 local install = require('distant.cli.install')
+local Manager = require('distant.cli.manager')
 
 local cli = {}
 
 --- Minimum version supported by the cli, also enforcing
 --- version upgrades such that 0.17.x would not allow 0.18.0+
 --- @type Version
-local MIN_VERSION = assert(utils.parse_version('0.17.0'))
+local MIN_VERSION = assert(utils.parse_version('0.17.1'))
+
+--- @param opts ClientConfig
+--- @return Client
+function cli.client(opts)
+    local settings = cli.settings(opts)
+    opts = opts or {}
+    opts.binary = opts.binary or settings.bin
+
+    return Client:new(opts)
+end
+
+--- @param opts ManagerConfig
+--- @return Manager
+function cli.manager(opts)
+    local settings = cli.settings(opts)
+    opts = opts or {}
+    opts.binary = opts.binary or settings.bin
+
+    return Manager:new(opts)
+end
 
 --- @class CliSettingsOpts
 --- @field bin? string #path to the binary
@@ -51,35 +73,6 @@ end
 function cli.version(opts)
     local settings = cli.settings(opts)
     return utils.exec_version(settings.bin)
-end
-
---- Builds a new cli command to execute using the given cmd as input
---- @overload fun(cmd:BaseCmd):string
---- @param cmd BaseCmd
---- @param opts {bin?:string, list:boolean}
---- @return string|string[]
-function cli.build_cmd(cmd, opts)
-    if not opts then
-        opts = {}
-    end
-
-    local settings = cli.settings(opts)
-
-    -- Supply connection, unix socket, and windows pipe name if
-    -- command can take them
-    cmd = cmd:set_from_tbl({
-        connection = '',
-        unix_socket = '',
-        windows_pipe = '',
-    })
-
-    if opts.list then
-        local lst = cmd:as_list()
-        table.insert(lst, 1, settings.bin)
-        return lst
-    else
-        return settings.bin .. ' ' .. cmd:as_string()
-    end
 end
 
 --- @overload fun():boolean

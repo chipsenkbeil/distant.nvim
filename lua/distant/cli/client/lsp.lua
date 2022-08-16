@@ -1,14 +1,33 @@
+local log = require('distant.log')
 local vars = require('distant.vars')
 
-local cli = require('distant.cli')
 local Cmd = require('distant.cli.cmd')
-local log = require('distant.log')
 
-local lsp = {
-    __state = {
+--- Represents a distant client LSP
+--- @class ClientLsp
+--- @field config ClientConfig
+--- @field __state ClientLspState
+local ClientLsp = {}
+ClientLsp.__index = ClientLsp
+
+--- @class ClientLspState
+--- @field clients table<string, string>
+
+--- Creates a new instance of a manager of distant client LSP processes
+--- @param opts ClientConfig
+--- @return ClientLsp
+function ClientLsp:new(opts)
+    opts = opts or {}
+
+    local instance = {}
+    setmetatable(instance, ClientLsp)
+    instance.config = opts
+    instance.__state = {
         clients = {}
     }
-}
+
+    return instance
+end
 
 --- Wraps `vim.lsp.start_client`, injecting necessary details to run the
 --- LSP binary on the connected remote machine while acquiring and
@@ -19,15 +38,9 @@ local lsp = {
 --- @param opts table Additional options to use for the distant binary
 ---        acting as a proxy such as `log_file` or `log_level`
 --- @return number #The id of the created client
-local function lsp_start_client(config, opts)
-    assert(type(config) == 'table', 'config must be a table')
-    assert(config.cmd, 'cmd is required')
-    assert(config.root_dir, 'root_dir is required')
+function ClientLsp:__lsp_start_client(config, opts)
     opts = opts or {}
     log.fmt_trace('lsp_start_client(%s, %s)', config, opts)
-
-    assert(connection:is_connected(), 'Cli not yet connected!')
-    local session = assert(connection:tcp_session(), 'Cli has not established TCP session!')
 
     -- The command needs to be wrapped with a prefix that is our distant binary
     -- as we are running the actual lsp server remotely
@@ -37,10 +50,8 @@ local function lsp_start_client(config, opts)
     end
 
     --- @type string[]
-    local cmd = cli.build_cmd(
-        Cmd.lsp(config_cmd):set_from_tbl(opts),
-        { list = true }
-    )
+    local cmd = Cmd.client.lsp(config_cmd):set_from_tbl(opts):set_from_tbl(self.config.network):as_list()
+    table.insert(cmd, 0, self.config.binary)
 
     -- TODO: Followed this based on nvim-lspconfig, but don't yet understand
     --       the workspace configuration override
@@ -98,7 +109,7 @@ end
 --- Connects relevant LSP client to the provided buffer, optionally
 --- starting clients if needed
 --- @param buf number Handle of the buffer where client will attach
-function lsp.connect(buf)
+function ClientLsp:connect(buf)
     log.fmt_trace('lsp.connect(%s)', buf)
     local path = vars.buf.remote_path(buf)
 
@@ -123,10 +134,10 @@ function lsp.connect(buf)
                     log.fmt_trace('File %s of type %s applies to %s', path, buf_ft, label)
 
                     -- Start the client if it doesn't exist
-                    if lsp.__state.clients[label] == nil then
+                    if self.__state.clients[label] == nil then
                         -- Wrap the exit so we can clear our id tracker
                         local on_exit = function(code, signal, client_id)
-                            lsp.__state.clients[label] = nil
+                            self.__state.clients[label] = nil
 
                             if code ~= 0 then
                                 log.fmt_error('Client terminated: %s', vim.lsp.client_errors[client_id])
@@ -140,12 +151,15 @@ function lsp.connect(buf)
                         -- Support lsp-specific opts
                         log.fmt_debug('Starting LSP %s', label)
                         local opts = config.opts or {}
-                        local id = lsp_start_client(vim.tbl_deep_extend('force', config, { on_exit = on_exit }), opts)
-                        lsp.__state.clients[label] = id
+                        local id = self:__lsp_start_client(
+                            vim.tbl_deep_extend('force', config, { on_exit = on_exit }),
+                            opts
+                        )
+                        self.__state.clients[label] = id
                     end
 
                     -- Attach to our buffer if it isn't already
-                    local client_id = lsp.__state.clients[label]
+                    local client_id = self.__state.clients[label]
                     if not vim.lsp.buf_is_attached(buf, client_id) then
                         log.fmt_debug('Attaching to buf %s for LSP %s', buf, label)
                         vim.lsp.buf_attach_client(buf, client_id)
@@ -156,4 +170,4 @@ function lsp.connect(buf)
     end
 end
 
-return lsp
+return ClientLsp

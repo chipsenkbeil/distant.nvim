@@ -57,7 +57,10 @@ utils.detect_os_arch = function()
         -- is popen supported?
         local popen_status, popen_result = pcall(io.popen, '')
         if popen_status then
-            popen_result:close()
+            if popen_result then
+                popen_result:close()
+            end
+
             -- Unix-based OS
             raw_os_name = io.popen('uname -s', 'r'):read('*l')
             raw_arch_name = io.popen('uname -m', 'r'):read('*l')
@@ -557,6 +560,7 @@ utils.mkdir = function(opts, cb)
         elseif is_file then
             return cb(string.format('Cannot create dir: %s is file', path))
         else
+            --- @diagnostic disable-next-line:redefined-local
             return vim.loop.fs_mkdir(path, mode, function(err, success)
                 if success then
                     return cb(nil)
@@ -572,14 +576,17 @@ utils.mkdir = function(opts, cb)
                         path = parent_path,
                         parents = parents,
                         mode = mode
-                    }, function(err)
-                        return vim.loop.fs_mkdir(path, mode, function(err, success)
-                            if not err and not success then
-                                err = 'Something went wrong creating ' .. path
-                            end
-                            return cb(err)
+                    },
+                        --- @diagnostic disable-next-line:unused-local
+                        function(_err)
+                            --- @diagnostic disable-next-line:redefined-local
+                            return vim.loop.fs_mkdir(path, mode, function(err, success)
+                                if not err and not success then
+                                    err = 'Something went wrong creating ' .. path
+                                end
+                                return cb(err)
+                            end)
                         end)
-                    end)
                 else
                     return cb(string.format('Cannot create dir: %s', err or '???'))
                 end
