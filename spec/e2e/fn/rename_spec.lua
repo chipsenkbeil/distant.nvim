@@ -5,7 +5,7 @@ describe('fn', function()
     local driver, root
 
     before_each(function()
-        driver = Driver:setup()
+        driver = Driver:setup({ label = 'fn.rename' })
         root = driver:new_dir_fixture()
     end)
 
@@ -20,7 +20,7 @@ describe('fn', function()
 
             local dst = root.file()
 
-            local err = fn.rename({src = src.path(), dst = dst.path()})
+            local err = fn.rename({ src = src.path(), dst = dst.path() })
             assert(not err, err)
 
             assert.is.falsy(src.exists())
@@ -36,7 +36,7 @@ describe('fn', function()
 
             local dst = root.dir()
 
-            local err = fn.rename({src = src.path(), dst = dst.path()})
+            local err = fn.rename({ src = src.path(), dst = dst.path() })
             assert(not err, err)
 
             assert.is.falsy(src.exists())
@@ -52,7 +52,7 @@ describe('fn', function()
 
             local dst = root.dir('dir/dir2')
 
-            local err = fn.rename({src = src.path(), dst = dst.path()})
+            local err = fn.rename({ src = src.path(), dst = dst.path() })
             assert.is.truthy(err)
 
             assert.is.truthy(src.exists())
@@ -63,7 +63,7 @@ describe('fn', function()
             local src = root.file()
             local dst = root.file()
 
-            local err = fn.rename({src = src.path(), dst = dst.path()})
+            local err = fn.rename({ src = src.path(), dst = dst.path() })
             assert.is.truthy(err)
 
             assert.is.falsy(src.exists())

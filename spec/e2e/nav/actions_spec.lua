@@ -7,7 +7,7 @@ describe('actions', function()
     local driver, root
 
     before_each(function()
-        driver = Driver:setup()
+        driver = Driver:setup({ label = 'nav.actions' })
 
         -- TODO: This is really expensive, but plenary doesn't offer setup/teardown
         --       functions that we could use to limit this to the the entire
@@ -16,7 +16,7 @@ describe('actions', function()
         --       Because we don't know when the last it(...) would finish, we cannot
         --       support manually creating a fixture and unloading it as it would
         --       get unloaded while other it blocks are still using it
-        root = driver:new_dir_fixture({items = {
+        root = driver:new_dir_fixture({ items = {
             'dir1/',
             'dir1/dir1-file1',
             'dir1/dir1-file2',
@@ -32,7 +32,7 @@ describe('actions', function()
 
             'file1',
             'file2',
-        }})
+        } })
     end)
 
     after_each(function()
@@ -81,7 +81,7 @@ describe('actions', function()
         end)
 
         it('should do nothing if not in a remote buffer', function()
-            local buf = driver.make_buffer('not_a_remote_file', {modified = false})
+            local buf = driver.make_buffer('not_a_remote_file', { modified = false })
             driver.window().set_buf(buf.id())
 
             -- Ensure we are pointing at the right line
@@ -133,7 +133,7 @@ describe('actions', function()
         end)
 
         it('should do nothing if not in a remote buffer', function()
-            local buf = driver.make_buffer('some contents', {modified = false})
+            local buf = driver.make_buffer('some contents', { modified = false })
             driver.window().set_buf(buf.id())
 
             -- Perform up action
@@ -190,11 +190,11 @@ describe('actions', function()
         end)
 
         it('should do nothing if not in a remote buffer', function()
-            local buf = driver.make_buffer('some contents', {modified = false})
+            local buf = driver.make_buffer('some contents', { modified = false })
             driver.window().set_buf(buf.id())
 
             -- Perform newfile action
-            actions.newfile({path = 'new.txt'})
+            actions.newfile({ path = 'new.txt' })
 
             -- Should not have changed buffers
             assert.are.equal(buf.id(), vim.api.nvim_get_current_buf())
@@ -252,11 +252,11 @@ describe('actions', function()
         end)
 
         it('should do nothing if not in a remote buffer', function()
-            local buf = driver.make_buffer('some contents', {modified = false})
+            local buf = driver.make_buffer('some contents', { modified = false })
             driver.window().set_buf(buf.id())
 
             -- Perform mkdir action
-            actions.mkdir({path = 'new.dir'})
+            actions.mkdir({ path = 'new.dir' })
 
             -- Should not have changed buffers
             assert.are.equal(buf.id(), vim.api.nvim_get_current_buf())
@@ -363,11 +363,11 @@ describe('actions', function()
         end)
 
         it('should do nothing if not in a remote buffer', function()
-            local buf = driver.make_buffer('some contents', {modified = false})
+            local buf = driver.make_buffer('some contents', { modified = false })
             driver.window().set_buf(buf.id())
 
             -- Perform rename action
-            actions.rename({path = 'new.txt'})
+            actions.rename({ path = 'new.txt' })
 
             -- Should not have changed buffers
             assert.are.equal(buf.id(), vim.api.nvim_get_current_buf())
@@ -479,7 +479,7 @@ describe('actions', function()
             )
 
             -- Perform remove action
-            actions.remove({force = true})
+            actions.remove({ force = true })
 
             -- Should not have changed buffers
             assert.are.equal(buf.id(), vim.api.nvim_get_current_buf())
@@ -505,7 +505,7 @@ describe('actions', function()
             )
 
             -- Perform remove action
-            actions.remove({no_prompt = true})
+            actions.remove({ no_prompt = true })
 
             -- Should not have changed buffers
             assert.are.equal(buf.id(), vim.api.nvim_get_current_buf())
@@ -552,11 +552,11 @@ describe('actions', function()
         end)
 
         it('should do nothing if not in a remote buffer', function()
-            local buf = driver.make_buffer('some contents', {modified = false})
+            local buf = driver.make_buffer('some contents', { modified = false })
             driver.window().set_buf(buf.id())
 
             -- Perform remove action
-            actions.remove({no_prompt = true})
+            actions.remove({ no_prompt = true })
 
             -- Should not have changed buffers
             assert.are.equal(buf.id(), vim.api.nvim_get_current_buf())

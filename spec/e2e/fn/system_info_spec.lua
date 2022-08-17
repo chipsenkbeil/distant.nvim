@@ -1,15 +1,14 @@
 local fn = require('distant.fn')
 local Driver = require('spec.e2e.driver')
 
+local driver = Driver:setup({ label = 'fn.system_info' })
+
 describe('fn', function()
-    local driver
 
     before_each(function()
-        driver = Driver:setup()
     end)
 
     after_each(function()
-        driver:teardown()
     end)
 
     describe('system_info', function()
@@ -23,3 +22,5 @@ describe('fn', function()
         end)
     end)
 end)
+
+driver:teardown()

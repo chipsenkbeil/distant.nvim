@@ -13,6 +13,7 @@ local state = require('distant.state')
 --- @class EditorLaunchSshOpts
 --- @field user string|nil
 --- @field port number|nil
+--- @field backend 'libssh'|'ssh2'|nil
 
 --- @class EditorLaunchDistantOpts
 --- @field bin string|nil
@@ -55,6 +56,7 @@ return function(opts, cb)
         distant = opts.distant and opts.distant.bin,
         distant_args = opts.distant and opts.distant.args,
         no_shell = not use_login_shell,
+        ssh_backend = opts.ssh and opts.ssh.backend,
         ssh_port = opts.ssh and opts.ssh.port,
         ssh_username = opts.ssh and opts.ssh.user,
         timeout = opts.timeout,

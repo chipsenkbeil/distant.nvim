@@ -67,7 +67,7 @@ describe('editor.lsp', function()
     local driver, root
 
     before_each(function()
-        driver = Driver:setup({lazy = true})
+        driver = Driver:setup({ lazy = true, label = 'editor.lsp' })
         root = driver:new_dir_fixture()
         driver:initialize({
             settings = {
@@ -91,7 +91,7 @@ describe('editor.lsp', function()
 
     it('should support navigating to other files that are remote', function()
         make_rust_project(root)
-        driver.exec('sh', {'-c', '"cd ' .. root.path() .. ' && $HOME/.cargo/bin/cargo build"'})
+        driver.exec('sh', { '-c', '"cd ' .. root.path() .. ' && $HOME/.cargo/bin/cargo build"' })
 
         -- Open main.rs, which should start the LSP server
         local main_rs = root.dir('src').file('main.rs')
@@ -139,7 +139,7 @@ describe('editor.lsp', function()
 
     pending('should support renaming symbols in remote files', function()
         make_rust_project(root)
-        driver.exec('sh', {'-c', '"cd ' .. root.path() .. ' && $HOME/.cargo/bin/cargo build"'})
+        driver.exec('sh', { '-c', '"cd ' .. root.path() .. ' && $HOME/.cargo/bin/cargo build"' })
 
         -- Open main.rs, which should start the LSP server
         local main_rs = root.dir('src').file('main.rs')

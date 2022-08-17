@@ -5,7 +5,7 @@ describe('fn', function()
     local driver, root
 
     before_each(function()
-        driver = Driver:setup()
+        driver = Driver:setup({ label = 'fn.read_dir' })
 
         -- TODO: This is really expensive, but plenary doesn't offer setup/teardown
         --       functions that we could use to limit this to the the entire

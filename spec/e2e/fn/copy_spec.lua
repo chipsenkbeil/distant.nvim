@@ -5,7 +5,7 @@ describe('fn', function()
     local driver, root
 
     before_each(function()
-        driver = Driver:setup()
+        driver = Driver:setup({ label = 'fn.copy' })
         root = driver:new_dir_fixture()
     end)
 
@@ -20,11 +20,11 @@ describe('fn', function()
 
             local dst = root.file()
 
-            local err = fn.copy({src = src.path(), dst = dst.path()})
+            local err = fn.copy({ src = src.path(), dst = dst.path() })
             assert(not err, err)
 
-            src.assert.same({'some text'})
-            dst.assert.same({'some text'})
+            src.assert.same({ 'some text' })
+            dst.assert.same({ 'some text' })
         end)
 
         it('should copy a src directory to a destination', function()
@@ -36,21 +36,21 @@ describe('fn', function()
 
             local dst = root.dir()
 
-            local err = fn.copy({src = src.path(), dst = dst.path()})
+            local err = fn.copy({ src = src.path(), dst = dst.path() })
             assert(not err, err)
 
             assert.is.truthy(src.exists())
-            src_file.assert.same({'some text'})
+            src_file.assert.same({ 'some text' })
 
             assert.is.truthy(dst.exists())
-            dst.file('file').assert.same({'some text'})
+            dst.file('file').assert.same({ 'some text' })
         end)
 
         it('should fail if src path does not exist', function()
             local src = root.file()
             local dst = root.file()
 
-            local err = fn.copy({src = src.path(), dst = dst.path()})
+            local err = fn.copy({ src = src.path(), dst = dst.path() })
             assert.is.truthy(err)
 
             assert.is.falsy(src.exists())
@@ -63,7 +63,7 @@ describe('fn', function()
 
             local dst = root.file('dir/file')
 
-            local err = fn.copy({src = src.path(), dst = dst.path()})
+            local err = fn.copy({ src = src.path(), dst = dst.path() })
             assert.is.truthy(err)
 
             assert.is.truthy(src.exists())

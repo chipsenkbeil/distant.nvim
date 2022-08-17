@@ -1,5 +1,6 @@
 local config = require('spec.e2e.config')
 local editor = require('distant.editor')
+local state = require('distant.state')
 local settings = require('distant.settings')
 
 local Driver = {}
@@ -41,6 +42,9 @@ end
 --- @type Client|nil
 local client = nil
 
+--- @type Manager|nil
+local manager = nil
+
 --- Initialize a client if one has not been initialized yet
 --- @return Client
 local function initialize_client(opts)
@@ -73,55 +77,83 @@ local function initialize_client(opts)
         '--port', '8080:8999',
     }, opts.args or {})
     local ssh = {
+        -- TODO: libssh isn't available on musl platform as a pre-packaged
+        --       distant binary, so we cannot switch backends until that
+        --       is resolved
+        -- backend = 'libssh',
         user = config.user,
         other = {
             ['StrictHostKeyChecking'] = 'no'
         },
     }
     local destination = host
-    local mode = launch_mode(opts)
-    if config.user and mode ~= 'ssh' then
-        destination = config.user .. '@' .. destination
-    end
-    destination = mode .. '://' .. destination
-    local launch_opts = {
-        destination = destination,
-        distant = {
-            bin = distant_bin,
-            args = distant_args,
-        },
-        ssh = ssh,
-        auth = {
-            -- All password challenges return the same password
-            on_authenticate = function(ev)
-                local answers = {}
-                local i = 1
-                local n = tonumber(#ev.questions)
-                while i <= n do
-                    table.insert(answers, config.password or '')
-                    i = i + 1
-                end
-                return answers
-            end,
 
-            -- Verify any host received
-            on_host_verify = function(_) return true end,
-        },
+    local dummy_auth = {
+        -- All password challenges return the same password
+        on_authenticate = function(ev)
+            local answers = {}
+            local i = 1
+            local n = tonumber(#ev.questions)
+            while i <= n do
+                table.insert(answers, config.password or '')
+                i = i + 1
+            end
+            return answers
+        end,
+
+        -- Verify any host received
+        on_host_verify = function(_) return true end,
     }
-    editor.launch(launch_opts, function(err, c)
-        if err then
-            local desc = string.format(
-                'editor.launch({ destination = %s, distant_bin = %s, distant_args = %s })',
-                destination, distant_bin, vim.inspect(distant_args)
-            )
-            error(string.format(
-                'For %s, failed: %s',
-                desc, err
-            ))
-        else
-            client = c
-        end
-    end)
+
+    -- If mode is distant, launch, otherwise if mode is ssh, connect
+    local mode = launch_mode(opts)
+    if mode == 'distant' then
+        local launch_opts = {
+            destination = destination,
+            distant = {
+                bin = distant_bin,
+                args = distant_args,
+            },
+            ssh = ssh,
+            auth = dummy_auth,
+        }
+
+        editor.launch(launch_opts, function(err, c)
+            if err then
+                local desc = string.format(
+                    'editor.launch({ destination = %s, distant_bin = %s, distant_args = %s })',
+                    destination, distant_bin, vim.inspect(distant_args)
+                )
+                error(string.format(
+                    'For %s, failed: %s',
+                    desc, err
+                ))
+            else
+                client = c
+            end
+        end)
+    elseif mode == 'ssh' then
+        editor.connect({
+            destination = destination,
+            auth = dummy_auth,
+        }, function(err, c)
+            if err then
+                local desc = string.format(
+                    'editor.connect({ destination = %s })',
+                    destination
+                )
+                error(string.format(
+                    'For %s, failed: %s',
+                    desc, err
+                ))
+            else
+                client = c
+            end
+        end)
+    else
+        error('Unsupported mode: ' .. mode)
+    end
+
     local status = vim.fn.wait(timeout, function()
         return client ~= nil
     end, interval)
@@ -129,7 +161,29 @@ local function initialize_client(opts)
     return client
 end
 
+--- Initialize a manager if one has not been initialized yet
+--- @return Manager
+local function initialize_manager(opts)
+    opts = opts or {}
+    if manager ~= nil then
+        return manager
+    end
+
+    local label = opts.label
+    if label then
+        opts.network = vim.tbl_extend('keep', config.network or {}, {
+            windows_pipe = 'nvim-test-' .. label .. '-' .. next_id(),
+            unix_socket = '/tmp/nvim-test-' .. label .. '-' .. next_id() .. '.sock',
+        })
+    end
+
+    manager = state:load_manager(opts)
+
+    return manager
+end
+
 --- Initializes a driver for e2e tests
+--- @param opts {label:string} #must have label, everything else is optional
 function Driver:setup(opts)
     opts = opts or {}
 
@@ -140,6 +194,7 @@ function Driver:setup(opts)
     -- Create a new instance and assign the session to it
     local obj = {}
     setmetatable(obj, Driver)
+    obj.label = assert(opts.label, 'Missing label in setup')
     obj.__state = {
         client = nil,
         fixtures = {},
@@ -161,6 +216,12 @@ function Driver:initialize(opts)
         settings.merge(opts.settings)
     end
 
+    -- NOTE: Need to initialize early as driver is conflicting with itself
+    --       due to random not being random enough between driver tests
+    --       to prevent the same socket/windows pipe conflicting between
+    --       multiple managers
+    self.__state.manager = initialize_manager(opts)
+
     self.__state.client = initialize_client(opts)
     return self
 end
@@ -168,6 +229,7 @@ end
 --- Tears down driver, cleaning up resources
 function Driver:teardown()
     self.__state.client = nil
+    self.__state.manager = nil
 
     for _, fixture in ipairs(self.__state.fixtures) do
         fixture.remove({ ignore_errors = true })

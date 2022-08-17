@@ -443,9 +443,14 @@ end
 
 --- Returns a new id for use in sending messages
 --- @return number id Randomly generated id
-utils.next_id = function()
-    return math.floor(math.random() * 10000)
-end
+utils.next_id = (function()
+    -- Ensure that we have something kind-of random
+    math.randomseed(os.time())
+
+    return function()
+        return math.floor(math.random() * 10000)
+    end
+end)()
 
 --- Defines an augroup
 --- From https://github.com/wincent/wincent

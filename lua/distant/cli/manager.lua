@@ -194,6 +194,7 @@ end
 --- @field log_level string|nil #alternative log level to use
 --- @field no_shell boolean|nil #if true, will not attempt to execute distant binary within a shell on the remote machine
 --- @field ssh string|nil #alternative path to ssh binary (if executing external process)
+--- @field ssh_backend 'libssh'|'ssh2'|nil #backend to use for native ssh
 --- @field ssh_external boolean|nil #if true, will execute an external ssh process instead of using native library
 --- @field ssh_identity_file string|nil #location of identity file to use with ssh
 --- @field ssh_port number|nil #alternative ssh port to use instead of 22
@@ -257,6 +258,7 @@ function Manager:launch(opts, cb)
         log_level         = opts.log_level,
         no_shell          = opts.no_shell,
         ssh               = opts.ssh,
+        ssh_backend       = opts.ssh_backend,
         ssh_external      = opts.ssh_external,
         ssh_identity_file = opts.ssh_identity_file,
         ssh_port          = opts.ssh_port and tostring(opts.ssh_port),

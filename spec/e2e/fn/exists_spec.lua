@@ -5,7 +5,7 @@ describe('fn', function()
     local driver, root, file
 
     before_each(function()
-        driver = Driver:setup()
+        driver = Driver:setup({ label = 'fn.exists' })
         root = driver:new_dir_fixture()
 
         file = root.file()
@@ -18,13 +18,13 @@ describe('fn', function()
 
     describe('exists', function()
         it('should return true when path exists', function()
-            local err, res = fn.exists({path = file.path()})
+            local err, res = fn.exists({ path = file.path() })
             assert(not err, err)
             assert.is.truthy(res)
         end)
 
         it('should return false when path does not exist', function()
-            local err, res = fn.exists({path = file.path() .. '123'})
+            local err, res = fn.exists({ path = file.path() .. '123' })
             assert(not err, err)
             assert.is.falsy(res)
         end)

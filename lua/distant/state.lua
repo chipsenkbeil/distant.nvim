@@ -31,6 +31,7 @@ function State:load_settings(label)
 end
 
 --- Loads the manager using the specified config, installing the underlying cli if necessary
+--- @overload fun(opts:ManagerConfig):Manager
 --- @param opts ManagerConfig
 --- @param cb fun(err:string|nil, manager:Manager|nil) #if provided, will asynchronously return manager
 --- @return Manager|nil #if synchronous, returns manager
@@ -52,22 +53,19 @@ function State:load_manager(opts, cb)
                 return cb(err)
             end
 
-            -- Create a neovim-local manager
-            local os = utils.detect_os_arch()
-            local network = {}
-            if os == 'windows' then
-                network.windows_pipe = 'nvim-' .. utils.next_id()
-            else
-                network.unix_socket = utils.cache_path('nvim-' .. utils.next_id() .. '.sock')
-            end
-
+            -- Define manager using provided opts, overriding the default network settings
             self.manager = cli.manager(vim.tbl_extend('keep', opts, {
                 binary = path,
-                network = network,
+
+                -- Create a neovim-local manager network setting as default
+                network = {
+                    windows_pipe = 'nvim-' .. utils.next_id(),
+                    unix_socket = utils.cache_path('nvim-' .. utils.next_id() .. '.sock'),
+                },
             }))
 
             if not self.manager:is_listening({}) then
-                log.debug('Manager not listening, so starting proess')
+                log.debug('Manager not listening, so starting process')
 
                 --- @diagnostic disable-next-line:redefined-local
                 self.manager:listen({}, function(err)
@@ -95,8 +93,7 @@ function State:load_manager(opts, cb)
 end
 
 function State:launch(opts, cb)
-    --- @type string
-    local destination = assert(opts.destination, 'Destination is missing')
+    assert(opts.destination, 'Destination is missing')
 
     self:load_manager(opts, function(err, manager)
         if err then
@@ -105,25 +102,14 @@ function State:launch(opts, cb)
 
         assert(manager, 'Impossible: manager is nil')
 
-        if vim.startswith(destination, 'ssh://') then
-            --- @diagnostic disable-next-line:redefined-local
-            manager:connect(opts, function(err, client)
-                if client then
-                    self.client = client
-                end
+        --- @diagnostic disable-next-line:redefined-local
+        manager:launch(opts, function(err, client)
+            if client then
+                self.client = client
+            end
 
-                return cb(err, client)
-            end)
-        else
-            --- @diagnostic disable-next-line:redefined-local
-            manager:launch(opts, function(err, client)
-                if client then
-                    self.client = client
-                end
-
-                return cb(err, client)
-            end)
-        end
+            return cb(err, client)
+        end)
     end)
 end
 

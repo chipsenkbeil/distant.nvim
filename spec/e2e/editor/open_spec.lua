@@ -6,7 +6,7 @@ describe('editor.open', function()
     local driver, file, dir
 
     before_each(function()
-        driver = Driver:setup()
+        driver = Driver:setup({ label = 'editor.open' })
         file = driver:new_file_fixture({
             ext = 'txt',
             lines = {
@@ -44,7 +44,7 @@ describe('editor.open', function()
         })
 
         -- Get the absolute path to the file we are editing
-        local err, metadata = fn.metadata({path = test_path, canonicalize = true})
+        local err, metadata = fn.metadata({ path = test_path, canonicalize = true })
         assert(not err, err)
 
         -- Verify we set a remote path variable to the absolute path
@@ -73,7 +73,7 @@ describe('editor.open', function()
         })
 
         -- Get the absolute path to the file we are editing
-        local err, metadata = fn.metadata({path = test_path, canonicalize = true})
+        local err, metadata = fn.metadata({ path = test_path, canonicalize = true })
         assert(not err, err)
 
         -- Verify we set a remote path variable to the absolute path
@@ -95,7 +95,7 @@ describe('editor.open', function()
         local buf = driver.buffer(editor.open(test_path))
 
         -- Change the buffer and write it back to the remote destination
-        buf.set_lines({'line 1', 'line 2'})
+        buf.set_lines({ 'line 1', 'line 2' })
 
         -- NOTE: To have write work, we require an autocmd for BufReadCmd, which only
         --       appears if we have called the setup function; so, if you get an error
@@ -104,7 +104,7 @@ describe('editor.open', function()
         vim.cmd([[write]])
 
         -- Verify that the remote file did change
-        file.assert.same({'line 1', 'line 2'})
+        file.assert.same({ 'line 1', 'line 2' })
     end)
 
     it('should configure file buffers to reload contents from remote server on edit', function()
@@ -112,10 +112,10 @@ describe('editor.open', function()
         local buf = driver.buffer(editor.open(test_path))
 
         -- Change our buffer to something new
-        buf.set_lines({'line 1', 'line 2'})
+        buf.set_lines({ 'line 1', 'line 2' })
 
         -- Verify that buffer has been updated with new contents
-        buf.assert.same({'line 1', 'line 2'})
+        buf.assert.same({ 'line 1', 'line 2' })
 
         -- Edit the buffer to reload (discard current contents)
         -- NOTE: This requires a blocking read
@@ -139,7 +139,7 @@ describe('editor.open', function()
         })
 
         -- Get the absolute path to the file we are editing
-        local err, metadata = fn.metadata({path = test_path, canonicalize = true})
+        local err, metadata = fn.metadata({ path = test_path, canonicalize = true })
         assert(not err, err)
 
         -- Verify we set a remote path variable to the absolute path
@@ -180,7 +180,7 @@ describe('editor.open', function()
         })
 
         -- Get the absolute path to the file we are editing
-        local err, metadata = fn.metadata({path = test_path, canonicalize = true})
+        local err, metadata = fn.metadata({ path = test_path, canonicalize = true })
         assert(not err, err)
 
         -- Verify we set a remote path variable to the absolute path
