@@ -21,7 +21,7 @@ RUN DEBIAN_FRONTEND=noninteractive \
         gzip
 
 # Configure a test password
-ENV DISTANT_PASSWORD=12345678
+ARG DISTANT_PASSWORD=
 
 # Configure a non-root user with a password that matches its name
 # as we need a user with a password even when we are providing
@@ -31,7 +31,9 @@ RUN addgroup --system $user \
     && adduser --system --home /home/$user --shell /bin/sh --ingroup $user $user \
     && echo "$user ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/$user \
     && chmod 0440 /etc/sudoers.d/$user \
-    && echo "$user:$DISTANT_PASSWORD" | chpasswd
+    && test -n "$DISTANT_PASSWORD" \
+        && echo "$user:$DISTANT_PASSWORD" | chpasswd \
+        || echo "Password configured as empty"
 USER $user
 WORKDIR /home/$user
 
@@ -58,8 +60,10 @@ RUN sudo mkdir -p /var/run/sshd \
     && cp /home/$user/.ssh/id_rsa.pub /home/$user/.ssh/authorized_keys \
     && echo 'StrictHostKeyChecking no' > /home/$user/.ssh/config
 
+ARG DISTANT_VERSION=0.17.5
+
 # Install distant binary and make sure its in a path for everyone
-ARG distant_release=https://github.com/chipsenkbeil/distant/releases/download/v0.17.4
+ARG distant_release=https://github.com/chipsenkbeil/distant/releases/download/v$DISTANT_VERSION
 RUN curl -L $distant_release/distant-linux64-gnu > $cargo_bin_dir/distant \
     && chmod +x $cargo_bin_dir/distant \
     && sudo ln -s $cargo_bin_dir/distant /usr/local/bin/distant

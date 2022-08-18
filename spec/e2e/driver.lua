@@ -77,12 +77,13 @@ local function initialize_client(opts)
         '--port', '8080:8999',
     }, opts.args or {})
     local ssh = {
-        -- backend = 'libssh',
-        backend = 'ssh2',
         other = {
             ['StrictHostKeyChecking'] = 'no'
         },
     }
+    if config.ssh_backend then
+        ssh.backend = config.ssh_backend
+    end
 
     local dummy_auth = {
         -- All password challenges return the same password
