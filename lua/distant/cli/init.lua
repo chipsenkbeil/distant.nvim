@@ -9,7 +9,7 @@ local cli = {}
 --- Minimum version supported by the cli, also enforcing
 --- version upgrades such that 0.17.x would not allow 0.18.0+
 --- @type Version
-local MIN_VERSION = assert(utils.parse_version('0.17.2'))
+local MIN_VERSION = assert(utils.parse_version('0.17.4'))
 
 --- @param opts ClientConfig
 --- @return Client

@@ -4,9 +4,11 @@
 --- @field launch fun(destination:string):ClientLaunchCmd
 --- @field lsp fun(cmd:string):ClientLspCmd
 --- @field repl fun():ClientReplCmd
+--- @field select fun(cmd:string|nil):ClientSelectCmd
 --- @field shell fun(cmd:string|nil):ClientShellCmd
 
 --- @class ManagerCmd
+--- @field list fun():ManagerListCmd
 --- @field listen fun():ManagerListenCmd
 
 --- @class ServerCmd
@@ -44,6 +46,12 @@ return {
         repl = function()
             local Cmd = require('distant.cli.cmd.client.repl')
             return Cmd:new()
+        end,
+
+        --- @type fun(connection:string|nil):ClientSelectCmd
+        select = function(...)
+            local Cmd = require('distant.cli.cmd.client.select')
+            return Cmd:new(...)
         end,
 
         --- @type fun(cmd:string|nil):ClientShellCmd

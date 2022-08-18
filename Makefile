@@ -41,6 +41,8 @@ define docker_exec
 	--rm \
 	--name $(DOCKER_CLIENT) \
 	--network=$(DOCKER_NETWORK) \
+	--memory=4g \
+	--memory-swap=8g \
 	-e DISTANT_HOST=$(DOCKER_SERVER) \
 	-e DISTANT_PORT=22 \
 	-e DISTANT_BIN=/usr/local/bin/distant \

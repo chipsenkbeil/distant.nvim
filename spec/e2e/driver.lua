@@ -77,16 +77,12 @@ local function initialize_client(opts)
         '--port', '8080:8999',
     }, opts.args or {})
     local ssh = {
-        -- TODO: libssh isn't available on musl platform as a pre-packaged
-        --       distant binary, so we cannot switch backends until that
-        --       is resolved
         -- backend = 'libssh',
-        user = config.user,
+        backend = 'ssh2',
         other = {
             ['StrictHostKeyChecking'] = 'no'
         },
     }
-    local destination = host
 
     local dummy_auth = {
         -- All password challenges return the same password
@@ -103,11 +99,19 @@ local function initialize_client(opts)
 
         -- Verify any host received
         on_host_verify = function(_) return true end,
+
+        -- Errors should fail completely
+        on_error = function(err) error(err) end,
     }
 
     -- If mode is distant, launch, otherwise if mode is ssh, connect
     local mode = launch_mode(opts)
     if mode == 'distant' then
+        local destination = host
+        if config.user then
+            destination = config.user .. '@' .. destination
+        end
+        destination = 'ssh://' .. destination
         local launch_opts = {
             destination = destination,
             distant = {
@@ -133,6 +137,7 @@ local function initialize_client(opts)
             end
         end)
     elseif mode == 'ssh' then
+        local destination = host
         editor.connect({
             destination = destination,
             auth = dummy_auth,

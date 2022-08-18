@@ -68,7 +68,7 @@ function State:load_manager(opts, cb)
                 log.debug('Manager not listening, so starting process')
 
                 --- @diagnostic disable-next-line:redefined-local
-                self.manager:listen({}, function(err)
+                self.manager:listen({ log_level = 'trace' }, function(err)
                     if err then
                         log.fmt_error('Manager failed: %s', err)
                     end

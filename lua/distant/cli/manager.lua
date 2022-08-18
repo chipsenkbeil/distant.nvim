@@ -70,13 +70,90 @@ function Manager:client(connection)
     end
 end
 
+--- @class ManagerSelectOpts
+--- @field connection string|nil #If provided, will set manager's default connection to this connection
+--- @field on_choices nil|fun(opts:{choices:string[], current:number}):number|nil #If provided,
+--- @field timeout number|nil
+--- @field interval number|nil
+
+--- @class ManagerConnectionSelector
+--- @field choices string[]
+--- @field current number
+--- @field select fun(choice:number|nil, cb:fun(err:string|nil)|nil) #Perform a selection, or cancel if choice = nil
+
+--- Changes the selected connection used as default by the manager
+--- @param opts ManagerSelectOpts
+--- @param cb fun(err:string|nil, selector:ManagerConnectionSelector|nil) #Selector will be provided if no connection provided in opts
+function Manager:select(opts, cb)
+    opts = opts or {}
+
+    local cmd = Cmd.client
+        .select(opts.connection)
+        :set_format('json')
+        :set_from_tbl(self.config.network)
+        :as_list()
+    table.insert(cmd, 1, self.config.binary)
+
+    local rx
+    if not cb then
+        cb, rx = utils.oneshot_channel(
+            opts.timeout or DEFAULT_TIMEOUT,
+            opts.interval or DEFAULT_INTERVAL
+        )
+    end
+
+    assert(cb, 'Impossible: cb cannot be nil at this point')
+
+    --- @type JobHandle
+    local handle
+    local error_lines = {}
+    handle = utils.job_start(cmd, {
+        on_success = function()
+            cb(nil)
+        end,
+        on_failure = function()
+            cb('Failed to make selection')
+        end,
+        on_stdout_line = function(line)
+            local msg = vim.fn.json_decode(line)
+            if msg.type == 'select' then
+                return cb(nil, {
+                    choices = msg.choices,
+                    current = msg.current,
+                    select = function(choice, new_cb)
+                        -- Update our cb triggered when process exits to now be the selector's callback
+                        cb = new_cb
+
+                        --- @diagnostic disable-next-line:redefined-local
+                        local msg = { type = 'selected', choice = choice }
+                        handle:write(utils.compress(vim.fn.json_encode(msg)) .. '\n')
+                    end,
+                })
+            end
+        end,
+        on_stderr_line = function(line)
+            if line ~= nil then
+                table.insert(error_lines, line)
+            end
+        end,
+    })
+
+    if rx then
+        local err, result = rx()
+        return (not err) and result
+    end
+end
+
 --- Check if defined manager is listening. Note that this can be the case even when
 --- we have not spawned the manager ourselves
 --- @param opts {timeout:number|nil, interval:number|nil}
 --- @param cb fun(value:boolean)|nil
 --- @return boolean|nil
 function Manager:is_listening(opts, cb)
-    local cmd = Cmd.manager.list():set_from_tbl(self.config.network):as_list()
+    local cmd = Cmd.manager
+        .list()
+        :set_from_tbl(self.config.network)
+        :as_list()
     table.insert(cmd, 1, self.config.binary)
 
     local rx
@@ -136,18 +213,21 @@ end
 --- @param cb fun(err:string|nil) #invoked when the manager exits
 --- @return JobHandle #handle of listening manager job
 function Manager:listen(opts, cb)
-    local cmd = Cmd.manager.listen():set_from_tbl({
-        -- Explicitly point to manager's unix socket or windows pipe
-        unix_socket  = self.config.network.unix_socket,
-        windows_pipe = self.config.network.windows_pipe,
+    local cmd = Cmd.manager
+        .listen()
+        :set_from_tbl({
+            -- Explicitly point to manager's unix socket or windows pipe
+            unix_socket  = self.config.network.unix_socket,
+            windows_pipe = self.config.network.windows_pipe,
 
-        -- Optional user settings
-        access    = opts.access,
-        config    = opts.config,
-        log_file  = opts.log_file,
-        log_level = opts.log_level,
-        user      = opts.user,
-    }):as_list()
+            -- Optional user settings
+            access    = opts.access,
+            config    = opts.config,
+            log_file  = opts.log_file,
+            log_level = opts.log_level,
+            user      = opts.user,
+        })
+        :as_list()
     table.insert(cmd, 1, self.config.binary)
 
     local handle, error_lines
@@ -242,28 +322,31 @@ function Manager:launch(opts, cb)
 
     local destination = opts.destination
     log.fmt_trace('Launch destination: %s', destination)
-    local cmd = Cmd.client.launch(destination):set_from_tbl({
-        -- Explicitly set to use JSON for communication and point to
-        -- manager's unix socket or windows pipe
-        format       = 'json',
-        unix_socket  = self.config.network.unix_socket,
-        windows_pipe = self.config.network.windows_pipe,
+    local cmd = Cmd.client
+        .launch(destination)
+        :set_from_tbl({
+            -- Explicitly set to use JSON for communication and point to
+            -- manager's unix socket or windows pipe
+            format       = 'json',
+            unix_socket  = self.config.network.unix_socket,
+            windows_pipe = self.config.network.windows_pipe,
 
-        -- Optional user settings
-        cache             = opts.cache,
-        config            = opts.config,
-        distant           = opts.distant,
-        distant_args      = wrap_args(opts.distant_args),
-        log_file          = opts.log_file,
-        log_level         = opts.log_level,
-        no_shell          = opts.no_shell,
-        ssh               = opts.ssh,
-        ssh_backend       = opts.ssh_backend,
-        ssh_external      = opts.ssh_external,
-        ssh_identity_file = opts.ssh_identity_file,
-        ssh_port          = opts.ssh_port and tostring(opts.ssh_port),
-        ssh_username      = opts.ssh_username,
-    }):as_list()
+            -- Optional user settings
+            cache             = opts.cache,
+            config            = opts.config,
+            distant           = opts.distant,
+            distant_args      = wrap_args(opts.distant_args),
+            log_file          = opts.log_file,
+            log_level         = opts.log_level,
+            no_shell          = opts.no_shell,
+            ssh               = opts.ssh,
+            ssh_backend       = opts.ssh_backend,
+            ssh_external      = opts.ssh_external,
+            ssh_identity_file = opts.ssh_identity_file,
+            ssh_port          = opts.ssh_port and tostring(opts.ssh_port),
+            ssh_username      = opts.ssh_username,
+        })
+        :as_list()
     table.insert(cmd, 1, self.config.binary)
 
     log.fmt_debug('Launch cmd: %s', cmd)
@@ -307,19 +390,22 @@ function Manager:connect(opts, cb)
     end
 
     local destination = opts.destination
-    local cmd = Cmd.client.connect(destination):set_from_tbl({
-        -- Explicitly set to use JSON for communication and point to
-        -- manager's unix socket or windows pipe
-        format       = 'json',
-        unix_socket  = self.config.network.unix_socket,
-        windows_pipe = self.config.network.windows_pipe,
+    local cmd = Cmd.client
+        .connect(destination)
+        :set_from_tbl({
+            -- Explicitly set to use JSON for communication and point to
+            -- manager's unix socket or windows pipe
+            format       = 'json',
+            unix_socket  = self.config.network.unix_socket,
+            windows_pipe = self.config.network.windows_pipe,
 
-        -- Optional user settings
-        cache     = opts.cache,
-        config    = opts.config,
-        log_file  = opts.log_file,
-        log_level = opts.log_level,
-    }):as_list()
+            -- Optional user settings
+            cache     = opts.cache,
+            config    = opts.config,
+            log_file  = opts.log_file,
+            log_level = opts.log_level,
+        })
+        :as_list()
     table.insert(cmd, 1, self.config.binary)
 
     log.fmt_debug('Connect cmd: %s', cmd)

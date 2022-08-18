@@ -59,7 +59,7 @@ RUN sudo mkdir -p /var/run/sshd \
     && echo 'StrictHostKeyChecking no' > /home/$user/.ssh/config
 
 # Install distant binary and make sure its in a path for everyone
-ARG distant_release=https://github.com/chipsenkbeil/distant/releases/download/v0.17.2
+ARG distant_release=https://github.com/chipsenkbeil/distant/releases/download/v0.17.4
 RUN curl -L $distant_release/distant-linux64-gnu > $cargo_bin_dir/distant \
     && chmod +x $cargo_bin_dir/distant \
     && sudo ln -s $cargo_bin_dir/distant /usr/local/bin/distant
