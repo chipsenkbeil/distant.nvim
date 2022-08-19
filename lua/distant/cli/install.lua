@@ -588,6 +588,9 @@ local function install(opts, cb)
     local local_bin = bin_path()
     local has_bin = vim.fn.executable(local_bin) == 1
     local min_version = opts.min_version
+    if has_bin then
+        print('Local cli available at ' .. local_bin)
+    end
 
     local prompt = opts.prompt
     if not prompt then

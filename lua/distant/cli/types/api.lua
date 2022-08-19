@@ -40,7 +40,7 @@
 --- @alias ApiRename fun(params:DistantRenameParams, cb?:fun(err:ApiError, res:DistantOk|nil)):ApiError|nil, DistantOk|nil
 --- @alias ApiSpawn fun(params:DistantSpawnParams, cb?:fun(err:ApiError, res:DistantProcSpawned|nil)):ApiError|nil, DistantProcSpawned|nil
 --- @alias ApiSpawnLsp fun(params:DistantSpawnLspParams, cb?:fun(err:ApiError, res:DistantProcSpawned|nil)):ApiError|nil, DistantProcSpawned|nil
---- @alias ApiSpawnWait fun(params:DistantSpawnWaitParams, cb?:fun(err:ApiError, res:DistantProcSpawned|nil)):ApiError|nil, DistantProcSpawned|nil
+--- @alias ApiSpawnWait fun(params:DistantSpawnWaitParams, cb?:fun(err:ApiError, res:DistantProcOutput|nil)):ApiError|nil, DistantProcOutput|nil
 --- @alias ApiSystemInfo fun(params:DistantSystemInfoParams, cb?:fun(err:ApiError, res:DistantSystemInfo|nil)):ApiError|nil, DistantSystemInfo|nil
 --- @alias ApiWatch fun(params:DistantWatchParams, cb?:fun(err:ApiError, res:DistantOk|nil)):ApiError|nil, DistantOk|nil
 --- @alias ApiWriteFile fun(params:DistantWriteFileParams, cb?:fun(err:ApiError, res:DistantOk|nil)):ApiError|nil, DistantOk|nil
@@ -235,6 +235,12 @@
 
 --- @class DistantProcSpawned
 --- @field id number
+
+--- @class DistantProcOutput
+--- @field success boolean
+--- @field exit_code number
+--- @field stdout number[]
+--- @field stderr number[]
 
 --- @class DistantProcStdout
 --- @field id number

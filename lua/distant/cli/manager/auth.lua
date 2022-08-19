@@ -20,7 +20,6 @@ local function make_auth_handler()
         --- @param msg AuthHandlerMsg
         --- @return string[]
         on_authenticate = function(msg)
-            print('msg = ' .. vim.inspect(msg))
             if msg.extra then
                 if msg.extra.username then
                     print('Authentication for ' .. msg.extra.username)

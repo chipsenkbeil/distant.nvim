@@ -1278,7 +1278,7 @@ v0.2.0 ~
   * Add |DistantShell| command to launch a remote shell
   * Add |DistantClientVersion| command to print the version of the client
   * Change |DistantInstall| parameter from `reload` to `reinstall`
-  * Update minimum `distant` version to `0.17.0`
+  * Update minimum `distant` version to `0.18.0`
   * Change |DistantLaunch| parameters
     * `external_ssh` -> `ssh_external`
     * `extra_server_args` -> `distant_args`

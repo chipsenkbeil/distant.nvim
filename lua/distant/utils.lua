@@ -40,11 +40,11 @@ utils.cache_path = function(path)
             utils.plugin_name()
         )
 
-    if vim.tbl_islist(full_path) then
+    if vim.tbl_islist(path) then
         for _, component in ipairs(path) do
             full_path = full_path .. utils.seperator() .. component
         end
-    else
+    elseif path ~= nil then
         full_path = full_path .. utils.seperator() .. path
     end
 
@@ -61,11 +61,11 @@ utils.data_path = function(path)
             utils.plugin_name()
         )
 
-    if vim.tbl_islist(full_path) then
+    if vim.tbl_islist(path) then
         for _, component in ipairs(path) do
             full_path = full_path .. utils.seperator() .. component
         end
-    else
+    elseif path ~= nil then
         full_path = full_path .. utils.seperator() .. path
     end
 
