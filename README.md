@@ -55,6 +55,7 @@ way to get up and running is the following:
 ```lua
 use {
   'chipsenkbeil/distant.nvim',
+  tag = 'v0.2',
   config = function()
     require('distant').setup {
       -- Applies Chip's personal settings to every machine you connect to

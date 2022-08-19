@@ -131,9 +131,7 @@ settings.chip_default = function()
 
     return vim.tbl_deep_extend('keep', {
         distant = {
-            -- TODO: Restore shutdown argument once it is supported again
-            -- args = { '--shutdown-after', '60' },
-            args = {},
+            args = { '--shutdown', 'lonely=60' },
         },
         file = {
             mappings = {

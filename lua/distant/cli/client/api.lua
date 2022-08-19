@@ -481,7 +481,6 @@ return function(repl)
         ret_type = { 'proc_spawned', 'proc_stdout', 'proc_stderr', 'proc_done' },
         req_type = {
             cmd = 'string',
-            args = { type = 'table', optional = true },
             persist = { type = 'boolean', optional = true },
             pty = { type = 'table', optional = true },
         },

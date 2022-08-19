@@ -513,7 +513,7 @@ distant.setup({opts})                                        *distant.setup()*
           -- Any settings defined here are applied to all hosts
           ['*'] = {
             distant = {
-              args = '--shutdown-after 60',
+              args = {'--shutdown', 'lonely=60'},
             },
             file = {
               mappings = {
@@ -1285,10 +1285,13 @@ v0.2.0 ~
     * `identity_file` -> `ssh_identity_file`
     * `port` -> `ssh_port`
     * `username` -> `ssh_username`
-    * `shutdown_after` has been removed until support is re-added to `distant`
+    * `shutdown_after` has been renamed to `shutdown` and supports multiple
+      rules
   * Update launch and connection functionality to use a destination in the
     form of `[scheme://][username@]host[:port]` instead of individually
     providing a host, port, and mode for defining servers
+  * Remove `args` from |distant.fn.spawn_wait| in favor of `cmd` taking
+    all of the arguments as part of the string
 
 v0.1.2 ~
 

@@ -72,8 +72,7 @@ local function initialize_client(opts)
     local distant_bin = config.bin
     local distant_args = vim.list_extend({
         '--current-dir', config.root_dir,
-        -- TODO: Re-add the shutdown feature when it is available
-        -- '--shutdown-after', '60',
+        '--shutdown', 'lonely=60',
         '--port', '8080:8999',
     }, opts.args or {})
     local ssh = {

@@ -23,7 +23,7 @@ describe('fn', function()
         end
 
         it('should execute remote program and return results', function()
-            local err, res = fn.spawn_wait({ cmd = 'echo', args = { 'some output' } })
+            local err, res = fn.spawn_wait({ cmd = 'echo some output' })
             assert(not err, err)
             assert.are.same(to_tbl(res), {
                 success = true,
@@ -41,7 +41,7 @@ describe('fn', function()
         --       is able to correctly capture stderr, so this will need to be investigated
         if driver:mode() == 'distant' then
             it('should support capturing stderr', function()
-                local err, res = fn.spawn_wait({ cmd = 'sh', args = { '-c', '1>&2 echo some output' } })
+                local err, res = fn.spawn_wait({ cmd = 'sh -c 1>&2 echo some output' })
                 assert(not err, err)
                 assert.are.same(to_tbl(res), {
                     success = true,
@@ -52,7 +52,7 @@ describe('fn', function()
             end)
 
             it('should support capturing exit code', function()
-                local err, res = fn.spawn_wait({ cmd = 'sh', args = { '-c', 'exit 99' } })
+                local err, res = fn.spawn_wait({ cmd = 'sh -c exit 99' })
                 assert(not err, err)
                 assert.are.same(to_tbl(res), {
                     success = false,

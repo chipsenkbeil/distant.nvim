@@ -156,7 +156,15 @@ function ClientRepl:send(msgs, opts, cb)
     local callback = cb
     if #payload == 1 and not opts.unaltered then
         callback = function(entries, stop)
-            cb(entries[1], stop)
+            -- NOTE: In the case of multi-responses, we might get back
+            --       additional entries that are only one thing instead
+            --       of a list (e.g. proc spawn stdout/stderr/done would
+            --       still come back as one entry)
+            --
+            --       Because of that, we need to check if entries[1] would
+            --       yield nil, and if so we just return entries itself
+            entries = entries[1] or entries
+            cb(entries, stop)
         end
     end
     self.__state.callbacks[full_msg.id] = {

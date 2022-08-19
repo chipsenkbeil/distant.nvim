@@ -11,7 +11,7 @@ local ServerListenCmd = BaseCmd:new('server listen', { allowed = {
     'log-level',
     'max-msg-capacity',
     'port',
-    'shutdown-after',
+    'shutdown',
     'timeout',
 } })
 
@@ -95,12 +95,22 @@ function ServerListenCmd:set_port(value, n)
     return self:set('port', port)
 end
 
---- Sets `--shutdown-after <value>`
---- @param value number #time in seconds
+--- Sets `--shutdown <key>[=<value>]`
+--- @param key 'after'|'lonely'|'never' #rule type
+--- @param value number|nil #time in seconds
 --- @return ServerListenCmd
-function ServerListenCmd:set_shutdown_after(value)
-    vim.validate({ value = { value, 'number' } })
-    return self:set('shutdown-after', tostring(value))
+function ServerListenCmd:set_shutdown(key, value)
+    vim.validate({
+        key = { key, 'string' },
+        value = { value, 'number' }
+    })
+
+    local shutdown_value = key
+    if value ~= nil then
+        shutdown_value = shutdown_value .. '=' .. tostring(value)
+    end
+
+    return self:set('shutdown', shutdown_value)
 end
 
 --- Sets `--timeout <value>`
