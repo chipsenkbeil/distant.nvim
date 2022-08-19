@@ -137,7 +137,7 @@ local function initialize_client(opts)
             end
         end)
     elseif mode == 'ssh' then
-        local destination = host
+        local destination = 'ssh://' .. host
         editor.connect({
             destination = destination,
             auth = dummy_auth,
@@ -602,6 +602,7 @@ Driver.buffer = function(buf)
             lines = vim.split(lines, '\n', true)
         end
 
+        -- same(expected, actual)
         assert.are.same(lines, obj.lines())
     end
 
@@ -893,6 +894,7 @@ Driver.remote_file = function(remote_path)
             lines = vim.split(lines, '\n', true)
         end
 
+        -- same(expected, actual)
         assert.are.same(lines, obj.lines())
     end
 
@@ -1085,6 +1087,7 @@ Driver.local_file = function(path)
             lines = vim.split(lines, '\n', true)
         end
 
+        -- same(expected, actual)
         assert.are.same(lines, obj.lines())
     end
 

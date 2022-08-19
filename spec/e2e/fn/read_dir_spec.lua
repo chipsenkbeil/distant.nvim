@@ -33,46 +33,46 @@ describe('fn', function()
         it('should list immediate directory contents', function()
             local err, res = fn.read_dir({ path = root.path() })
             assert(not err, err)
-            assert.are.same(res.entries, {
+            assert.are.same({
                 { path = 'dir', file_type = 'dir', depth = 1 },
                 { path = 'file', file_type = 'file', depth = 1 },
                 { path = 'link', file_type = 'symlink', depth = 1 },
-            })
+            }, res.entries)
         end)
 
         it('should support infinite depth if specified', function()
             local err, res = fn.read_dir({ path = root.path(), depth = 0 })
             assert(not err, err)
-            assert.are.same(res.entries, {
+            assert.are.same({
                 { path = 'dir', file_type = 'dir', depth = 1 },
                 { path = 'dir/dir2', file_type = 'dir', depth = 2 },
                 { path = 'dir/dir2/file3', file_type = 'file', depth = 3 },
                 { path = 'dir/file2', file_type = 'file', depth = 2 },
                 { path = 'file', file_type = 'file', depth = 1 },
                 { path = 'link', file_type = 'symlink', depth = 1 },
-            })
+            }, res.entries)
         end)
 
         it('should support explicit depth beyond immediate if specified', function()
             local err, res = fn.read_dir({ path = root.path(), depth = 2 })
             assert(not err, err)
-            assert.are.same(res.entries, {
+            assert.are.same({
                 { path = 'dir', file_type = 'dir', depth = 1 },
                 { path = 'dir/dir2', file_type = 'dir', depth = 2 },
                 { path = 'dir/file2', file_type = 'file', depth = 2 },
                 { path = 'file', file_type = 'file', depth = 1 },
                 { path = 'link', file_type = 'symlink', depth = 1 },
-            })
+            }, res.entries)
         end)
 
         it('should support absolute paths if specified', function()
             local err, res = fn.read_dir({ path = root.path(), absolute = true })
             assert(not err, err)
-            assert.are.same(res.entries, {
+            assert.are.same({
                 { path = root.dir('dir').path(), file_type = 'dir', depth = 1 },
                 { path = root.file('file').path(), file_type = 'file', depth = 1 },
                 { path = root.symlink('link').path(), file_type = 'symlink', depth = 1 },
-            })
+            }, res.entries)
         end)
 
         it('should support canonicalized paths if specified', function()
@@ -108,18 +108,18 @@ describe('fn', function()
             --       to sort the tables first
             --
             --       https://github.com/Olivine-Labs/busted/issues/262
-            assert.are.same(actual, expected)
+            assert.are.same(expected, actual)
         end)
 
         it('should include root path if specified', function()
             local err, res = fn.read_dir({ path = root.path(), include_root = true })
             assert(not err, err)
-            assert.are.same(res.entries, {
+            assert.are.same({
                 { path = root.canonicalized_path(), file_type = 'dir', depth = 0 },
                 { path = 'dir', file_type = 'dir', depth = 1 },
                 { path = 'file', file_type = 'file', depth = 1 },
                 { path = 'link', file_type = 'symlink', depth = 1 },
-            })
+            }, res.entries)
         end)
 
         it('should fail if the path does not exist', function()
@@ -137,7 +137,7 @@ describe('fn', function()
 
                 local err, res = fn.read_dir({ path = file.path() })
                 assert.is.falsy(err)
-                assert.are.same(res.entries, {})
+                assert.are.same({}, res.entries)
             end)
         elseif driver:mode() == 'ssh' then
             it('should fail if path is to a file', function()

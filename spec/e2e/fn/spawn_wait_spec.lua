@@ -25,12 +25,12 @@ describe('fn', function()
         it('should execute remote program and return results', function()
             local err, res = fn.spawn_wait({ cmd = 'echo some output' })
             assert(not err, err)
-            assert.are.same(to_tbl(res), {
+            assert.are.same({
                 success = true,
                 exit_code = 0,
                 stdout = 'some output\n',
                 stderr = '',
-            })
+            }, to_tbl(res))
         end)
 
         -- distant and ssh modes behave differently here as ssh treats as a success and
@@ -43,23 +43,23 @@ describe('fn', function()
             it('should support capturing stderr', function()
                 local err, res = fn.spawn_wait({ cmd = 'sh -c 1>&2 echo some output' })
                 assert(not err, err)
-                assert.are.same(to_tbl(res), {
+                assert.are.same({
                     success = true,
                     exit_code = 0,
                     stdout = '',
                     stderr = 'some output\n',
-                })
+                }, to_tbl(res))
             end)
 
             it('should support capturing exit code', function()
                 local err, res = fn.spawn_wait({ cmd = 'sh -c exit 99' })
                 assert(not err, err)
-                assert.are.same(to_tbl(res), {
+                assert.are.same({
                     success = false,
                     exit_code = 99,
                     stdout = '',
                     stderr = '',
-                })
+                }, to_tbl(res))
             end)
 
             it('should fail if the remote program is not found', function()
