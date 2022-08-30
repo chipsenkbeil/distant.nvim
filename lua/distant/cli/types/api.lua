@@ -1,3 +1,5 @@
+--- @meta
+
 --- @class ClientApi
 --- @field append_file ApiAppendFile
 --- @field append_file_text ApiAppendFileText
@@ -25,10 +27,14 @@
 
 --- @alias ApiError string|boolean
 --- @alias FilePath string
+--- @alias FileType 'dir'|'file'|'symlink'
 --- @alias BinaryData number[]
+--- @alias SearchId number
 
 --- @alias ApiAppendFile fun(params:DistantAppendFileParams, cb?:fun(err:ApiError, res:DistantOk|nil)):ApiError|nil, DistantOk|nil
 --- @alias ApiAppendFileText fun(params:DistantAppendFileTextParams, cb?:fun(err:ApiError, res:DistantOk|nil)):ApiError|nil, DistantOk|nil
+--- @alias ApiCancelSearch fun(params:DistantCancelSearchParams, cb?:fun(err:ApiError, res:DistantOk|nil)):ApiError|nil, DistantOk|nil
+--- @alias ApiCapabilities fun(params:DistantCapabilitiesParams, cb?:fun(err:ApiError, res:DistantCapabilities|nil)):ApiError|nil, DistantCapabilities|nil
 --- @alias ApiCopy fun(params:DistantCopyParams, cb?:fun(err:ApiError, res:DistantOk|nil)):ApiError|nil, DistantOk|nil
 --- @alias ApiCreateDir fun(params:DistantCreateDirParams, cb?:fun(err:ApiError, res:DistantOk|nil)):ApiError|nil, DistantOk|nil
 --- @alias ApiExists fun(params:DistantExistsParams, cb?:fun(err:ApiError, res:DistantExists|nil)):ApiError|nil, DistantExists|nil
@@ -41,6 +47,7 @@
 --- @alias ApiSpawn fun(params:DistantSpawnParams, cb?:fun(err:ApiError, res:DistantProcSpawned|nil)):ApiError|nil, DistantProcSpawned|nil
 --- @alias ApiSpawnLsp fun(params:DistantSpawnLspParams, cb?:fun(err:ApiError, res:DistantProcSpawned|nil)):ApiError|nil, DistantProcSpawned|nil
 --- @alias ApiSpawnWait fun(params:DistantSpawnWaitParams, cb?:fun(err:ApiError, res:DistantProcOutput|nil)):ApiError|nil, DistantProcOutput|nil
+--- @alias ApiSearch fun(params:DistantSearchParams, cb?:fun(err:ApiError, res:DistantSearcher|nil)):ApiError|nil, DistantSearcher|nil
 --- @alias ApiSystemInfo fun(params:DistantSystemInfoParams, cb?:fun(err:ApiError, res:DistantSystemInfo|nil)):ApiError|nil, DistantSystemInfo|nil
 --- @alias ApiWatch fun(params:DistantWatchParams, cb?:fun(err:ApiError, res:DistantOk|nil)):ApiError|nil, DistantOk|nil
 --- @alias ApiWriteFile fun(params:DistantWriteFileParams, cb?:fun(err:ApiError, res:DistantOk|nil)):ApiError|nil, DistantOk|nil
@@ -58,6 +65,11 @@
 --- @class DistantAppendFileTextParams
 --- @field path FilePath
 --- @field text string
+
+--- @class DistantCancelSearchParams
+--- @field id SearchId
+
+--- @class DistantCapabilitiesParams
 
 --- @class DistantCopyParams
 --- @field src FilePath
@@ -95,6 +107,33 @@
 --- @class DistantRenameParams
 --- @field src FilePath
 --- @field dst FilePath
+
+--- @class DistantSearchParams
+--- @field query DistantSearchQuery
+--- @field on_match nil|fun(match:DistantSearchMatch)
+--- @field on_done nil|fun(matches:DistantSearchMatch[])
+
+--- @class DistantSearchQuery
+--- @field target DistantSearchTarget
+--- @field condition DistantSearchCondition
+--- @field paths FilePath[]
+--- @field options nil|DistantSearchOptions
+
+--- @alias DistantSearchTarget 'contents'|'path'
+
+--- @class DistantSearchCondition
+--- @field type 'ends_with'|'equals'|'regex'|'starts_with'
+--- @field value string
+
+--- @class DistantSearchOptions
+--- @field allowed_file_types nil|FileType[]
+--- @field include nil|DistantSearchCondition
+--- @field exclude nil|DistantSearchCondition
+--- @field follow_symbolic_links nil|boolean
+--- @field limit nil|number
+--- @field max_depth nil|number
+--- @field min_depth nil|number
+--- @field pagination nil|number
 
 --- @class DistantSpawnParams
 --- @field cmd string
@@ -146,6 +185,38 @@
 
 --- @class DistantText
 --- @field data string
+
+--- @alias DistantCapabilities DistantCapability[]
+
+--- @class DistantCapability
+--- @field kind string
+--- @field description string
+
+--- @class DistantSearchMatch
+--- @field type 'path'|'contents'
+--- @field path FilePath
+--- @field submatches DistantSearchSubmatch[]
+---
+--- @field lines nil|string #lines that were matched (only for contents type)
+--- @field line_number nil|string #starting line of match (only for contents type)
+--- @field absolute_offset nil|number #byte offset from start of content (only for contents type)
+
+--- @class DistantSearchSubmatch
+--- @field match DistantSearchMatchData
+--- @field start number #starting byte offset relative to lines (inclusive)
+--- @field end number #ending byte offset relative to lines (exclusive)
+
+--- @class DistantSearchMatchData
+--- @field type 'text'|'bytes'
+--- @field value string|number[]
+
+--- @class DistantSearcher
+--- @field id SearchId
+--- @field query DistantSearchQuery
+--- @field done boolean
+--- @field matches DistantSearchMatch[]
+--- @field on_match nil|fun(match:DistantSearchMatch)
+--- @field on_done nil|fun(matches:DistantSearchMatch[])
 
 --- @class DistantDirEntries
 --- @field entries DistantDirEntry[]

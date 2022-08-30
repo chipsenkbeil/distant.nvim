@@ -26,6 +26,8 @@ return function(opts)
             indent .. '* Arch        = "' .. info.arch .. '"';
             indent .. '* Current Dir = "' .. info.current_dir .. '"';
             indent .. '* Main Sep    = "' .. info.main_separator .. '"';
+            indent .. '* Username    = "' .. info.username .. '"';
+            indent .. '* Shell       = "' .. info.shell .. '"';
         })
     end
 end

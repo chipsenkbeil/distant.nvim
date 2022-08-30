@@ -139,6 +139,7 @@ end
 --- will be invoked synchronously and return `err|nil, data|nil`
 ---
 --- @param params MakeFnParams
+--- @return fun(msgs:OneOrMoreMsgs, opts:table, cb:ApiCallback)
 local function make_fn(params)
     vim.validate({
         repl = { params.repl, 'table' },
@@ -188,14 +189,36 @@ local function make_fn(params)
         -- @type CliMsg[]
         local msgs
         if not vim.tbl_islist(msg) or vim.tbl_isempty(msg) then
-            msgs = { msg }
+            msgs = { vim.deepcopy(msg) }
         else
-            msgs = msg
+            msgs = vim.deepcopy(msg)
         end
 
-        -- Inject our request type into the msg at root level
+        -- Calculate all of the parameters that are virtual and remove
+        -- them from the msgs we send via the api (but not the input
+        -- we pass to the function map/and_then
+        local virtual_params = {}
+        if type(params.req_type) == 'table' then
+            for key, value in pairs(params.req_type) do
+                local is_virtual = false
+                if type(value) == 'table' then
+                    is_virtual = not (not value.virtual)
+                end
+
+                if is_virtual then
+                    table.insert(virtual_params, key)
+                end
+            end
+        end
+
+        -- Inject our request type into the msg at root level and
+        -- remove any virtual parameters
         for _, m in ipairs(msgs) do
             m['type'] = params.type
+
+            for _, param in ipairs(virtual_params) do
+                m[param] = nil
+            end
         end
 
         -- Ensure that our parameters are actually the right type in case
@@ -341,6 +364,16 @@ return function(repl)
         },
     })
 
+    --- @type ApiCapabilities
+    api.capabilities = make_fn({
+        repl = repl,
+        type = 'capabilities',
+        ret_type = 'capabilities',
+        res_type = {
+            supported = 'table',
+        },
+    })
+
     --- @type ApiCopy
     api.copy = make_fn({
         repl = repl,
@@ -471,6 +504,103 @@ return function(repl)
         req_type = {
             src = 'string',
             dst = 'string',
+        },
+    })
+
+    --- @type ApiSearch
+    api.search = make_fn({
+        repl = repl,
+        type = 'search',
+        ret_type = { 'search_started', 'search_results', 'search_done' },
+        req_type = {
+            query = 'table',
+            on_match = { type = 'function', virtual = true, optional = true },
+            on_done = { type = 'function', virtual = true, optional = true },
+        },
+        multi = true,
+        map = function(data, type, input, stop)
+            return {
+                data = data,
+                type = type,
+                input = input,
+                stop = stop,
+            }
+        end,
+        and_then = function(args)
+            local err = args.err
+            local data = args.data
+            local input = args.input
+            local cb = args.cb
+
+            if err then
+                return cb(err)
+            end
+
+            if data.type == 'search_started' then
+                local searcher = {
+                    id = data.id,
+                    query = input.query,
+
+                    -- Uodated once the search is done
+                    done = false,
+
+                    -- This is only populated if `on_match` is nil
+                    matches = {},
+
+                    on_match = input.on_match,
+                    on_done = input.on_done,
+                }
+
+                -- Will cancel search when invoked
+                searcher.cancel = function(cancel_cb)
+                    api.cancel_search({ id = searcher.id }, cancel_cb)
+                end
+
+                api.__state.searchers[searcher.id] = searcher
+                return cb(false, searcher)
+            elseif data.type == 'search_done' then
+                local searcher = api.__state.searchers[data.id]
+                if searcher then
+                    -- Mark searcher as done
+                    searcher.done = true
+
+                    -- Invoke the callback if we have one
+                    if type(searcher.on_done) == 'function' then
+                        searcher.on_done(searcher.matches or {})
+                    end
+
+                    -- Clear searcher from our internal state
+                    api.__state.searchers[searcher.id] = nil
+                end
+            else
+                local searcher = api.__state.searchers[data.id]
+                if searcher then
+                    if not vim.tbl_islist(searcher.matches) then
+                        searcher.matches = {}
+                    end
+
+                    for _, m in ipairs(data.matches or {}) do
+                        -- Invoke the callback if we have one, otherwise store
+                        -- the match in our internal list
+                        if type(searcher.on_match) == 'function' then
+                            searcher.on_match(m)
+                        else
+                            table.insert(searcher.matches, m)
+                        end
+                    end
+                end
+
+            end
+        end,
+    })
+
+    --- @type ApiCancelSearch
+    api.cancel_search = make_fn({
+        repl = repl,
+        type = 'cancel_search',
+        ret_type = 'ok',
+        req_type = {
+            id = 'string',
         },
     })
 

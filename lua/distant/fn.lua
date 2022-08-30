@@ -23,6 +23,7 @@ end
 return make_fns({}, {
     'append_file',
     'append_file_text',
+    'capabilities',
     'copy',
     'create_dir',
     'exists',
@@ -32,6 +33,7 @@ return make_fns({}, {
     'read_file_text',
     'remove',
     'rename',
+    'search',
     'spawn',
     'spawn_wait',
     'system_info',
