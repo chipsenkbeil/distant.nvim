@@ -12,12 +12,7 @@ local ClientLaunchCmd = BaseCmd:new('client launch', { allowed = {
     'log-file',
     'log-level',
     'no-shell',
-    'ssh',
-    'ssh-backend',
-    'ssh-external',
-    'ssh-identity-file',
-    'ssh-port',
-    'ssh-username',
+    'options',
     'unix-socket',
     'windows-pipe',
 } })
@@ -115,50 +110,12 @@ function ClientLaunchCmd:set_no_shell()
     return self:set('no-shell')
 end
 
---- Sets `--ssh <value>`
---- @param value string
---- @return ClientLaunchCmd
-function ClientLaunchCmd:set_ssh(value)
-    vim.validate({ value = { value, 'string' } })
-    return self:set('ssh', value)
-end
-
---- Sets `--ssh-backend <value>`
---- @param backend 'libssh'|'ssh2'
---- @return ClientLaunchCmd
-function ClientLaunchCmd:set_ssh_backend(backend)
-    vim.validate({ backend = { backend, 'string' } })
-    return self:set('ssh-backend', backend)
-end
-
---- Sets `--ssh-external`
---- @return ClientLaunchCmd
-function ClientLaunchCmd:set_ssh_external()
-    return self:set('ssh-external')
-end
-
---- Sets `--ssh-identity-file <value>`
---- @param value string
---- @return ClientLaunchCmd
-function ClientLaunchCmd:set_ssh_identity_file(value)
-    vim.validate({ value = { value, 'string' } })
-    return self:set('ssh-identity-file', value)
-end
-
---- Sets `--ssh-port <value>`
---- @param value number
---- @return ClientLaunchCmd
-function ClientLaunchCmd:set_ssh_port(value)
-    vim.validate({ value = { value, 'number' } })
-    return self:set('ssh-port', tostring(value))
-end
-
---- Sets `--ssh-username <value>`
---- @param value string #username to use when ssh'ing into machine
---- @return ClientLaunchCmd
-function ClientLaunchCmd:set_ssh_username(value)
-    vim.validate({ value = { value, 'string' } })
-    return self:set('ssh-username', value)
+--- Sets `--options <options>`
+--- @param options string
+--- @return ClientConnectCmd
+function ClientLaunchCmd:set_options(options)
+    vim.validate({ options = { options, 'string' } })
+    return self:set('options', options)
 end
 
 --- Sets `--unix-socket <path>`

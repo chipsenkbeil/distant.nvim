@@ -173,7 +173,7 @@ end
 --- DistantLaunch destination [opt1=..., opt2=...]
 command.launch = function(input)
     input = command.parse_input(input)
-    paths_to_number(input.opts, { 'ssh.port', 'timeout', 'interval' })
+    paths_to_number(input.opts, { 'timeout', 'interval' })
 
     local destination = input.args[1]
     input.opts.destination = destination

@@ -5,6 +5,7 @@ local state = require('distant.state')
 --- @field destination string
 ---
 --- @field auth AuthHandler|nil
+--- @field options string|table<string, any>
 --- @field timeout number|nil
 --- @field interval number|nil
 
@@ -33,5 +34,6 @@ return function(opts, cb)
         auth = opts.auth,
         timeout = opts.timeout,
         interval = opts.interval,
+        options = opts.options,
     }, cb)
 end

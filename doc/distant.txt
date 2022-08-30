@@ -202,9 +202,6 @@ DistantLaunch {destination} {opts}                             *DistantLaunch*
     Destination is in the form of scheme://[user@]host[:port]
 
     Options: ~
-        {ssh.user}       (string)  alternative user for connecting to the ssh
-                                   server (default: "<neovim user>")
-        {ssh.port}       (number)  port of the ssh server (default: 22)
         {distant.bin}    (string)  path to binary of `distant` on the remote
                                    machine (default: "distant")
         {distant.args}   (string)  additional arguments to provide to the
@@ -213,6 +210,11 @@ DistantLaunch {destination} {opts}                             *DistantLaunch*
         {distant.use_login_shell}
                         (boolean)  if true, will spawn the distant server
                                    using a login shell (default: true)
+        {options}  (string|table)  additional options to provide to the
+                                   handler of the destination in the form of
+                                   `key="value",key2="value2"`. Can also use
+                                   table notation in the form of
+                                   `options.key="value"` (default: "")
         {timeout}        (number)  maximum time in milliseconds before failing
                                    (default: settings.max_timeout)
         {interval}       (number)  approximate time in milliseconds between
@@ -222,8 +224,8 @@ DistantLaunch {destination} {opts}                             *DistantLaunch*
     Examples: ~
 >
         :DistantLaunch example.com
-        :DistantLaunch example.com mode=ssh
-        :DistantLaunch example.com ssh.port=2222 distant.bin=/path/to/distant
+        :DistantLaunch ssh://example.com
+        :DistantLaunch ssh://example.com:2222 distant.bin=/path/to/distant
 <
 
 DistantConnect {destination} {opts}                           *DistantConnect*
@@ -234,6 +236,11 @@ DistantConnect {destination} {opts}                           *DistantConnect*
     Will prompt for the secret key used to communicate with the server.
 
     Options: ~
+        {options}  (string|table)  additional options to provide to the
+                                   handler of the destination in the form of
+                                   `key="value",key2="value2"`. Can also use
+                                   table notation in the form of
+                                   `options.key="value"` (default: "")
         {timeout}        (number)  maximum time in milliseconds before failing
                                    (default: settings.max_timeout)
         {interval}       (number)  approximate time in milliseconds between
@@ -243,7 +250,8 @@ DistantConnect {destination} {opts}                           *DistantConnect*
     Examples: ~
 >
         :DistantConnect example.com:2222
-        :DistantConnect example.com:2222 timeout=5000
+        :DistantConnect ssh://example.com:2222
+        :DistantConnect distant://example.com:2222 timeout=5000
 <
 
 DistantInstall [reinstall]                                    *DistantInstall*

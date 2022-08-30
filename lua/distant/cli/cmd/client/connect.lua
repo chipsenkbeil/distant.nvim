@@ -8,6 +8,7 @@ local ClientConnectCmd = BaseCmd:new('client connect', { allowed = {
     'format',
     'log-file',
     'log-level',
+    'options',
     'unix-socket',
     'windows-pipe',
 } })
@@ -67,6 +68,14 @@ end
 function ClientConnectCmd:set_log_level(value)
     vim.validate({ value = { value, 'string' } })
     return self:set('log-level', value)
+end
+
+--- Sets `--options <options>`
+--- @param options string
+--- @return ClientConnectCmd
+function ClientConnectCmd:set_options(options)
+    vim.validate({ options = { options, 'string' } })
+    return self:set('options', options)
 end
 
 --- Sets `--unix-socket <path>`

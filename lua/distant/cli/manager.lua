@@ -262,6 +262,24 @@ function Manager:listen(opts, cb)
     return handle
 end
 
+--- @param opts string|table<string, any> #options to build into a string list
+--- @return string #options in the form of key="value",key2="value2"
+local function build_options(opts)
+    if type(opts) == 'string' then
+        return opts
+    else
+        local s = ''
+        local clean_value
+
+        for key, value in pairs(opts) do
+            clean_value = tostring(value):gsub('\\', '\\\\'):gsub('"', '\\"')
+            s = s .. tostring(key) .. '="' .. clean_value .. '",'
+        end
+
+        return s
+    end
+end
+
 --- @class ManagerLaunchOpts
 --- @field destination string #uri representing the remote server
 ---
@@ -273,12 +291,7 @@ end
 --- @field log_file string|nil #alternative log file path to use
 --- @field log_level string|nil #alternative log level to use
 --- @field no_shell boolean|nil #if true, will not attempt to execute distant binary within a shell on the remote machine
---- @field ssh string|nil #alternative path to ssh binary (if executing external process)
---- @field ssh_backend 'libssh'|'ssh2'|nil #backend to use for native ssh
---- @field ssh_external boolean|nil #if true, will execute an external ssh process instead of using native library
---- @field ssh_identity_file string|nil #location of identity file to use with ssh
---- @field ssh_port number|nil #alternative ssh port to use instead of 22
---- @field ssh_username string|nil #alternative ssh username to use instead of the current user
+--- @field options string|table<string, any> #additional options tied to a specific destination handler
 
 --- Launches a server remotely and performs authentication using the given manager
 --- @param opts ManagerLaunchOpts
@@ -332,19 +345,14 @@ function Manager:launch(opts, cb)
             windows_pipe = self.config.network.windows_pipe,
 
             -- Optional user settings
-            cache             = opts.cache,
-            config            = opts.config,
-            distant           = opts.distant,
-            distant_args      = wrap_args(opts.distant_args),
-            log_file          = opts.log_file,
-            log_level         = opts.log_level,
-            no_shell          = opts.no_shell,
-            ssh               = opts.ssh,
-            ssh_backend       = opts.ssh_backend,
-            ssh_external      = opts.ssh_external,
-            ssh_identity_file = opts.ssh_identity_file,
-            ssh_port          = opts.ssh_port and tostring(opts.ssh_port),
-            ssh_username      = opts.ssh_username,
+            cache        = opts.cache,
+            config       = opts.config,
+            distant      = opts.distant,
+            distant_args = wrap_args(opts.distant_args),
+            log_file     = opts.log_file,
+            log_level    = opts.log_level,
+            no_shell     = opts.no_shell,
+            options      = build_options(opts.options),
         })
         :as_list()
     table.insert(cmd, 1, self.config.binary)
@@ -375,6 +383,7 @@ end
 --- @field cache string|nil #alternative cache path to use
 --- @field log_file string|nil #alternative log file path to use
 --- @field log_level string|nil #alternative log level to use
+--- @field options string|table<string, any> #additional options tied to a specific destination handler
 
 --- Connects to a remote server using the given manager
 --- @param opts ManagerConnectOpts
@@ -404,6 +413,7 @@ function Manager:connect(opts, cb)
             config    = opts.config,
             log_file  = opts.log_file,
             log_level = opts.log_level,
+            options   = build_options(opts.options),
         })
         :as_list()
     table.insert(cmd, 1, self.config.binary)
