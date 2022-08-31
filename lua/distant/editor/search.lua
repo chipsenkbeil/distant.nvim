@@ -5,8 +5,9 @@ local DEFAULT_PAGINATION = 10
 local MAX_LINE_LEN = 100
 
 --- Add matches to qflist
+--- @param id number #id of quickfix list
 --- @param matches DistantSearchMatch[] #match(s) to add
-local function add_matches_to_qflist(matches)
+local function add_matches_to_qflist(id, matches)
     -- Quit if nothing to add
     if #matches == 0 then
         return
@@ -50,7 +51,7 @@ local function add_matches_to_qflist(matches)
         table.insert(items, item)
     end
 
-    vim.fn.setqflist(items, 'a')
+    vim.fn.setqflist({}, 'a', { id = id, items = items })
 end
 
 --- @class EditorSearchOpts
@@ -90,11 +91,12 @@ return function(opts)
     opts.query.options.pagination = opts.query.options.pagination or DEFAULT_PAGINATION
 
     -- Keep track of how many matches we have
+    local qflist_id
     local match_cnt = 0
 
     -- For each set of matches, we add them to our quickfix list
     opts.on_results = function(matches)
-        add_matches_to_qflist(matches)
+        add_matches_to_qflist(qflist_id, matches)
         match_cnt = match_cnt + #matches
         print('Search matched ' .. tostring(match_cnt) .. ' times')
 
@@ -107,7 +109,7 @@ return function(opts)
         matches = matches or {}
         match_cnt = match_cnt + #matches
 
-        add_matches_to_qflist(matches)
+        add_matches_to_qflist(qflist_id, matches)
         print('Search finished with ' .. tostring(match_cnt) .. ' matches')
 
         if user_on_done ~= nil and type(user_on_done) == 'function' then
@@ -119,13 +121,16 @@ return function(opts)
     fn.search(opts, function(err, searcher)
         assert(not err, err)
 
-        local query_condition_value = searcher.query.condition.value
-        print('Searching via ' .. query_condition_value)
-
         -- Create an empty list to be populated with results
         vim.fn.setqflist({}, ' ', {
-            title = 'DistantSearch ' .. query_condition_value,
+            title = 'DistantSearch ' .. searcher.query.condition.value
         })
+
+        -- Set our list id by grabbing the id of the latest qflist
+        qflist_id = vim.fn.getqflist({ id = 0 }).id
+
+        print('Started search ' .. tostring(searcher.id))
+
         vim.cmd([[ copen ]])
     end)
 end
