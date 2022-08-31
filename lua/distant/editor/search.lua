@@ -1,8 +1,62 @@
 local fn = require('distant.fn')
 local log = require('distant.log')
 
+local DEFAULT_PAGINATION = 10
+local MAX_LINE_LEN = 100
+
+--- Add matches to qflist
+--- @param matches DistantSearchMatch[] #match(s) to add
+local function add_matches_to_qflist(matches)
+    -- Quit if nothing to add
+    if #matches == 0 then
+        return
+    end
+
+    local items = {}
+
+    for _, match in ipairs(matches) do
+        local item = {
+            filename = tostring(match.path),
+        }
+
+        if not vim.startswith(item.filename, 'distant://') then
+            item.filename = 'distant://' .. item.filename
+        end
+
+        -- Contents have more information to provide than filenames
+        if match.type == 'contents' then
+            item.lnum = tonumber(match.line_number)
+            if match.submatches[1] then
+                item.col = match.submatches[1].start + 1
+            end
+
+            -- If we have text, assign up to 100 characters, truncating with suffix ...
+            -- if we have a longer line
+            if match.lines.type == 'text' then
+                item.text = match.lines.value
+                if #item.text > MAX_LINE_LEN then
+                    item.text = item.text:sub(1, MAX_LINE_LEN - 3) .. '...'
+                end
+
+                -- Clean up the text to prevent it being a blob/string buffer
+                -- by removing control characters and null (\0) that can appear
+                -- when searching text by escaping it
+                item.text = item.text:gsub('%z', '\\0'):gsub('%c', '')
+            end
+        elseif match.type == 'path' then
+            item.lnum = 1
+        end
+
+        table.insert(items, item)
+    end
+
+    vim.fn.setqflist(items, 'a')
+end
+
 --- @class EditorSearchOpts
 --- @field query DistantSearchQuery|string
+--- @field on_results nil|fun(matches:DistantSearchMatch[])
+--- @field on_done nil|fun(matches:DistantSearchMatch[])
 --- @field timeout number|nil #Maximum time to wait for a response
 --- @field interval number|nil #Time in milliseconds to wait between checks for a response
 
@@ -26,37 +80,26 @@ return function(opts)
         }
     end
 
-    local user_on_match = opts.on_match
+    local user_on_results = opts.on_results
     local user_on_done = opts.on_done
 
-    local last_path = nil
+    if type(opts.query.options) ~= 'table' then
+        opts.query.options = {}
+    end
+
+    opts.query.options.pagination = opts.query.options.pagination or DEFAULT_PAGINATION
+
+    -- Keep track of how many matches we have
     local match_cnt = 0
-    opts.on_match = function(match)
-        if match.type == 'contents' then
-            -- If start of a new path of results, add a newline
-            if last_path ~= nil and match.path ~= last_path then
-                print('')
-            end
 
-            if match.path ~= last_path then
-                print(match.path)
-            end
+    -- For each set of matches, we add them to our quickfix list
+    opts.on_results = function(matches)
+        add_matches_to_qflist(matches)
+        match_cnt = match_cnt + #matches
+        print('Search matched ' .. tostring(match_cnt) .. ' times')
 
-            if match.lines.type == 'text' then
-                print(tostring(match.line_number) .. ':' .. match.lines.value)
-            elseif match.lines.type == 'bytes' then
-                print(tostring(match.line_number) .. ': {BINARY DATA}')
-            else
-                error('Unknown match line type: ' .. match.lines.type)
-            end
-        else
-            print(match.path)
-        end
-
-        match_cnt = match_cnt + 1
-
-        if type(user_on_match) == 'function' then
-            return user_on_match(match)
+        if user_on_results ~= nil and type(user_on_results) == 'function' then
+            return user_on_results(matches)
         end
     end
 
@@ -64,21 +107,25 @@ return function(opts)
         matches = matches or {}
         match_cnt = match_cnt + #matches
 
-        for _, match in ipairs(matches) do
-            print(vim.inspect(match))
-        end
+        add_matches_to_qflist(matches)
+        print('Search finished with ' .. tostring(match_cnt) .. ' matches')
 
-        if type(user_on_done) == 'function' then
+        if user_on_done ~= nil and type(user_on_done) == 'function' then
             return user_on_done(matches)
-        end
-
-        if match_cnt == 0 then
-            error('No match found')
         end
     end
 
     -- Callback is triggered when search is started
-    fn.search(opts, function(err)
+    fn.search(opts, function(err, searcher)
         assert(not err, err)
+
+        local query_condition_value = searcher.query.condition.value
+        print('Searching via ' .. query_condition_value)
+
+        -- Create an empty list to be populated with results
+        vim.fn.setqflist({}, ' ', {
+            title = 'DistantSearch ' .. query_condition_value,
+        })
+        vim.cmd([[ copen ]])
     end)
 end

@@ -515,7 +515,7 @@ return function(repl)
         ret_type = { 'search_started', 'search_results', 'search_done' },
         req_type = {
             query = 'table',
-            on_match = { type = 'function', virtual = true, optional = true },
+            on_results = { type = 'function', virtual = true, optional = true },
             on_done = { type = 'function', virtual = true, optional = true },
         },
         multi = true,
@@ -549,7 +549,7 @@ return function(repl)
                     -- This is only populated if `on_match` is nil
                     matches = {},
 
-                    on_match = input.on_match,
+                    on_results = input.on_results,
                     on_done = input.on_done,
                 }
 
@@ -583,12 +583,12 @@ return function(repl)
                         searcher.matches = {}
                     end
 
-                    for _, m in ipairs(data.matches or {}) do
-                        -- Invoke the callback if we have one, otherwise store
-                        -- the match in our internal list
-                        if type(searcher.on_match) == 'function' then
-                            searcher.on_match(m)
-                        else
+                    -- Invoke the callback if we have one, otherwise store
+                    -- the matches in our internal list
+                    if type(searcher.on_results) == 'function' then
+                        searcher.on_results(data.matches)
+                    else
+                        for _, m in ipairs(data.matches) do
                             table.insert(searcher.matches, m)
                         end
                     end
