@@ -267,7 +267,7 @@ end
 local function build_options(opts)
     if type(opts) == 'string' then
         return opts
-    else
+    elseif type(opts) == 'table' then
         local s = ''
         local clean_value
 
