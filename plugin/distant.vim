@@ -42,3 +42,5 @@ command! -nargs=* DistantRename
       \ lua require('distant.command').rename(vim.fn.expand('<args>'))
 command! -nargs=* DistantRun
       \ lua require('distant.command').run(vim.fn.expand('<args>'))
+command! -nargs=* DistantSearch
+      \ lua require('distant.command').search(vim.fn.expand('<args>'))

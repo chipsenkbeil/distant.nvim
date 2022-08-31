@@ -75,13 +75,9 @@ local function initialize_client(opts)
         '--shutdown', 'lonely=60',
         '--port', '8080:8999',
     }, opts.args or {})
-    local ssh = {
-        other = {
-            ['StrictHostKeyChecking'] = 'no'
-        },
-    }
+    local options = {}
     if config.ssh_backend then
-        ssh.backend = config.ssh_backend
+        options['ssh.backend'] = config.ssh_backend
     end
 
     local dummy_auth = {
@@ -114,12 +110,12 @@ local function initialize_client(opts)
         destination = 'ssh://' .. destination
         local launch_opts = {
             destination = destination,
+            auth = dummy_auth,
             distant = {
                 bin = distant_bin,
                 args = distant_args,
             },
-            ssh = ssh,
-            auth = dummy_auth,
+            options = options,
         }
 
         editor.launch(launch_opts, function(err, c)

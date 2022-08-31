@@ -6,7 +6,9 @@
 -- This library is free software; you can redistribute it and/or modify it
 -- under the terms of the MIT license. See LICENSE for details.
 
---- @type 'trace'|'debug'|'info'|'warn'|'error'|'fatal'
+--- @alias NeovimLogLevel 'trace'|'debug'|'info'|'warn'|'error'|'fatal'
+
+--- @type NeovimLogLevel
 local d_log_level = vim.fn.getenv('DISTANT_LOG_LEVEL')
 if d_log_level == vim.NIL then
     d_log_level = 'info'

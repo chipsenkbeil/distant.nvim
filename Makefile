@@ -8,6 +8,7 @@ DISTANT_PORT?=22
 DISTANT_IDENTITY_FILE?=
 DISTANT_BIN?="$(HOME)/.cargo/bin/distant"
 DISTANT_LOG_LEVEL?=info
+DISTANT_LOG_FILE?=
 DISTANT_USER?=$(shell whoami)
 DISTANT_PASSWORD?=
 DISTANT_MODE?=
@@ -52,6 +53,7 @@ define docker_exec
 	-e DISTANT_MODE=$(DISTANT_MODE) \
 	-e DISTANT_SSH_BACKEND=$(DISTANT_SSH_BACKEND) \
 	-e DISTANT_LOG_LEVEL=$(DISTANT_LOG_LEVEL) \
+	-e DISTANT_LOG_FILE=$(DISTANT_LOG_FILE) \
 	$(2) \
 	$(DOCKER_IMAGE) sh -c "cd app && ssh-keyscan -H $(DOCKER_SERVER) >> ~/.ssh/known_hosts && sudo rm /usr/bin/rls && $(1)"; \
 	STATUS=$$?; \

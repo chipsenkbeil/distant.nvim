@@ -338,6 +338,7 @@ return function(repl)
     local api = {
         __state = {
             processes = {},
+            searchers = {},
             watchers = {},
         }
     }
@@ -529,7 +530,7 @@ return function(repl)
         and_then = function(args)
             local err = args.err
             local data = args.data
-            local input = args.input
+            local input = data.input
             local cb = args.cb
 
             if err then
@@ -537,6 +538,7 @@ return function(repl)
             end
 
             if data.type == 'search_started' then
+                data = data.data
                 local searcher = {
                     id = data.id,
                     query = input.query,
@@ -559,6 +561,7 @@ return function(repl)
                 api.__state.searchers[searcher.id] = searcher
                 return cb(false, searcher)
             elseif data.type == 'search_done' then
+                data = data.data
                 local searcher = api.__state.searchers[data.id]
                 if searcher then
                     -- Mark searcher as done
@@ -573,6 +576,7 @@ return function(repl)
                     api.__state.searchers[searcher.id] = nil
                 end
             else
+                data = data.data
                 local searcher = api.__state.searchers[data.id]
                 if searcher then
                     if not vim.tbl_islist(searcher.matches) then

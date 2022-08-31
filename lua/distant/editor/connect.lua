@@ -5,9 +5,11 @@ local state = require('distant.state')
 --- @field destination string
 ---
 --- @field auth AuthHandler|nil
+--- @field interval number|nil
+--- @field log_level DistantLogLevel|nil
+--- @field log_file string|nil
 --- @field options string|table<string, any>
 --- @field timeout number|nil
---- @field interval number|nil
 
 --- Connects to a running distance binary on the remote machine
 --- @param opts EditorConnectOpts
@@ -32,6 +34,8 @@ return function(opts, cb)
 
         -- User-defined settings
         auth = opts.auth,
+        log_file = opts.log_file,
+        log_level = opts.log_level,
         timeout = opts.timeout,
         interval = opts.interval,
         options = opts.options,

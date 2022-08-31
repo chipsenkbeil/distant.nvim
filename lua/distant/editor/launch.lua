@@ -6,9 +6,11 @@ local state = require('distant.state')
 ---
 --- @field auth AuthHandler|nil
 --- @field distant EditorLaunchDistantOpts|nil
+--- @field interval number|nil
+--- @field log_level DistantLogLevel|nil
+--- @field log_file string|nil
 --- @field options string|table<string, any>
 --- @field timeout number|nil
---- @field interval number|nil
 
 --- @class EditorLaunchDistantOpts
 --- @field bin string|nil
@@ -50,6 +52,8 @@ return function(opts, cb)
         auth = opts.auth,
         distant = opts.distant and opts.distant.bin,
         distant_args = opts.distant and opts.distant.args,
+        log_file = opts.log_file,
+        log_level = opts.log_level,
         no_shell = not use_login_shell,
         options = opts.options,
         timeout = opts.timeout,

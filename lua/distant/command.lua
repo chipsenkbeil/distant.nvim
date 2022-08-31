@@ -320,6 +320,46 @@ command.run = function(input)
     end
 end
 
+--- DistantSearch pattern [paths ...] [opt1=... opt2=...]
+command.search = function(input)
+    input = command.parse_input(input)
+    paths_to_number(input.opts, { 'timeout', 'interval' })
+
+    local timeout = input.opts.timeout
+    local interval = input.opts.interval
+
+    local pattern = input.args[1]
+    local paths = {}
+    for i, path in ipairs(input.args) do
+        if i > 1 then
+            table.insert(paths, path)
+        end
+    end
+    local target = input.opts.target or 'contents'
+    local options = {}
+    for key, value in pairs(input.opts or {}) do
+        if key ~= 'timeout' and key ~= 'interval' and key ~= 'target' then
+            options[key] = value
+        end
+    end
+
+    local query = {
+        paths = paths,
+        target = target,
+        condition = {
+            type = 'regex',
+            value = pattern,
+        },
+        options = options,
+    }
+
+    fn.search({
+        query = query,
+        timeout = timeout,
+        interval = interval,
+    })
+end
+
 --- DistantShell [cmd arg1 arg2 ...]
 command.shell = function(input)
     input = command.parse_input(input)
