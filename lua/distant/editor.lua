@@ -4,6 +4,7 @@ local editor = {}
 editor.launch = require('distant.editor.launch')
 editor.connect = require('distant.editor.connect')
 editor.open = require('distant.editor.open')
+editor.search = require('distant.editor.search')
 editor.write = require('distant.editor.write')
 
 editor.show_metadata = require('distant.editor.show.metadata')

@@ -353,7 +353,7 @@ command.search = function(input)
         options = options,
     }
 
-    fn.search({
+    editor.search({
         query = query,
         timeout = timeout,
         interval = interval,
