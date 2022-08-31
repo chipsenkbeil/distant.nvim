@@ -12,6 +12,12 @@ if d_log_level == vim.NIL then
     d_log_level = 'info'
 end
 
+--- @type string|nil
+local d_log_file = vim.fn.getenv('DISTANT_LOG_FILE')
+if d_log_file == vim.NIL then
+    d_log_file = nil
+end
+
 -- User configuration section
 local default_config = {
     -- Name of the plugin. Prepended to log messages
@@ -52,7 +58,7 @@ local unpack = unpack or table.unpack
 log.new = function(config, standalone)
     config = vim.tbl_deep_extend('force', default_config, config)
 
-    local outfile = string.format('%s/%s.log', vim.api.nvim_call_function('stdpath', { 'cache' }), config.plugin)
+    local outfile = d_log_file or string.format('%s/%s.log', vim.api.nvim_call_function('stdpath', { 'cache' }), config.plugin)
 
     local obj
     if standalone then
