@@ -18,11 +18,16 @@ local function _initialize()
             local line, col
             path, line, col = u.strip_line_col(path)
 
+            -- Ensure our buffer is named without the line/column
+            vim.api.nvim_buf_set_name(buf, path)
+
             log.fmt_debug('Reading %s into buf %s', path, buf)
             editor.open({
-                path = path;
-                buf = buf;
-                reload = true;
+                path = path,
+                buf = buf,
+                reload = true,
+                line = line,
+                col = col,
             })
         end)
 

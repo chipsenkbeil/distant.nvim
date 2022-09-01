@@ -358,14 +358,16 @@ utils.strip_prefix = function(s, prefix)
 end
 
 --- Returns a string with the given prefix removed if it is found in the string
+--- in the form "file/path:line,col" -> "file/path", line, col
+---
 --- @param s string
 --- @return string, number|nil, number|nil
 utils.strip_line_col = function(s)
-    local start, _, line, col = string.find(s, '^(.+):(%d+),(%d+)$', 1, false)
-    if start == nil then
+    local _, _, new_s, line, col = string.find(s, '^(.+):(%d+),(%d+)$', 1, false)
+    if new_s == nil then
         return s
     else
-        return s:sub(1, start), tonumber(line), tonumber(col)
+        return new_s, tonumber(line), tonumber(col)
     end
 end
 

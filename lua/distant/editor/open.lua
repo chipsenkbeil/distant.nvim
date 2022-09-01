@@ -231,6 +231,8 @@ end
 --- @field path string #Path to directory to show
 --- @field buf? number #If not -1 and number, will use this buffer number instead of looking for a buffer
 --- @field win? number #If not -1 and number, will use this window
+--- @field line? number #If provided, will jump to the specified line (1-based index)
+--- @field col? number #If provided, will jump to the specified column (1-based index)
 --- @field reload? boolean #If true, will reload the buffer even if already open
 --- @field timeout? number #Maximum time to wait for a response
 --- @field interval? number #Time in milliseconds to wait between checks for a response
@@ -289,6 +291,16 @@ return function(opts)
         is_file = p.is_file or p.missing;
         win = opts.win;
     })
+
+    -- Update position in buffer
+    if opts.line ~= nil or opts.col ~= nil then
+        local cur_line, cur_col = vim.api.nvim_win_get_cursor(0)
+        local line = opts.line or cur_line
+        local col = (opts.col - 1) or cur_col
+        vim.schedule(function()
+            vim.api.nvim_win_set_cursor(opts.win or 0, { line, col })
+        end)
+    end
 
     return buf
 end

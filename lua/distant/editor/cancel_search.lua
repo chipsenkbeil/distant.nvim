@@ -12,9 +12,11 @@ return function(opts)
 
     if state.search ~= nil then
         local id = state.search.searcher.id
-        state.search.searcher.cancel(opts, function(err)
-            assert(not err, err)
-            print('Canceled search ' .. id)
-        end)
+        if not state.search.searcher.done then
+            state.search.searcher.cancel(opts, function(err)
+                assert(not err, err)
+                print('Cancelled search ' .. id)
+            end)
+        end
     end
 end

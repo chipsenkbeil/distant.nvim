@@ -33,9 +33,20 @@ local function add_matches_to_qflist(id, matches)
         -- Contents have more information to provide than filenames
         if match.type == 'contents' then
             item.lnum = tonumber(match.line_number)
+            item.end_lnum = item.lnum
             if match.submatches[1] then
                 item.col = match.submatches[1].start + 1
+                item.end_col = match.submatches[1]['end']
             end
+
+            -- Update our filename to include the line and column since
+            -- we need to force a jump to that position instead of
+            -- relying on quickfix, which tries to jump before the content
+            -- has been loaded
+            --
+            -- Format is distant://path/to/file.txt:line,col where the
+            -- suffix of :line,col is used to indicate where to go
+            -- item.filename = item.filename .. ':' .. item.lnum .. ',' .. (item.col or 1)
 
             -- If we have text, assign up to 100 characters, truncating with suffix ...
             -- if we have a longer line
@@ -52,6 +63,7 @@ local function add_matches_to_qflist(id, matches)
             end
         elseif match.type == 'path' then
             item.lnum = 1
+            item.end_lnum = item.lnum
         end
 
         table.insert(items, item)
@@ -150,10 +162,13 @@ return function(opts)
 
     -- Stop any existing search being done by the editor
     if state.search ~= nil then
-        state.search.searcher.cancel(function(err)
-            assert(not err, err)
-            do_search()
-        end)
+        local searcher = state.search.searcher
+        if not searcher.done then
+            searcher.cancel(function(err)
+                assert(not err, err)
+                do_search()
+            end)
+        end
     else
         do_search()
     end
