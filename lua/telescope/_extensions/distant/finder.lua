@@ -3,7 +3,7 @@ local fn = require('distant.fn')
 --- Display results in batches of 10 by default
 local DEFAULT_PAGINATION = 10
 
-local DISPLAY_LINE_LEN = 20
+local DISPLAY_LINE_LEN = 40
 
 --- @class DistantFinder
 --- @field query DistantSearchQuery
@@ -62,6 +62,7 @@ local function make_entry(match)
             .. entry.lnum .. ','
             .. (entry.col or 1) .. ':'
             .. match.lines.value:sub(1, DISPLAY_LINE_LEN)
+            .. (#match.lines.value > DISPLAY_LINE_LEN and '...' or '')
 
         entry.ordinal = entry.ordinal .. suffix
         entry.display = entry.display .. suffix
@@ -105,8 +106,13 @@ end
 
 --- Spawns the search task
 function Finder:__find(prompt, process_result, process_complete)
+    vim.pretty_print('Finder:__find:', prompt, process_result, process_complete)
+
     -- Make sure we aren't already searching by stopping anything running
-    self:close(function()
+    self:close(function(err)
+        vim.pretty_print('close', err)
+        assert(not err, err)
+
         -- Empty prompt is not supported
         if vim.trim(prompt) == '' then
             return
@@ -120,14 +126,18 @@ function Finder:__find(prompt, process_result, process_complete)
         -- On results, we process them
         opts.on_results = function(matches)
             for _, match in ipairs(matches) do
-                process_result(make_entry(match))
+                local entry = make_entry(match)
+                table.insert(self.results, entry)
+                process_result(entry)
             end
         end
 
         -- On completion, we process dangling results
         opts.on_done = function(matches)
             for _, match in ipairs(matches) do
-                process_result(make_entry(match))
+                local entry = make_entry(match)
+                table.insert(self.results, entry)
+                process_result(entry)
             end
 
             process_complete()
@@ -141,14 +151,15 @@ function Finder:__find(prompt, process_result, process_complete)
 end
 
 --- Cancels the finder's ongoing task
+--- @param cb fun(err:string|nil)
 function Finder:close(cb)
     cb = cb or function() end
+    self.results = {}
 
     if self.__searcher ~= nil then
         if not self.__searcher.done then
             self.__searcher.cancel(function(err)
-                assert(not err, err)
-                cb()
+                cb(err)
             end)
         end
 
