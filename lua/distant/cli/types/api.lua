@@ -198,7 +198,7 @@
 --- @field submatches DistantSearchSubmatch[]
 ---
 --- @field lines nil|DistantSearchMatchData #lines that were matched (only for contents type)
---- @field line_number nil|string #starting line of match (only for contents type)
+--- @field line_number nil|number #starting line of match (only for contents type)
 --- @field absolute_offset nil|number #byte offset from start of content (only for contents type)
 
 --- @class DistantSearchSubmatch

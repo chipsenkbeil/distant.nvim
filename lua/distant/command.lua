@@ -185,7 +185,7 @@ command.launch = function(input)
 
     editor.launch(input.opts, function(err, _)
         if not err then
-            print('Connected to ' .. destination)
+            vim.notify('Connected to ' .. destination)
         else
             vim.api.nvim_err_writeln(tostring(err) or 'Launch failed without cause')
         end
@@ -207,7 +207,7 @@ command.connect = function(input)
 
     editor.connect(input.opts, function(err)
         if not err then
-            print('Connected to ' .. destination)
+            vim.notify('Connected to ' .. destination)
         else
             vim.api.nvim_err_writeln(tostring(err) or 'Connect failed without cause')
         end
@@ -222,7 +222,7 @@ command.install = function(input)
         if err then
             vim.api.nvim_err_writeln(err)
         else
-            print('Installed to ' .. path)
+            vim.notify('Installed to ' .. path)
         end
     end)
 end

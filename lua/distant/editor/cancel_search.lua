@@ -15,7 +15,7 @@ return function(opts)
         if not state.search.searcher.done then
             state.search.searcher.cancel(opts, function(err)
                 assert(not err, err)
-                print('Cancelled search ' .. id)
+                vim.notify('Cancelled search ' .. id)
             end)
         end
     end

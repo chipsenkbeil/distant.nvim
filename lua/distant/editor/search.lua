@@ -116,7 +116,7 @@ return function(opts)
     opts.on_results = function(matches)
         add_matches_to_qflist(qflist_id, matches)
         match_cnt = match_cnt + #matches
-        print('Search matched ' .. tostring(match_cnt) .. ' times')
+        vim.notify('Search matched ' .. tostring(match_cnt) .. ' times')
 
         if user_on_results ~= nil and type(user_on_results) == 'function' then
             return user_on_results(matches)
@@ -128,7 +128,7 @@ return function(opts)
         match_cnt = match_cnt + #matches
 
         add_matches_to_qflist(qflist_id, matches)
-        print('Search finished with ' .. tostring(match_cnt) .. ' matches')
+        vim.notify('Search finished with ' .. tostring(match_cnt) .. ' matches')
 
         if user_on_done ~= nil and type(user_on_done) == 'function' then
             return user_on_done(matches)
@@ -154,7 +154,7 @@ return function(opts)
                 searcher = searcher,
             }
 
-            print('Started search ' .. tostring(searcher.id))
+            vim.notify('Started search ' .. tostring(searcher.id))
 
             vim.cmd([[ copen ]])
         end)
