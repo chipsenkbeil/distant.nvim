@@ -349,11 +349,23 @@ end
 --- @param prefix string
 --- @return string
 utils.strip_prefix = function(s, prefix)
-    local offset = string.find(s, prefix, 1, true)
+    local offset = string.find(s, prefix)
     if offset == 1 then
         return string.sub(s, string.len(prefix) + 1)
     else
         return s
+    end
+end
+
+--- Returns a string with the given prefix removed if it is found in the string
+--- @param s string
+--- @return string, number|nil, number|nil
+utils.strip_line_col = function(s)
+    local start, _, line, col = string.find(s, '^(.+):(%d+),(%d+)$', 1, false)
+    if start == nil then
+        return s
+    else
+        return s:sub(1, start), tonumber(line), tonumber(col)
     end
 end
 

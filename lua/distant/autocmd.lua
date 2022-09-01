@@ -15,6 +15,9 @@ local function _initialize()
             local fname = vim.fn.expand('<amatch>')
             local path = u.strip_prefix(fname, 'distant://')
 
+            local line, col
+            path, line, col = u.strip_line_col(path)
+
             log.fmt_debug('Reading %s into buf %s', path, buf)
             editor.open({
                 path = path;
