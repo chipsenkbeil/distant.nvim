@@ -132,7 +132,7 @@ function Finder:__find(prompt, process_result, process_complete)
             end
         end
 
-        -- On completion, we process dangling results
+        -- On completion, we process dangling results and clear our searcher
         opts.on_done = function(matches)
             for _, match in ipairs(matches) do
                 local entry = make_entry(match)
@@ -141,8 +141,10 @@ function Finder:__find(prompt, process_result, process_complete)
             end
 
             process_complete()
+            self.__searcher = nil
         end
 
+        --- @diagnostic disable-next-line:redefined-local
         fn.search(opts, function(err, searcher)
             assert(not err, err)
             self.__searcher = searcher
