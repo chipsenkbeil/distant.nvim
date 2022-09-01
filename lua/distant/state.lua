@@ -2,9 +2,14 @@ local log = require('distant.log')
 local settings = require('distant.settings')
 local utils = require('distant.utils')
 
+--- @class EditorSearchState
+--- @field qfid number #id of quickfix list storing results
+--- @field searcher DistantSearcher #searcher being used
+
 --- @class State
 --- @field client Client|nil #active client
 --- @field manager Manager|nil #active manager
+--- @field search EditorSearchState|nil #active search via editor
 --- @field settings Settings #user settings
 local State = {}
 State.__index = State
@@ -15,6 +20,7 @@ function State:new()
     setmetatable(instance, State)
     instance.client = nil
     instance.manager = nil
+    instance.search = nil
 
     -- Set default settings so we don't get nil access errors even when no
     -- launch call has been made yet

@@ -32,6 +32,8 @@ command! -nargs=0 DistantClientVersion
       \ lua require('distant.command').client_version()
 
 " Define our purely-functional commands that wrap the lua calls
+command! -nargs=* DistantCancelSearch
+      \ lua require('distant.command').cancel_search(vim.fn.expand('<args>'))
 command! -nargs=* DistantCopy
       \ lua require('distant.command').copy(vim.fn.expand('<args>'))
 command! -nargs=* DistantMkdir

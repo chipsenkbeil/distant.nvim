@@ -215,6 +215,7 @@
 --- @field query DistantSearchQuery
 --- @field done boolean
 --- @field matches DistantSearchMatch[]
+--- @field cancel fun(opts:nil|table, cb:nil|fun())
 --- @field on_match nil|fun(match:DistantSearchMatch)
 --- @field on_done nil|fun(matches:DistantSearchMatch[])
 

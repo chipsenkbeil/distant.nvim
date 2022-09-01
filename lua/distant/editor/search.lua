@@ -1,5 +1,6 @@
 local fn = require('distant.fn')
 local log = require('distant.log')
+local state = require('distant.state')
 
 local DEFAULT_PAGINATION = 10
 local MAX_LINE_LEN = 100
@@ -17,9 +18,14 @@ local function add_matches_to_qflist(id, matches)
 
     for _, match in ipairs(matches) do
         local item = {
+            -- Set the path that will be used during jump
             filename = tostring(match.path),
+
+            -- Add a more friendly name for display only
+            module = tostring(match.path),
         }
 
+        -- Ensure that we jump to the remote file and not some local version
         if not vim.startswith(item.filename, 'distant://') then
             item.filename = 'distant://' .. item.filename
         end
@@ -61,7 +67,7 @@ end
 --- @field timeout number|nil #Maximum time to wait for a response
 --- @field interval number|nil #Time in milliseconds to wait between checks for a response
 
---- Opens a new window to display system info
+--- Performs a search using the provided query, displaying results in a new quickfix list
 --- @param opts EditorSearchOpts
 return function(opts)
     opts = opts or {}
@@ -128,6 +134,17 @@ return function(opts)
 
         -- Set our list id by grabbing the id of the latest qflist
         qflist_id = vim.fn.getqflist({ id = 0 }).id
+
+        -- Stop any existing search being done by the editor
+        if state.search ~= nil then
+            state.search.searcher.cancel()
+        end
+
+        -- Update state with our active search
+        state.search = {
+            qfid = qflist_id,
+            searcher = searcher,
+        }
 
         print('Started search ' .. tostring(searcher.id))
 

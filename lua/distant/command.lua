@@ -320,6 +320,17 @@ command.run = function(input)
     end
 end
 
+--- DistantCancelSearch
+command.cancel_search = function(input)
+    input = command.parse_input(input)
+    paths_to_number(input.opts, { 'timeout', 'interval' })
+
+    editor.cancel_search({
+        timeout = input.opts.timeout,
+        interval = input.opts.interval,
+    })
+end
+
 --- DistantSearch pattern [paths ...] [opt1=... opt2=...]
 command.search = function(input)
     input = command.parse_input(input)

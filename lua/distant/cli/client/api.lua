@@ -554,8 +554,18 @@ return function(repl)
                 }
 
                 -- Will cancel search when invoked
-                searcher.cancel = function(cancel_cb)
-                    api.cancel_search({ id = searcher.id }, cancel_cb)
+                searcher.cancel = function(opts, cancel_cb)
+                    opts = opts or {}
+
+                    -- Just given callback
+                    if type(opts) == 'function' then
+                        cancel_cb = opts
+                        opts = {}
+                    end
+
+                    opts = vim.tbl_extend('keep', { id = searcher.id }, opts)
+
+                    api.cancel_search(opts, cancel_cb)
                 end
 
                 api.__state.searchers[searcher.id] = searcher
@@ -604,7 +614,7 @@ return function(repl)
         type = 'cancel_search',
         ret_type = 'ok',
         req_type = {
-            id = 'string',
+            id = 'number',
         },
     })
 
