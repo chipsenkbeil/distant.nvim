@@ -123,31 +123,38 @@ return function(opts)
         end
     end
 
-    -- Callback is triggered when search is started
-    fn.search(opts, function(err, searcher)
-        assert(not err, err)
+    local function do_search()
+        -- Callback is triggered when search is started
+        fn.search(opts, function(err, searcher)
+            assert(not err, err)
 
-        -- Create an empty list to be populated with results
-        vim.fn.setqflist({}, ' ', {
-            title = 'DistantSearch ' .. searcher.query.condition.value
-        })
+            -- Create an empty list to be populated with results
+            vim.fn.setqflist({}, ' ', {
+                title = 'DistantSearch ' .. searcher.query.condition.value
+            })
 
-        -- Set our list id by grabbing the id of the latest qflist
-        qflist_id = vim.fn.getqflist({ id = 0 }).id
+            -- Set our list id by grabbing the id of the latest qflist
+            qflist_id = vim.fn.getqflist({ id = 0 }).id
 
-        -- Stop any existing search being done by the editor
-        if state.search ~= nil then
-            state.search.searcher.cancel()
-        end
+            -- Update state with our active search
+            state.search = {
+                qfid = qflist_id,
+                searcher = searcher,
+            }
 
-        -- Update state with our active search
-        state.search = {
-            qfid = qflist_id,
-            searcher = searcher,
-        }
+            print('Started search ' .. tostring(searcher.id))
 
-        print('Started search ' .. tostring(searcher.id))
+            vim.cmd([[ copen ]])
+        end)
+    end
 
-        vim.cmd([[ copen ]])
-    end)
+    -- Stop any existing search being done by the editor
+    if state.search ~= nil then
+        state.search.searcher.cancel(function(err)
+            assert(not err, err)
+            do_search()
+        end)
+    else
+        do_search()
+    end
 end
