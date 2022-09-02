@@ -7,7 +7,7 @@ local function _initialize()
 
     -- Assign appropriate handlers for distant:// scheme
     u.augroup('distant', function()
-        u.autocmd('BufReadCmd', 'distant://*', function()
+        u.autocmd('BufNewFile,BufReadCmd,FileReadCmd', 'distant://*', function()
             --- @diagnostic disable-next-line:missing-parameter
             local buf = tonumber(vim.fn.expand('<abuf>'))
 

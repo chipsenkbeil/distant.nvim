@@ -23,6 +23,9 @@ local function add_matches_to_qflist(id, matches)
 
             -- Add a more friendly name for display only
             module = tostring(match.path),
+
+            -- Not an error, so mark as such
+            valid = 0,
         }
 
         -- Ensure that we jump to the remote file and not some local version
@@ -69,6 +72,7 @@ local function add_matches_to_qflist(id, matches)
         table.insert(items, item)
     end
 
+    log.trace('ADDING ITEMS = ' .. vim.inspect(items))
     vim.fn.setqflist({}, 'a', { id = id, items = items })
 end
 
@@ -142,7 +146,8 @@ return function(opts)
 
             -- Create an empty list to be populated with results
             vim.fn.setqflist({}, ' ', {
-                title = 'DistantSearch ' .. searcher.query.condition.value
+                title = 'DistantSearch ' .. searcher.query.condition.value,
+                context = { distant = true, search_id = searcher.id },
             })
 
             -- Set our list id by grabbing the id of the latest qflist
@@ -168,6 +173,8 @@ return function(opts)
                 assert(not err, err)
                 do_search()
             end)
+        else
+            do_search()
         end
     else
         do_search()

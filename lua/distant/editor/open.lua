@@ -271,14 +271,69 @@ return function(opts)
         and opts.buf
         or vim.fn.bufnr('^' .. buf_name .. '$')
     local buf_exists = buf ~= -1
+    log.fmt_debug('does buf %s exist? %s', buf_name, buf_exists and 'yes' or 'no')
 
     -- If the buffer didn't exist already (or if forcing reload), load contents
     -- into the buffer, optionally creating it if the buffer id is -1
     if not buf_exists or opts.reload then
+        -- TODO: Do we want to use winsaveview and winrestview here? netrw does it to keep position
+        --
+        -- fun! netrw#Nread(mode,fname)
+        --   let svpos= winsaveview()
+        --   call netrw#NetRead(a:mode,a:fname)
+        --   call winrestview(svpos)
+        -- endfun
+        --
+        -- Additionally, does
+        --
+        -- call s:NetrwOptionsSave("w:")
+        -- call s:NetrwOptionsSafe(0)
+        -- call s:RestoreCursorline()
+        local view
+        if buf_exists then
+            view = vim.fn.winsaveview()
+            log.fmt_trace('buf %s, winsaveview() = %s', buf, view)
+        end
+
+        -- Lock in our current quickfix list to ensure that loading content doesn't break it
+        -- local qflist = vim.fn.getqflist({ id = 0, context = 0, items = 0 })
+
         -- Load content and either place it inside the provided buffer or create
         -- a new buffer in one is not provided (buf == -1)
         buf = load_content(p, buf, opts)
         log.fmt_debug('loaded %s into buf %s', p.path, buf)
+
+        -- Restore our quickfix list now that content has been loaded by merging with the current
+        -- list in case changes occurred since the list was saved
+        --
+        -- NOTE: We only need to worry about restoring distant quickfix lists
+        --[[ if qflist.context.distant then
+            -- NOTE: Cannot call immediately as that would cause E925, where we've modified a
+            --       quickfix list within an autocmd
+            vim.schedule(function()
+                local cur_qflist = vim.fn.getqflist({ id = qflist.id, context = 0, items = 0 })
+                local search_id = cur_qflist.context.search_id
+                local items = cur_qflist.items
+
+                -- If we aren't in a qflist of the same search, we don't need to do anything
+                if qflist.context.search_id ~= search_id then
+                    return
+                end
+
+                -- Because we know that we never remove items from our list, only grow it,
+                -- we want to just replace all existing items up to our old list
+                for i, item in ipairs(qflist.items) do
+                    items[i] = item
+                end
+
+                vim.fn.setqflist({}, 'r', { id = qflist.id, items = items })
+            end)
+        end ]]
+
+        if buf_exists then
+            vim.fn.winrestview(view)
+            log.fmt_trace('buf %s, winrestview()', buf)
+        end
     end
 
     -- Reconfigure the buffer, setting its name and various properties as well as
