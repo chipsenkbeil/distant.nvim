@@ -399,11 +399,12 @@ return function(opts)
     if opts.line ~= nil or opts.col ~= nil or cursor_override then
         local cur_line, cur_col = vim.api.nvim_win_get_cursor(opts.win or 0)
         local line = opts.line or (cursor_override and cursor_override.line) or cur_line
-        local col
-        if opts.col then
-            col = opts.col - 1
+        local col = opts.col or (cursor_override.col)
+        -- Input col is base index 1, whereas vim takes index 0
+        if col then
+            col = col - 1
         end
-        col = col or cursor_override and (cursor_override.col) or cur_col
+        col = col or cur_col
         vim.schedule(function()
             vim.api.nvim_win_set_cursor(opts.win or 0, { line, col })
         end)
