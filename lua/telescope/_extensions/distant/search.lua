@@ -8,6 +8,7 @@ function M.search(opts)
 
     pickers.new(opts, {
         prompt_title = 'distant search',
+        debounce = 100,
         finder = DistantFinder:new({
             query = {
                 paths = opts.paths,
@@ -17,9 +18,16 @@ function M.search(opts)
                     limit = opts.limit,
                     pagination = opts.pagination,
                 },
-            }
+            },
+            settings = {
+                minimum_len = 3,
+            },
         }),
     }):find()
 end
+
+M.pickers = {
+    search = M.search,
+}
 
 return M

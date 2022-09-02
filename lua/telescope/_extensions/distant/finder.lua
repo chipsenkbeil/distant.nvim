@@ -1,3 +1,4 @@
+local log = require('distant.log')
 local fn = require('distant.fn')
 
 --- Display results in batches of 10 by default
@@ -5,8 +6,12 @@ local DEFAULT_PAGINATION = 10
 
 local DISPLAY_LINE_LEN = 40
 
+--- @class DistantFinderSettings
+--- @field minimum_len number #minimum length of input before sending a query
+
 --- @class DistantFinder
 --- @field query DistantSearchQuery
+--- @field settings DistantFinderSettings
 --- @field results DistantFinderEntry[]
 --- @field __searcher DistantSearcher|nil #active searcher (internal)
 local Finder = {}
@@ -73,12 +78,14 @@ end
 
 --- @class DistantFinderOpts
 --- @field query DistantSearchQuery #query to execute whose results will be captured
+--- @field settings DistantFinderSettings|nil
 
 --- Creates a new finder that takes
 --- @param opts DistantFinderOpts
 --- @return DistantFinder
 function Finder:new(opts)
     opts = opts or {}
+    vim.pretty_print("opts", opts)
 
     assert(opts.query, 'query is required')
 
@@ -98,23 +105,27 @@ function Finder:new(opts)
     -- Results is empty until find is started
     local obj = setmetatable({
         query = opts.query,
+        settings = vim.tbl_extend('keep', opts.settings or {}, {
+            minimum_len = 1,
+        }),
         results = {},
     }, self)
+
+    assert(obj.settings.minimum_len > 0, 'minimum_len must be > 0')
+    vim.pretty_print(obj)
 
     return obj
 end
 
 --- Spawns the search task
 function Finder:__find(prompt, process_result, process_complete)
-    vim.pretty_print('Finder:__find:', prompt, process_result, process_complete)
-
     -- Make sure we aren't already searching by stopping anything running
     self:close(function(err)
-        vim.pretty_print('close', err)
         assert(not err, err)
 
-        -- Empty prompt is not supported
-        if vim.trim(prompt) == '' then
+        if string.len(prompt) < self.settings.minimum_len then
+            log.fmt_debug('Skipping prompt %s as it is less than %s', prompt, self.settings.minimum_len)
+            process_complete()
             return
         end
 
@@ -163,6 +174,8 @@ function Finder:close(cb)
             self.__searcher.cancel(function(err)
                 cb(err)
             end)
+        else
+            cb()
         end
 
         self.__searcher = nil
