@@ -1,6 +1,6 @@
 local fn = require('distant.fn')
 local log = require('distant.log')
-local v = require('distant.vars')
+local vars = require('distant.vars')
 
 --- @class EditorWriteOpts
 --- @field buf number #The handle of the buffer to write
@@ -24,7 +24,8 @@ return function(opts)
     end
 
     -- Load the remote path from the buffer being saved
-    local path = v.buf.remote_path(buf)
+    --- @type string|nil
+    local path = vars.buf(buf).remote_path.get()
 
     if path ~= nil then
         -- Load the contents of the buffer

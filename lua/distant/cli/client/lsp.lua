@@ -113,7 +113,9 @@ end
 --- @param buf number Handle of the buffer where client will attach
 function ClientLsp:connect(buf)
     log.fmt_trace('lsp.connect(%s)', buf)
-    local path = vars.buf.remote_path(buf)
+
+    --- @type string|nil
+    local path = vars.buf(buf).remote_path.get()
 
     -- Only perform a connection if we have connected
     -- and have a remote path

@@ -79,7 +79,82 @@ local function check_path(path, opts)
     }
 end
 
+--- Schedules a repair of quickfix markers.
+---
+--- In the situation where a buf already existed but was not initialized,
+--- this is from a list like a quickfix list that had created a buf for
+--- a non-file (distant://...) with markers in place before content.
+---
+--- NOTE: Calling nvim_buf_set_lines invokes `qf_mark_adjust` through `mark_adjust`,
+---       which causes the lnum of quickfix, location-list, and marks to get moved
+---       incorrectly when we are first populating (going from 1 line to N lines);
+---       so, we want to spawn a task that will correct line numbers when shifted
+---
+--- @param buf number #buffer whose markers to repair
+local function schedule_repair_markers(buf)
+    local list = vim.fn.getqflist({ id = 0, context = 0 })
+    local qfid = list.id
+
+    if list.context and list.context.distant then
+        vim.schedule(function()
+            list = vim.fn.getqflist({ id = qfid, idx = 0, items = 0 })
+
+            -- If we get lnum > end_lnum, this is from the marker from
+            -- the quickfix list getting pushed down from new lines
+            for _, item in ipairs(list.items) do
+                if item.bufnr == buf and item.lnum > item.end_lnum then
+                    item.lnum = item.end_lnum
+                end
+            end
+
+            -- Update list and restore the selected position
+            vim.fn.setqflist({}, 'r', { id = list.id, items = list.items })
+            vim.fn.setqflist({}, 'a', { id = list.id, idx = list.idx })
+        end)
+    end
+end
+
+--- In the situation where we were loaded by a quickfix list, this moves
+--- the cursor to the appropriate location based on the selection.
+---
+--- Position is only set if distant quickfix with matching buffer for selection
+---
+--- @param buf number
+--- @return {line: number, col: number}|nil
+local function get_qflist_selection_cursor(buf)
+    local list = vim.fn.getqflist({ id = 0, context = 0 })
+    local qfid = list.id
+
+    if list.context and list.context.distant then
+        list = vim.fn.getqflist({ id = qfid, idx = 0, items = 0 })
+
+        -- Get line and column from entry only if it is for this buffer
+        if list.idx > 0 then
+            local item = list.items[list.idx]
+
+            if item and item.bufnr == buf then
+                local line = item.lnum or 1
+                local col = item.col or 0
+                local end_line = item.end_lnum or line
+                local end_col = item.end_col or col
+
+                if line > end_line then
+                    line = end_line
+                end
+
+                if col > end_col then
+                    col = end_col
+                end
+
+                return { line = line, col = col }
+            end
+        end
+    end
+end
+
 local function create_or_populate_buf(buf, lines)
+    local buf_exists = buf ~= -1
+
     log.fmt_trace('create_or_populate_buf(%s, %s)', buf, lines)
     -- Create a buffer to house the text if no buffer exists
     if buf == -1 then
@@ -99,7 +174,21 @@ local function create_or_populate_buf(buf, lines)
     if line_cnt == 0 then
         line_cnt = 1
     end
+
+    -- In the situation where a buf already existed but was not initialized,
+    -- this is from a list like a quickfix list that had created a buf for
+    -- a non-file (distant://...) with markers in place before content
+    --
+    -- NOTE: Calling nvim_buf_set_lines invokes `qf_mark_adjust` through `mark_adjust`,
+    --       which causes the lnum of quickfix, location-list, and marks to get moved
+    --       incorrectly when we are first populating (going from 1 line to N lines);
+    --       so, we want to spawn a task that will correct line numbers when shifted
+    if buf_exists and vars.buf(buf).remote_path.is_unset() then
+        schedule_repair_markers(buf)
+    end
+
     vim.api.nvim_buf_set_lines(buf, 0, line_cnt, false, lines)
+
     vim.api.nvim_buf_set_option(buf, 'modifiable', is_modifiable)
     vim.api.nvim_buf_set_option(buf, 'modified', false)
 
@@ -197,11 +286,8 @@ local function configure_buf(args)
     end
 
     -- Add stateful information to the buffer, helping keep track of it
-    vars.buf.set_remote_path(args.buf, args.path)
-    vars.buf.set_remote_type(
-        args.buf,
-        args.is_dir and 'dir' or 'file'
-    )
+    vars.buf(args.buf).remote_path.set(args.path)
+    vars.buf(args.buf).remote_type.set(args.is_dir and 'dir' or 'file')
 
     -- Display the buffer in the specified window, defaulting to current
     vim.api.nvim_win_set_buf(args.win or 0, args.buf)
@@ -220,9 +306,7 @@ local function configure_buf(args)
         vim.cmd([[ filetype detect ]])
 
         -- Launch any associated LSP clients
-        if not state.client then
-            error('Not connection has been established!')
-        end
+        assert(state.client, 'Not connection has been established!')
         state.client:lsp():connect(args.buf)
     end
 end
@@ -275,60 +359,24 @@ return function(opts)
 
     -- If the buffer didn't exist already (or if forcing reload), load contents
     -- into the buffer, optionally creating it if the buffer id is -1
+    local cursor_override
     if not buf_exists or opts.reload then
-        -- TODO: Do we want to use winsaveview and winrestview here? netrw does it to keep position
-        --
-        -- fun! netrw#Nread(mode,fname)
-        --   let svpos= winsaveview()
-        --   call netrw#NetRead(a:mode,a:fname)
-        --   call winrestview(svpos)
-        -- endfun
-        --
-        -- Additionally, does
-        --
-        -- call s:NetrwOptionsSave("w:")
-        -- call s:NetrwOptionsSafe(0)
-        -- call s:RestoreCursorline()
         local view
         if buf_exists then
             view = vim.fn.winsaveview()
             log.fmt_trace('buf %s, winsaveview() = %s', buf, view)
-        end
 
-        -- Lock in our current quickfix list to ensure that loading content doesn't break it
-        -- local qflist = vim.fn.getqflist({ id = 0, context = 0, items = 0 })
+            -- Special case where a quickfix list created the buffer without content
+            if vars.buf(buf).remote_path.is_unset() then
+                cursor_override = get_qflist_selection_cursor(buf)
+                log.fmt_trace('buf %s, cursor_override = %s', buf, cursor_override)
+            end
+        end
 
         -- Load content and either place it inside the provided buffer or create
         -- a new buffer in one is not provided (buf == -1)
         buf = load_content(p, buf, opts)
         log.fmt_debug('loaded %s into buf %s', p.path, buf)
-
-        -- Restore our quickfix list now that content has been loaded by merging with the current
-        -- list in case changes occurred since the list was saved
-        --
-        -- NOTE: We only need to worry about restoring distant quickfix lists
-        --[[ if qflist.context.distant then
-            -- NOTE: Cannot call immediately as that would cause E925, where we've modified a
-            --       quickfix list within an autocmd
-            vim.schedule(function()
-                local cur_qflist = vim.fn.getqflist({ id = qflist.id, context = 0, items = 0 })
-                local search_id = cur_qflist.context.search_id
-                local items = cur_qflist.items
-
-                -- If we aren't in a qflist of the same search, we don't need to do anything
-                if qflist.context.search_id ~= search_id then
-                    return
-                end
-
-                -- Because we know that we never remove items from our list, only grow it,
-                -- we want to just replace all existing items up to our old list
-                for i, item in ipairs(qflist.items) do
-                    items[i] = item
-                end
-
-                vim.fn.setqflist({}, 'r', { id = qflist.id, items = items })
-            end)
-        end ]]
 
         if buf_exists then
             vim.fn.winrestview(view)
@@ -347,11 +395,15 @@ return function(opts)
         win = opts.win;
     })
 
-    -- Update position in buffer
-    if opts.line ~= nil or opts.col ~= nil then
-        local cur_line, cur_col = vim.api.nvim_win_get_cursor(0)
-        local line = opts.line or cur_line
-        local col = (opts.col - 1) or cur_col
+    -- Update position in buffer if provided new position
+    if opts.line ~= nil or opts.col ~= nil or cursor_override then
+        local cur_line, cur_col = vim.api.nvim_win_get_cursor(opts.win or 0)
+        local line = opts.line or (cursor_override and cursor_override.line) or cur_line
+        local col
+        if opts.col then
+            col = opts.col - 1
+        end
+        col = col or cursor_override and (cursor_override.col) or cur_col
         vim.schedule(function()
             vim.api.nvim_win_set_cursor(opts.win or 0, { line, col })
         end)
