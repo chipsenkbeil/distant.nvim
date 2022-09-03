@@ -94,7 +94,7 @@ return function(opts)
     if type(opts.query) == 'string' then
         local regex = opts.query
         opts.query = {
-            path = '.',
+            paths = { '.' },
             target = 'contents',
             condition = {
                 type = 'regex',
