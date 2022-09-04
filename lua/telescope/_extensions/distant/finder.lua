@@ -69,6 +69,11 @@ local function make_entry(match)
             .. match.lines.value:sub(1, DISPLAY_LINE_LEN)
             .. (#match.lines.value > DISPLAY_LINE_LEN and '...' or '')
 
+        -- Clean up the text to prevent it being a blob/string buffer
+        -- by removing control characters and null (\0) that can appear
+        -- when searching text by escaping it
+        suffix = suffix:gsub('%z', '\\0'):gsub('%c', '')
+
         entry.ordinal = entry.ordinal .. suffix
         entry.display = entry.display .. suffix
 
@@ -85,7 +90,6 @@ end
 --- @return DistantFinder
 function Finder:new(opts)
     opts = opts or {}
-    vim.pretty_print("opts", opts)
 
     assert(opts.query, 'query is required')
 
@@ -112,7 +116,6 @@ function Finder:new(opts)
     }, self)
 
     assert(obj.settings.minimum_len > 0, 'minimum_len must be > 0')
-    vim.pretty_print(obj)
 
     return obj
 end
@@ -139,7 +142,16 @@ function Finder:__find(prompt, process_result, process_complete)
             for _, match in ipairs(matches) do
                 local entry = make_entry(match)
                 table.insert(self.results, entry)
-                process_result(entry)
+
+                -- If this returns true, we need to stop
+                if process_result(entry) then
+                    --- @diagnostic disable-next-line:redefined-local
+                    self:close(function(err)
+                        assert(not err, err)
+                    end)
+
+                    return
+                end
             end
         end
 
@@ -148,7 +160,11 @@ function Finder:__find(prompt, process_result, process_complete)
             for _, match in ipairs(matches) do
                 local entry = make_entry(match)
                 table.insert(self.results, entry)
-                process_result(entry)
+
+                -- If this returns true, we need to stop early
+                if process_result(entry) then
+                    break
+                end
             end
 
             process_complete()
