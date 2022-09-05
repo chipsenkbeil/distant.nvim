@@ -1,6 +1,7 @@
 local fn = require('distant.fn')
 local log = require('distant.log')
 local state = require('distant.state')
+local vars = require('distant.vars')
 
 local DEFAULT_PAGINATION = 10
 local MAX_LINE_LEN = 100
@@ -17,31 +18,73 @@ local function add_matches_to_qflist(id, matches)
     local items = {}
 
     for _, match in ipairs(matches) do
+        local filename = 'distant://' .. tostring(match.path)
         local item = {
-            -- Set the path that will be used during jump
-            filename = tostring(match.path),
-
             -- Add a more friendly name for display only
             module = tostring(match.path),
 
-            -- Not an error, so mark as such
-            valid = 0,
+            -- Has no buffer as of yet (we create it)
+            bufnr = -1,
+
+            -- Not an error, but marking as valid so we can
+            -- traverse using :cnext and :cprevious
+            valid = 1,
         }
 
-        -- Ensure that we jump to the remote file and not some local version
-        if not vim.startswith(item.filename, 'distant://') then
-            item.filename = 'distant://' .. item.filename
+        -- Assign line and column information
+        item.lnum = tonumber(match.line_number) or 1
+        item.end_lnum = item.lnum
+        if match.submatches[1] then
+            item.col = match.submatches[1].start + 1
+            item.end_col = match.submatches[1]['end']
+        end
+
+        -- Check if we already have a buffer for the file
+        for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+            print('buf ' .. bufnr .. ' = ' .. vim.api.nvim_buf_get_name(bufnr))
+        end
+
+        item.bufnr = vars.buf.find_with_path(match.path) or -1
+        vim.pretty_print('did we get a bufnr from', filename, item.bufnr)
+
+        -- Create the buffer as unlisted and not scratch for the filename
+        if item.bufnr == -1 then
+            vim.pretty_print('no buffer found, so creating new buffer for', filename)
+            log.fmt_trace('%s does not exist, so creating new buffer', filename)
+            item.bufnr = vim.api.nvim_create_buf(false, false)
+            if item.bufnr == 0 then
+                error('Failed to create unlisted buffer for ' .. filename)
+            end
+            vim.api.nvim_buf_set_name(item.bufnr, filename)
+            log.fmt_trace('created buf %s for %s', item.bufnr, filename)
+        else
+            vim.pretty_print('buffer', item.bufnr, 'found for', filename)
+            log.fmt_trace('reusing buf %s for %s', item.bufnr, filename)
+        end
+
+        -- If our buffer has not been loaded from remote file, we extend
+        -- it to be as long as needed to support tracked line
+        --
+        -- Otherwise, the file has already been opened and should contain
+        -- the lines we would be tracking
+        if vars.buf(item.bufnr).remote_path.is_unset() then
+            local line_cnt = vim.api.nvim_buf_line_count(item.bufnr)
+            local additional_line_cnt = item.end_lnum - line_cnt
+            if additional_line_cnt > 0 then
+                log.fmt_trace('growing buf %s by %s lines', item.bufnr, additional_line_cnt)
+                vim.api.nvim_buf_set_lines(
+                    item.bufnr,
+                    -1,
+                    -1,
+                    true,
+                    vim.fn['repeat']({ '' }, additional_line_cnt)
+                )
+                vim.api.nvim_buf_set_option(item.bufnr, 'modified', false)
+            end
         end
 
         -- Contents have more information to provide than filenames
         if match.type == 'contents' then
-            item.lnum = tonumber(match.line_number)
-            item.end_lnum = item.lnum
-            if match.submatches[1] then
-                item.col = match.submatches[1].start + 1
-                item.end_col = match.submatches[1]['end']
-            end
-
             -- Update our filename to include the line and column since
             -- we need to force a jump to that position instead of
             -- relying on quickfix, which tries to jump before the content
@@ -64,15 +107,12 @@ local function add_matches_to_qflist(id, matches)
                 -- when searching text by escaping it
                 item.text = item.text:gsub('%z', '\\0'):gsub('%c', '')
             end
-        elseif match.type == 'path' then
-            item.lnum = 1
-            item.end_lnum = item.lnum
         end
 
         table.insert(items, item)
     end
 
-    log.trace('ADDING ITEMS = ' .. vim.inspect(items))
+    vim.pretty_print('items', items)
     vim.fn.setqflist({}, 'a', { id = id, items = items })
 end
 

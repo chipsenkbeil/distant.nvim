@@ -5,6 +5,14 @@ local state = require('distant.state')
 local utils = require('distant.utils')
 local vars = require('distant.vars')
 
+local function print_buffers(label)
+    label = label or ''
+    print('= BUFFERS ' .. label .. '=')
+    for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+        print(bufnr .. ': ' .. vim.api.nvim_buf_get_name(bufnr))
+    end
+end
+
 --- Applies neovim buffer-local mappings
 ---
 --- @param buf number
@@ -44,11 +52,17 @@ end
 --- @field timeout? number #Maximum time to wait for a response (optional)
 --- @field interval? number #Time in milliseconds to wait between checks for a response (optional)
 
+--- @class EditorOpenCheckPathResult
+--- @field path string #canonicalized path where possible, otherwise input path
+--- @field is_dir boolean #true if path represents a directory
+--- @field is_file boolean #true if path represents a normal file
+--- @field missing boolean #true if path does not exist remotely
+
 --- Checks a path to see if it exists, returning a table with information
 ---
 --- @param path string Path to directory to show
---- @param opts? EditorOpenCheckPathOpts
---- @return table #Table containing `path`, `is_dir`, `is_file`, and `missing` fields
+--- @param opts EditorOpenCheckPathOpts|nil
+--- @return EditorOpenCheckPathResult
 local function check_path(path, opts)
     opts = opts or {}
     log.fmt_trace('check_path(%s, %s)', path, opts)
@@ -153,11 +167,11 @@ local function get_qflist_selection_cursor(buf)
 end
 
 local function create_or_populate_buf(buf, lines)
+    log.fmt_trace('create_or_populate_buf(%s, %s)', buf, lines)
     local buf_exists = buf ~= -1
 
-    log.fmt_trace('create_or_populate_buf(%s, %s)', buf, lines)
     -- Create a buffer to house the text if no buffer exists
-    if buf == -1 then
+    if not buf_exists then
         buf = vim.api.nvim_create_buf(true, false)
         assert(buf ~= 0, 'Failed to create buffer for remote editing')
     end
@@ -215,6 +229,7 @@ end
 local function load_buf_from_dir(path, buf, opts)
     opts = opts or {}
     log.fmt_trace('load_buf_from_dir(%s, %s, %s)', path, buf, opts)
+    local buf_exists = buf ~= -1
 
     local err, res = fn.read_dir(vim.tbl_extend('keep', { path = path }, opts))
     assert(not err, err)
@@ -226,7 +241,7 @@ local function load_buf_from_dir(path, buf, opts)
     end)
 
     -- Create a buffer to house the text if no buffer exists
-    if buf == -1 then
+    if not buf_exists then
         buf = vim.api.nvim_create_buf(true, false)
         assert(buf ~= 0, 'Failed to create buffer for remote editing')
     end
@@ -253,13 +268,16 @@ local function load_content(p, buf, opts)
 end
 
 local function configure_buf(args)
-    assert(type(args.buf) == 'number')
-    assert(type(args.name) == 'string')
-    assert(type(args.path) == 'string')
-    assert(type(args.is_dir) == 'boolean')
-    assert(type(args.is_file) == 'boolean')
-    assert(args.win == nil or type(args.win) == 'number')
     log.fmt_trace('configure_buf(%s)', args)
+    vim.validate({
+        buf = { args.buf, 'number' },
+        name = { args.name, 'string' },
+        canonicalized_path = { args.canonicalized_path, 'string' },
+        raw_path = { args.raw_path, 'string' },
+        is_dir = { args.is_dir, 'boolean' },
+        is_file = { args.is_file, 'boolean' },
+        win = { args.win, 'boolean', true },
+    })
 
     -- Set the buffer name to include a schema, which will trigger our
     -- autocmd for writing to the remote destination in the situation
@@ -286,8 +304,17 @@ local function configure_buf(args)
     end
 
     -- Add stateful information to the buffer, helping keep track of it
-    vars.buf(args.buf).remote_path.set(args.path)
-    vars.buf(args.buf).remote_type.set(args.is_dir and 'dir' or 'file')
+    (function()
+        local v = vars.buf(args.buf)
+        v.remote_path.set(args.canonicalized_path)
+        v.remote_type.set(args.is_dir and 'dir' or 'file')
+
+        -- Add the raw path as an alternative path that can be used
+        -- to look up this buffer
+        local alt_paths = v.remote_alt_paths.get() or {}
+        alt_paths[args.raw_path] = true
+        v.remote_alt_paths.set(alt_paths)
+    end)()
 
     -- Display the buffer in the specified window, defaulting to current
     vim.api.nvim_win_set_buf(args.win or 0, args.buf)
@@ -306,13 +333,13 @@ local function configure_buf(args)
         vim.cmd([[ filetype detect ]])
 
         -- Launch any associated LSP clients
-        assert(state.client, 'Not connection has been established!')
+        assert(state.client, 'No connection has been established!')
         state.client:lsp():connect(args.buf)
     end
 end
 
 --- @class EditorOpenOpts
---- @field path string #Path to directory to show
+--- @field path string #Path to file or directory; MUST be prefixed with distant://
 --- @field buf? number #If not -1 and number, will use this buffer number instead of looking for a buffer
 --- @field win? number #If not -1 and number, will use this window
 --- @field line? number #If provided, will jump to the specified line (1-based index)
@@ -330,6 +357,8 @@ end
 --- @param opts? EditorOpenOpts
 --- @return number|nil #The handle of the created buffer for the remote file/directory, or nil if failed
 return function(opts)
+    vim.pretty_print('editor.open', opts)
+    print_buffers('start')
     opts = opts or {}
     log.fmt_trace('editor.open(%s)', opts)
 
@@ -343,9 +372,12 @@ return function(opts)
 
     vim.validate({ opts = { opts, 'table' } })
 
+    -- Ensure that local_path is without prefix and path is with prefix
     local local_path = utils.strip_prefix(path, 'distant://')
+    path = 'distant://' .. path
 
-    -- Retrieve information about our path
+    -- Retrieve information about our path, capturing the canonicalized path
+    -- if possible without the distant:// prefix
     local p = check_path(local_path, opts)
     log.fmt_debug('retrieved path info for %s', p.path)
 
@@ -353,13 +385,16 @@ return function(opts)
     local buf_name = 'distant://' .. p.path
     local buf = (type(opts.buf) == 'number' and opts.buf ~= -1)
         and opts.buf
-        or vim.fn.bufnr('^' .. buf_name .. '$')
+        or vars.buf.find_with_path(p.path)
+        or -1
     local buf_exists = buf ~= -1
     log.fmt_debug('does buf %s exist? %s', buf_name, buf_exists and 'yes' or 'no')
 
+    print_buffers('post-lookup-buf')
+
     -- If the buffer didn't exist already (or if forcing reload), load contents
     -- into the buffer, optionally creating it if the buffer id is -1
-    local cursor_override
+    local cursor = { line = opts.line, col = opts.col }
     if not buf_exists or opts.reload then
         local view
         if buf_exists then
@@ -368,13 +403,16 @@ return function(opts)
 
             -- Special case where a quickfix list created the buffer without content
             if vars.buf(buf).remote_path.is_unset() then
-                cursor_override = get_qflist_selection_cursor(buf)
-                log.fmt_trace('buf %s, cursor_override = %s', buf, cursor_override)
+                local override = get_qflist_selection_cursor(buf)
+                if override then
+                    cursor = override
+                    log.fmt_trace('buf %s, override cursor = %s', buf, cursor)
+                end
             end
         end
 
         -- Load content and either place it inside the provided buffer or create
-        -- a new buffer in one is not provided (buf == -1)
+        -- a new buffer in one is not provided (buf <= 0)
         buf = load_content(p, buf, opts)
         log.fmt_debug('loaded %s into buf %s', p.path, buf)
 
@@ -384,22 +422,27 @@ return function(opts)
         end
     end
 
+    print_buffers('post-read-contents')
+
     -- Reconfigure the buffer, setting its name and various properties as well as
     -- launching and attaching LSP clients if necessary
     configure_buf({
-        buf = buf;
-        name = buf_name;
-        path = p.path;
-        is_dir = p.is_dir;
-        is_file = p.is_file or p.missing;
-        win = opts.win;
+        buf = buf,
+        name = buf_name,
+        canonicalized_path = p.path,
+        raw_path = local_path,
+        is_dir = p.is_dir,
+        is_file = p.is_file or p.missing,
+        win = opts.win,
     })
 
+    print_buffers('post-configure-buf')
+
     -- Update position in buffer if provided new position
-    if opts.line ~= nil or opts.col ~= nil or cursor_override then
+    if cursor.line ~= nil or cursor.col ~= nil then
         local cur_line, cur_col = vim.api.nvim_win_get_cursor(opts.win or 0)
-        local line = opts.line or (cursor_override and cursor_override.line) or cur_line
-        local col = opts.col or (cursor_override.col)
+        local line = cursor.line or cur_line
+        local col = cursor.col
         -- Input col is base index 1, whereas vim takes index 0
         if col then
             col = col - 1
@@ -410,5 +453,6 @@ return function(opts)
         end)
     end
 
+    vim.pretty_print('opened buf', buf)
     return buf
 end

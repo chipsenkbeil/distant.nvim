@@ -437,24 +437,6 @@ utils.contains = function(tbl, value)
     return false
 end
 
---- Short wrapper to check if a specific global variable exists
-utils.nvim_has_var = function(name)
-    return vim.fn.exists('g:' .. name) == 1
-end
-
---- Short wrapper to remove a global variable if it exists, returning its
---- value; if it does not exist, nil is returned
-utils.nvim_remove_var = function(name)
-    if not utils.nvim_has_var(name) then
-        return nil
-    end
-
-    local value = vim.api.nvim_get_var(name)
-    vim.api.nvim_del_var(name)
-
-    return value
-end
-
 --- Returns a new id for use in sending messages
 --- @return number id Randomly generated id
 utils.next_id = (function()

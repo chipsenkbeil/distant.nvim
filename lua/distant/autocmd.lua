@@ -1,13 +1,30 @@
 local editor = require('distant.editor')
 local log = require('distant.log')
 local u = require('distant.utils')
+local vars = require('distant.vars')
 
 local function _initialize()
     log.trace('Initializing autocmds')
 
     -- Assign appropriate handlers for distant:// scheme
     u.augroup('distant', function()
-        u.autocmd('BufNewFile,BufReadCmd,FileReadCmd', 'distant://*', function()
+        -- If we enter a buffer that is not initialized, we trigger a BufReadCmd
+        u.autocmd('BufEnter', 'distant://*', function()
+            --- @diagnostic disable-next-line:missing-parameter
+            local buf = tonumber(vim.fn.expand('<abuf>'))
+
+            if buf > 0 and vars.buf(buf).remote_path.is_unset() then
+                log.fmt_debug('buf %s is not initialized, so triggering BufReadCmd', buf)
+                vim.api.nvim_exec_autocmds('BufReadCmd', {
+                    group = 'distant',
+                    --- @diagnostic disable-next-line:missing-parameter
+                    pattern = vim.fn.expand('<amatch>'),
+                })
+            end
+        end)
+
+        -- Primary entrypoint to load remote files
+        u.autocmd('BufReadCmd,FileReadCmd', 'distant://*', function()
             --- @diagnostic disable-next-line:missing-parameter
             local buf = tonumber(vim.fn.expand('<abuf>'))
 
@@ -31,6 +48,7 @@ local function _initialize()
             })
         end)
 
+        -- Primary entrypoint to write remote files
         u.autocmd('BufWriteCmd', 'distant://*', function()
             --- @diagnostic disable-next-line:missing-parameter
             local buf = tonumber(vim.fn.expand('<abuf>'))
