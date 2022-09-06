@@ -150,6 +150,8 @@ end
 --- @param cb fun(value:boolean)|nil
 --- @return boolean|nil
 function Manager:is_listening(opts, cb)
+    opts = opts or {}
+
     local cmd = Cmd.manager
         .list()
         :set_from_tbl(self.config.network)
@@ -185,6 +187,8 @@ end
 --- @param opts {timeout:number|nil, interval:number|nil}
 --- @return boolean
 function Manager:wait_for_listening(opts)
+    opts = opts or {}
+
     local timeout = opts.timeout or DEFAULT_TIMEOUT
     local interval = opts.interval or DEFAULT_INTERVAL
 
@@ -213,6 +217,8 @@ end
 --- @param cb fun(err:string|nil) #invoked when the manager exits
 --- @return JobHandle #handle of listening manager job
 function Manager:listen(opts, cb)
+    opts = opts or {}
+
     local cmd = Cmd.manager
         .listen()
         :set_from_tbl({

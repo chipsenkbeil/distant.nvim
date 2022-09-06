@@ -3,6 +3,7 @@
 --- @field __internal string[]
 --- @field __allowed table<string, boolean>|nil
 local BaseCmd = {}
+BaseCmd.__index = BaseCmd
 
 --- @class BaseCmdNewOpts
 --- @field allowed? string[] #if provided, will restrict cmd set to only those in allowed list
@@ -14,15 +15,14 @@ function BaseCmd:new(cmd, opts)
     opts = opts or {}
 
     local instance = {}
-    setmetatable(instance, self)
-    self.__index = self
-    self.__cmd = cmd
-    self.__internal = {}
+    setmetatable(instance, BaseCmd)
+    instance.__cmd = cmd
+    instance.__internal = {}
 
     if vim.tbl_islist(opts.allowed) then
-        self.__allowed = {}
+        instance.__allowed = {}
         for _, key in ipairs(opts.allowed) do
-            self.__allowed[key] = true
+            instance.__allowed[key] = true
         end
     end
 
