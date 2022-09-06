@@ -1,3 +1,5 @@
+local utils = require('distant.utils')
+
 --- @class BufVar
 --- @field set fun(value:any) #sets buffer variable to value
 --- @field get fun():any #retrieves buffer variable value (or nil if not set)
@@ -122,7 +124,7 @@ vars.buf = (function()
     --- @param path string #looks for distant://path and path itself
     --- @return number|nil #bufnr of first match if found
     instance.find_with_path = function(path)
-        assert(not vim.startswith(path, 'distant://'), 'path cannot start with distant://')
+        path = utils.strip_prefix(path, 'distant://')
 
         -- Check if we have a buffer in the form of distant://path
         local bufnr = vim.fn.bufnr('^distant://' .. path .. '$', 0)
@@ -134,14 +136,9 @@ vars.buf = (function()
         -- as the primary or one of the alternate paths
         --- @diagnostic disable-next-line:redefined-local
         for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
-            vim.pretty_print('Does buf', bufnr, 'match path', path)
-            vim.pretty_print('Remote Path', vars.buf(bufnr).remote_path.get())
-            vim.pretty_print('Remote Alt paths', vars.buf(bufnr).remote_alt_paths.get())
             if vars.buf(bufnr).has_matching_remote_path(path) then
-                print('Yes')
                 return bufnr
             end
-            print('No')
         end
     end
 

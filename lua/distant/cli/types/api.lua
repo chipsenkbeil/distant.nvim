@@ -25,7 +25,6 @@
 -- ALIASES
 -------------------------------------------------------------------------------
 
---- @alias ApiError string|boolean
 --- @alias FilePath string
 --- @alias FileType 'dir'|'file'|'symlink'
 --- @alias BinaryData number[]

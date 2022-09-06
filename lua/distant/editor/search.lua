@@ -39,17 +39,10 @@ local function add_matches_to_qflist(id, matches)
             item.end_col = match.submatches[1]['end']
         end
 
-        -- Check if we already have a buffer for the file
-        for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
-            print('buf ' .. bufnr .. ' = ' .. vim.api.nvim_buf_get_name(bufnr))
-        end
-
         item.bufnr = vars.buf.find_with_path(match.path) or -1
-        vim.pretty_print('did we get a bufnr from', filename, item.bufnr)
 
         -- Create the buffer as unlisted and not scratch for the filename
         if item.bufnr == -1 then
-            vim.pretty_print('no buffer found, so creating new buffer for', filename)
             log.fmt_trace('%s does not exist, so creating new buffer', filename)
             item.bufnr = vim.api.nvim_create_buf(false, false)
             if item.bufnr == 0 then
@@ -58,7 +51,6 @@ local function add_matches_to_qflist(id, matches)
             vim.api.nvim_buf_set_name(item.bufnr, filename)
             log.fmt_trace('created buf %s for %s', item.bufnr, filename)
         else
-            vim.pretty_print('buffer', item.bufnr, 'found for', filename)
             log.fmt_trace('reusing buf %s for %s', item.bufnr, filename)
         end
 
@@ -112,7 +104,6 @@ local function add_matches_to_qflist(id, matches)
         table.insert(items, item)
     end
 
-    vim.pretty_print('items', items)
     vim.fn.setqflist({}, 'a', { id = id, items = items })
 end
 

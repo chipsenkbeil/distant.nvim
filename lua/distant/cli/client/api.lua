@@ -2,6 +2,8 @@ local log = require('distant.log')
 local state = require('distant.state')
 local utils = require('distant.utils')
 
+local Error = require('distant.cli.client.api.error')
+
 local function clean_data(data)
     if type(data) == 'table' then
         local tbl = data
@@ -84,6 +86,7 @@ local function parse_response(opts)
     local payload = opts.payload
     local ptype = payload.type
 
+    --- @return boolean
     local is_expected = function(t)
         if type(opts.expected) == 'string' then
             return t == opts.expected
@@ -108,13 +111,16 @@ local function parse_response(opts)
         return false, opts.map(payload, ptype, opts.input, opts.stop), opts.stop
         -- If we get an error type, return its description if it has one
     elseif ptype == 'error' and payload.description then
-        return tostring(payload.description), opts.stop
+        return Error:new({
+            kind = type(payload.kind) == 'string' and payload.kind or 'unknown',
+            description = type(payload.description) == 'string' and payload.description or '',
+        }), opts.stop
         -- Otherwise, if the error is returned but without a description, report it
     elseif ptype == 'error' then
-        return 'Error response received without description', opts.stop
+        return Error:unknown('Error response received without description'), opts.stop
         -- Otherwise, if we got an unexpected type, report it
     else
-        return 'Received invalid response of type ' .. ptype .. ', wanted ' .. vim.inspect(opts.expected), opts.stop
+        return Error:unknown('Received invalid response of type ' .. ptype .. ', wanted ' .. vim.inspect(opts.expected)), opts.stop
     end
 end
 
