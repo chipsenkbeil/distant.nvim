@@ -1,5 +1,6 @@
 *distant.txt*   Plugin that supports working with remote machines
-
+                                                                          0.2
+>
        _______  ______  ______  ________  ______  __    __ ________ 
       |       \|      \/      \|        \/      \|  \  |  \        \
       | ▓▓▓▓▓▓▓\\▓▓▓▓▓▓  ▓▓▓▓▓▓\\▓▓▓▓▓▓▓▓  ▓▓▓▓▓▓\ ▓▓\ | ▓▓\▓▓▓▓▓▓▓▓
@@ -9,7 +10,7 @@
       | ▓▓__/ ▓▓_| ▓▓_|  \__| ▓▓  | ▓▓  | ▓▓  | ▓▓ ▓▓ \▓▓▓▓  | ▓▓   
       | ▓▓    ▓▓   ▓▓ \\▓▓    ▓▓  | ▓▓  | ▓▓  | ▓▓ ▓▓  \▓▓▓  | ▓▓   
        \▓▓▓▓▓▓▓ \▓▓▓▓▓▓ \▓▓▓▓▓▓    \▓▓   \▓▓   \▓▓\▓▓   \▓▓   \▓▓   
-                                                              
+<
 
 ==============================================================================
                                                                 *distant.nvim*
@@ -29,10 +30,11 @@ TABLE OF CONTENTS                                                *distant-toc*
 5.  Settings ...............................................|distant-settings|
 6.  Navigation ...........................................|distant-navigation|
 7.  Lua API .................................................|distant-lua-api|
-8.  FAQ .........................................................|distant-faq|
-9.  Changelog .............................................|distant-changelog|
-10. Credits .................................................|distant-credits|
-11. License .................................................|distant-license|
+8.  Extensions ...........................................|distant-extensions|
+9.  FAQ .........................................................|distant-faq|
+10. Changelog .............................................|distant-changelog|
+11. Credits .................................................|distant-credits|
+12. License .................................................|distant-license|
 
 ==============================================================================
 INTRODUCTION                                            *distant-introduction*
@@ -423,6 +425,51 @@ DistantRun {cmd} {arg1} {arg2} ...                                *DistantRun*
 >
         :DistantRun echo "hello world"
         :DistantRun ls -l
+<
+
+DistantSearch {pattern} [ {path} ... ] {opts}                  *DistantSearch*
+
+    Searches using the provided pattern (regular expression) for files within
+    the provided paths. If no path is provided, the current directory of the
+    server is used instead.
+
+    The search command accepts a pattern and optional series of paths as its
+    arguments followed by an optional series of named parameters in the form
+    of `name=value`.
+
+    Options: ~
+        {target}     (string) if 'contents', a file's contents are searched
+                              using the pattern. If 'path', the
+                              file/directory/symlink path is evaluated using
+                              the pattern instead. (default: 'contents')
+        {include}    (string) if provided, will only include matches whose
+                              paths match the given regex
+        {exclude}    (string) if provided, will only include matches whose
+                              paths do not match the given regex
+        {limit}      (number) if provided, will stop after finding N matches
+                              to receive results (default: nil)
+        {pagination} (number) if provided, N matches will be sent at a time,
+                              instead of waiting until the search completes
+                              to receive results (default: nil)
+        {min_depth}  (number) if provided, will start traversing in search of
+                              matches once reaching depth N where 0 is the
+                              provided path, 1 is its children, 2 is its
+                              grandchildren, etc. (default: nil)
+        {max_depth}  (number) if provided, will stop traversing in search of
+                              matches after reaching depth N where 0 is the
+                              provided path, 1 is its children, 2 is its
+                              grandchildren, etc. (default: nil)
+        {timeout}    (number) maximum time in milliseconds before failing
+                              (default: settings.max_timeout)
+        {interval}   (number) approximate time in milliseconds between each
+                              check to see if the operation completed
+                              (default: settings.timeout_interval)
+
+    Examples: ~
+>
+        :DistantSearch hello.*
+        :DistantSearch hello.* some/path
+        :DistantSearch hello.* some/path limit=5
 <
 
 ==============================================================================
@@ -1237,6 +1284,32 @@ distant.fn.write_file_text({opts}, {cb})          *distant.fn.write_file_text*
         {err}  (string|nil)   an error if it occurs (synchronous only)
 
 ==============================================================================
+EXTENSIONS                                                *distant-extensions*
+
+Alongside core features available in the plugin, there are also integrations
+into other plugins. Today, distant.nvim supports:
+
+* `telescope.nvim` (https://github.com/nvim-telescope/telescope.nvim)
+
+telescope.nvim~
+
+Traditional searching features are available via `telescope.nvim`. There are
+two ways to trigger the prompt:
+
+Command: ~
+>
+        :Telescope distant search
+<
+
+Lua: ~
+>
+        lua require('telescope').extensions.distant.search({
+            paths = {'some/dir'},
+            pagination = 1,
+        })
+<
+
+==============================================================================
 FAQ                                                              *distant-faq*
 
 How does this plugin differ from using neovim with sshfs?  *distant-faq-sshfs*
@@ -1282,8 +1355,10 @@ Latest ~
 
 v0.2.0 ~
 
-  * Change plugin to use `distant` binary instead of Lua library
+  * Change `plugin` to use `distant` binary instead of Lua library
   * Add |DistantShell| command to launch a remote shell
+  * Add |DistantSearch| command to perform a remote search and populate a
+    quickfix list
   * Add |DistantClientVersion| command to print the version of the client
   * Change |DistantInstall| parameter from `reload` to `reinstall`
   * Update minimum `distant` version to `0.19.0`
@@ -1293,8 +1368,7 @@ v0.2.0 ~
     * `identity_file` -> `ssh_identity_file`
     * `port` -> `ssh_port`
     * `username` -> `ssh_username`
-    * `shutdown_after` has been renamed to `shutdown` and supports multiple
-      rules
+    * `shutdown_after` has been renamed to `shutdown` and supports multiple rules
   * Update launch and connection functionality to use a destination in the
     form of `[scheme://][username@]host[:port]` instead of individually
     providing a host, port, and mode for defining servers
