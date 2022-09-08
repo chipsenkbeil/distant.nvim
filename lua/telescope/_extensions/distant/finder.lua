@@ -1,9 +1,7 @@
 local log = require('distant.log')
 local fn = require('distant.fn')
 
---- Display results in batches of 10 by default
-local DEFAULT_PAGINATION = 10
-
+local DEFAULT_LIMIT = 10000
 local DISPLAY_LINE_LEN = 40
 
 --- @class DistantFinderSettings
@@ -102,9 +100,11 @@ function Finder:new(opts)
     -- Fall back to current directory if no path provided
     opts.query.paths = opts.query.paths or { '.' }
 
-    -- Define pagination if not provided so we get a stream of results
+    -- Define pagination and limit if not provided so we get a stream of results
     opts.query.options = opts.query.options or {}
-    opts.query.options.pagination = opts.query.options.pagination or DEFAULT_PAGINATION
+    opts.query.options.limit = opts.query.options.limit or DEFAULT_LIMIT
+    opts.query.options.pagination = (opts.query.options.pagination
+        or math.max(math.floor(opts.query.options.limit / 100), 1))
 
     -- Results is empty until find is started
     local obj = setmetatable({

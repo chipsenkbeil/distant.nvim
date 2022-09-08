@@ -354,6 +354,11 @@ command.search = function(input)
         end
     end
 
+    -- If no path provided, default to current working directory
+    if vim.tbl_isempty(paths) then
+        table.insert(paths, '.')
+    end
+
     local query = {
         paths = paths,
         target = target,

@@ -536,7 +536,7 @@ return function(repl)
         and_then = function(args)
             local err = args.err
             local data = args.data
-            local input = data.input
+            local input = data and data.input
             local cb = args.cb
 
             if err then
