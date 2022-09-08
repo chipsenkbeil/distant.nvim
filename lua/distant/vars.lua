@@ -13,11 +13,14 @@ local utils = require('distant.utils')
 --- @param buf number #buffer number
 --- @param name string #name of the variable
 --- @param ty BufVarType|BufVarType[] #type(s) that the variable can be
+--- @param set_map nil|fun(...):... #if provided, maps input to output of set(...)
 --- @return BufVar
-local function buf_var(buf, name, ty)
+local function buf_var(buf, name, ty, set_map)
     --- Fails with error if not valid type
     --- @type fun(value:any)
     local validate_var
+
+    set_map = function(...) return ... end
 
     if vim.tbl_islist(ty) then
         validate_var = function(value)
@@ -40,6 +43,7 @@ local function buf_var(buf, name, ty)
     local function set_buf_var(value)
         if value ~= nil then
             validate_var(value)
+            value = set_map(value)
         end
 
         vim.api.nvim_buf_set_var(buf, 'distant_' .. name, value)
@@ -72,6 +76,16 @@ local function buf_var(buf, name, ty)
     }
 end
 
+--- Ensure that path does not end with separator / or \ as
+--- the stored paths don't end with those, either
+--- @param path string
+--- @return string
+local function clean_path(path)
+    if type(path) == 'string' then
+        return path:gsub('[\\/]+$', '')
+    end
+end
+
 -- GLOBAL DEFINITIONS ---------------------------------------------------------
 
 --- Contains getters and setters for variables used by this plugin
@@ -84,9 +98,13 @@ vars.Buf.__index = vars.buf
 vars.Buf.__call = function(_, bufnr)
     bufnr = bufnr or 0
     local buf_vars = {
-        remote_path = buf_var(bufnr, 'remote_path', 'string'),
+        remote_path = buf_var(bufnr, 'remote_path', 'string', clean_path),
         remote_type = buf_var(bufnr, 'remote_type', 'string'),
-        remote_alt_paths = buf_var(bufnr, 'remote_alt_paths', 'table'),
+        remote_alt_paths = buf_var(bufnr, 'remote_alt_paths', 'table', function(paths)
+            if vim.tbl_islist(paths) then
+                return vim.tbl_map(clean_path, paths)
+            end
+        end),
     }
 
     --- Returns true if remote buffer variables have been set
@@ -99,6 +117,8 @@ vars.Buf.__call = function(_, bufnr)
     --- @return boolean
     buf_vars.has_matching_remote_path = function(path)
         if buf_vars.is_initialized() then
+            path = clean_path(path)
+
             local matches_primary_path = path == buf_vars.remote_path.get()
             if matches_primary_path then
                 return true
