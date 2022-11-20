@@ -5,8 +5,8 @@
 A wrapper around [`distant`](https://github.com/chipsenkbeil/distant) that
 enables users to edit remote files from the comfort of their local environment.
 
-- **Requires neovim 0.5+**
-- **Requires distant 0.16.4+**
+- **Requires neovim 0.7+**
+- **Requires distant 0.20.0+**
 
 🚧 **(Alpha stage software) This plugin is in rapid development and may
 break or change frequently!** 🚧
@@ -21,10 +21,7 @@ Supports the following features against remote machines:
 - [X] Copying files & directories
 - [X] Renaming files & directories
 - [X] Running [LSPs](https://neovim.io/doc/lsp/) remotely and getting live results locally
-
-Support is coming up for these features:
-
-- [ ] Optional [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) integration
+- [X] [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) integration via `:Telescope distant search`
 
 ## Demo
 
