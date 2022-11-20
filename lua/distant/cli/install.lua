@@ -14,10 +14,13 @@ local MAX_DOWNLOAD_CHOICES = 10
 --- Mapping of {os}:{arch} to artifact under releases
 local PLATFORM_BIN = {
     ['windows:x86_64']    = 'distant-win64.exe',
-    ['linux:x86_64:gnu']  = 'distant-linux64-gnu',
-    ['linux:x86_64:musl'] = 'distant-linux64-musl',
     ['macos:x86_64']      = 'distant-macos',
     ['macos:arm']         = 'distant-macos',
+    ['linux:x86_64:gnu']  = 'distant-linux64-gnu-x86',
+    ['linux:x86_64:musl'] = 'distant-linux64-musl-x86',
+    ['linux:arm:gnu']     = 'distant-linux64-gnu-aarch64',
+    ['linux:arm:musl']    = 'distant-linux64-musl-aarch64',
+    ['linux:arm-v7:gnu']  = 'distant-linux64-gnu-arm-v7',
 }
 
 --- Mapping of type to local binary name we expect

@@ -1,6 +1,7 @@
 local log   = require('distant.log')
 local utils = require('distant.utils')
 
+local AuthHandler = require('distant.cli.auth')
 local Cmd = require('distant.cli.cmd')
 
 local DEFAULT_TIMEOUT = 15000
@@ -20,6 +21,8 @@ ClientRepl.__index = ClientRepl
 --- @field interval number|nil
 
 --- @class ClientReplState
+--- @field authenticated boolean #true if authenticated and ready to send messages
+--- @field queue string[] #queue of outgoing json messages
 --- @field handle? JobHandle
 --- @field callbacks table<string, ClientReplCallback>
 
@@ -56,6 +59,8 @@ function ClientRepl:new(opts)
     instance.config.interval = instance.config.interval or DEFAULT_INTERVAL
 
     instance.__state = {
+        authenticated = false;
+        queue = {};
         handle = nil;
         callbacks = {};
     }
@@ -73,6 +78,9 @@ end
 --- @param cb fun(code:number)|nil #optional callback when the repl exits
 function ClientRepl:start(cb)
     if not self:is_running() then
+        -- Assign a fresh authentication handler
+        local auth = AuthHandler:new()
+
         local cmd = Cmd.client.repl():set_format('json'):set_from_tbl(self.config.network):as_list()
         table.insert(cmd, 1, self.config.binary)
 
@@ -92,7 +100,26 @@ function ClientRepl:start(cb)
             end;
             on_stdout_line = function(line)
                 if line ~= nil and line ~= "" then
-                    self:__handler(vim.fn.json_decode(line))
+                    local msg = vim.fn.json_decode(line)
+
+                    -- Check if we are processing an authentication msg
+                    -- or an API message
+                    if auth:is_auth_msg(msg) then
+                        --- @diagnostic disable-next-line:redefined-local
+                        auth:handle_msg(msg, function(msg)
+                            handle.write(utils.compress(vim.fn.json_encode(msg)) .. '\n')
+                        end)
+                        self.__state.authenticated = auth.finished
+
+                        if auth.finished then
+                            for _, json in ipairs(self.__state.queue) do
+                                self.__state.handle.write(json)
+                            end
+                            self.__state.queue = {}
+                        end
+                    else
+                        self:__handler(msg)
+                    end
                 end
             end;
             on_stderr_line = function(line)
@@ -111,6 +138,8 @@ function ClientRepl:stop()
     if self.__state.handle ~= nil and self.__state.handle:running() then
         self.__state.handle.stop()
     end
+    self.__state.authenticated = false
+    self.__state.queue = {}
     self.__state.handle = nil
     self.__state.callbacks = {}
 end
@@ -176,7 +205,14 @@ function ClientRepl:send(msgs, opts, cb)
     }
 
     local json = utils.compress(vim.fn.json_encode(full_msg)) .. '\n'
-    self.__state.handle.write(json)
+
+    -- If authenticated, we go ahead and send our message, otherwise we queue it
+    -- to be sent as soon as we become authenticated
+    if self.__state.authenticated then
+        self.__state.handle.write(json)
+    else
+        table.insert(self.__state.queue, json)
+    end
 end
 
 --- Send one or more messages to the remote machine and wait synchronously for the result

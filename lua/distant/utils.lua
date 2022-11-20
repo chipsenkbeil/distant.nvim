@@ -256,7 +256,7 @@ end
 --- @field minor number
 --- @field patch number
 --- @field pre_release string|nil
---- @field pre_release_version number
+--- @field pre_release_version number|nil
 
 --- @param vstr string
 --- @return Version|nil #Returns version if valid, otherwise nil
@@ -296,14 +296,16 @@ utils.can_upgrade_version = function(a, b, opts)
 
     -- If we allow for unstable upgrades, then the patch number
     -- is significant
+    --
+    -- NOTE: Pre-release version has a lower precedence than normal version in
+    --       semver 2.0.0
     if unstable and opts.allow_unstable_upgrade then
-        -- Pre-release version is ignored for precedence in semver 2.0.0
         return a.major == b.major and
             a.minor == b.minor and
             a.patch <= b.patch and
-            a.pre_release == b.pre_release
+            (a.pre_release <= b.pre_release or
+                (a.pre_release ~= nil and b.pre_release == nil))
     elseif unstable then
-        -- Pre-release version is ignored for precedence in semver 2.0.0
         return a.major == b.major and
             a.minor == b.minor and
             a.patch == b.patch and
