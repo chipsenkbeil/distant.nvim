@@ -6,18 +6,26 @@ local vars = require('distant.vars')
 
 local actions = {}
 
+--- Returns the separator used by the remote system
+--- @return string
+local function remote_sep()
+    return assert(fn.cached_system_info().main_separator, 'missing remote sep')
+end
+
 --- Returns the path under the cursor without joining it to the base path
+--- @return string
 local function path_under_cursor()
     local linenr = vim.fn.line('.') - 1
     return vim.api.nvim_buf_get_lines(0, linenr, linenr + 1, true)[1]
 end
 
 --- Returns the full path under cursor by joining it with the base path
+--- @return string|nil
 local function full_path_under_cursor()
     --- @type string|nil
     local base_path = vars.buf().remote_path.get()
     if base_path ~= nil then
-        return utils.join_path(base_path, path_under_cursor())
+        return utils.join_path(remote_sep(), { base_path, path_under_cursor() })
     end
 end
 
@@ -79,7 +87,7 @@ actions.newfile = function(opts)
             return
         end
 
-        local path = utils.join_path(base_path, name)
+        local path = utils.join_path(remote_sep(), { base_path, name })
         editor.open(path)
     end
 end
@@ -102,7 +110,7 @@ actions.mkdir = function(opts)
             return
         end
 
-        local path = utils.join_path(base_path, name)
+        local path = utils.join_path(remote_sep(), { base_path, name })
         local err = fn.create_dir({ path = path, all = true })
 
         if not err then

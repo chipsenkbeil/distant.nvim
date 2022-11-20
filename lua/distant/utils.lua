@@ -553,14 +553,18 @@ utils.parent_path = function(path)
 end
 
 --- Join multiple path components together, separating by /
+--- @param sep string
+--- @param paths string[]
 --- @return string #The path as a string
-utils.join_path = function(...)
+utils.join_path = function(sep, paths)
+    assert(type(sep) == 'string', 'sep must be a string')
+    assert(vim.tbl_islist(paths), 'paths must be a list')
     local path = ''
 
-    for _, component in ipairs({ ... }) do
+    for _, component in ipairs(paths) do
         -- If we already have a partial path, we need to add the separator
-        if path ~= '' and not vim.endswith(path, '/') then
-            path = path .. '/'
+        if path ~= '' and not vim.endswith(path, sep) then
+            path = path .. sep
         end
 
         path = path .. component

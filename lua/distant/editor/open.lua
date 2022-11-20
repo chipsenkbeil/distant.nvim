@@ -304,6 +304,9 @@ local function configure_buf(args)
     --- @diagnostic disable-next-line:redefined-local
     local function set_bufname(bufnr, bufname)
         local old_bufname = vim.api.nvim_buf_get_name(bufnr)
+        if old_bufname == bufname then
+            return
+        end
 
         -- Set the buffer name to include a schema, which will trigger our
         -- autocmd for writing to the remote destination in the situation

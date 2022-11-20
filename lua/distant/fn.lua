@@ -13,6 +13,16 @@ local function make_fns(obj, names)
         end
     end
 
+    -- Add our custom, hard-coded methods as well
+    obj.cached_system_info = function()
+        local state = require('distant.state')
+        local client = assert(
+            state.client,
+            'Client must be initialized before invoking fn'
+        )
+        return client:system_info()
+    end
+
     return obj
 end
 

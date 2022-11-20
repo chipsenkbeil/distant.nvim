@@ -64,15 +64,15 @@ describe('utils', function()
 
     describe('join_path', function()
         it('should return empty string if no paths provided', function()
-            assert.are.equal('', u.join_path())
+            assert.are.equal('', u.join_path('/', {}))
         end)
 
         it('should return singular path as is', function()
-            assert.are.equal('something', u.join_path('something'))
+            assert.are.equal('something', u.join_path('/', { 'something' }))
         end)
 
         it('should join separate paths using path sep', function()
-            assert.are.equal('some/path/series', u.join_path('some', 'path', 'series'))
+            assert.are.equal('some/path/series', u.join_path('/', { 'some', 'path', 'series' }))
         end)
     end)
 

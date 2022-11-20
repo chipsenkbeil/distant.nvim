@@ -24,6 +24,7 @@ Client.__index = Client
 --- @field lsp ClientLsp
 --- @field repl ClientRepl
 --- @field shell ClientShell
+--- @field system_info DistantSystemInfo|nil
 
 --- Creates a new instance of a distant client
 --- @param opts ClientConfig
@@ -46,6 +47,7 @@ function Client:new(opts)
         lsp = ClientLsp:new(instance.config),
         repl = repl,
         shell = ClientShell:new(instance.config),
+        system_info = nil,
     }
 
     return instance
@@ -69,6 +71,18 @@ end
 --- @return ClientShell
 function Client:shell()
     return self.__state.shell
+end
+
+--- @return DistantSystemInfo
+function Client:system_info()
+    if self.__state.system_info == nil then
+        local err, info = self:api().system_info({})
+        assert(not err, err)
+        assert(info, 'missing system info in response')
+        self.__state.system_info = info
+    end
+
+    return self.__state.system_info
 end
 
 return Client
