@@ -312,7 +312,6 @@ function Manager:launch(opts, cb)
         return
     end
 
-    -- TODO: Support escaping single quotes in provided text
     local wrap_args = function(text)
         if vim.tbl_islist(text) then
             text = table.concat(text, ' ')
@@ -320,8 +319,8 @@ function Manager:launch(opts, cb)
             text = tostring(text)
         end
 
-        local quote = '\''
-        text = vim.trim(text)
+        local quote = '"'
+        text = vim.trim(text):gsub('"', '\"')
 
         -- If text empty, exit
         if #text == 0 then
