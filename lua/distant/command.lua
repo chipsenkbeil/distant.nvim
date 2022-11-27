@@ -129,13 +129,15 @@ command.parse_input = function(input)
     }
 end
 
---- Converts each path within table into a number using `tonumber()`
+--- Converts each path within table into a value using `f()`
 ---
 --- Paths are split by period, meaning `path.to.field` becomes
---- `tbl.path.to.field = tonumber(tbl.path.to.field)`
+--- `tbl.path.to.field = f(tbl.path.to.field)`
+--- @generic T
 --- @param tbl table
 --- @param paths string[]
-local function paths_to_number(tbl, paths)
+--- @param f fun(value:string):T
+local function paths_to_f(tbl, paths, f)
     tbl = tbl or {}
 
     local parts, inner
@@ -154,9 +156,29 @@ local function paths_to_number(tbl, paths)
             end
         end
         if inner ~= nil and inner[parts[#parts]] ~= nil then
-            inner[parts[#parts]] = tonumber(inner[parts[#parts]])
+            inner[parts[#parts]] = f(inner[parts[#parts]])
         end
     end
+end
+
+--- Converts each path within table into a number using `tonumber()`
+---
+--- Paths are split by period, meaning `path.to.field` becomes
+--- `tbl.path.to.field = tonumber(tbl.path.to.field)`
+--- @param tbl table
+--- @param paths string[]
+local function paths_to_number(tbl, paths)
+    return paths_to_f(tbl, paths, tonumber)
+end
+
+--- Converts each path within table into a bool using `value == 'true'`
+---
+--- Paths are split by period, meaning `path.to.field` becomes
+--- `tbl.path.to.field = tbl.path.to.field == 'true'`
+--- @param tbl table
+--- @param paths string[]
+local function paths_to_bool(tbl, paths)
+    return paths_to_f(tbl, paths, function(value) return value == 'true' end)
 end
 
 --- DistantOpen path [opt1=... opt2=...]
@@ -334,7 +356,8 @@ end
 --- DistantSearch pattern [paths ...] [opt1=... opt2=...]
 command.search = function(input)
     input = command.parse_input(input)
-    paths_to_number(input.opts, { 'timeout', 'interval' })
+    paths_to_number(input.opts, { 'pagination', 'limit', 'max_depth', 'timeout', 'interval' })
+    paths_to_bool(input.opts, { 'follow_symbolic_links' })
 
     local timeout = input.opts.timeout
     local interval = input.opts.interval
