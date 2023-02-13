@@ -1374,6 +1374,8 @@ v0.2.0 ~
     providing a host, port, and mode for defining servers
   * Remove `args` from |distant.fn.spawn_wait| in favor of `cmd` taking
     all of the arguments as part of the string
+  * Add function `distant.state.client:shell():to_cmd()` that can be used to
+    generate the cli command used to spawn the shell
 
 v0.1.2 ~
 

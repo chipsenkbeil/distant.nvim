@@ -29,18 +29,8 @@ end
 --- @param opts ClientShellSpawnOpts
 --- @return number #Job id, or 0 if invalid arguments or -1 if cli is not executable
 function ClientShell:spawn(opts)
-    local c = opts.cmd
-    local is_table = type(c) == 'table'
-    local is_string = type(c) == 'string'
-    if (is_table and vim.tbl_isempty(c)) or (is_string and vim.trim(c) == '') then
-        c = nil
-    elseif is_table then
-        c = table.concat(c, ' ')
-    end
-
-    --- @type string[]
-    local cmd = Cmd.client.shell(c):set_from_tbl(self.config.network):as_list()
-    table.insert(cmd, 1, self.config.binary)
+    -- Acquire a command list that we will execute in our terminal
+    local cmd = self:to_cmd(opts or {})
 
     -- Get or create the buffer we will be using with this terminal,
     -- ensure it is no longer modifiable, switch to it, and then
@@ -62,6 +52,28 @@ function ClientShell:spawn(opts)
     end
 
     return job_id
+end
+
+--- @class ClientShellToCmdOpts
+--- @field cmd string|string[]|nil #Optional command to use instead of default shell
+
+--- @param opts ClientShellToCmdOpts
+--- @return string[] #list representing the command separated by whitespace
+function ClientShell:to_cmd(opts)
+    local c = (opts or {}).cmd
+    local is_table = type(c) == 'table'
+    local is_string = type(c) == 'string'
+    if (is_table and vim.tbl_isempty(c)) or (is_string and vim.trim(c) == '') then
+        c = nil
+    elseif is_table then
+        c = table.concat(c, ' ')
+    end
+
+    --- @type string[]
+    local cmd = Cmd.client.shell(c):set_from_tbl(self.config.network):as_list()
+    table.insert(cmd, 1, self.config.binary)
+
+    return cmd
 end
 
 return ClientShell
