@@ -156,11 +156,11 @@ used to start a remote session.
 Commands support {positional} and {key=value} pairs. Positional arguments are
 relative to each other and are not influenced by key=value pairs inbetween.
 >
-  :DistantLaunch example.com mode=ssh ssh.user=name ssh.port=2222
+  :DistantLaunch ssh://name@example.com:2222
 <
 Commands also support quoted strings as values such as
 >
-  :DistantLaunch example.com distant.args="--log-file distant.log --log-level trace"
+  :DistantLaunch ssh://example.com distant.args="--log-file distant.log --log-level trace"
 <
 
 Specialized commands~
