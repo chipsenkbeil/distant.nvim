@@ -117,15 +117,17 @@ vars.Buf.__call = function(_, bufnr)
     --- @return boolean
     buf_vars.has_matching_remote_path = function(path)
         if buf_vars.is_initialized() then
-            path = clean_path(path)
+            local cleaned_path = clean_path(path)
 
-            local matches_primary_path = path == buf_vars.remote_path.get()
+            local primary_path = buf_vars.remote_path.get()
+            local cleaned_primary_path = clean_path(primary_path)
+            local matches_primary_path = primary_path == path or cleaned_primary_path == cleaned_path
             if matches_primary_path then
                 return true
             end
 
             local alt_paths = vars.buf(bufnr).remote_alt_paths.get() or {}
-            if alt_paths[path] == true then
+            if alt_paths[path] ~= nil or alt_paths[cleaned_path] ~= nil then
                 return true
             end
         end
