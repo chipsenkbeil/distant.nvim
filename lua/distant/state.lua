@@ -30,9 +30,16 @@ function State:new()
 end
 
 --- Loads into state the settings appropriate for the remote machine with the give label
+--- @param destination string Full destination to server, which can be in a form like SCHEME://USER:PASSWORD@HOST:PORT
 --- @return Settings
-function State:load_settings(label)
-    self.settings = settings.for_label(label)
+function State:load_settings(destination)
+    -- Parse our destination into the host only
+    local d = utils.parse_destination(destination)
+    if not d or not d.host then
+        error('Invalid destination: '.. tostring(destination))
+    end
+
+    self.settings = settings.for_label(d.host)
     return self.settings
 end
 
