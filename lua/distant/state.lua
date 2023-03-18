@@ -33,13 +33,21 @@ end
 --- @param destination string Full destination to server, which can be in a form like SCHEME://USER:PASSWORD@HOST:PORT
 --- @return Settings
 function State:load_settings(destination)
+    log.fmt_trace('Detecting settings for destination: %s', destination)
+
     -- Parse our destination into the host only
+    local label
     local d = utils.parse_destination(destination)
     if not d or not d.host then
         error('Invalid destination: '.. tostring(destination))
+    else
+        label = d.host
+        log.fmt_debug('Using settings label: %s', label)
     end
 
-    self.settings = settings.for_label(d.host)
+    self.settings = settings.for_label(label)
+    log.fmt_debug('Settings loaded: %s', self.settings)
+
     return self.settings
 end
 
