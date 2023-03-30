@@ -23,28 +23,13 @@ Supports the following features against remote machines:
 - [X] Running [LSPs](https://neovim.io/doc/lsp/) remotely and getting live results locally
 - [X] [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) integration via `:Telescope distant search`
 
-## Demo
-
-### Intro Video
-
-Demonstrates using distant.nvim to edit files and use a language server on a
-remote machine.
-
-[![Intro Video](https://img.youtube.com/vi/BuW2b1Ii0RI/0.jpg)](https://www.youtube.com/watch?v=BuW2b1Ii0RI)
-
-### v0.1.0 Update
-
-Demonstrates the new release of distant.nvim (v0.1.0) leveraging distant's new
-lua module (v0.15.0). Main highlights include:
-
-- integrated ssh authentication
-- ssh mode
-- refactored and simplified vim & Lua APIs
-- complete help documentation
-
-[![v0.1.0 update](https://img.youtube.com/vi/wVAsbpByQ3o/0.jpg)](https://www.youtube.com/watch?v=wVAsbpByQ3o)
-
 ## Installation & Setup
+
+> It is **highly** recommended to not use the master branch of this plugin.
+> Instead, prefer either a branch (`v0.1` or `v0.2`) or a specific tag (`v0.1.1`)
+> to lock in the plugin. When using a branch, you will get rolling updates to
+> that branch. When using a tag, you are locked into the features and stability
+> of the plugin at that point!
 
 Using [packer.nvim](https://github.com/wbthomason/packer.nvim), the quickest
 way to get up and running is the following:
@@ -52,7 +37,7 @@ way to get up and running is the following:
 ```lua
 use {
   'chipsenkbeil/distant.nvim',
-  tag = 'v0.2',
+  branch = 'v0.2',
   config = function()
     require('distant').setup {
       -- Applies Chip's personal settings to every machine you connect to
@@ -115,6 +100,27 @@ all of the contents of the specified directory.
 For more details on available functions, settings, commands, and more,
 please check out the vim help documentation via 
 [`:help distant.txt`](doc/distant.txt).
+
+## Demo
+
+### Intro Video
+
+Demonstrates using distant.nvim to edit files and use a language server on a
+remote machine.
+
+[![Intro Video](https://img.youtube.com/vi/BuW2b1Ii0RI/0.jpg)](https://www.youtube.com/watch?v=BuW2b1Ii0RI)
+
+### v0.1.0 Update
+
+Demonstrates the new release of distant.nvim (v0.1.0) leveraging distant's new
+lua module (v0.15.0). Main highlights include:
+
+- integrated ssh authentication
+- ssh mode
+- refactored and simplified vim & Lua APIs
+- complete help documentation
+
+[![v0.1.0 update](https://img.youtube.com/vi/wVAsbpByQ3o/0.jpg)](https://www.youtube.com/watch?v=wVAsbpByQ3o)
 
 ## License
 
