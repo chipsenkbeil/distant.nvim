@@ -6,6 +6,7 @@ local ClientLspCmd = BaseCmd:new('client lsp', { allowed = {
     'config',
     'cache',
     'connection',
+    'current-dir',
     'log-file',
     'log-level',
     'persist',
@@ -54,6 +55,14 @@ end
 function ClientLspCmd:set_connection(id)
     vim.validate({ id = { id, 'string' } })
     return self:set('connection', id)
+end
+
+--- Sets `--current-dir <dir>`
+--- @param dir string
+--- @return ClientLspCmd
+function ClientLspCmd:set_current_dir(dir)
+    vim.validate({ dir = { dir, 'string' } })
+    return self:set('current-dir', dir)
 end
 
 --- Sets `--log-file <value>`

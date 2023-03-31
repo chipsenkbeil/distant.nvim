@@ -51,6 +51,11 @@ function ClientLsp:__lsp_start_client(config, opts)
         config_cmd = table.concat(config_cmd, ' ')
     end
 
+    -- If no current directory provided, use the root directory
+    if not opts.current_dir then
+        opts.current_dir = config.root_dir
+    end
+
     --- @type string[]
     local cmd = Cmd.client.lsp(config_cmd):set_from_tbl(opts):set_from_tbl(self.config.network):as_list()
     table.insert(cmd, 1, self.config.binary)
@@ -154,7 +159,6 @@ function ClientLsp:connect(buf)
 
                         -- Support lsp-specific opts
                         log.fmt_debug('Starting LSP %s', label)
-                        local opts = config.opts or {}
                         local id = self:__lsp_start_client(
                             vim.tbl_deep_extend('force', config, { on_exit = on_exit }),
                             opts

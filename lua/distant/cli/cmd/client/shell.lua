@@ -6,6 +6,7 @@ local ClientShellCmd = BaseCmd:new('client shell', { allowed = {
     'config',
     'cache',
     'connection',
+    'current-dir',
     'environment',
     'log-file',
     'log-level',
@@ -58,6 +59,14 @@ end
 function ClientShellCmd:set_connection(id)
     vim.validate({ id = { id, 'string' } })
     return self:set('connection', id)
+end
+
+--- Sets `--current-dir <dir>`
+--- @param dir string
+--- @return ClientShellCmd
+function ClientShellCmd:set_current_dir(dir)
+    vim.validate({ dir = { dir, 'string' } })
+    return self:set('current-dir', dir)
 end
 
 --- Sets `--environment <id>`
