@@ -2,23 +2,27 @@ local BaseCmd = require('distant.cli.cmd.base')
 
 --- @class ClientActionCmd: BaseCmd
 --- @field __subcommand BaseCmd|nil
-local ClientActionCmd = BaseCmd:new('client action', { allowed = {
-    'config',
-    'cache',
-    'connection',
-    'log-file',
-    'log-level',
-    'timeout',
-    'unix-socket',
-    'windows-pipe',
-} })
+local ClientActionCmd = BaseCmd:new('client action', {
+    allowed = {
+        'config',
+        'cache',
+        'connection',
+        'log-file',
+        'log-level',
+        'timeout',
+        'unix-socket',
+        'windows-pipe',
+    }
+})
 
 --- Creates new action cmd
 --- @param subcommand? BaseCmd
+--- @param tail? string
 --- @return ClientActionCmd
-function ClientActionCmd:new(subcommand)
+function ClientActionCmd:new(subcommand, tail)
     self.__internal = {}
     self.__subcommand = subcommand
+    self.__tail = tail
     return self
 end
 
@@ -27,9 +31,17 @@ end
 function ClientActionCmd:as_list()
     local lst = BaseCmd.as_list(self)
     if self.__subcommand then
-        for _, itm in ipairs(self.__subcommand:as_list()) do
-            table.insert(lst, itm)
+        if type(self.__subcommand) == 'table' then
+            for _, itm in ipairs(self.__subcommand:as_list()) do
+                table.insert(lst, itm)
+            end
+        elseif type(self.__subcommand) == 'string' then
+            table.insert(lst, self.__subcommand)
         end
+    end
+    if type(self.__tail) == 'string' then
+        table.insert(lst, '--')
+        table.insert(lst, self.__tail)
     end
     return lst
 end
@@ -96,6 +108,20 @@ end
 function ClientActionCmd:set_windows_pipe(name)
     vim.validate({ name = { name, 'string' } })
     return self:set('windows-pipe', name)
+end
+
+--- Sets `-- <tail>`
+--- @param tail string|string[]
+--- @return ClientActionCmd
+function ClientActionCmd:set_tail(tail)
+    -- Flatten list of arguments into single string
+    if type(tail) == 'table' and vim.tbl_islist(tail) then
+        tail = table.concat(tail, ' ')
+    end
+
+    vim.validate({ tail = { tail, 'string' } })
+    self.__tail = tail
+    return self
 end
 
 return ClientActionCmd

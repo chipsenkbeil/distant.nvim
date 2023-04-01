@@ -81,8 +81,8 @@ function ClientLsp:__lsp_start_client(config, opts)
 
         if not config.workspace_folders then
             params.workspaceFolders = { {
-                uri = vim.uri_from_fname(config.root_dir);
-                name = string.format('%s', config.root_dir);
+                uri = vim.uri_from_fname(config.root_dir),
+                name = string.format('%s', config.root_dir),
             } }
         else
             params.workspaceFolders = config.workspace_folders
@@ -100,14 +100,13 @@ function ClientLsp:__lsp_start_client(config, opts)
         'force',
         config,
         {
-            before_init = before_init;
-            cmd = cmd;
-            capabilities = capabilities;
-
+            before_init = before_init,
+            cmd = cmd,
+            capabilities = capabilities,
             -- Must zero these out to ensure that we pass validation
             -- TODO: Support Windows local machine
-            root_dir = '/';
-            workspace_folders = nil;
+            root_dir = '/',
+            workspace_folders = nil,
         }
     )
     return vim.lsp.start_client(lsp_config)
@@ -176,6 +175,28 @@ function ClientLsp:connect(buf)
             end
         end
     end
+end
+
+--- @class ClientLspToCmdOpts
+--- @field cmd string|string[]|nil #Optional command to use instead of default shell
+
+--- @param opts ClientLspToCmdOpts
+--- @return string[] #list representing the command separated by whitespace
+function ClientLsp:to_cmd(opts)
+    local c = (opts or {}).cmd
+    local is_table = type(c) == 'table'
+    local is_string = type(c) == 'string'
+    if (is_table and vim.tbl_isempty(c)) or (is_string and vim.trim(c) == '') then
+        return {}
+    elseif is_table then
+        c = table.concat(c, ' ')
+    end
+
+    --- @type string[]
+    local cmd = Cmd.client.lsp(c):set_from_tbl(self.config.network):as_list()
+    table.insert(cmd, 1, self.config.binary)
+
+    return cmd
 end
 
 return ClientLsp
