@@ -6,7 +6,7 @@ A wrapper around [`distant`](https://github.com/chipsenkbeil/distant) that
 enables users to edit remote files from the comfort of their local environment.
 
 - **Requires neovim 0.7+**
-- **Requires distant 0.20.0+**
+- **Requires distant 0.20.0-alpha.4**
 
 🚧 **(Alpha stage software) This plugin is in rapid development and may
 break or change frequently!** 🚧
