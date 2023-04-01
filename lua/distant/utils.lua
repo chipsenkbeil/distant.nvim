@@ -463,11 +463,19 @@ utils.can_upgrade_version = function(a, b, opts)
     -- NOTE: Pre-release version has a lower precedence than normal version in
     --       semver 2.0.0
     if unstable and opts.allow_unstable_upgrade then
+        -- For the pre-release, we check multiple situations
+        --
+        -- 1. Pre-release is the same (e.g. alpha == alpha) and current version is <= new version (e.g. 2 <= 4)
+        -- 2. Pre-release is an upgrade (e.g. alpha < beta)
+        -- 3. Pre-release is an upgrade to non-pre-release (e.g. alpha to full release)
         return a.major == b.major and
             a.minor == b.minor and
             a.patch <= b.patch and
-            (a.pre_release <= b.pre_release or
-                (a.pre_release ~= nil and b.pre_release == nil))
+            (
+                a.pre_release < b.pre_release or
+                (a.pre_release ~= nil and b.pre_release == nil) or
+                (a.pre_release == b.pre_release and a.pre_release_version <= b.pre_release_version)
+            )
     elseif unstable then
         return a.major == b.major and
             a.minor == b.minor and
