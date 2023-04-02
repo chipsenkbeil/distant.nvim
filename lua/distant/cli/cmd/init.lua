@@ -1,5 +1,6 @@
 --- @class ClientCmd
---- @field action fun(subcommand:string|nil):ClientActionCmd
+--- @field action fun(subcommand:string|BaseCmd|nil):ClientActionCmd
+--- @field action_cmd {spawn:fun(cmd:string):ProcSpawnCmd}
 --- @field connect fun(destination:string):ClientConnectCmd
 --- @field launch fun(destination:string):ClientLaunchCmd
 --- @field lsp fun(cmd:string):ClientLspCmd
@@ -23,44 +24,44 @@ return {
             local Cmd = require('distant.cli.cmd.client.action')
             return Cmd:new(...)
         end,
-
+        action_cmd = {
+            --- @type fun(cmd:string|nil):ProcSpawnCmd
+            spawn = function(...)
+                local Cmd = require('distant.cli.cmd.client.spawn')
+                return Cmd:new(...)
+            end,
+        },
         --- @type fun(destination:string):ClientConnectCmd
         connect = function(...)
             local Cmd = require('distant.cli.cmd.client.connect')
             return Cmd:new(...)
         end,
-
         --- @type fun(destination:string):ClientLaunchCmd
         launch = function(...)
             local Cmd = require('distant.cli.cmd.client.launch')
             return Cmd:new(...)
         end,
-
         --- @type fun(cmd:string):ClientLspCmd
         lsp = function(...)
             local Cmd = require('distant.cli.cmd.client.lsp')
             return Cmd:new(...)
         end,
-
         --- @type fun():ClientReplCmd
         repl = function()
             local Cmd = require('distant.cli.cmd.client.repl')
             return Cmd:new()
         end,
-
         --- @type fun(connection:string|nil):ClientSelectCmd
         select = function(...)
             local Cmd = require('distant.cli.cmd.client.select')
             return Cmd:new(...)
         end,
-
         --- @type fun(cmd:string|nil):ClientShellCmd
         shell = function(...)
             local Cmd = require('distant.cli.cmd.client.shell')
             return Cmd:new(...)
         end,
     },
-
     --- @type ManagerCmd
     --- For commands like `distant manager ...`
     manager = {
@@ -69,14 +70,12 @@ return {
             local Cmd = require('distant.cli.cmd.manager.list')
             return Cmd:new()
         end,
-
         --- @type fun():ManagerListenCmd
         listen = function()
             local Cmd = require('distant.cli.cmd.manager.listen')
             return Cmd:new()
         end,
     },
-
     --- @type ServerCmd
     --- For commands like `distant server ...`
     server = {

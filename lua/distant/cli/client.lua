@@ -90,6 +90,9 @@ end
 --- @field cmd string|string[]|nil
 --- @field lsp string|string[]|nil
 --- @field shell string|string[]|nil
+---
+--- @field cwd string|nil
+--- @field env table<string,string>|nil
 
 --- Wraps cmd, lsp, or shell to be invoked via distant. Returns
 --- a string if the input is a string, or a list if the input
@@ -116,17 +119,52 @@ function Client:wrap(args)
 
     if has_cmd then
         -- Get the command as a string
-        local action = args.cmd or ''
-        if type(action) == 'table' then
-            action = table.concat(action, ' ')
+        local cmd = args.cmd or ''
+        if type(cmd) == 'table' then
+            cmd = table.concat(cmd, ' ')
         end
 
-        result = Cmd.client.action('spawn'):set_tail(action):set_from_tbl(self.config.network):as_list()
+        local subcmd = Cmd.client.action_cmd.spawn(cmd)
+        if type(args.cwd) == 'string' then
+            subcmd = subcmd:set_current_dir(args.cwd)
+        end
+        if args.env then
+            subcmd = subcmd:set_environment(args.env)
+        end
+
+        result = Cmd.client.action(subcmd):set_from_tbl(self.config.network):as_list()
         table.insert(result, 1, self.config.binary)
     elseif has_lsp then
-        result = self:lsp():to_cmd({ cmd = args.lsp })
+        -- Get the lsp as a string
+        local lsp = args.lsp or ''
+        if type(lsp) == 'table' then
+            lsp = table.concat(lsp, ' ')
+        end
+
+        local cmd = Cmd.client.lsp(lsp)
+        if args.cwd then
+            cmd = cmd:set_current_dir(args.cwd)
+        end
+
+        result = cmd:set_from_tbl(self.config.network):as_list()
+        table.insert(result, 1, self.config.binary)
     elseif has_shell then
-        result = self:shell():to_cmd({ cmd = args.shell })
+        -- Get the shell as a string
+        local shell = args.shell or ''
+        if type(shell) == 'table' then
+            shell = table.concat(shell, ' ')
+        end
+
+        local cmd = Cmd.client.shell(shell)
+        if args.cwd then
+            cmd = cmd:set_current_dir(args.cwd)
+        end
+        if args.env then
+            cmd = cmd:set_environment(args.env)
+        end
+
+        result = cmd:set_from_tbl(self.config.network):as_list()
+        table.insert(result, 1, self.config.binary)
     end
 
     -- If input was string, output will be a string
