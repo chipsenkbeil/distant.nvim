@@ -56,7 +56,7 @@ function ProcSpawnCmd:set_environment(environment)
     vim.validate({ environment = { environment, 'table' } })
     local s = ''
     for key, value in pairs(environment) do
-        s = s .. key .. '="' .. value .. '='
+        s = s .. key .. '="' .. value .. '",'
     end
 
     return self:set('environment', s)

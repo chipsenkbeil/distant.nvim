@@ -2,20 +2,22 @@ local BaseCmd = require('distant.cli.cmd.base')
 
 --- @class ClientShellCmd: BaseCmd
 --- @field __cmd string
-local ClientShellCmd = BaseCmd:new('client shell', { allowed = {
-    'config',
-    'cache',
-    'connection',
-    'current-dir',
-    'environment',
-    'log-file',
-    'log-level',
-    'persist',
-    'pty',
-    'unix-socket',
-    'windows-pipe',
+local ClientShellCmd = BaseCmd:new('client shell', {
+    allowed = {
+        'config',
+        'cache',
+        'connection',
+        'current-dir',
+        'environment',
+        'log-file',
+        'log-level',
+        'persist',
+        'pty',
+        'unix-socket',
+        'windows-pipe',
 
-} })
+    }
+})
 
 --- Creates new shell cmd
 --- @param prog? string #optional prog to run instead of $TERM
@@ -76,7 +78,7 @@ function ClientShellCmd:set_environment(environment)
     vim.validate({ environment = { environment, 'table' } })
     local s = ''
     for key, value in pairs(environment) do
-        s = s .. key .. '="' .. value .. '='
+        s = s .. key .. '="' .. value .. '",'
     end
 
     return self:set('environment', s)
