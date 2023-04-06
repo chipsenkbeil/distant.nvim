@@ -1,7 +1,7 @@
-local log = require('distant.log')
-local state = require('distant.state')
-local ui = require('distant.ui')
-local utils = require('distant.utils')
+local log = require('distant-core.log')
+local state = require('distant-core.state')
+local ui = require('distant-core.ui')
+local utils = require('distant-core.utils')
 
 --- Opens a new window to display session info
 return function()
@@ -22,22 +22,22 @@ return function()
         local connection = client.config.network.connection
         local destination = state.manager:connection_destination(connection)
         vim.list_extend(msg, {
-            '= Client =';
-            '';
-            '* Connection = ' .. connection;
-            '* Destination = ' .. destination;
+            '= Client =',
+            '',
+            '* Connection = ' .. connection,
+            '* Destination = ' .. destination,
         })
     else
         vim.list_extend(msg, {
-            '= No Client =';
-            '';
+            '= No Client =',
+            '',
         })
     end
 
     vim.list_extend(msg, {
-        '';
-        '= Remote Files =';
-        '';
+        '',
+        '= Remote Files =',
+        '',
     })
     vim.list_extend(msg, distant_buf_names)
 

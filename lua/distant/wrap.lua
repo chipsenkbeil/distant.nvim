@@ -5,7 +5,7 @@
 --- @return string|string[]
 return function(args)
     local client = assert(
-        require('distant.state').client,
+        require('distant-core.state').client,
         'Client must be initialized before invoking wrap'
     )
 

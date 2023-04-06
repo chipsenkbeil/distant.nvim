@@ -4,7 +4,7 @@
 local function make_fns(obj, names)
     for _, name in ipairs(names) do
         obj[name] = function(...)
-            local state = require('distant.state')
+            local state = require('distant-core.state')
             local client = assert(
                 state.client,
                 'Client must be initialized before invoking fn'
@@ -15,7 +15,7 @@ local function make_fns(obj, names)
 
     -- Add our custom, hard-coded methods as well
     obj.cached_system_info = function()
-        local state = require('distant.state')
+        local state = require('distant-core.state')
         local client = assert(
             state.client,
             'Client must be initialized before invoking fn'

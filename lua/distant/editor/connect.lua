@@ -1,5 +1,5 @@
-local log = require('distant.log')
-local state = require('distant.state')
+local log = require('distant-core.log')
+local state = require('distant-core.state')
 
 --- @class EditorConnectOpts
 --- @field destination string
@@ -31,7 +31,6 @@ return function(opts, cb)
     -- Connect and update our active client
     return state:connect({
         destination = opts.destination,
-
         -- User-defined settings
         auth = opts.auth,
         log_file = opts.log_file,

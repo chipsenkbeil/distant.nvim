@@ -1,7 +1,8 @@
 local editor = require('distant.editor')
-local log = require('distant.log')
-local u = require('distant.utils')
-local vars = require('distant.vars')
+
+local log = require('distant-core.log')
+local u = require('distant-core.utils')
+local vars = require('distant-core.vars')
 
 local function _initialize()
     log.trace('Initializing autocmds')

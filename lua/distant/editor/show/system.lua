@@ -1,6 +1,7 @@
 local fn = require('distant.fn')
-local log = require('distant.log')
-local ui = require('distant.ui')
+
+local log = require('distant-core.log')
+local ui = require('distant-core.ui')
 
 --- @class EditorShowSystemOpts
 --- @field timeout? number #Maximum time to wait for a response
@@ -19,15 +20,15 @@ return function(opts)
 
     if info ~= nil then
         ui.show_msg({
-            '= System Info =';
-            '';
-            indent .. '* Family      = "' .. info.family .. '"';
-            indent .. '* OS          = "' .. info.os .. '"';
-            indent .. '* Arch        = "' .. info.arch .. '"';
-            indent .. '* Current Dir = "' .. info.current_dir .. '"';
-            indent .. '* Main Sep    = "' .. info.main_separator .. '"';
-            indent .. '* Username    = "' .. info.username .. '"';
-            indent .. '* Shell       = "' .. info.shell .. '"';
+            '= System Info =',
+            '',
+            indent .. '* Family      = "' .. info.family .. '"',
+            indent .. '* OS          = "' .. info.os .. '"',
+            indent .. '* Arch        = "' .. info.arch .. '"',
+            indent .. '* Current Dir = "' .. info.current_dir .. '"',
+            indent .. '* Main Sep    = "' .. info.main_separator .. '"',
+            indent .. '* Username    = "' .. info.username .. '"',
+            indent .. '* Shell       = "' .. info.shell .. '"',
         })
     end
 end

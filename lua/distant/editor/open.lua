@@ -1,9 +1,10 @@
-local data = require('distant.data')
 local fn = require('distant.fn')
-local log = require('distant.log')
-local state = require('distant.state')
-local utils = require('distant.utils')
-local vars = require('distant.vars')
+
+local data = require('distant-core.data')
+local log = require('distant-core.log')
+local state = require('distant-core.state')
+local utils = require('distant-core.utils')
+local vars = require('distant-core.vars')
 
 --- Applies neovim buffer-local mappings
 ---
@@ -35,7 +36,7 @@ local function apply_mappings(bufnr, mappings)
                 for _, id in ipairs(fn_ids) do
                     data.remove(id)
                 end
-            end;
+            end,
         })
     end
 end

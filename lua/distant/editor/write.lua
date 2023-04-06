@@ -1,6 +1,7 @@
 local fn = require('distant.fn')
-local log = require('distant.log')
-local vars = require('distant.vars')
+
+local log = require('distant-core.log')
+local vars = require('distant-core.vars')
 
 --- @class EditorWriteOpts
 --- @field buf number #The handle of the buffer to write

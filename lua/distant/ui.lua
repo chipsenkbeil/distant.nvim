@@ -1,4 +1,4 @@
-local u = require('distant.utils')
+local u = require('distant-core.utils')
 
 local ui = {}
 
@@ -66,15 +66,15 @@ ui.show_msg = function(msg, ty, width, height, closing_keys)
 
     -- Render the window with the message
     local win = vim.api.nvim_open_win(buf, 1, {
-        relative = 'editor';
-        width = width;
-        height = height;
-        col = (info.width / 2) - (width / 2);
-        row = (info.height / 2) - (height / 2);
-        anchor = 'NW';
-        style = 'minimal';
-        border = 'single';
-        noautocmd = true;
+        relative = 'editor',
+        width = width,
+        height = height,
+        col = (info.width / 2) - (width / 2),
+        row = (info.height / 2) - (height / 2),
+        anchor = 'NW',
+        style = 'minimal',
+        border = 'single',
+        noautocmd = true,
     })
 
     -- Ensure numbers are not displayed

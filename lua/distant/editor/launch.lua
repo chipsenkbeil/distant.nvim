@@ -1,5 +1,5 @@
-local log = require('distant.log')
-local state = require('distant.state')
+local log = require('distant-core.log')
+local state = require('distant-core.state')
 
 --- @class EditorLaunchOpts
 --- @field destination string
@@ -47,7 +47,6 @@ return function(opts, cb)
     -- Create a new client to be used as our active client
     return state:launch({
         destination = opts.destination,
-
         -- User-defined settings
         auth = opts.auth,
         distant = opts.distant and opts.distant.bin,

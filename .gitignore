@@ -3,6 +3,7 @@ vendor/
 **/*.so
 **/*.dll
 doc/tags
+**/.luarc.json
 
 
 # Added by cargo

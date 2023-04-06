@@ -1,7 +1,8 @@
 local fn = require('distant.fn')
-local log = require('distant.log')
-local state = require('distant.state')
-local vars = require('distant.vars')
+
+local log = require('distant-core.log')
+local state = require('distant-core.state')
+local vars = require('distant-core.vars')
 
 local DEFAULT_PAGINATION = 10
 local MAX_LINE_LEN = 100
@@ -22,10 +23,8 @@ local function add_matches_to_qflist(id, matches)
         local item = {
             -- Add a more friendly name for display only
             module = tostring(match.path),
-
             -- Has no buffer as of yet (we create it)
             bufnr = -1,
-
             -- Not an error, but marking as valid so we can
             -- traverse using :cnext and :cprevious
             valid = 1,

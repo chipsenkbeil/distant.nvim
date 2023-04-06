@@ -1,8 +1,9 @@
 local editor = require('distant.editor')
-local log = require('distant.log')
 local fn = require('distant.fn')
-local utils = require('distant.utils')
-local vars = require('distant.vars')
+
+local log = require('distant-core.log')
+local utils = require('distant-core.utils')
+local vars = require('distant-core.vars')
 
 local actions = {}
 
