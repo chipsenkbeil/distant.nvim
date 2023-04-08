@@ -16,23 +16,25 @@ describe('actions', function()
         --       Because we don't know when the last it(...) would finish, we cannot
         --       support manually creating a fixture and unloading it as it would
         --       get unloaded while other it blocks are still using it
-        root = driver:new_dir_fixture({ items = {
-            'dir1/',
-            'dir1/dir1-file1',
-            'dir1/dir1-file2',
+        root = driver:new_dir_fixture({
+            items = {
+                'dir1/',
+                'dir1/dir1-file1',
+                'dir1/dir1-file2',
 
-            'dir1/sub1/',
-            'dir1/sub1/dir1-sub1-file1',
+                'dir1/sub1/',
+                'dir1/sub1/dir1-sub1-file1',
 
-            'dir1/sub2/',
+                'dir1/sub2/',
 
-            'dir2/',
-            'dir2/dir2-file1',
-            'dir2/dir2-file2',
+                'dir2/',
+                'dir2/dir2-file1',
+                'dir2/dir2-file2',
 
-            'file1',
-            'file2',
-        } })
+                'file1',
+                'file2',
+            }
+        })
     end)
 
     after_each(function()

@@ -1,5 +1,5 @@
 local c = require('spec.unit.config')
-local u = require('distant.utils')
+local u = require('distant-core.utils')
 
 local utils = {}
 

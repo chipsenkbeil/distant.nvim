@@ -1,7 +1,7 @@
 local config = require('spec.e2e.config')
 local editor = require('distant.editor')
-local state = require('distant.state')
-local settings = require('distant.settings')
+local state = require('distant-core.state')
+local settings = require('distant-core.settings')
 
 local Driver = {}
 Driver.__index = Driver
@@ -92,10 +92,8 @@ local function initialize_client(opts)
             end
             return answers
         end,
-
         -- Verify any host received
         on_host_verify = function(_) return true end,
-
         -- Errors should fail completely
         on_error = function(err) error(err) end,
     }

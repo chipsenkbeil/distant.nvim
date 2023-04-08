@@ -1,4 +1,4 @@
-local u = require('distant.utils')
+local u = require('distant-core.utils')
 
 describe('utils', function()
     describe('clean_term_line', function()

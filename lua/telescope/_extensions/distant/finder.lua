@@ -1,4 +1,4 @@
-local log = require('distant.log')
+local log = require('distant-core.log')
 local fn = require('distant.fn')
 
 local DEFAULT_LIMIT = 10000
@@ -182,7 +182,8 @@ end
 --- Cancels the finder's ongoing task
 --- @param cb fun(err:string|nil)
 function Finder:close(cb)
-    cb = cb or function() end
+    cb = cb or function()
+    end
     self.results = {}
 
     if self.__searcher ~= nil then

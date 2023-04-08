@@ -1,4 +1,3 @@
-local _ = require('distant-core.functional')
 local M = {}
 
 ---@alias NodeType

@@ -2,7 +2,7 @@ local editor = require('distant.editor')
 local fn = require('distant.fn')
 local match = require('luassert.match')
 local stub = require('luassert.stub')
-local vars = require('distant.vars')
+local vars = require('distant-core.vars')
 
 --- Creates a stubbed vars.buf(...) instance
 --- that returns a table with only `remote_path`
@@ -12,7 +12,8 @@ local vars = require('distant.vars')
 --- Returns the stubbed `vars.buf(...).remote_path.get`
 local function stub_vars_buf_remote_path_get(value)
     local remote_path = {
-        get = function() end
+        get = function()
+        end
     }
     stub(remote_path, 'get', value)
 

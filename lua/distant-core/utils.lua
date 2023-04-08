@@ -642,7 +642,7 @@ end
 ---        representing a vim expression
 utils.autocmd = function(name, pattern, cmd)
     -- NOTE: Inlined here to avoid loop from circular dependencies
-    local data = require('distant.data')
+    local data = require('distant-core.data')
 
     local cmd_type = type(cmd)
     if cmd_type == 'function' then

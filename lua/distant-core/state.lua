@@ -67,7 +67,7 @@ function State:load_manager(opts, cb)
 
     if not self.manager then
         -- NOTE: Lazily load cli to prevent loop
-        local cli = require('distant.cli')
+        local cli = require('distant-core.cli')
 
         cli.install(opts, function(err, path)
             if err then
