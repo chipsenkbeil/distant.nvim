@@ -56,7 +56,7 @@ local DEFAULT_SETTINGS = {
     lsp = {},
 }
 
-local settings = {}
+local M = {}
 
 --- Contains the setting definitions for all remote machines, each
 --- associated by a label with '*' representing a blanket set of
@@ -67,14 +67,14 @@ local inner = { [DEFAULT_LABEL] = vim.tbl_deep_extend('force', {}, DEFAULT_SETTI
 
 --- Merges current settings with provided, overwritting anything with provided
 --- @param other table<string, Settings> The other settings to include
-settings.merge = function(other)
+M.merge = function(other)
     inner = vim.tbl_deep_extend('force', inner, other)
 end
 
 --- Returns a collection of labels contained by the settings
 --- @param exclude_default? boolean If true, will not include default label in results
 --- @return string[]
-settings.labels = function(exclude_default)
+M.labels = function(exclude_default)
     local labels = {}
     for label, _ in pairs(inner) do
         if not exclude_default or label ~= DEFAULT_LABEL then
@@ -89,11 +89,11 @@ end
 --- @param label string The label associated with the remote server's settings
 --- @param no_default? boolean If true, will not apply default settings first
 --- @return Settings @The settings associated with the remote machine (or empty table)
-settings.for_label = function(label, no_default)
+M.for_label = function(label, no_default)
     log.fmt_trace('settings.for_label(%s, %s)', label, vim.inspect(no_default))
 
     local specific = inner[label] or {}
-    local default = settings.default()
+    local default = M.default()
 
     local settings_for_label = specific
     if not no_default then
@@ -105,7 +105,7 @@ end
 
 --- Retrieves settings that apply to any remote machine
 --- @return Settings @The settings to apply to any remote machine (or empty table)
-settings.default = function()
+M.default = function()
     local tbl = inner[DEFAULT_LABEL] or {}
 
     -- Lazily determine the default binary if not configured
@@ -119,31 +119,4 @@ settings.default = function()
     return tbl
 end
 
---- Retrieve settings with opinionated configuration for Chip's usage
---- @return Settings @The settings to apply to any remote machine (or empty table)
-settings.chip_default = function()
-    local actions = require('distant.nav.actions')
-
-    return vim.tbl_deep_extend('keep', {
-        distant = {
-            args = { '--shutdown', 'lonely=60' },
-        },
-        file = {
-            mappings = {
-                ['-'] = actions.up,
-            },
-        },
-        dir = {
-            mappings = {
-                ['<Return>'] = actions.edit,
-                ['-']        = actions.up,
-                ['K']        = actions.mkdir,
-                ['N']        = actions.newfile,
-                ['R']        = actions.rename,
-                ['D']        = actions.remove,
-            }
-        },
-    }, settings.default())
-end
-
-return settings
+return M
