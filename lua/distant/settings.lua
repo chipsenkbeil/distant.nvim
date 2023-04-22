@@ -1,4 +1,6 @@
-local M = require('distant-core.settings')
+local core = require('distant-core')
+
+local M = core.settings
 
 --- Retrieve settings with opinionated configuration for Chip's usage
 --- @return Settings @The settings to apply to any remote machine (or empty table)

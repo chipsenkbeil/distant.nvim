@@ -1,6 +1,6 @@
-local u = require('distant-core.utils')
+local utils = require('distant-core').utils
 
-local ui = {}
+local M = {}
 
 --- Displays a popup window with the provided message
 ---
@@ -10,7 +10,7 @@ local ui = {}
 --- @param width number|nil #width of the window (optional)
 --- @param height number|nil #height of the window (optional)
 --- @return number handle #returns the handle of the buffer containing the message
-ui.show_msg = function(msg, ty, width, height, closing_keys)
+M.show_msg = function(msg, ty, width, height, closing_keys)
     local buf = vim.api.nvim_create_buf(false, true)
     assert(buf ~= 0, 'Failed to create buffer for msg')
 
@@ -20,7 +20,7 @@ ui.show_msg = function(msg, ty, width, height, closing_keys)
     if type(msg) == 'table' then
         msg = table.concat(msg, '\n')
     end
-    local lines = u.filter_map(vim.split(msg, '\n', true), function(line)
+    local lines = utils.filter_map(vim.split(msg, '\n', true), function(line)
         if line ~= nil then
             return line
         end
@@ -39,7 +39,7 @@ ui.show_msg = function(msg, ty, width, height, closing_keys)
 
     -- Fill buffer such that it covers entire window
     if height - #lines > 0 then
-        vim.api.nvim_buf_set_lines(buf, 0, 1, false, u.make_n_lines(height - #lines, ''))
+        vim.api.nvim_buf_set_lines(buf, 0, 1, false, utils.make_n_lines(height - #lines, ''))
     end
 
     -- Add the lines to our buffer
@@ -88,4 +88,4 @@ ui.show_msg = function(msg, ty, width, height, closing_keys)
     return buf
 end
 
-return ui
+return M

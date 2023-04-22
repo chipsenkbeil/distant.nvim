@@ -1,5 +1,6 @@
-local log = require('distant-core.log')
-local state = require('distant-core.state')
+local core = require('distant-core')
+local log = core.log
+local state = core.state
 
 --- @class EditorLaunchOpts
 --- @field destination string

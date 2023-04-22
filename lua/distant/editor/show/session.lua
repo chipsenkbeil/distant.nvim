@@ -1,7 +1,8 @@
-local log = require('distant-core.log')
-local state = require('distant-core.state')
-local ui = require('distant-core.ui')
-local utils = require('distant-core.utils')
+local core = require('distant-core')
+local log = core.log
+local state = core.state
+local ui = core.ui
+local utils = core.utils
 
 --- Opens a new window to display session info
 return function()

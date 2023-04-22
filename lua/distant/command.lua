@@ -1,8 +1,10 @@
 local editor = require('distant.editor')
 local fn = require('distant.fn')
 
-local cli = require('distant-core.cli')
-local state = require('distant-core.state')
+local core = require('distant-core')
+local cli = core.cli
+local state = core.state
+local utils = core.utils
 
 local command = {}
 
@@ -421,9 +423,8 @@ end
 
 --- DistantClientVersion
 command.client_version = function()
-    local Client = require('distant-core.cli')
+    local Client = cli.client()
     local client = Client:new()
-    local utils = require('distant-core.utils')
 
     local version = assert(client:version(), 'Could not get client version')
     print(utils.version_to_string(version))

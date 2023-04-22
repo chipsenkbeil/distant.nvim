@@ -1,16 +1,17 @@
 local editor = require('distant.editor')
 
-local log = require('distant-core.log')
-local u = require('distant-core.utils')
-local vars = require('distant-core.vars')
+local core = require('distant-core')
+local log = core.log
+local utils = core.utils
+local vars = core.vars
 
 local function _initialize()
     log.trace('Initializing autocmds')
 
     -- Assign appropriate handlers for distant:// scheme
-    u.augroup('distant', function()
+    utils.augroup('distant', function()
         -- If we enter a buffer that is not initialized, we trigger a BufReadCmd
-        u.autocmd('BufEnter', 'distant://*', function()
+        utils.autocmd('BufEnter', 'distant://*', function()
             --- @diagnostic disable-next-line:missing-parameter
             local bufnr = tonumber(vim.fn.expand('<abuf>'))
 
@@ -25,16 +26,16 @@ local function _initialize()
         end)
 
         -- Primary entrypoint to load remote files
-        u.autocmd('BufReadCmd,FileReadCmd', 'distant://*', function()
+        utils.autocmd('BufReadCmd,FileReadCmd', 'distant://*', function()
             --- @diagnostic disable-next-line:missing-parameter
             local bufnr = tonumber(vim.fn.expand('<abuf>'))
 
             --- @diagnostic disable-next-line:missing-parameter
             local fname = vim.fn.expand('<amatch>')
-            local path = u.strip_prefix(fname, 'distant://')
+            local path = utils.strip_prefix(fname, 'distant://')
 
             local line, col
-            path, line, col = u.strip_line_col(path)
+            path, line, col = utils.strip_line_col(path)
 
             -- Ensure our buffer is named without the line/column,
             -- but with the appropriate prefix
@@ -51,7 +52,7 @@ local function _initialize()
         end)
 
         -- Primary entrypoint to write remote files
-        u.autocmd('BufWriteCmd', 'distant://*', function()
+        utils.autocmd('BufWriteCmd', 'distant://*', function()
             --- @diagnostic disable-next-line:missing-parameter
             local bufnr = tonumber(vim.fn.expand('<abuf>'))
 

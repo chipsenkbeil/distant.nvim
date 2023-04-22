@@ -1,10 +1,11 @@
 local fn = require('distant.fn')
 
-local data = require('distant-core.data')
-local log = require('distant-core.log')
-local state = require('distant-core.state')
-local utils = require('distant-core.utils')
-local vars = require('distant-core.vars')
+local core = require('distant-core')
+local data = core.data
+local log = core.log
+local state = core.state
+local utils = core.utils
+local vars = core.vars
 
 --- Applies neovim buffer-local mappings
 ---
