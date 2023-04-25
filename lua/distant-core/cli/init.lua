@@ -1,7 +1,7 @@
 local utils = require('distant-core.utils')
 
 local Client = require('distant-core.cli.client')
-local install = require('distant-core.cli.install')
+local installer = require('distant-core.installer')
 local Manager = require('distant-core.cli.manager')
 
 local cli = {}
@@ -52,7 +52,7 @@ function cli.settings(opts)
     local bin = opts.bin or state.settings.client.bin
     local is_bin_generic = bin == 'distant' or bin == 'distant.exe'
     if not opts.no_install_fallback and is_bin_generic and vim.fn.executable(bin) ~= 1 then
-        bin = install.path()
+        bin = installer.path()
     end
 
     return {
@@ -131,7 +131,7 @@ function cli.install(opts, cb)
     end
 
     -- Otherwise, try to install to our internal location and use it
-    return install.install({
+    return installer.install({
         min_version = MIN_VERSION,
         reinstall = opts.reinstall,
     }, function(success, result)

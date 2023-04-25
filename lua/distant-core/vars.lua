@@ -22,7 +22,7 @@ local function buf_var(buf, name, ty, set_map)
 
     set_map = function(...) return ... end
 
-    if vim.tbl_islist(ty) then
+    if type(ty) == 'table' and vim.tbl_islist(ty) then
         validate_var = function(value)
             for _, t in ipairs(ty) do
                 if type(value) == t then
@@ -82,20 +82,22 @@ end
 --- @return string
 local function clean_path(path)
     if type(path) == 'string' then
-        return path:gsub('[\\/]+$', '')
+        return string.gsub(path, '[\\/]+$', '')[1]
+    else
+        return ''
     end
 end
 
 -- GLOBAL DEFINITIONS ---------------------------------------------------------
 
 --- Contains getters and setters for variables used by this plugin
-local vars = {}
+local M = {}
 
 -- BUF LOCAL DEFINITIONS ------------------------------------------------------
 
-vars.Buf = {}
-vars.Buf.__index = vars.buf
-vars.Buf.__call = function(_, bufnr)
+M.Buf = {}
+M.Buf.__index = M.buf
+M.Buf.__call = function(_, bufnr)
     bufnr = bufnr or 0
     local buf_vars = {
         remote_path = buf_var(bufnr, 'remote_path', 'string', clean_path),
@@ -126,7 +128,7 @@ vars.Buf.__call = function(_, bufnr)
                 return true
             end
 
-            local alt_paths = vars.buf(bufnr).remote_alt_paths.get() or {}
+            local alt_paths = M.buf(bufnr).remote_alt_paths.get() or {}
             if alt_paths[path] ~= nil or alt_paths[cleaned_path] ~= nil then
                 return true
             end
@@ -138,9 +140,9 @@ vars.Buf.__call = function(_, bufnr)
     return buf_vars
 end
 
-vars.buf = (function()
+M.buf = (function()
     local instance = {}
-    setmetatable(instance, vars.Buf)
+    setmetatable(instance, M.Buf)
 
     --- Search all buffers for path or alt path match
     --- @param path string #looks for distant://path and path itself
@@ -158,7 +160,7 @@ vars.buf = (function()
         -- as the primary or one of the alternate paths
         --- @diagnostic disable-next-line:redefined-local
         for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
-            if vars.buf(bufnr).has_matching_remote_path(path) then
+            if M.buf(bufnr).has_matching_remote_path(path) then
                 return bufnr
             end
         end
@@ -167,4 +169,4 @@ vars.buf = (function()
     return instance
 end)()
 
-return vars
+return M

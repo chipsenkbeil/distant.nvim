@@ -1,17 +1,21 @@
 local log = require('distant-core.log')
 local state = require('distant-core.ui.state')
 
--- TODO: Support this being configurable
--- Width of the window. Accepts:
--- - Integer greater than 1 for fixed width.
--- - Float in the range of 0-1 for a percentage of screen width.
-local UI_WIDTH = 0.8
+---@alias WinWidth number
+--- Width of the window. Accepts:
+--- - Integer greater than 1 for fixed width.
+--- - Float in the range of 0-1 for a percentage of screen width.
 
--- TODO: Support this being configurable
--- Height of the window. Accepts:
--- - Integer greater than 1 for fixed height.
--- - Float in the range of 0-1 for a percentage of screen height.
-local UI_HEIGHT = 0.9
+---@alias WinHeight number
+--- Height of the window. Accepts:
+--- - Integer greater than 1 for fixed height.
+--- - Float in the range of 0-1 for a percentage of screen height.
+
+---@type WinWidth
+local DEFAULT_UI_WIDTH = 0.8
+
+---@type WinHeight
+local DEFAULT_UI_HEIGHT = 0.9
 
 local M = {}
 
@@ -177,7 +181,7 @@ end
 -- exported for tests
 M._render_node = render_node
 
----@alias WindowOpts { effects?: table<string, fun()>, winhighlight?: string[], border?: string|table }
+---@alias WindowOpts { effects?: table<string, fun()>, winhighlight?: string[], border?: string|table, width?: WinWidth, height?: WinHeight }
 
 ---@param size integer | float
 ---@param viewport integer
@@ -193,8 +197,8 @@ end
 local function create_popup_window_opts(opts, sizes_only)
     local lines = vim.o.lines - vim.o.cmdheight
     local columns = vim.o.columns
-    local height = calc_size(UI_HEIGHT, lines)
-    local width = calc_size(UI_WIDTH, columns)
+    local height = calc_size(opts.height or DEFAULT_UI_HEIGHT, lines)
+    local width = calc_size(opts.width or DEFAULT_UI_WIDTH, columns)
     local row = math.floor((lines - height) / 2)
     local col = math.floor((columns - width) / 2)
     local popup_layout = {

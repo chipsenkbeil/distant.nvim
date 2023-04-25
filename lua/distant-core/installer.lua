@@ -44,15 +44,9 @@ end
 --- @field page? number #Page in release list to query, defaulting to first page
 --- @field per_page? number #Number of entries to query for a page
 
---- @overload fun(cb:fun(success:boolean, result:string|table)):number
 --- @param opts QueryReleaseApiOpts
---- @param cb fun(success:boolean, result:string|table)
---- @return number #job-id on success, 0 on invalid arguments, -1 if unable to execute cmd
+--- @param cb fun(err?:string, result?:table)
 local function query_release_api(opts, cb)
-    if not cb then
-        cb = opts
-        opts = {}
-    end
     vim.validate({ opts = { opts, 'table' }, cb = { cb, 'function' } })
 
     -- Build our query string of ?page=N&per_page=N
@@ -82,16 +76,21 @@ local function query_release_api(opts, cb)
     end
 
     if not cmd then
-        return cb(false, 'No external command is available. Please install curl, wget, or fetch!')
+        cb('No external command is available. Please install curl, wget, or fetch!', nil)
     end
 
     local json_str, err
-    return vim.fn.jobstart(cmd, {
+    vim.fn.jobstart(cmd, {
         on_exit = function(_, exit_code)
             if exit_code ~= 0 then
-                cb(false, 'Exit ' .. tostring(exit_code) .. ': ' .. tostring(err))
+                cb('Exit ' .. tostring(exit_code) .. ': ' .. tostring(err), nil)
             else
-                cb(pcall(vim.fn.json_decode, json_str or ''))
+                local success, value = pcall(vim.fn.json_decode, json_str or '')
+                if success then
+                    cb(nil, value)
+                else
+                    cb(tostring(value), nil)
+                end
             end
         end,
         on_stdout = function(_, data, _)
@@ -118,23 +117,18 @@ end
 --- @field prerelease boolean
 
 --- Retrieve some subset of release entries
---- @overload fun(cb:fun(success:boolean, res:string|ReleaseEntry[])):number
 --- @param opts QueryReleaseListOpts
---- @param cb fun(success:boolean, res:string|ReleaseEntry[])
---- @return number #job-id on success, 0 on invalid arguments, -1 if unable to execute cmd
+--- @param cb fun(err?:string, entries?:ReleaseEntry[])
 local function query_release_list(opts, cb)
-    if not cb then
-        cb = opts
-        opts = {}
-    end
     vim.validate({ opts = { opts, 'table' }, cb = { cb, 'function' } })
     if type(opts.asset_name) ~= 'string' then
         error('opts.asset_name is required and must be a string')
     end
 
-    return query_release_api(opts, function(success, res)
-        if not success then
-            return cb(success, res)
+    query_release_api({ page = opts.page, per_page = opts.per_page }, function(err, res)
+        if err then
+            cb(err, nil)
+            return
         end
 
         --- @type ReleaseEntry[]
@@ -176,15 +170,14 @@ local function query_release_list(opts, cb)
             end
         end
 
-        cb(true, entries)
+        cb(nil, entries)
     end)
 end
 
 --- Downloads src using curl, wget, or fetch and stores it at dst
 --- @param src string #url to download from
 --- @param dst string #destination to store artifact
---- @param cb fun(success:boolean, result:string) #where result is an error message or the binary path
---- @return number #job-id on success, 0 on invalid arguments, -1 if unable to execute cmd
+--- @param cb fun(err?:string, path?:string) #where result is an error message or the binary path
 local function download(src, dst, cb)
     local cmd
     if tonumber(vim.fn.executable('curl')) == 1 then
@@ -196,7 +189,8 @@ local function download(src, dst, cb)
     end
 
     if not cmd then
-        return cb(false, 'No external command is available. Please install curl, wget, or fetch!')
+        cb('No external command is available. Please install curl, wget, or fetch!', nil)
+        return
     end
 
     -- Create a new buffer to house our terminal window
@@ -204,19 +198,19 @@ local function download(src, dst, cb)
     assert(bufnr ~= 0, 'Failed to create buffer')
     vim.api.nvim_win_set_buf(0, bufnr)
 
-    return vim.fn.termopen(cmd, {
+    vim.fn.termopen(cmd, {
         pty = true,
         on_exit = function(_, exit_code)
             if exit_code ~= 0 then
                 vim.schedule(function()
-                    cb(false, string.format('%s failed (%s)', cmd, exit_code))
+                    cb(string.format('%s failed (%s)', cmd, exit_code), nil)
                 end)
             else
                 -- Close out the terminal window
                 vim.api.nvim_buf_delete(bufnr, { force = true })
 
                 vim.schedule(function()
-                    cb(true, dst)
+                    cb(nil, dst)
                 end)
             end
         end
@@ -320,22 +314,13 @@ end
 --- @field bin_name? string #Name of binary artifact to download, defaulting to platform choice
 --- @field min_version? Version #Minimum version to list as a download choice
 
---- @overload fun(cb:fun(success:boolean, result:string)):number
 --- @param opts DownloadBinaryOpts
---- @param cb fun(success:boolean, result:string) #where result is an error message or the binary path
---- @return number #job-id on success, 0 on invalid arguments, -1 if unable to execute cmd
+--- @param cb fun(err?:string, path?:string) #where result is an error message or the binary path
 local function download_binary(opts, cb)
+    vim.validate({ opts = { opts, 'table' }, cb = { cb, 'function' } })
+
     --- @type string
     local host_platform = HOST_PLATFORM
-
-    if not cb then
-        cb = opts
-        opts = {}
-    end
-
-    if not opts then
-        opts = {}
-    end
 
     local bin_name = opts.bin_name
     local min_version = opts.min_version
@@ -372,50 +357,46 @@ local function download_binary(opts, cb)
     end
 
     if not bin_name then
-        return cb(false, 'No binary available for ' .. host_platform)
+        cb('No binary available for ' .. host_platform, nil)
+        return
     end
 
-    return query_release_list({ asset_name = bin_name }, function(success, res)
-        if not success then
-            return cb(success, res)
+    query_release_list({ asset_name = bin_name }, function(err, entries)
+        if err then
+            cb(err, nil)
+            return
         end
-
-        --- @type ReleaseEntry[]
-        res = res
 
         local choices = vim.tbl_map(
             function(entry) return entry.description end,
             vim.tbl_filter(function(entry)
                 local version = parse_tag_into_version(entry.tag)
-                return not min_version or utils.can_upgrade_version(
+                return not min_version or ((not not version) and utils.can_upgrade_version(
                     min_version,
                     version,
                     { allow_unstable_upgrade = true }
-                )
-            end, res)
+                ))
+            end, entries)
         )
         local choice = prompt_choices({
             prompt = 'Which version of the binary do you want?',
             choices = choices,
             max_choices = MAX_DOWNLOAD_CHOICES,
         })
-        local entry = res[choice]
+        local entry = entries[choice]
         if not entry then
-            return cb(false, 'Cancelled selecting binary version')
+            cb('Cancelled selecting binary version', nil)
+            return
         end
 
-        return download(entry.url, bin_path(), cb)
+        download(entry.url, bin_path(), cb)
     end)
 end
 
---- @overload fun(cb:fun(success:boolean, result:string))
---- @param path string
---- @param cb fun(success:boolean, result:string) #where result is an error message or the binary path
+--- @param path? string
+--- @param cb fun(err?:string, path?:string) #where result is an error message or the binary path
 local function copy_binary(path, cb)
-    if not cb then
-        cb = path
-        path = nil
-    end
+    vim.validate({ path = { path, 'string', true }, cb = { cb, 'function' } })
 
     if not path then
         path = vim.fn.input('Path to binary: ')
@@ -426,24 +407,24 @@ local function copy_binary(path, cb)
         vim.loop.fs_copyfile(path, dst, function(err, success)
             vim.schedule(function()
                 if err then
-                    cb(false, err)
+                    cb(err, nil)
                 elseif not success then
-                    cb(false, 'Failed to copy ' .. path .. ' to ' .. dst)
+                    cb('Failed to copy ' .. path .. ' to ' .. dst, nil)
                 else
-                    cb(true, dst)
+                    cb(nil, dst)
                 end
             end)
         end)
     else
-        cb(false, 'Binary path missing')
+        cb('Binary path missing', nil)
     end
 end
 
---- @param cb fun(success:boolean, result:string) #where result is an error message or the repo path
---- @return number #job-id on success, 0 on invalid arguments, -1 if unable to execute cmd
+--- @param cb fun(err?:string, path?:string) #where result is an error message or the repo path
 local function clone_repository(cb)
     if tonumber(vim.fn.executable('git')) ~= 1 then
-        return cb(false, 'git not found in path')
+        cb('git not found in path', nil)
+        return
     end
 
     local tmpdir = vim.fn.tempname()
@@ -454,48 +435,38 @@ local function clone_repository(cb)
     assert(bufnr ~= 0, 'Failed to create buffer')
     vim.api.nvim_win_set_buf(0, bufnr)
 
-    return vim.fn.termopen(cmd, {
+    vim.fn.termopen(cmd, {
         pty = true,
         on_exit = function(_, exit_code)
             if exit_code ~= 0 then
                 vim.fn.delete(tmpdir, 'rf')
                 vim.schedule(function()
-                    cb(false, string.format('%s failed (%s)', cmd, exit_code))
+                    cb(string.format('%s failed (%s)', cmd, exit_code), nil)
                 end)
             else
                 -- Close out the terminal window
                 vim.api.nvim_buf_delete(bufnr, { force = true })
 
                 vim.schedule(function()
-                    cb(true, tmpdir)
+                    cb(nil, tmpdir)
                 end)
             end
         end
     })
 end
 
---- @class BuildBinaryOpts
---- @field bin string
 
---- @overload fun(cb:fun(success:boolean, result:string)):number
---- @param opts BuildBinaryOpts
---- @param cb fun(success:boolean, result:string) #where result is an error message or the binary path
---- @return number #job-id on success, 0 on invalid arguments, -1 if unable to execute cmd
-local function build_binary(opts, cb)
-    if not cb then
-        cb = opts
-        opts = {}
-    end
-
-    return clone_repository(function(success, tmpdir)
-        if not success then
-            return vim.schedule(function()
-                cb(success, tmpdir)
-            end)
+--- @param cb fun(err?:string, path?:string) #where result is an error message or the binary path
+local function build_binary(cb)
+    clone_repository(function(err, path)
+        if err then
+            vim.schedule(function() cb(err, nil) end)
+            return
         end
 
         if tonumber(vim.fn.executable('cargo')) ~= 1 then
-            return cb(false, 'cargo not found in path')
+            cb('cargo not found in path', nil)
+            return
         end
 
         -- Create a new buffer to house our terminal window
@@ -504,10 +475,10 @@ local function build_binary(opts, cb)
         vim.api.nvim_win_set_buf(0, bufnr)
 
         -- $ROOT/distant/Cargo.toml
-        local cargo_toml = tmpdir .. SEP .. 'Cargo.toml'
+        local cargo_toml = path .. SEP .. 'Cargo.toml'
 
         -- $ROOT/distant/target/release/{bin}
-        local release_bin = tmpdir .. SEP .. 'target' .. SEP .. 'release' .. SEP
+        local release_bin = path .. SEP .. 'target' .. SEP .. 'release' .. SEP
         if HOST_OS == 'windows' then
             release_bin = release_bin .. 'distant.exe'
         else
@@ -516,14 +487,14 @@ local function build_binary(opts, cb)
 
         -- Build release binary
         local cmd = string.format('cargo build --release', cargo_toml)
-        return vim.fn.termopen(cmd, {
-            cwd = tmpdir,
+        vim.fn.termopen(cmd, {
+            cwd = path,
             pty = true,
             on_exit = function(_, exit_code)
                 if exit_code ~= 0 then
-                    vim.fn.delete(tmpdir, 'rf')
+                    vim.fn.delete(path, 'rf')
                     vim.schedule(function()
-                        cb(false, string.format('%s failed (%s)', cmd, exit_code))
+                        cb(string.format('%s failed (%s)', cmd, exit_code), nil)
                     end)
                 else
                     -- Close out the terminal window
@@ -531,7 +502,7 @@ local function build_binary(opts, cb)
 
                     vim.schedule(function()
                         copy_binary(release_bin, function(status, msg)
-                            vim.fn.delete(tmpdir, 'rf')
+                            vim.fn.delete(path, 'rf')
                             cb(status, msg or release_bin)
                         end)
                     end)
@@ -545,21 +516,26 @@ end
 -- PUBLIC API
 -------------------------------------------------------------------------------
 
+local M = {
+    path = bin_path,
+    dir = bin_dir,
+}
+
 --- Returns true if the binary is loaded, otherwise return false
 --- @return boolean
-local function exists()
+function M.exists()
     return vim.fn.executable(bin_path()) == 1
 end
 
 --- Returns true if the binary is available on our path, even if not locally
 --- @return boolean
-local function available_on_path()
+function M.available_on_path()
     return vim.fn.executable(HOST_BIN_NAME) == 1
 end
 
 --- Returns the name of the binary on the platform
 --- @return 'distant'|'distant.exe'
-local function bin_name()
+function M.bin_name()
     return HOST_BIN_NAME
 end
 
@@ -572,19 +548,9 @@ end
 --- Installs the binary asynchronously if unavailable, providing several options to perform
 --- the installation
 ---
---- @overload fun(cb:fun(success:boolean, result:string)):number
 --- @param opts InstallOpts
---- @param cb fun(success:boolean, result:string)
---- @return number #job-id on success, 0 on invalid arguments, -1 if unable to execute cmd
-local function install(opts, cb)
-    if not cb then
-        cb = opts
-        opts = {}
-    end
-    if not opts then
-        opts = {}
-    end
-
+--- @param cb fun(err?:string, path?:string)
+function M.install(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
         cb = { cb, 'function' },
@@ -618,7 +584,8 @@ local function install(opts, cb)
         )
 
         if valid_version then
-            return cb(true, local_bin)
+            cb(nil, local_bin)
+            return
         elseif version then
             prompt = string.format(
                 'Installed cli version is %s, which is not backwards-compatible with %s! '
@@ -631,7 +598,8 @@ local function install(opts, cb)
         -- Otherwise, if we have a binary and no minimum required version,
         -- then we're good to go and can exit immediately
     elseif has_bin and not opts.reinstall then
-        return cb(true, local_bin)
+        cb(nil, local_bin)
+        return
     end
 
     local choice = prompt_choices({
@@ -644,93 +612,80 @@ local function install(opts, cb)
     })
 
     if not choice then
-        return cb(false, 'Aborted choice prompt')
+        cb('Aborted choice prompt', nil)
+        return
     end
 
     local do_action = function()
-        local cb_wrapper = vim.schedule_wrap(function(success, res)
-            if not success then
-                return cb(success, res)
-            else
-                local path = res
-
-                -- If we succeeded, we need to make sure the binary is executable on Unix systems
-                -- and we do this by getting the pre-existing mode and ensuring that it is
-                -- executable
-                vim.loop.fs_stat(path, vim.schedule_wrap(function(err, stat)
-                    if err then
-                        return cb(false, err)
-                    end
-
-                    -- Mode comes in as a decimal representing octal value
-                    -- and we want to ensure that it has executable permissions
-                    local mode = utils.bitmask(
-                        stat.mode or 493, -- 0o755 -> 493
-                        73,               -- 0o111 -> 73
-                        'or'
-                    )
-
-                    vim.loop.fs_chmod(path, mode, vim.schedule_wrap(function(err, success)
-                        if err then
-                            return cb(false, err)
-                        elseif not success then
-                            return cb(false, 'Failed to change binary permissions')
-                        else
-                            return cb(true, path)
-                        end
-                    end))
-                end))
+        local cb_wrapper = vim.schedule_wrap(function(err, path)
+            if err then
+                cb(err, nil)
+                return
             end
+
+            assert(path, 'Path nil without error!')
+
+            -- If we succeeded, we need to make sure the binary is executable on Unix systems
+            -- and we do this by getting the pre-existing mode and ensuring that it is
+            -- executable
+            vim.loop.fs_stat(path, vim.schedule_wrap(function(err, stat)
+                if err then
+                    cb(err, nil)
+                    return
+                end
+
+                -- Mode comes in as a decimal representing octal value
+                -- and we want to ensure that it has executable permissions
+                local mode = utils.bitmask(
+                    stat.mode or 493, -- 0o755 -> 493
+                    73,               -- 0o111 -> 73
+                    'or'
+                )
+
+                vim.loop.fs_chmod(path, mode, vim.schedule_wrap(function(err, success)
+                    if err then
+                        cb(err, nil)
+                    elseif not success then
+                        cb('Failed to change binary permissions', nil)
+                    else
+                        cb(nil, path)
+                    end
+                end))
+            end))
         end)
 
         -- Perform action to get binary
         if choice == 1 then
-            return download_binary({ min_version = opts.min_version }, cb_wrapper)
+            download_binary({ min_version = opts.min_version }, cb_wrapper)
         elseif choice == 2 then
-            return build_binary(cb_wrapper)
+            build_binary(cb_wrapper)
         elseif choice == 3 then
-            return copy_binary(cb_wrapper)
+            copy_binary(nil, cb_wrapper)
         end
     end
 
     -- If we have a bin and were given a choice, we want to delete the old binary
     -- before installing the new one to avoid weird corruption
     if has_bin then
-        return vim.loop.fs_unlink(local_bin, vim.schedule_wrap(function(err, success)
+        vim.loop.fs_unlink(local_bin, vim.schedule_wrap(function(err, success)
             if err then
-                return cb(false, 'Failed to remove old binary: ' .. err)
+                cb('Failed to remove old binary: ' .. err, nil)
             elseif not success then
-                return cb(false, 'Failed to remove old binary: ???')
+                cb('Failed to remove old binary: ???', nil)
             end
 
-            return do_action()
+            do_action()
         end))
     else
         -- Ensure that the directory to house the binary exists
-        return utils.mkdir({ path = bin_dir(), parents = true }, function(err)
+        utils.mkdir({ path = bin_dir(), parents = true }, function(err)
             if err then
-                return cb(false, 'Unable to create directory for binary: ' .. err)
+                cb('Unable to create directory for binary: ' .. err, nil)
             end
 
-            return do_action()
+            do_action()
         end)
     end
 end
 
---- @class CliInstall
---- @field available_on_path fun():boolean #???
---- @field bin_name fun():'distant'|'distant.exe' #returns the name of the binary (distant or distant.exe)
---- @field exists fun():boolean #returns true if binary exists and is executable
---- @field install fun(opts?: InstallOpts, cb:fun(success:boolean, err:string|nil)):number
---- @field path fun():string #returns path to binary
---- @field dir fun():string #returns path to directory containing binary
-
---- @type CliInstall
-return {
-    available_on_path = available_on_path,
-    bin_name = bin_name,
-    exists = exists,
-    install = install,
-    path = bin_path,
-    dir = bin_dir,
-}
+return M

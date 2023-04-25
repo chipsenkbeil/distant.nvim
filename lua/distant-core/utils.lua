@@ -40,7 +40,7 @@ utils.cache_path = function(path)
         utils.plugin_name()
         )
 
-    if vim.tbl_islist(path) then
+    if type(path) == 'table' and vim.tbl_islist(path) then
         for _, component in ipairs(path) do
             full_path = full_path .. utils.seperator() .. component
         end
@@ -61,7 +61,7 @@ utils.data_path = function(path)
         utils.plugin_name()
         )
 
-    if vim.tbl_islist(path) then
+    if type(path) == 'table' and vim.tbl_islist(path) then
         for _, component in ipairs(path) do
             full_path = full_path .. utils.seperator() .. component
         end
@@ -232,8 +232,10 @@ utils.job_start = function(cmd, opts)
 
     if job_id == 0 then
         log.fmt_error('Invalid arguments: %s', cmd)
+        error('Invalid arguments: ' .. tostring(cmd))
     elseif job_id == -1 then
         log.fmt_error('Cmd is not executable: %s', cmd)
+        error('Cmd is not executable: ' .. tostring(cmd))
     else
         return {
             id = function()
@@ -292,7 +294,7 @@ utils.parse_destination = function(destination)
     --- Additionally, username will be empty string if it is not provided but a password is.
     --- Same situation with username provided but no password
     local function parse_username_password(s)
-        local username, password, i, has_password, old_s
+        local username, password, i, has_password, is_valid, old_s
         i = 1
         username = ''
         password = ''
@@ -402,7 +404,7 @@ utils.parse_destination = function(destination)
     -- If destination still has content remaining, return nil result!
     -- If host is empty, return nil result!
     if #destination > 0 or not host or #host == 0 then
-        return nil
+        error('Unable to parse destination!')
     end
 
     return {
@@ -424,12 +426,12 @@ end
 --- @param vstr string
 --- @return Version|nil #Returns version if valid, otherwise nil
 utils.parse_version = function(vstr)
-    local semver, ext = unpack(vim.split(vstr, '-', true))
-    local major, minor, patch = unpack(vim.split(semver, '.', true))
+    local semver, ext = unpack(vim.split(vstr, '-', { plain = true }))
+    local major, minor, patch = unpack(vim.split(semver, '.', { plain = true }))
 
     local pre_release, pre_release_version
     if ext then
-        pre_release, pre_release_version = unpack(vim.split(ext, '.', true))
+        pre_release, pre_release_version = unpack(vim.split(ext, '.', { plain = true }))
     end
 
     local version = {
@@ -582,7 +584,7 @@ end
 utils.compress = function(s)
     return utils.concat_nonempty(
         utils.filter_map(
-            vim.split(s, '\n', true),
+            vim.split(s, '\n', { plain = true }),
             (function(line)
                 return vim.trim(line)
             end)
@@ -611,7 +613,7 @@ utils.contains = function(tbl, value)
 end
 
 --- Returns a new id for use in sending messages
---- @return number id Randomly generated id
+--- @return fun():number #Randomly generated id
 utils.next_id = (function()
     -- Ensure that we have something kind-of random
     math.randomseed(os.time())
@@ -672,7 +674,7 @@ end
 --- Reads all lines from a file
 ---
 --- @param path string Path to the file
---- @return list|nil #List of lines split by newline, or nil if failed to read
+--- @return string[]|nil #List of lines split by newline, or nil if failed to read
 utils.read_lines = function(path)
     local f = io.open(path, "rb")
     local contents = nil
@@ -681,14 +683,14 @@ utils.read_lines = function(path)
         f:close()
     end
     if contents ~= nil then
-        return vim.split(contents, '\n', true)
+        return vim.split(contents, '\n', { plain = true })
     end
 end
 
 --- Reads all lines from a file and then removes the file
 ---
 --- @param path string Path to the file
---- @return list|nil #List of lines split by newline, or nil if failed to read
+--- @return string[]|nil #List of lines split by newline, or nil if failed to read
 utils.read_lines_and_remove = function(path)
     local lines = utils.read_lines(path)
     os.remove(path)
@@ -762,8 +764,8 @@ utils.mkdir = function(opts, cb)
 
     vim.loop.fs_stat(path, function(err, stat)
         local exists = not err and not (not stat)
-        local is_dir = exists and stat.type == 'directory'
-        local is_file = exists and stat.type == 'file'
+        local is_dir = exists and stat ~= nil and stat.type == 'directory'
+        local is_file = exists and stat ~= nil and stat.type == 'file'
 
         if is_dir then
             return cb(nil)
@@ -771,7 +773,7 @@ utils.mkdir = function(opts, cb)
             return cb(string.format('Cannot create dir: %s is file', path))
         else
             --- @diagnostic disable-next-line:redefined-local
-            return vim.loop.fs_mkdir(path, mode, function(err, success)
+            vim.loop.fs_mkdir(path, mode, function(err, success)
                 if success then
                     return cb(nil)
                 elseif parents then
@@ -790,7 +792,7 @@ utils.mkdir = function(opts, cb)
                         --- @diagnostic disable-next-line:unused-local
                         function(_err)
                             --- @diagnostic disable-next-line:redefined-local
-                            return vim.loop.fs_mkdir(path, mode, function(err, success)
+                            vim.loop.fs_mkdir(path, mode, function(err, success)
                                 if not err and not success then
                                     err = 'Something went wrong creating ' .. path
                                 end

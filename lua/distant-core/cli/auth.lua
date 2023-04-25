@@ -60,7 +60,7 @@ function AuthHandler:handle_msg(msg, reply)
         })
         return true
     elseif type == 'auth_error' then
-        self:on_error(vim.inspect(msg))
+        self:on_error({ kind = msg.kind, text = msg.text })
         return false
     elseif type == 'auth_finished' then
         self:on_finished()

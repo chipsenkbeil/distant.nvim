@@ -1,6 +1,6 @@
 --- @class BaseCmd
 --- @field __cmd string
---- @field __internal string[]
+--- @field __internal table<string, boolean|string>
 --- @field __allowed table<string, boolean>|nil
 local BaseCmd = {}
 BaseCmd.__index = BaseCmd
@@ -44,7 +44,7 @@ end
 
 --- Sets an argument
 --- @param key string #the key to add
---- @param value? string #optional value for argument
+--- @param value? boolean|string #optional value for argument
 --- @param verbatim? boolean #if true, does not transform key casing and uses as is
 --- @return BaseCmd #reference to self
 function BaseCmd:set(key, value, verbatim)
@@ -87,6 +87,8 @@ function BaseCmd:clear(key, verbatim)
     end
 
     self.__internal[key_label] = nil
+
+    return self
 end
 
 --- Converts cmd into a list of string

@@ -43,7 +43,9 @@ function M.spawn(opts, cb)
         end,
         on_stdout_line = function(line)
             if line ~= nil and line ~= "" then
-                local msg = vim.fn.json_decode(line)
+                --- @type table
+                local msg = assert(vim.fn.json_decode(line), 'Invalid JSON from line')
+
                 if auth:is_auth_msg(msg) then
                     --- @diagnostic disable-next-line:redefined-local
                     auth:handle_msg(msg, function(msg)

@@ -24,47 +24,42 @@ end
 local default_config = {
     -- Name of the plugin. Prepended to log messages
     plugin = 'distant',
-
     -- Should print the output to neovim while running
     -- values: 'sync','async',false
     use_console = 'async',
-
     -- Should highlighting be used in console (using echohl)
     highlights = true,
-
     -- Should write to a file
     use_file = true,
-
     -- Any messages above this level will be logged.
     level = string.lower(d_log_level),
-
     -- Level configuration
     modes = {
         { name = 'trace', hl = 'Comment' },
         { name = 'debug', hl = 'Comment' },
-        { name = 'info', hl = 'None' },
-        { name = 'warn', hl = 'WarningMsg' },
+        { name = 'info',  hl = 'None' },
+        { name = 'warn',  hl = 'WarningMsg' },
         { name = 'error', hl = 'ErrorMsg' },
         { name = 'fatal', hl = 'ErrorMsg' },
     },
-
     -- Can limit the number of decimals displayed for floats
     float_precision = 0.01,
 }
 
 -- {{{ NO NEED TO CHANGE
-local log = {}
+local M = {}
 
 local unpack = unpack or table.unpack
 
-log.new = function(config, standalone)
+M.new = function(config, standalone)
     config = vim.tbl_deep_extend('force', default_config, config)
 
-    local outfile = d_log_file or string.format('%s/%s.log', vim.api.nvim_call_function('stdpath', { 'cache' }), config.plugin)
+    local outfile = d_log_file or
+        string.format('%s/%s.log', vim.api.nvim_call_function('stdpath', { 'cache' }), config.plugin)
 
     local obj
     if standalone then
-        obj = log
+        obj = M
     else
         obj = config
     end
@@ -188,7 +183,7 @@ log.new = function(config, standalone)
     return obj
 end
 
-log.new(default_config, true)
+M.new(default_config, true)
 -- }}}
 
-return log
+return M
