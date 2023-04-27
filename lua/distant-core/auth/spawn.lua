@@ -1,14 +1,12 @@
-local AuthHandler = require('distant-core.cli.auth')
+local AuthHandler = require('distant-core.auth.handler')
 local log = require('distant-core.log')
 local utils = require('distant-core.utils')
-
-local M = {}
 
 --- Spawn a command that does some authentication and eventually returns an id upon success
 --- @param opts {cmd:string|string[], auth:AuthHandler|nil}
 --- @param cb fun(err:string|nil, connection:string|nil)
 --- @return JobHandle
-function M.spawn(opts, cb)
+return function(opts, cb)
     opts = opts or {}
     assert(opts.cmd, 'missing cmd')
 
@@ -46,9 +44,9 @@ function M.spawn(opts, cb)
                 --- @type table
                 local msg = assert(vim.fn.json_decode(line), 'Invalid JSON from line')
 
-                if auth:is_auth_msg(msg) then
+                if auth:is_auth_request(msg) then
                     --- @diagnostic disable-next-line:redefined-local
-                    auth:handle_msg(msg, function(msg)
+                    auth:handle_request(msg, function(msg)
                         handle.write(utils.compress(vim.fn.json_encode(msg)) .. '\n')
                     end)
                 elseif msg.type == 'launched' or msg.type == 'connected' then
@@ -71,5 +69,3 @@ function M.spawn(opts, cb)
 
     return handle
 end
-
-return M

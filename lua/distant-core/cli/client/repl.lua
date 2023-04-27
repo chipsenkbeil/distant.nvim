@@ -104,9 +104,9 @@ function ClientRepl:start(cb)
 
                     -- Check if we are processing an authentication msg
                     -- or an API message
-                    if auth:is_auth_msg(msg) then
+                    if auth:is_auth_request(msg) then
                         --- @diagnostic disable-next-line:redefined-local
-                        auth:handle_msg(msg, function(msg)
+                        auth:handle_request(msg, function(msg)
                             handle.write(utils.compress(vim.fn.json_encode(msg)) .. '\n')
                         end)
                         self.__state.authenticated = auth.finished

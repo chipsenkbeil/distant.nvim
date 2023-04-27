@@ -2,21 +2,21 @@ local log = require('distant-core.log')
 
 --- @class AuthHandler
 --- @field finished boolean #true if handler has finished performing authentication
-local AuthHandler = {}
-AuthHandler.__index = AuthHandler
+local M = {}
+M.__index = M
 
 --- Creates a new instance of the authentication handler.
 --- @return AuthHandler
-function AuthHandler:new()
+function M:new()
     local instance = {}
-    setmetatable(instance, AuthHandler)
+    setmetatable(instance, M)
     return instance
 end
 
 --- Returns true if the provided message with a type is an authentication request.
 --- @param msg {type:string}
 --- @return boolean
-function AuthHandler:is_auth_msg(msg)
+function M:is_auth_request(msg)
     return msg and type(msg.type) == 'string' and vim.tbl_contains({
         'auth_initialization',
         'auth_start_method',
@@ -32,7 +32,7 @@ end
 --- @param msg table #incoming request message
 --- @param reply fun(msg:table) #used to send a response message back
 --- @return boolean #true if okay, otherwise false to indicate error/unknown
-function AuthHandler:handle_msg(msg, reply)
+function M:handle_request(msg, reply)
     local type = msg.type
 
     if type == 'auth_initialization' then
@@ -74,20 +74,20 @@ end
 --- Invoked when authentication is starting, containing available methods to use for authentication.
 --- @param msg {methods:string[]}
 --- @return string[] #authentication methods to use
-function AuthHandler:on_initialization(msg)
+function M:on_initialization(msg)
     return msg.methods
 end
 
 --- Invoked when an indicator that a new authentication method is starting during authentication.
 --- @param method string
-function AuthHandler:on_start_method(method)
+function M:on_start_method(method)
     log.fmt_trace('Beginning authentication method: %s', method)
 end
 
 --- Invoked when a request to answer some questions is received during authentication.
 --- @param msg {questions:{text:string, extra:table<string, string>|nil}[], extra:table<string, string>|nil}
 --- @return string[]
-function AuthHandler:on_challenge(msg)
+function M:on_challenge(msg)
     if msg.extra then
         if msg.extra.username then
             print('Authentication for ' .. msg.extra.username)
@@ -111,7 +111,7 @@ end
 --- Invoked when a request to verify some information is received during authentication.
 --- @param msg {kind:'host'|'unknown', text:string}
 --- @return boolean
-function AuthHandler:on_verification(msg)
+function M:on_verification(msg)
     local answer = vim.fn.input(string.format('%s\nEnter [y/N]> ', msg.text))
     if answer ~= nil then
         answer = vim.trim(answer)
@@ -121,7 +121,7 @@ end
 
 --- Invoked when information is received during authentication.
 --- @param text string
-function AuthHandler:on_info(text)
+function M:on_info(text)
     print(text)
 end
 
@@ -129,7 +129,7 @@ end
 --- Fatal errors indicate the end of authentication.
 ---
 --- @param err {kind:'fatal'|'error', text:string}
-function AuthHandler:on_error(err)
+function M:on_error(err)
     log.fmt_error('Authentication error: %s', err.text)
 
     if not self.finished then
@@ -138,15 +138,15 @@ function AuthHandler:on_error(err)
 end
 
 --- Invoked when authentication is finishd
-function AuthHandler:on_finished()
+function M:on_finished()
     log.trace('Authentication finished')
     self.finished = true
 end
 
 --- Invoked whenever an unknown authentication msg is received.
 --- @param x any
-function AuthHandler:on_unknown(x)
+function M:on_unknown(x)
     log.fmt_error('Unknown authentication event received: %s', x)
 end
 
-return AuthHandler
+return M

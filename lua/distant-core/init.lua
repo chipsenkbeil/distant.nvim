@@ -1,4 +1,6 @@
 return {
+    auth = require('distant-core.auth'),
+    builder = require('distant-core.builder'),
     cli = require('distant-core.cli'),
     data = require('distant-core.data'),
     log = require('distant-core.log'),
@@ -8,4 +10,3 @@ return {
     utils = require('distant-core.utils'),
     vars = require('distant-core.vars'),
 }
-

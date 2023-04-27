@@ -1,7 +1,7 @@
 local log = require('distant-core.log')
 local utils = require('distant-core.utils')
 
-local auth = require('distant-core.cli.manager.auth')
+local auth_spawn = require('distant-core.auth.spawn')
 local Client = require('distant-core.cli.client')
 local Cmd = require('distant-core.cli.cmd')
 
@@ -115,14 +115,16 @@ function Manager:select(opts, cb)
             cb('Failed to make selection')
         end,
         on_stdout_line = function(line)
-            local msg = vim.fn.json_decode(line)
+            local msg = assert(vim.fn.json_decode(line), 'Invalid JSON from line')
             if msg.type == 'select' then
                 return cb(nil, {
                     choices = msg.choices,
                     current = msg.current,
                     select = function(choice, new_cb)
                         -- Update our cb triggered when process exits to now be the selector's callback
-                        cb = new_cb
+                        if new_cb then
+                            cb = new_cb
+                        end
 
                         --- @diagnostic disable-next-line:redefined-local
                         local msg = { type = 'selected', choice = choice }
@@ -268,7 +270,7 @@ function Manager:listen(opts, cb)
 end
 
 --- @param opts string|table<string, any> #options to build into a string list
---- @return string #options in the form of key="value",key2="value2"
+--- @return string|nil #options in the form of key="value",key2="value2"
 local function build_options(opts)
     if type(opts) == 'string' then
         return opts
@@ -355,19 +357,21 @@ function Manager:launch(opts, cb)
             log_file     = opts.log_file,
             log_level    = opts.log_level,
             no_shell     = opts.no_shell,
-            options      = build_options(opts.options),
+            options      = build_options(opts.options) or '',
         })
         :as_list()
     table.insert(cmd, 1, self.config.binary)
 
     log.fmt_debug('Launch cmd: %s', cmd)
-    return auth.spawn({
+    return auth_spawn({
         cmd = cmd,
         auth = opts.auth,
     }, function(err, connection)
         if err then
             return cb(err)
         end
+
+        assert(connection, 'Connection nil while error is nil!')
 
         -- Update manager to reflect connection
         self.connections[connection] = {
@@ -415,19 +419,21 @@ function Manager:connect(opts, cb)
             config       = opts.config,
             log_file     = opts.log_file,
             log_level    = opts.log_level,
-            options      = build_options(opts.options),
+            options      = build_options(opts.options) or '',
         })
         :as_list()
     table.insert(cmd, 1, self.config.binary)
 
     log.fmt_debug('Connect cmd: %s', cmd)
-    return auth.spawn({
+    return auth_spawn({
         cmd = cmd,
         auth = opts.auth,
     }, function(err, connection)
         if err then
             return cb(err)
         end
+
+        assert(connection, 'Connection nil while error is nil!')
 
         -- Update manager to reflect connection
         self.connections[connection] = {
