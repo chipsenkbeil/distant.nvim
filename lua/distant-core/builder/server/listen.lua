@@ -1,4 +1,4 @@
-local Cmd = require('distant-core.builder.cmd')
+local CmdBuilder = require('distant-core.builder.cmd')
 
 --- @class DistantServerListenCmdBuilder
 --- @field cmd DistantCmdBuilder
@@ -11,7 +11,7 @@ function M:new()
     local instance = {}
     setmetatable(instance, M)
 
-    instance.cmd = Cmd:new('server listen', {
+    instance.cmd = CmdBuilder:new('server listen', {
         allowed = {
             'foreground',
             'key-from-stdin',
@@ -28,6 +28,14 @@ function M:new()
     })
 
     return instance
+end
+
+--- Sets multiple arguments using the given table.
+--- @param tbl table<string, boolean|string>
+--- @return DistantServerListenCmdBuilder
+function M:set_from_tbl(tbl)
+    self.cmd:set_from_tbl(tbl)
+    return self
 end
 
 --- Sets `--foreground`

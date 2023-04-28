@@ -1,4 +1,4 @@
-local Cmd = require('distant-core.builder.cmd')
+local CmdBuilder = require('distant-core.builder.cmd')
 
 --- @class DistantConnectCmdBuilder
 --- @field cmd DistantCmdBuilder
@@ -12,7 +12,7 @@ function M:new(destination)
     local instance = {}
     setmetatable(instance, M)
 
-    instance.cmd = Cmd:new('connect ' .. destination, {
+    instance.cmd = CmdBuilder:new('connect ' .. destination, {
         allowed = {
             'config',
             'cache',
@@ -26,6 +26,14 @@ function M:new(destination)
     })
 
     return instance
+end
+
+--- Sets multiple arguments using the given table.
+--- @param tbl table<string, boolean|string>
+--- @return DistantConnectCmdBuilder
+function M:set_from_tbl(tbl)
+    self.cmd:set_from_tbl(tbl)
+    return self
 end
 
 --- Sets `--config <path>`

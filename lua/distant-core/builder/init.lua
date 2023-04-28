@@ -1,4 +1,5 @@
 local DistantApiCmdBuilder = require('distant-core.builder.api')
+local DistantCmdBuilder = require('distant-core.builder.cmd')
 local DistantConnectCmdBuilder = require('distant-core.builder.connect')
 local DistantLaunchCmdBuilder = require('distant-core.builder.launch')
 local DistantShellCmdBuilder = require('distant-core.builder.shell')
@@ -16,6 +17,13 @@ M.__index = M
 --- @return DistantApiCmdBuilder
 function M.api()
     return DistantApiCmdBuilder:new()
+end
+
+--- @param cmd string|string[]
+--- @param opts? {allowed?:string[]}
+--- @return DistantCmdBuilder
+function M.cmd(cmd, opts)
+    return DistantCmdBuilder:new(cmd, opts)
 end
 
 --- @param destination string

@@ -10,7 +10,7 @@ M.__index = M
 ---
 --- If `opts` provided, `opts.allowed` will restrict the `set` function to only operate for those in the allowed list.
 ---
---- @param cmd string
+--- @param cmd string|string[]
 --- @param opts? {allowed?:string[]}
 --- @return DistantCmdBuilder
 function M:new(cmd, opts)
@@ -18,9 +18,14 @@ function M:new(cmd, opts)
 
     local instance = {}
     setmetatable(instance, M)
-    instance.__cmd = cmd
     instance.__internal = {}
     instance.__tail = nil
+
+    if type(cmd) == 'table' then
+        instance.__cmd = table.concat(cmd, ' ')
+    else
+        instance.__cmd = cmd
+    end
 
     if vim.tbl_islist(opts.allowed) then
         instance.__allowed = {}
@@ -81,6 +86,13 @@ end
 function M:set_tail(value)
     self.__tail = value
     return self
+end
+
+--- Checks if the command has a `key` specified.
+--- @param key string
+--- @return boolean
+function M:has(key)
+    return self.__internal[key] ~= nil
 end
 
 --- Removes an argument.

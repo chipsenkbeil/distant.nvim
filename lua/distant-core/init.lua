@@ -4,6 +4,7 @@ return {
     cli = require('distant-core.cli'),
     data = require('distant-core.data'),
     log = require('distant-core.log'),
+    lsp = require('distant-core.lsp'),
     settings = require('distant-core.settings'),
     state = require('distant-core.state'),
     ui = require('distant-core.ui'),

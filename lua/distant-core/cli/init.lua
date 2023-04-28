@@ -4,7 +4,7 @@ local Client = require('distant-core.cli.client')
 local installer = require('distant-core.installer')
 local Manager = require('distant-core.cli.manager')
 
-local cli = {}
+local M = {}
 
 --- Minimum version supported by the cli, also enforcing
 --- version upgrades such that 0.17.x would not allow 0.18.0+
@@ -12,9 +12,9 @@ local cli = {}
 local MIN_VERSION = assert(utils.parse_version('0.20.0-alpha.5'))
 
 --- @param opts ClientConfig
---- @return Client
-function cli.client(opts)
-    local settings = cli.settings(opts)
+--- @return DistantClient
+function M.client(opts)
+    local settings = M.settings(opts)
     opts = opts or {}
     opts.binary = opts.binary or settings.bin
 
@@ -22,9 +22,9 @@ function cli.client(opts)
 end
 
 --- @param opts ManagerConfig
---- @return Manager
-function cli.manager(opts)
-    local settings = cli.settings(opts)
+--- @return DistantManager
+function M.manager(opts)
+    local settings = M.settings(opts)
     opts = opts or {}
     opts.binary = opts.binary or settings.bin
 
@@ -39,7 +39,7 @@ end
 
 --- @param opts CliSettingsOpts
 --- @return {bin:string, timeout:number, interval:number}
-function cli.settings(opts)
+function M.settings(opts)
     opts = opts or {}
 
     -- NOTE: Must load state lazily here, otherwise we get a loop
@@ -64,7 +64,7 @@ end
 
 --- Returns a copy of the minimum version of the CLI supported
 --- @return Version
-function cli.min_version()
+function M.min_version()
     return vim.deepcopy(MIN_VERSION)
 end
 
@@ -72,16 +72,16 @@ end
 --- @overload fun():Version|nil
 --- @param opts CliSettingsOpts #Setting options
 --- @return Version|nil
-function cli.version(opts)
-    local settings = cli.settings(opts)
+function M.version(opts)
+    local settings = M.settings(opts)
     return utils.exec_version(settings.bin)
 end
 
 --- @overload fun():boolean
 --- @param opts CliSettingsOpts #Setting options
 --- @return boolean #true if the binary used by this cli exists and is executable
-function cli.is_executable(opts)
-    local settings = cli.settings(opts)
+function M.is_executable(opts)
+    local settings = M.settings(opts)
     return vim.fn.executable(settings.bin) == 1
 end
 
@@ -91,7 +91,7 @@ end
 --- @overload fun(cb:fun(err:string|nil, path:string|nil))
 --- @param opts {bin?:string, reinstall?:boolean, timeout?:number, interval?:number} #Optional installation options
 --- @param cb fun(err:string|nil, path:string|nil) #Path is the path to the installed binary
-function cli.install(opts, cb)
+function M.install(opts, cb)
     if not cb then
         cb = opts
         opts = {}
@@ -101,13 +101,13 @@ function cli.install(opts, cb)
         opts = {}
     end
 
-    local settings = cli.settings(opts)
+    local settings = M.settings(opts)
     local has_bin = vim.fn.executable(settings.bin) == 1
 
     --- @param bin string #Path to binary
     --- @return boolean
     local function validate_cli(bin)
-        local version = cli.version({ bin = bin })
+        local version = M.version({ bin = bin })
         if not version then
             return cb('Unable to detect binary version')
         end
@@ -143,4 +143,4 @@ function cli.install(opts, cb)
     end)
 end
 
-return cli
+return M

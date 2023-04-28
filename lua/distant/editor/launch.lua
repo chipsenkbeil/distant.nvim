@@ -22,7 +22,7 @@ local state = core.state
 --- up a session so clients are able to communicate with it
 ---
 --- @param opts EditorLaunchOpts
---- @param cb fun(err:string|nil, client:Client|nil)
+--- @param cb fun(err:string|nil, client:DistantClient|nil)
 return function(opts, cb)
     opts = opts or {}
     cb = cb or function(err)

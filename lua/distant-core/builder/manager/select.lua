@@ -1,4 +1,4 @@
-local Cmd = require('distant-core.builder.cmd')
+local CmdBuilder = require('distant-core.builder.cmd')
 
 --- @class DistantManagerSelectCmdBuilder
 --- @field cmd DistantCmdBuilder
@@ -18,7 +18,7 @@ function M:new(connection)
         cmd = cmd .. ' ' .. connection
     end
 
-    instance.cmd = Cmd:new(cmd, {
+    instance.cmd = CmdBuilder:new(cmd, {
         allowed = {
             'config',
             'cache',
@@ -31,6 +31,14 @@ function M:new(connection)
     })
 
     return instance
+end
+
+--- Sets multiple arguments using the given table.
+--- @param tbl table<string, boolean|string>
+--- @return DistantManagerSelectCmdBuilder
+function M:set_from_tbl(tbl)
+    self.cmd:set_from_tbl(tbl)
+    return self
 end
 
 --- Sets `--config <path>`

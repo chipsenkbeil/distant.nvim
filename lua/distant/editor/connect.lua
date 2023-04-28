@@ -14,7 +14,7 @@ local state = core.state
 
 --- Connects to a running distance binary on the remote machine
 --- @param opts EditorConnectOpts
---- @param cb fun(err:string|nil, client:Client|nil)
+--- @param cb fun(err:string|nil, client:DistantClient|nil)
 return function(opts, cb)
     opts = opts or {}
     cb = cb or function(err)

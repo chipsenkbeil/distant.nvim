@@ -7,8 +7,8 @@ local utils = require('distant-core.utils')
 --- @field searcher DistantSearcher #searcher being used
 
 --- @class State
---- @field client Client|nil #active client
---- @field manager Manager|nil #active manager
+--- @field client DistantClient|nil #active client
+--- @field manager DistantManager|nil #active manager
 --- @field search EditorSearchState|nil #active search via editor
 --- @field settings Settings #user settings
 local State = {}
@@ -52,10 +52,10 @@ function State:load_settings(destination)
 end
 
 --- Loads the manager using the specified config, installing the underlying cli if necessary
---- @overload fun(opts:ManagerConfig):Manager
+--- @overload fun(opts:ManagerConfig):DistantManager
 --- @param opts ManagerConfig
---- @param cb fun(err:string|nil, manager:Manager|nil) #if provided, will asynchronously return manager
---- @return Manager|nil #if synchronous, returns manager
+--- @param cb fun(err:string|nil, manager:DistantManager|nil) #if provided, will asynchronously return manager
+--- @return DistantManager|nil #if synchronous, returns manager
 function State:load_manager(opts, cb)
     local rx
     if not cb then

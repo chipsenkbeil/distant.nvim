@@ -1,4 +1,4 @@
-local Cmd = require('distant-core.builder.cmd')
+local CmdBuilder = require('distant-core.builder.cmd')
 
 --- @class DistantApiCmdBuilder
 --- @field cmd DistantCmdBuilder
@@ -11,7 +11,7 @@ function M:new()
     local instance = {}
     setmetatable(instance, M)
 
-    instance.cmd = Cmd:new('api', {
+    instance.cmd = CmdBuilder:new('api', {
         allowed = {
             'config',
             'cache',
@@ -25,6 +25,14 @@ function M:new()
     })
 
     return instance
+end
+
+--- Sets multiple arguments using the given table.
+--- @param tbl table<string, boolean|string>
+--- @return DistantApiCmdBuilder
+function M:set_from_tbl(tbl)
+    self.cmd:set_from_tbl(tbl)
+    return self
 end
 
 --- Sets `--config <path>`

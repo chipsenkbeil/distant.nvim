@@ -1,4 +1,4 @@
-local Cmd = require('distant-core.builder.cmd')
+local CmdBuilder = require('distant-core.builder.cmd')
 
 --- @class DistantManagerListCmdBuilder
 --- @field cmd DistantCmdBuilder
@@ -11,7 +11,7 @@ function M:new()
     local instance = {}
     setmetatable(instance, M)
 
-    instance.cmd = Cmd:new('manager list', {
+    instance.cmd = CmdBuilder:new('manager list', {
         allowed = {
             'cache',
             'config',
@@ -23,6 +23,14 @@ function M:new()
     })
 
     return instance
+end
+
+--- Sets multiple arguments using the given table.
+--- @param tbl table<string, boolean|string>
+--- @return DistantManagerListCmdBuilder
+function M:set_from_tbl(tbl)
+    self.cmd:set_from_tbl(tbl)
+    return self
 end
 
 --- Sets `--cache <path>`

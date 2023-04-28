@@ -1,19 +1,18 @@
-local log = require('distant-core.log')
-local utils = require('distant-core.utils')
+local auth             = require('distant-core.auth')
+local builder          = require('distant-core.builder')
+local Client           = require('distant-core.cli.client')
+local log              = require('distant-core.log')
+local utils            = require('distant-core.utils')
 
-local auth_spawn = require('distant-core.auth.spawn')
-local Client = require('distant-core.cli.client')
-local Cmd = require('distant-core.cli.cmd')
-
-local DEFAULT_TIMEOUT = 1000
+local DEFAULT_TIMEOUT  = 1000
 local DEFAULT_INTERVAL = 100
 
 --- Represents a distant manager
---- @class Manager
+--- @class DistantManager
 --- @field config ManagerConfig
 --- @field connections table<string, {destination:string}> #mapping of id -> destination
-local Manager = {}
-Manager.__index = Manager
+local M                = {}
+M.__index              = M
 
 --- @class ManagerConfig
 --- @field binary string #path to distant binary to use
@@ -25,12 +24,12 @@ Manager.__index = Manager
 
 --- Creates a new instance of a distant manager
 --- @param opts ManagerConfig
---- @return Manager
-function Manager:new(opts)
+--- @return DistantManager
+function M:new(opts)
     opts = opts or {}
 
     local instance = {}
-    setmetatable(instance, Manager)
+    setmetatable(instance, M)
     instance.config = {
         binary = opts.binary,
         network = vim.deepcopy(opts.network) or {},
@@ -42,13 +41,13 @@ end
 
 --- @param connection string #id of the connection being managed
 --- @return boolean
-function Manager:has_connection(connection)
+function M:has_connection(connection)
     return self.connections[connection] ~= nil
 end
 
 --- @param connection string #id of the connection being managed
 --- @return string|nil #destination if connection exists
-function Manager:connection_destination(connection)
+function M:connection_destination(connection)
     local c = self.connections[connection]
     if c then
         return c.destination
@@ -56,8 +55,8 @@ function Manager:connection_destination(connection)
 end
 
 --- @param connection string #id of the connection being managed
---- @return Client|nil #client wrapper around connection if it exists, or nil
-function Manager:client(connection)
+--- @return DistantClient|nil #client wrapper around connection if it exists, or nil
+function M:client(connection)
     if self:has_connection(connection) then
         return Client:new({
             binary = self.config.binary,
@@ -84,10 +83,11 @@ end
 --- Changes the selected connection used as default by the manager
 --- @param opts ManagerSelectOpts
 --- @param cb fun(err:string|nil, selector:ManagerConnectionSelector|nil) #Selector will be provided if no connection provided in opts
-function Manager:select(opts, cb)
+function M:select(opts, cb)
     opts = opts or {}
 
-    local cmd = Cmd.client
+    local cmd = builder
+        .manager
         .select(opts.connection)
         :set_format('json')
         :set_from_tbl(self.config.network)
@@ -151,10 +151,11 @@ end
 --- @param opts {timeout:number|nil, interval:number|nil}
 --- @param cb fun(value:boolean)|nil
 --- @return boolean|nil
-function Manager:is_listening(opts, cb)
+function M:is_listening(opts, cb)
     opts = opts or {}
 
-    local cmd = Cmd.manager
+    local cmd = builder
+        .manager
         .list()
         :set_from_tbl(self.config.network)
         :as_list()
@@ -188,7 +189,7 @@ end
 --- Waits until the manager is listening, up to timeout
 --- @param opts {timeout:number|nil, interval:number|nil}
 --- @return boolean
-function Manager:wait_for_listening(opts)
+function M:wait_for_listening(opts)
     opts = opts or {}
 
     local timeout = opts.timeout or DEFAULT_TIMEOUT
@@ -218,10 +219,11 @@ end
 --- @param opts ManagerListenOpts
 --- @param cb fun(err:string|nil) #invoked when the manager exits
 --- @return JobHandle #handle of listening manager job
-function Manager:listen(opts, cb)
+function M:listen(opts, cb)
     opts = opts or {}
 
-    local cmd = Cmd.manager
+    local cmd = builder
+        .manager
         .listen()
         :set_from_tbl({
             -- Explicitly point to manager's unix socket or windows pipe
@@ -302,9 +304,9 @@ end
 
 --- Launches a server remotely and performs authentication using the given manager
 --- @param opts ManagerLaunchOpts
---- @param cb fun(err:string|nil, client:Client|nil)
+--- @param cb fun(err:string|nil, client:DistantClient|nil)
 --- @return JobHandle|nil
-function Manager:launch(opts, cb)
+function M:launch(opts, cb)
     opts = opts or {}
     log.fmt_debug('Launching with options: %s', opts)
 
@@ -341,7 +343,7 @@ function Manager:launch(opts, cb)
 
     local destination = opts.destination
     log.fmt_trace('Launch destination: %s', destination)
-    local cmd = Cmd.client
+    local cmd = builder
         .launch(destination)
         :set_from_tbl({
             -- Explicitly set to use JSON for communication and point to
@@ -363,7 +365,7 @@ function Manager:launch(opts, cb)
     table.insert(cmd, 1, self.config.binary)
 
     log.fmt_debug('Launch cmd: %s', cmd)
-    return auth_spawn({
+    return auth.spawn({
         cmd = cmd,
         auth = opts.auth,
     }, function(err, connection)
@@ -394,9 +396,9 @@ end
 
 --- Connects to a remote server using the given manager
 --- @param opts ManagerConnectOpts
---- @param cb fun(err:string|nil, client:Client|nil)
+--- @param cb fun(err:string|nil, client:DistantClient|nil)
 --- @return JobHandle|nil
-function Manager:connect(opts, cb)
+function M:connect(opts, cb)
     opts = opts or {}
     log.fmt_debug('Connecting with options: %s', opts)
 
@@ -406,7 +408,7 @@ function Manager:connect(opts, cb)
     end
 
     local destination = opts.destination
-    local cmd = Cmd.client
+    local cmd = builder
         .connect(destination)
         :set_from_tbl({
             -- Explicitly set to use JSON for communication and point to
@@ -425,7 +427,7 @@ function Manager:connect(opts, cb)
     table.insert(cmd, 1, self.config.binary)
 
     log.fmt_debug('Connect cmd: %s', cmd)
-    return auth_spawn({
+    return auth.spawn({
         cmd = cmd,
         auth = opts.auth,
     }, function(err, connection)
@@ -444,4 +446,4 @@ function Manager:connect(opts, cb)
     end)
 end
 
-return Manager
+return M

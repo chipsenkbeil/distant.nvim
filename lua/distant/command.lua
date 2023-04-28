@@ -415,7 +415,7 @@ command.shell = function(input)
         table.insert(cmd, 1, cmd_prog)
     end
 
-    --- @type Client
+    --- @type DistantClient
     local client = assert(state.client, 'No client established')
 
     client:shell():spawn({ cmd = cmd })

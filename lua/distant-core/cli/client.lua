@@ -1,15 +1,15 @@
+local builder     = require('distant-core.builder')
 local make_api    = require('distant-core.cli.client.api')
 local ClientLsp   = require('distant-core.cli.client.lsp')
 local ClientRepl  = require('distant-core.cli.client.repl')
 local ClientShell = require('distant-core.cli.client.shell')
-local Cmd         = require('distant-core.cli.cmd')
 
 --- Represents a distant client
---- @class Client
+--- @class DistantClient
 --- @field config ClientConfig
 --- @field __state ClientState
-local Client      = {}
-Client.__index    = Client
+local M           = {}
+M.__index         = M
 
 --- @class ClientConfig
 --- @field binary string #path to distant binary to use
@@ -29,12 +29,12 @@ Client.__index    = Client
 
 --- Creates a new instance of a distant client
 --- @param opts ClientConfig
---- @return Client
-function Client:new(opts)
+--- @return DistantClient
+function M:new(opts)
     opts = opts or {}
 
     local instance = {}
-    setmetatable(instance, Client)
+    setmetatable(instance, M)
     instance.config = {
         binary = opts.binary,
         network = vim.deepcopy(opts.network) or {},
@@ -55,27 +55,27 @@ function Client:new(opts)
 end
 
 --- @return ClientApi
-function Client:api()
+function M:api()
     return self.__state.api
 end
 
 --- @return ClientLsp
-function Client:lsp()
+function M:lsp()
     return self.__state.lsp
 end
 
 --- @return ClientRepl
-function Client:repl()
+function M:repl()
     return self.__state.repl
 end
 
 --- @return ClientShell
-function Client:shell()
+function M:shell()
     return self.__state.shell
 end
 
 --- @return DistantSystemInfo
-function Client:system_info()
+function M:system_info()
     if self.__state.system_info == nil then
         local err, info = self:api().system_info({})
         assert(not err, err)
@@ -100,7 +100,7 @@ end
 ---
 --- @param args ClientWrapArgs
 --- @return string|string[]
-function Client:wrap(args)
+function M:wrap(args)
     args = args or {}
     args.type = args.type or 'string'
 
@@ -118,44 +118,29 @@ function Client:wrap(args)
     local result = {}
 
     if has_cmd then
-        -- Get the command as a string
-        local cmd = args.cmd or ''
-        if type(cmd) == 'table' then
-            cmd = table.concat(cmd, ' ')
-        end
-
-        local subcmd = Cmd.client.action_cmd.spawn(cmd)
+        local cmd = builder.spawn(args.cmd)
         if type(args.cwd) == 'string' then
-            subcmd = subcmd:set_current_dir(args.cwd)
+            cmd = cmd:set_current_dir(args.cwd)
         end
         if args.env then
-            subcmd = subcmd:set_environment(args.env)
+            cmd = cmd:set_environment(args.env)
         end
 
-        result = Cmd.client.action(subcmd):set_from_tbl(self.config.network):as_list()
+        result = cmd:set_from_tbl(self.config.network):as_list()
         table.insert(result, 1, self.config.binary)
     elseif has_lsp then
-        -- Get the lsp as a string
-        local lsp = args.lsp or ''
-        if type(lsp) == 'table' then
-            lsp = table.concat(lsp, ' ')
-        end
-
-        local cmd = Cmd.client.lsp(lsp)
+        local cmd = builder.spawn(args.lsp):set_lsp()
         if args.cwd then
             cmd = cmd:set_current_dir(args.cwd)
+        end
+        if args.env then
+            cmd = cmd:set_environment(args.env)
         end
 
         result = cmd:set_from_tbl(self.config.network):as_list()
         table.insert(result, 1, self.config.binary)
     elseif has_shell then
-        -- Get the shell as a string
-        local shell = args.shell or ''
-        if type(shell) == 'table' then
-            shell = table.concat(shell, ' ')
-        end
-
-        local cmd = Cmd.client.shell(shell)
+        local cmd = builder.shell(args.shell)
         if args.cwd then
             cmd = cmd:set_current_dir(args.cwd)
         end
@@ -175,4 +160,4 @@ function Client:wrap(args)
     end
 end
 
-return Client
+return M

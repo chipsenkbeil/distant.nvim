@@ -1,4 +1,4 @@
-local Cmd = require('distant-core.builder.cmd')
+local CmdBuilder = require('distant-core.builder.cmd')
 
 --- @class DistantShellCmdBuilder
 --- @field cmd DistantCmdBuilder
@@ -17,7 +17,7 @@ function M:new(cmd)
         cmd = table.concat(cmd, ' ')
     end
 
-    instance.cmd = Cmd
+    instance.cmd = CmdBuilder
         :new('shell', {
             allowed = {
                 'config',
@@ -34,6 +34,14 @@ function M:new(cmd)
         :set_tail(cmd)
 
     return instance
+end
+
+--- Sets multiple arguments using the given table.
+--- @param tbl table<string, boolean|string>
+--- @return DistantShellCmdBuilder
+function M:set_from_tbl(tbl)
+    self.cmd:set_from_tbl(tbl)
+    return self
 end
 
 --- Sets `--config <path>`
