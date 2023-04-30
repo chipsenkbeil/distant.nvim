@@ -8,7 +8,8 @@ local DEFAULT_INTERVAL = 100
 
 --- Represents a JSON-formatted distant api transport.
 --- @class DistantApiTransport
---- @field config {binary:string, network:DistantClientNetwork, timeout?:number, interval?:number}
+--- @field auth_handler AuthHandler
+--- @field config {binary:string, network:DistantClientNetwork, timeout:number, interval:number}
 --- @field __state DistantApiTransportState
 local M                = {}
 M.__index              = M
@@ -17,30 +18,28 @@ M.__index              = M
 --- @field authenticated boolean True if authenticated and ready to send messages
 --- @field queue string[] Queue of outgoing json messages
 --- @field handle? JobHandle
---- @field callbacks table<string, DistantApiCallback>
+--- @field callbacks table<string, {callback:fun(payload:table), more:fun(payload:table):boolean}>
 
---- @class DistantApiCallback
---- @field callback fun(payload:table) #Invoked with payload from received event
---- @field multi boolean #If true, will not clear the callback after first invocation
---- @field stop fun() #When called, will stop the callback from being invoked and clear it
-
---- @class DistantApiMsg
---- @field type string
---- @field data table
-
---- Creates a new instance of our repl that wraps a job
---- @param opts {binary:string, network:DistantClientNetwork, timeout?:number, interval?:number}
+--- Creates a new instance of our api that wraps a job
+--- @param opts {binary:string, network:DistantClientNetwork, auth_handler?:AuthHandler, timeout?:number, interval?:number}
 --- @return DistantApiTransport
 function M:new(opts)
     opts = opts or {}
 
     local instance = {}
     setmetatable(instance, M)
-    instance.config = opts
+    instance.config = {
+        binary = opts.binary,
+        network = opts.network,
+        timeout = opts.timeout,
+        interval = opts.interval,
+    }
     assert(instance.config.binary, 'Transport missing binary')
     assert(instance.config.network, 'Transport missing network')
     instance.config.timeout = instance.config.timeout or DEFAULT_TIMEOUT
     instance.config.interval = instance.config.interval or DEFAULT_INTERVAL
+
+    instance.auth_handler = opts.auth_handler or AuthHandler:new()
 
     instance.__state = {
         authenticated = false,
@@ -52,18 +51,17 @@ function M:new(opts)
     return instance
 end
 
---- Whether or not the repl is running
+--- Whether or not the api is running
 --- @return boolean
 function M:is_running()
     return self.__state.handle ~= nil and self.__state.handle:running()
 end
 
---- Starts the repl if it is not already running
---- @param cb? fun(code:number) Optional callback when the repl exits
+--- Starts the api if it is not already running
+--- @param cb? fun(code:number) Optional callback when the api exits
 function M:start(cb)
     if not self:is_running() then
-        -- Assign a fresh authentication handler
-        local auth = AuthHandler:new()
+        local auth = self.auth_handler
 
         local cmd = builder.api():set_from_tbl(self.config.network):as_list()
         table.insert(cmd, 1, self.config.binary)
@@ -107,6 +105,8 @@ function M:start(cb)
                         end)
                         self.__state.authenticated = auth.finished
 
+                        -- We have finished authentication, so write out
+                        -- all of our queued messages
                         if auth.finished then
                             for _, json in ipairs(self.__state.queue) do
                                 self.__state.handle.write(json)
@@ -140,73 +140,31 @@ function M:stop()
     self.__state.callbacks = {}
 end
 
---- Send one or more messages to the remote machine, invoking the provided callback with the
---- response once it is received.
+--- Send payload to the remote machine, invoking the provided callback with the
+--- response once it is received. If `more` is provided, the response payload
+--- is passed to the function, which will return true if more responses to the
+--- same originating payload are expected.
 ---
---- * `unaltered` when true, the callback will not be wrapped in the situation
----   where there is a single request payload entry to then return a single
----   response payload entry
---- * `multi` when true, the callback may be triggered multiple times and will
----   not be cleared within the Transport upon receiving an event. Instead, a
----   function is returned that will be called when we want to stop receiving
----   events whose origin is this message
+--- Invokes the provided callback with the response payload once received. If
+--- `more` is used, this callback may be invoked more than once.
 ---
---- @param msgs DistantApiMsg|DistantApiMsg[]
---- @param opts? {multi?:boolean, unaltered?:boolean}
---- @param cb fun(data:table, stop:fun()|nil)
---- @overload fun(msgs:DistantApiMsg|DistantApiMsg[], cb:fun(data:table, stop:fun()|nil))
-function M:send(msgs, opts, cb)
-    if type(cb) ~= 'function' then
-        cb = opts
-        opts = {}
-    end
-
-    if not opts then
-        opts = {}
-    end
-
-    log.fmt_trace('Transport:send(%s, %s, _)', msgs, opts)
+--- @param opts {payload:table, more?:fun(payload:table):boolean}
+--- @param cb fun(payload:table)
+function M:send(opts, cb)
+    log.fmt_trace('Transport:send(%s, _)', opts)
     assert(self:is_running(), 'distant api transport is not running!')
 
-    local payload = msgs
-    if not vim.tbl_islist(payload) then
-        payload = { payload }
-    end
-
     -- Build a full message that wraps the provided message as the payload and
-    -- includes an id that our repl uses when relaying a response for the
+    -- includes an id that our api uses when relaying a response for the
     -- callback to process
     local full_msg = {
         id = tostring(utils.next_id()),
-        payload = payload,
+        payload = opts.payload,
     }
 
-    -- Store a callback based on our payload length
-    --
-    -- If we send a single message, then we expect a single message back in the
-    -- payload's entry and want to adjust the payload as such
-    --
-    -- Otherwise, we leave as is and get a list as our payload
-    local callback = cb
-    if #payload == 1 and not opts.unaltered then
-        callback = function(entries, stop)
-            -- NOTE: In the case of multi-responses, we might get back
-            --       additional entries that are only one thing instead
-            --       of a list (e.g. proc spawn stdout/stderr/done would
-            --       still come back as one entry)
-            --
-            --       Because of that, we need to check if entries[1] would
-            --       yield nil, and if so we just return entries itself
-            entries = entries[1] or entries
-            cb(entries, stop)
-        end
-    end
     self.__state.callbacks[full_msg.id] = {
-        callback = callback,
-        multi = opts.multi,
-        stop = function()
-            self.__state.callbacks[full_msg.id] = nil
-        end
+        callback = cb,
+        more = opts.more or function() return false end,
     }
 
     local json = utils.compress(vim.fn.json_encode(full_msg)) .. '\n'
@@ -222,38 +180,38 @@ end
 
 --- Send one or more messages to the remote machine and wait synchronously for the result
 --- up to `timeout` milliseconds, checking every `interval` milliseconds for
---- a result (default timeout = 1000, interval = 200)
+--- a result (default timeout = 1000, interval = 200). Throws an error if timeout exceeded.
 --
---- @param msgs DistantApiMsg|DistantApiMsg[]
---- @param opts? table
+--- @param opts {payload:table, timeout?:number, interval?:number, more?:fun(payload:table):boolean}
 --- @return table
-function M:send_wait(msgs, opts)
-    opts = opts or {}
-    log.fmt_trace('Transport:send_wait(%s, %s)', msgs, opts)
+function M:send_wait(opts)
+    log.fmt_trace('Transport:send_wait(%s)', opts)
     local tx, rx = utils.oneshot_channel(
         opts.timeout or self.config.timeout,
         opts.interval or self.config.interval
     )
 
-    self:send(msgs, opts, function(data)
-        tx(data)
+    self:send(opts, function(payload)
+        tx(payload)
     end)
 
-    return rx()
+    local err, payload = rx()
+    assert(not err, err)
+    return payload
 end
 
 --- Send one or more messages to the remote machine, wait synchronously for the result up
 --- to `timeout` milliseconds, checking every `interval` milliseconds for a
---- result (default timeout = 1000, interval = 200), and report an error if not okay
+--- result (default timeout = 1000, interval = 200), and report an error if not okay.
+--- Throws an error if timeout exceeded.
 ---
---- @param msgs DistantApiMsg|DistantApiMsg[]
---- @param opts? table
+--- @param opts {payload:table, timeout?:number, interval?:number, more?:fun(payload:table):boolean}
 --- @return table|nil
-function M:send_wait_ok(msgs, opts)
+function M:send_wait_ok(opts)
     opts = opts or {}
-    log.fmt_trace('Transport:send_wait_ok(%s, %s)', msgs, opts)
+    log.fmt_trace('Transport:send_wait_ok(%s)', opts)
     local timeout = opts.timeout or self.config.timeout
-    local result = self:send_wait(msgs, opts)
+    local result = self:send_wait(opts)
     if result == nil then
         log.fmt_error('Max timeout (%s) reached waiting for result', timeout)
     elseif result.type == 'error' then
@@ -263,12 +221,12 @@ function M:send_wait_ok(msgs, opts)
     end
 end
 
---- Primary event handler, routing received events to the corresponding callbacks
+--- Primary event handler, routing received events to the corresponding callbacks.
+--- @param msg {id:string, origin_id:string, payload:table}
 function M:__handler(msg)
     assert(type(msg) == 'table', 'msg must be a table')
     log.fmt_trace('Transport:__handler(%s)', msg)
 
-    -- {"id": ..., "origin_id": ..., "payload": ...}
     local origin_id = msg.origin_id
     local payload = msg.payload
 
@@ -277,32 +235,21 @@ function M:__handler(msg)
         return
     end
 
-    --- @type fun(payload:table, stop:fun()|nil)|nil
-    local cb
-
-    --- @type fun()|nil
-    local stop
-
     -- Look up our callback and, if it exists, invoke it
     if origin_id ~= nil and origin_id ~= vim.NIL then
         local cb_state = self.__state.callbacks[origin_id]
         if cb_state ~= nil then
-            cb = cb_state.callback
-            stop = cb_state.stop
+            local cb = cb_state.callback
+            local more = cb_state.more
 
-            -- If we are not marked to receive multiple events, clear our callback
-            -- and set the stop function to nil since we don't want it to exist
-            if not cb_state.multi then
+            if not more(payload) then
                 self.__state.callbacks[origin_id] = nil
-                stop = nil
             end
-        end
-    end
 
-    if cb then
-        return cb(payload, stop)
-    else
-        log.fmt_warn('Discarding message with origin %s as no callback exists', origin_id)
+            return cb(payload)
+        else
+            log.fmt_warn('Discarding message with origin %s as no callback exists', origin_id)
+        end
     end
 end
 

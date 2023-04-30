@@ -1,13 +1,15 @@
-local builder = require('distant-core.builder')
-local log     = require('distant-core.log')
-local vars    = require('distant-core.vars')
+local builder   = require('distant-core.builder')
+local log       = require('distant-core.log')
+local vars      = require('distant-core.vars')
+
+local Transport = require('distant-core.cli.client.transport')
 
 --- Represents a distant client
 --- @class DistantClient
 --- @field config {binary:string, network:DistantClientNetwork}
 --- @field __state ClientState
-local M       = {}
-M.__index     = M
+local M         = {}
+M.__index       = M
 
 --- @class DistantClientNetwork
 --- @field connection string|nil #id of the connection tied to the client
@@ -16,6 +18,7 @@ M.__index     = M
 
 --- @class ClientState
 --- @field lsp {clients:table<string, number>} Mapping of label -> client id
+--- @field transport DistantApiTransport|nil
 --- @field system_info DistantSystemInfo|nil
 
 --- Creates a new instance of a distant client
@@ -36,6 +39,7 @@ function M:new(opts)
         lsp = {
             clients = {},
         },
+        transport = nil,
         system_info = nil,
     }
 
