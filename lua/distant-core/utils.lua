@@ -623,39 +623,6 @@ utils.next_id = (function()
     end
 end)()
 
---- Defines an augroup
---- From https://github.com/wincent/wincent
----
---- @param name string The name of the augroup
---- @param cb function The callback to invoke within the augroup definition
-utils.augroup = function(name, cb)
-    vim.cmd('augroup ' .. name)
-    vim.cmd('autocmd!')
-    cb()
-    vim.cmd('augroup END')
-end
-
---- Defines an autocmd (use within augroup)
---- From https://github.com/wincent/wincent
----
---- @param name string Name of the autocmd
---- @param pattern string Pattern for the autocmd
---- @param cmd function|string Either a callback to be triggered or a string
----        representing a vim expression
-utils.autocmd = function(name, pattern, cmd)
-    -- NOTE: Inlined here to avoid loop from circular dependencies
-    local data = require('distant-core.data')
-
-    local cmd_type = type(cmd)
-    if cmd_type == 'function' then
-        local id = data.insert(cmd)
-        cmd = data.get_as_key_mapping(id)
-    elseif cmd_type ~= 'string' then
-        error('autocmd(): unsupported cmd type: ' .. cmd_type)
-    end
-    vim.cmd('autocmd ' .. name .. ' ' .. pattern .. ' ' .. cmd)
-end
-
 --- Produces a table of N lines all with the same text
 ---
 --- @param n number The total number of lines to produce
@@ -746,12 +713,7 @@ utils.join_path = function(sep, paths)
     return path
 end
 
---- @class MkdirOpts
---- @field path string
---- @field parents? boolean
---- @field mode? number
-
---- @param opts MkdirOpts
+--- @param opts {path:string, parents?:boolean, mode?:number}
 --- @param cb fun(err:string|nil)
 utils.mkdir = function(opts, cb)
     opts = opts or {}
@@ -851,7 +813,9 @@ utils.oneshot_channel = function(timeout, interval)
     local data
 
     local tx = function(...)
-        data = { ... }
+        if data == nil then
+            data = { ... }
+        end
     end
 
     local rx = function()

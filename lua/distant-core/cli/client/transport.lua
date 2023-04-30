@@ -183,7 +183,7 @@ end
 --- a result (default timeout = 1000, interval = 200). Throws an error if timeout exceeded.
 --
 --- @param opts {payload:table, timeout?:number, interval?:number, more?:fun(payload:table):boolean}
---- @return table
+--- @return string|nil, table|nil #Err?, Payload?
 function M:send_wait(opts)
     log.fmt_trace('Transport:send_wait(%s)', opts)
     local tx, rx = utils.oneshot_channel(
@@ -191,34 +191,10 @@ function M:send_wait(opts)
         opts.interval or self.config.interval
     )
 
-    self:send(opts, function(payload)
-        tx(payload)
-    end)
+    self:send(opts, tx)
 
     local err, payload = rx()
-    assert(not err, err)
-    return payload
-end
-
---- Send one or more messages to the remote machine, wait synchronously for the result up
---- to `timeout` milliseconds, checking every `interval` milliseconds for a
---- result (default timeout = 1000, interval = 200), and report an error if not okay.
---- Throws an error if timeout exceeded.
----
---- @param opts {payload:table, timeout?:number, interval?:number, more?:fun(payload:table):boolean}
---- @return table|nil
-function M:send_wait_ok(opts)
-    opts = opts or {}
-    log.fmt_trace('Transport:send_wait_ok(%s)', opts)
-    local timeout = opts.timeout or self.config.timeout
-    local result = self:send_wait(opts)
-    if result == nil then
-        log.fmt_error('Max timeout (%s) reached waiting for result', timeout)
-    elseif result.type == 'error' then
-        log.fmt_error('Call failed: %s', vim.inspect(result.data.description))
-    else
-        return result
-    end
+    return err, payload
 end
 
 --- Primary event handler, routing received events to the corresponding callbacks.

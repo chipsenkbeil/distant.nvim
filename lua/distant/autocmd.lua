@@ -5,33 +5,45 @@ local log = core.log
 local utils = core.utils
 local vars = core.vars
 
+--- @class DistantAutocmdOpts
+--- @field id number autocommand id
+--- @field event string  name of the triggered event
+--- @field group number|nil autocommand group id, if any
+--- @field match string expanded value of |<amatch>|
+--- @field buf number expanded value of |<abuf>|
+--- @field file string expanded value of |<afile>|
+--- @field data any arbitrary data passed from |nvim_exec_autocmds()|
+
 local function _initialize()
     log.trace('Initializing autocmds')
+    local autogroup_id = vim.api.nvim_create_augroup('distant', { clear = true })
 
-    -- Assign appropriate handlers for distant:// scheme
-    utils.augroup('distant', function()
-        -- If we enter a buffer that is not initialized, we trigger a BufReadCmd
-        utils.autocmd('BufEnter', 'distant://*', function()
-            --- @diagnostic disable-next-line:missing-parameter
-            local bufnr = tonumber(vim.fn.expand('<abuf>'))
+    -- If we enter a buffer that is not initialized, we trigger a BufReadCmd
+    vim.api.nvim_create_autocmd({ 'BufEnter' }, {
+        group = autogroup_id,
+        pattern = 'distant://*',
+        --- @param opts DistantAutocmdOpts
+        callback = function(opts)
+            local bufnr = opts.buf
 
             if bufnr > 0 and vars.buf(bufnr).remote_path.is_unset() then
                 log.fmt_debug('buf %s is not initialized, so triggering BufReadCmd', bufnr)
                 vim.api.nvim_exec_autocmds('BufReadCmd', {
                     group = 'distant',
-                    --- @diagnostic disable-next-line:missing-parameter
-                    pattern = vim.fn.expand('<amatch>'),
+                    pattern = opts.match,
                 })
             end
-        end)
+        end,
+    })
 
-        -- Primary entrypoint to load remote files
-        utils.autocmd('BufReadCmd,FileReadCmd', 'distant://*', function()
-            --- @diagnostic disable-next-line:missing-parameter
-            local bufnr = tonumber(vim.fn.expand('<abuf>'))
-
-            --- @diagnostic disable-next-line:missing-parameter
-            local fname = vim.fn.expand('<amatch>')
+    -- Primary entrypoint to load remote files
+    vim.api.nvim_create_autocmd({ 'BufReadCmd', 'FileReadCmd' }, {
+        group = autogroup_id,
+        pattern = 'distant://*',
+        --- @param opts DistantAutocmdOpts
+        callback = function(opts)
+            local bufnr = opts.buf
+            local fname = opts.match
             local path = utils.strip_prefix(fname, 'distant://')
 
             local line, col
@@ -49,19 +61,22 @@ local function _initialize()
                 line = line,
                 col = col,
             })
-        end)
+        end,
+    })
 
-        -- Primary entrypoint to write remote files
-        utils.autocmd('BufWriteCmd', 'distant://*', function()
-            --- @diagnostic disable-next-line:missing-parameter
-            local bufnr = tonumber(vim.fn.expand('<abuf>'))
-
+    -- Primary entrypoint to write remote files
+    vim.api.nvim_create_autocmd({ 'BufWriteCmd' }, {
+        group = autogroup_id,
+        pattern = 'distant://*',
+        --- @param opts DistantAutocmdOpts
+        callback = function(opts)
+            local bufnr = opts.buf
             if type(bufnr) == 'number' and bufnr ~= -1 then
                 log.fmt_debug('Writing buf %s', bufnr)
-                editor.write(bufnr)
+                editor.write({ buf = bufnr })
             end
-        end)
-    end)
+        end,
+    })
 end
 
 local is_initialized = false
