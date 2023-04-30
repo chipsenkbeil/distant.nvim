@@ -18,9 +18,9 @@ local function clean_data(data)
     end
 end
 
---- @param msg ClientReplMsg
+--- @param msg DistantApiMsg
 --- @param info {type:string, data:table<string, string|{type:string, optional:boolean}>, strict:boolean}
---- @return ClientReplMsg
+--- @return DistantApiMsg
 local function msg_validate(msg, info)
     local opts = {
         type = { msg.type, 'string' },
@@ -121,7 +121,7 @@ local function parse_response(opts)
         -- Otherwise, if we got an unexpected type, report it
     else
         return Error:unknown('Received invalid response of type ' .. ptype .. ', wanted ' .. vim.inspect(opts.expected)),
-        opts.stop
+            opts.stop
     end
 end
 
@@ -130,7 +130,7 @@ end
 --- @alias AndThenArgs {err:string|nil, data:table|nil, cb:ApiCallback}
 
 --- @class MakeFnParams
---- @field repl ClientRepl
+--- @field repl DistantApiTransport
 --- @field type string
 --- @field ret_type string|string[]
 --- @field map? fun(data:table, type:string, input:table, stop:fun()):table #transform data before it is sent back through callback or return
@@ -339,7 +339,7 @@ local function make_fn(params)
 end
 
 --- Wrap a REPL in a higher-level API
---- @param repl ClientRepl
+--- @param repl DistantApiTransport
 --- @return ClientApi
 return function(repl)
     local api = {

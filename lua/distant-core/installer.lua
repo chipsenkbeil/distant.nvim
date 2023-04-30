@@ -539,16 +539,17 @@ function M.bin_name()
     return HOST_BIN_NAME
 end
 
---- @class InstallOpts
---- @field reinstall? boolean #If true, will force prompts and remove any previously-installed instance of the binary
---- @field bin? string #If provided, will overwrite the name of the binary used
---- @field prompt? string #If provided, used as prompt
---- @field min_version? Version #If provided, filters download options to only those that meet specified version
-
 --- Installs the binary asynchronously if unavailable, providing several options to perform
---- the installation
+--- the installation:
+--
+--- * `reinstall` If true, will force prompts and remove any previously-installed instance of the binary
+--- * `bin` If provided, will overwrite the name of the binary used
+--- * `prompt` If provided, used as prompt
+--- * `min_version` If provided, filters download options to only those that meet specified version
 ---
---- @param opts InstallOpts
+--- Upon completion, the callback is triggered with either an error or the path to the binary.
+---
+--- @param opts {reinstall?:boolean, bin?:string, prompt?:string, min_version?:Version}
 --- @param cb fun(err?:string, path?:string)
 function M.install(opts, cb)
     vim.validate({

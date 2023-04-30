@@ -19,10 +19,11 @@ local utils = require('distant-core.utils')
 --- @field mappings table<string, fun()>
 
 --- @class LspSettings
+--- @field cmd string|string[]
 --- @field root_dir string
 --- @field filetypes? string[]
 --- @field on_exit? fun(code:number, signal:number|nil, client_id:string)
---- @field opts? table
+--- @field opts? table Additional options to feed directly to the language server
 
 -- Represents the label used to signify default/global settings
 local DEFAULT_LABEL = '*'
@@ -57,6 +58,7 @@ local DEFAULT_SETTINGS = {
 }
 
 local M = {}
+M.__index = M
 
 --- Contains the setting definitions for all remote machines, each
 --- associated by a label with '*' representing a blanket set of

@@ -1,60 +1,44 @@
+local AuthHandler      = require('distant-core.auth.handler')
+local builder          = require('distant-core.builder')
 local log              = require('distant-core.log')
 local utils            = require('distant-core.utils')
-
-local AuthHandler      = require('distant-core.cli.auth')
-local Cmd              = require('distant-core.cli.cmd')
 
 local DEFAULT_TIMEOUT  = 15000
 local DEFAULT_INTERVAL = 100
 
---- Represents a JSON-formatted distant client REPL
---- @class ClientRepl
---- @field config ClientReplConfig
---- @field __state ClientReplState
-local ClientRepl       = {}
-ClientRepl.__index     = ClientRepl
+--- Represents a JSON-formatted distant api transport.
+--- @class DistantApiTransport
+--- @field config {binary:string, network:DistantClientNetwork, timeout?:number, interval?:number}
+--- @field __state DistantApiTransportState
+local M                = {}
+M.__index              = M
 
---- @class ClientReplConfig
---- @field binary string
---- @field network ClientNetwork
---- @field timeout number|nil
---- @field interval number|nil
-
---- @class ClientReplState
---- @field authenticated boolean #true if authenticated and ready to send messages
---- @field queue string[] #queue of outgoing json messages
+--- @class DistantApiTransportState
+--- @field authenticated boolean True if authenticated and ready to send messages
+--- @field queue string[] Queue of outgoing json messages
 --- @field handle? JobHandle
---- @field callbacks table<string, ClientReplCallback>
+--- @field callbacks table<string, DistantApiCallback>
 
---- @class ClientReplCallback
+--- @class DistantApiCallback
 --- @field callback fun(payload:table) #Invoked with payload from received event
 --- @field multi boolean #If true, will not clear the callback after first invocation
 --- @field stop fun() #When called, will stop the callback from being invoked and clear it
 
---- @class ClientReplMsg
+--- @class DistantApiMsg
 --- @field type string
 --- @field data table
 
---- @alias OneOrMoreMsgs ClientReplMsg|ClientReplMsg[]
-
---- @class SendOpts
---- @field unaltered? boolean #when true, the callback will not be wrapped in the situation where there is
----                           a single request payload entry to then return a single response payload entry
---- @field multi? boolean #when true, the callback may be triggered multiple times and will not be cleared
----                       within the Repl upon receiving an event. Instead, a function is returned that will
----                       be called when we want to stop receiving events whose origin is this message
-
 --- Creates a new instance of our repl that wraps a job
---- @param opts ClientReplConfig
---- @return ClientRepl
-function ClientRepl:new(opts)
+--- @param opts {binary:string, network:DistantClientNetwork, timeout?:number, interval?:number}
+--- @return DistantApiTransport
+function M:new(opts)
     opts = opts or {}
 
     local instance = {}
-    setmetatable(instance, ClientRepl)
+    setmetatable(instance, M)
     instance.config = opts
-    assert(instance.config.binary, 'Repl missing binary')
-    assert(instance.config.network, 'Repl missing network')
+    assert(instance.config.binary, 'Transport missing binary')
+    assert(instance.config.network, 'Transport missing network')
     instance.config.timeout = instance.config.timeout or DEFAULT_TIMEOUT
     instance.config.interval = instance.config.interval or DEFAULT_INTERVAL
 
@@ -70,37 +54,49 @@ end
 
 --- Whether or not the repl is running
 --- @return boolean
-function ClientRepl:is_running()
+function M:is_running()
     return self.__state.handle ~= nil and self.__state.handle:running()
 end
 
 --- Starts the repl if it is not already running
---- @param cb fun(code:number)|nil #optional callback when the repl exits
-function ClientRepl:start(cb)
+--- @param cb? fun(code:number) Optional callback when the repl exits
+function M:start(cb)
     if not self:is_running() then
         -- Assign a fresh authentication handler
         local auth = AuthHandler:new()
 
-        local cmd = Cmd.client.repl():set_format('json'):set_from_tbl(self.config.network):as_list()
+        local cmd = builder.api():set_from_tbl(self.config.network):as_list()
         table.insert(cmd, 1, self.config.binary)
 
         local handle
         handle = utils.job_start(cmd, {
             on_success = function()
                 self:stop()
-                if cb ~= nil then
+                if type(cb) == 'function' then
                     cb(0)
                 end
             end,
             on_failure = function(code)
                 self:stop()
-                if cb ~= nil then
+                if type(cb) == 'function' then
                     cb(code)
                 end
             end,
             on_stdout_line = function(line)
                 if line ~= nil and line ~= "" then
-                    local msg = vim.fn.json_decode(line)
+                    --- @type boolean,table|nil
+                    local success, msg = pcall(vim.fn.json_decode, line)
+
+                    -- Quit if the decoding failed or we didn't get a msg
+                    if not success then
+                        log.fmt_error('Failed to decode to json: "%s"', line)
+                        return
+                    end
+
+                    if not msg or type(msg.type) ~= 'string' then
+                        log.fmt_error('Invalid msg: %s', msg)
+                        return
+                    end
 
                     -- Check if we are processing an authentication msg
                     -- or an API message
@@ -134,7 +130,7 @@ end
 
 --- Stops an instance of distant if running by killing the process
 --- and resetting state
-function ClientRepl:stop()
+function M:stop()
     if self.__state.handle ~= nil and self.__state.handle:running() then
         self.__state.handle.stop()
     end
@@ -145,12 +141,21 @@ function ClientRepl:stop()
 end
 
 --- Send one or more messages to the remote machine, invoking the provided callback with the
---- response once it is received
+--- response once it is received.
 ---
---- @param msgs OneOrMoreMsgs
---- @param opts? SendOpts
+--- * `unaltered` when true, the callback will not be wrapped in the situation
+---   where there is a single request payload entry to then return a single
+---   response payload entry
+--- * `multi` when true, the callback may be triggered multiple times and will
+---   not be cleared within the Transport upon receiving an event. Instead, a
+---   function is returned that will be called when we want to stop receiving
+---   events whose origin is this message
+---
+--- @param msgs DistantApiMsg|DistantApiMsg[]
+--- @param opts? {multi?:boolean, unaltered?:boolean}
 --- @param cb fun(data:table, stop:fun()|nil)
-function ClientRepl:send(msgs, opts, cb)
+--- @overload fun(msgs:DistantApiMsg|DistantApiMsg[], cb:fun(data:table, stop:fun()|nil))
+function M:send(msgs, opts, cb)
     if type(cb) ~= 'function' then
         cb = opts
         opts = {}
@@ -160,8 +165,8 @@ function ClientRepl:send(msgs, opts, cb)
         opts = {}
     end
 
-    log.fmt_trace('ClientRepl:send(%s, %s, _)', msgs, opts)
-    assert(self:is_running(), 'ClientRepl is not running!')
+    log.fmt_trace('Transport:send(%s, %s, _)', msgs, opts)
+    assert(self:is_running(), 'distant api transport is not running!')
 
     local payload = msgs
     if not vim.tbl_islist(payload) then
@@ -219,12 +224,12 @@ end
 --- up to `timeout` milliseconds, checking every `interval` milliseconds for
 --- a result (default timeout = 1000, interval = 200)
 --
---- @param msgs OneOrMoreMsgs
+--- @param msgs DistantApiMsg|DistantApiMsg[]
 --- @param opts? table
 --- @return table
-function ClientRepl:send_wait(msgs, opts)
+function M:send_wait(msgs, opts)
     opts = opts or {}
-    log.fmt_trace('ClientRepl:send_wait(%s, %s)', msgs, opts)
+    log.fmt_trace('Transport:send_wait(%s, %s)', msgs, opts)
     local tx, rx = utils.oneshot_channel(
         opts.timeout or self.config.timeout,
         opts.interval or self.config.interval
@@ -241,12 +246,12 @@ end
 --- to `timeout` milliseconds, checking every `interval` milliseconds for a
 --- result (default timeout = 1000, interval = 200), and report an error if not okay
 ---
---- @param msgs OneOrMoreMsgs
+--- @param msgs DistantApiMsg|DistantApiMsg[]
 --- @param opts? table
 --- @return table|nil
-function ClientRepl:send_wait_ok(msgs, opts)
+function M:send_wait_ok(msgs, opts)
     opts = opts or {}
-    log.fmt_trace('ClientRepl:send_wait_ok(%s, %s)', msgs, opts)
+    log.fmt_trace('Transport:send_wait_ok(%s, %s)', msgs, opts)
     local timeout = opts.timeout or self.config.timeout
     local result = self:send_wait(msgs, opts)
     if result == nil then
@@ -259,9 +264,9 @@ function ClientRepl:send_wait_ok(msgs, opts)
 end
 
 --- Primary event handler, routing received events to the corresponding callbacks
-function ClientRepl:__handler(msg)
+function M:__handler(msg)
     assert(type(msg) == 'table', 'msg must be a table')
-    log.fmt_trace('ClientRepl:__handler(%s)', msg)
+    log.fmt_trace('Transport:__handler(%s)', msg)
 
     -- {"id": ..., "origin_id": ..., "payload": ...}
     local origin_id = msg.origin_id
@@ -301,4 +306,4 @@ function ClientRepl:__handler(msg)
     end
 end
 
-return ClientRepl
+return M

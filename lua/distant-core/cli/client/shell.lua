@@ -1,19 +1,19 @@
-local Cmd = require('distant-core.cli.cmd')
+local builder = require('distant-core.builder')
 
 --- Represents a distant client shell
 --- @class ClientShell
 --- @field config ClientConfig
-local ClientShell = {}
-ClientShell.__index = ClientShell
+local M = {}
+M.__index = M
 
 --- Creates a new instance of distant client shell
 --- @param opts ClientConfig
 --- @return ClientShell
-function ClientShell:new(opts)
+function M:new(opts)
     opts = opts or {}
 
     local instance = {}
-    setmetatable(instance, ClientShell)
+    setmetatable(instance, M)
     instance.config = opts
     assert(instance.config.binary, 'Shell missing binary')
     assert(instance.config.network, 'Shell missing network')
@@ -22,15 +22,18 @@ function ClientShell:new(opts)
 end
 
 --- @class ClientShellSpawnOpts
---- @field cmd string|string[]|nil #Optional command to use instead of default shell
---- @field buf number|nil #Optional buffer to assign to shell, defaulting to current buffer
---- @field win number|nil #Optional window to assign to shell, default to current window
+--- @field cmd? string|string[] #Optional command to use instead of default shell
+--- @field buf? number #Optional buffer to assign to shell, defaulting to current buffer
+--- @field win? number #Optional window to assign to shell, default to current window
 
 --- @param opts ClientShellSpawnOpts
 --- @return number #Job id, or 0 if invalid arguments or -1 if cli is not executable
-function ClientShell:spawn(opts)
+function M:spawn(opts)
     -- Acquire a command list that we will execute in our terminal
-    local cmd = self:to_cmd(opts or {})
+    local cmd = builder
+        .shell(opts.cmd)
+        :set_from_tbl(self.config)
+        :as_list()
 
     -- Get or create the buffer we will be using with this terminal,
     -- ensure it is no longer modifiable, switch to it, and then
@@ -54,26 +57,4 @@ function ClientShell:spawn(opts)
     return job_id
 end
 
---- @class ClientShellToCmdOpts
---- @field cmd string|string[]|nil #Optional command to use instead of default shell
-
---- @param opts ClientShellToCmdOpts
---- @return string[] #list representing the command separated by whitespace
-function ClientShell:to_cmd(opts)
-    local c = (opts or {}).cmd
-    local is_table = type(c) == 'table'
-    local is_string = type(c) == 'string'
-    if (is_table and vim.tbl_isempty(c)) or (is_string and vim.trim(c) == '') then
-        c = nil
-    elseif is_table then
-        c = table.concat(c, ' ')
-    end
-
-    --- @type string[]
-    local cmd = Cmd.client.shell(c):set_from_tbl(self.config.network):as_list()
-    table.insert(cmd, 1, self.config.binary)
-
-    return cmd
-end
-
-return ClientShell
+return M
