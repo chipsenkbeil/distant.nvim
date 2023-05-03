@@ -1,4 +1,4 @@
-local Api     = require('distant-core.cli.client.api')
+local Api     = require('distant-core.client.api')
 local builder = require('distant-core.builder')
 local log     = require('distant-core.log')
 local vars    = require('distant-core.vars')

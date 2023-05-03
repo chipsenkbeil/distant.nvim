@@ -1,6 +1,6 @@
 local auth             = require('distant-core.auth')
 local builder          = require('distant-core.builder')
-local Client           = require('distant-core.cli.client')
+local Client           = require('distant-core.client')
 local log              = require('distant-core.log')
 local utils            = require('distant-core.utils')
 

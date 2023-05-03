@@ -1,6 +1,6 @@
-local Process = require('distant-core.cli.client.api.process')
-local Search = require('distant-core.cli.client.api.search')
-local Transport = require('distant-core.cli.client.transport')
+local Process = require('distant-core.client.api.process')
+local Search = require('distant-core.client.api.search')
+local Transport = require('distant-core.client.transport')
 local log = require('distant-core.log')
 
 --- @class DistantApiError

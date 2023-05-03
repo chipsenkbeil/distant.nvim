@@ -1,10 +1,10 @@
-local utils = require('distant-core.utils')
+local Client      = require('distant-core.client')
+local installer   = require('distant-core.installer')
+local Manager     = require('distant-core.manager')
+local utils       = require('distant-core.utils')
 
-local Client = require('distant-core.cli.client')
-local installer = require('distant-core.installer')
-local Manager = require('distant-core.cli.manager')
-
-local M = {}
+--- @class DistantCli
+local M           = {}
 
 --- Minimum version supported by the cli, also enforcing
 --- version upgrades such that 0.17.x would not allow 0.18.0+
