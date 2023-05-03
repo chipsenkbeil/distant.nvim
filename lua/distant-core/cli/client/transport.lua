@@ -140,6 +140,100 @@ function M:stop()
     self.__state.callbacks = {}
 end
 
+--- @class DistantApiTransportSendOpts
+--- @field payload table
+--- @field verify? fun(payload:table):boolean #if provided, will be invoked to verify the response payload is valid
+--- @field map? fun(payload:table):any #if provided, will transform the response payload before returning it
+--- @field more? fun(payload:table):boolean
+--- @field timeout? number
+--- @field interval? number
+
+--- Send payload to the remote machine, invoking the provided callback with the
+--- response once it is received. If `more` is provided, the response payload
+--- is passed to the function, which will return true if more responses to the
+--- same originating payload are expected.
+---
+--- Invokes the provided callback with the response payload once received. If
+--- `more` is used, this callback may be invoked more than once.
+---
+--- @param opts DistantApiTransportSendOpts
+--- @param cb? fun(err?:string, payload?:table)
+function M:send(opts, cb)
+    local payload = opts.payload
+    local verify = opts.verify
+
+    -- Asynchronous if cb provided, otherwise synchronous
+    if type(cb) == 'function' then
+        self:send_async({ payload = payload }, function(res)
+            if type(res) == 'table' and res.type == 'error' then
+                if type(res.description) == 'string' then
+                    local err = res.description
+
+                    if type(res.kind) == 'string' then
+                        err = '(' .. res.kind .. ') ' .. err
+                    end
+
+                    cb(err, nil)
+                else
+                    cb('Malformed error received: ' .. vim.inspect(res), nil)
+                end
+
+                return
+            end
+
+            if not type(res) == 'table' then
+                cb('Invalid response payload: ' .. vim.inspect(res), nil)
+                return
+            elseif type(verify) == 'function' and type(res) == 'table' and not verify(res) then
+                cb('Invalid response payload: ' .. vim.inspect(res), nil)
+                return
+            end
+
+            if type(opts.map) == 'function' and type(res) == 'table' then
+                res = opts.map(res)
+            end
+
+            cb(nil, res)
+        end)
+    else
+        local err, res = self:send_sync({
+            payload = payload,
+            timeout = opts.timeout,
+            interval = opts.interval
+        })
+
+        if err then
+            return err
+        end
+
+        if type(res) == 'table' and res.type == 'error' then
+            if type(res.description) == 'string' then
+                local res_err = res.description
+
+                if type(res.kind) == 'string' then
+                    res_err = '(' .. res.kind .. ') ' .. res_err
+                end
+
+                return res_err
+            else
+                return 'Malformed error received: ' .. vim.inspect(res)
+            end
+        end
+
+        if not type(res) == 'table' then
+            return 'Invalid response payload: ' .. vim.inspect(res)
+        elseif type(verify) == 'function' and type(res) == 'table' and not verify(res) then
+            return 'Invalid response payload: ' .. vim.inspect(res)
+        end
+
+        if type(opts.map) == 'function' and type(res) == 'table' then
+            res = opts.map(res)
+        end
+
+        return nil, res
+    end
+end
+
 --- Send payload to the remote machine, invoking the provided callback with the
 --- response once it is received. If `more` is provided, the response payload
 --- is passed to the function, which will return true if more responses to the
@@ -150,7 +244,7 @@ end
 ---
 --- @param opts {payload:table, more?:fun(payload:table):boolean}
 --- @param cb fun(payload:table)
-function M:send(opts, cb)
+function M:send_async(opts, cb)
     log.fmt_trace('Transport:send(%s, _)', opts)
     assert(self:is_running(), 'distant api transport is not running!')
 
@@ -184,14 +278,14 @@ end
 --
 --- @param opts {payload:table, timeout?:number, interval?:number, more?:fun(payload:table):boolean}
 --- @return string|nil, table|nil #Err?, Payload?
-function M:send_wait(opts)
+function M:send_sync(opts)
     log.fmt_trace('Transport:send_wait(%s)', opts)
     local tx, rx = utils.oneshot_channel(
         opts.timeout or self.config.timeout,
         opts.interval or self.config.interval
     )
 
-    self:send(opts, tx)
+    self:send_async(opts, tx)
 
     local err, payload = rx()
     return err, payload
