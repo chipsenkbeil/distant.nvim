@@ -1,5 +1,4 @@
 local fn  = require('distant.fn')
-
 local log = require('distant-core').log
 local ui  = require('distant-core').ui
 

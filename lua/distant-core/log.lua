@@ -113,10 +113,12 @@ M.new = function(config, standalone)
                     vim.cmd(string.format('echohl %s', level_config.hl))
                 end
 
+                --- @diagnostic disable-next-line:missing-parameter
                 local split_console = vim.split(console_string, '\n')
                 for _, v in ipairs(split_console) do
                     local formatted_msg = string.format('[%s] %s', config.plugin, vim.fn.escape(v, [['\]]))
 
+                    --- @diagnostic disable-next-line:param-type-mismatch
                     local ok = pcall(vim.cmd, string.format([[echom '%s']], formatted_msg))
                     if not ok then
                         vim.api.nvim_out_write(msg .. '\n')

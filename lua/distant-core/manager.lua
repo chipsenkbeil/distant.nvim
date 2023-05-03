@@ -9,8 +9,8 @@ local DEFAULT_INTERVAL = 100
 
 --- Represents a distant manager
 --- @class DistantManager
---- @field config DistantManagerConfig
---- @field connections table<string, {destination:string}> #mapping of id -> destination
+--- @field private config DistantManagerConfig
+--- @field private connections table<string, {destination:string}> #mapping of id -> destination
 local M                = {}
 M.__index              = M
 

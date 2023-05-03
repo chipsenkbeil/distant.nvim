@@ -1,5 +1,4 @@
 local editor = require('distant.editor')
-
 local log    = require('distant-core').log
 local utils  = require('distant-core').utils
 local vars   = require('distant-core').vars

@@ -1,5 +1,4 @@
 local fn   = require('distant.fn')
-
 local log  = require('distant-core').log
 local vars = require('distant-core').vars
 
@@ -33,6 +32,7 @@ return function(opts)
         -- TODO: This only works if the buffer is not hidden, but is
         --       this a problem for the write cmd since the buffer
         --       shouldn't be hidden?
+        --- @diagnostic disable-next-line:param-type-mismatch
         local lines = vim.fn.getbufline(buf, 1, '$')
 
         -- Write the buffer contents

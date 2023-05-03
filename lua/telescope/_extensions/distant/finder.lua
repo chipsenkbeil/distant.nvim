@@ -8,10 +8,10 @@ local DISPLAY_LINE_LEN = 40
 --- @field minimum_len number #minimum length of input before sending a query
 
 --- @class DistantFinder
---- @field query DistantSearchQuery
+--- @field query DistantApiSearchQuery
 --- @field settings DistantFinderSettings
 --- @field results DistantFinderEntry[]
---- @field __searcher DistantSearcher|nil #active searcher (internal)
+--- @field __search? DistantApiSearch #active search (internal)
 local Finder = {}
 Finder.__index = Finder
 
@@ -24,13 +24,13 @@ end
 --- @field value any #required, but can be anything
 --- @field ordinal string #text used for filtering
 --- @field display string|function #either the text to display or a function that takes the entry and converts it into a string
---- @field valid boolean|nil #if set to false, the entry will not be displayed by the picker
---- @field filename string|nil #path of file that will be opened (if set)
---- @field bufnr number|nil #buffer that will be opened (if set)
---- @field lnum number|nil #jumps to this line (if set)
---- @field col number|nil #jumps to this column (if set)
+--- @field valid? boolean #if set to false, the entry will not be displayed by the picker
+--- @field filename? string #path of file that will be opened (if set)
+--- @field bufnr? number #buffer that will be opened (if set)
+--- @field lnum? number #jumps to this line (if set)
+--- @field col? number #jumps to this column (if set)
 
---- @param match DistantSearchMatch
+--- @param match DistantApiSearchMatch
 --- @return DistantFinderEntry|nil
 local function make_entry(match)
     local path_with_scheme = match.path
@@ -60,12 +60,15 @@ local function make_entry(match)
             entry.col = match.submatches[1].start + 1
         end
 
+        local lines = match.lines.value
+        assert(type(lines) == 'string', 'Invalid match lines type')
+
         -- :line,col:{LINE}
         local suffix = ':'
             .. entry.lnum .. ','
             .. (entry.col or 1) .. ':'
-            .. match.lines.value:sub(1, DISPLAY_LINE_LEN)
-            .. (#match.lines.value > DISPLAY_LINE_LEN and '...' or '')
+            .. lines:sub(1, DISPLAY_LINE_LEN)
+            .. (#lines > DISPLAY_LINE_LEN and '...' or '')
 
         -- Clean up the text to prevent it being a blob/string buffer
         -- by removing control characters and null (\0) that can appear
@@ -80,7 +83,7 @@ local function make_entry(match)
 end
 
 --- @class DistantFinderOpts
---- @field query DistantSearchQuery #query to execute whose results will be captured
+--- @field query DistantApiSearchQuery #query to execute whose results will be captured
 --- @field settings DistantFinderSettings|nil
 
 --- Creates a new finder that takes
@@ -155,7 +158,7 @@ function Finder:__find(prompt, process_result, process_complete)
             end
         end
 
-        -- On completion, we process dangling results and clear our searcher
+        -- On completion, we process dangling results and clear our search
         opts.on_done = function(matches)
             for _, match in ipairs(matches) do
                 local entry = make_entry(match)
@@ -168,13 +171,13 @@ function Finder:__find(prompt, process_result, process_complete)
             end
 
             process_complete()
-            self.__searcher = nil
+            self.__search = nil
         end
 
         --- @diagnostic disable-next-line:redefined-local
-        fn.search(opts, function(err, searcher)
+        fn.search(opts, function(err, search)
             assert(not err, err)
-            self.__searcher = searcher
+            self.__search = search
         end)
     end)
 end
@@ -186,16 +189,16 @@ function Finder:close(cb)
     end
     self.results = {}
 
-    if self.__searcher ~= nil then
-        if not self.__searcher.done then
-            self.__searcher.cancel(function(err)
+    if self.__search ~= nil then
+        if not self.__search:is_done() then
+            self.__search:cancel(function(err)
                 cb(err)
             end)
         else
             cb()
         end
 
-        self.__searcher = nil
+        self.__search = nil
     else
         cb()
     end

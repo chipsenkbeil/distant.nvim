@@ -8,9 +8,9 @@ local DEFAULT_INTERVAL = 100
 
 --- Represents a JSON-formatted distant api transport.
 --- @class DistantApiTransport
---- @field auth_handler AuthHandler
+--- @field private auth_handler AuthHandler
 --- @field config {autostart:boolean, binary:string, network:DistantClientNetwork, timeout:number, interval:number}
---- @field __state DistantApiTransportState
+--- @field private __state DistantApiTransportState
 local M                = {}
 M.__index              = M
 

@@ -3,7 +3,7 @@ local utils = require('distant-core.utils')
 
 --- Represents a remote process.
 --- @class DistantApiProcess
---- @field __internal DistantApiProcessInternal
+--- @field private __internal DistantApiProcessInternal
 local M     = {}
 M.__index   = M
 

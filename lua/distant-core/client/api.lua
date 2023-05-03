@@ -35,7 +35,7 @@ local log = require('distant-core.log')
 
 --- Represents an API that uses a transport to communicate payloads.
 --- @class DistantApi
---- @field transport DistantApiTransport
+--- @field private transport DistantApiTransport
 local M = {}
 M.__index = M
 

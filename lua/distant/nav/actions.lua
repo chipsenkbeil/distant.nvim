@@ -1,6 +1,5 @@
 local editor = require('distant.editor')
 local fn     = require('distant.fn')
-
 local log    = require('distant-core').log
 local utils  = require('distant-core').utils
 local vars   = require('distant-core').vars
@@ -137,6 +136,7 @@ M.rename = function(opts)
     if base_path ~= nil then
         local old_path = full_path_under_cursor()
         if old_path ~= nil then
+            --- @diagnostic disable-next-line:redundant-parameter
             local new_path = opts.path or vim.fn.input('New name: ', old_path)
             if new_path == '' then
                 return

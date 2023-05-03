@@ -1,5 +1,4 @@
 local fn    = require('distant.fn')
-
 local data  = require('distant-core').data
 local log   = require('distant-core').log
 local state = require('distant-core').state
@@ -217,7 +216,7 @@ local function load_buf_from_file(path, bufnr, opts)
 
     local lines
     if text ~= nil then
-        lines = vim.split(text, '\n', true)
+        lines = vim.split(text, '\n', { plain = true })
     else
         log.fmt_error('Failed to read file: %s', path)
         return bufnr
@@ -235,12 +234,13 @@ local function load_buf_from_dir(path, bufnr, opts)
 
     local err, res = fn.read_dir(vim.tbl_extend('keep', { path = path }, opts))
     assert(not err, err)
+    assert(res, 'Impossible: read_dir result nil')
 
-    local lines = utils.filter_map(res.entries, function(entry)
+    local lines = assert(utils.filter_map(res.entries, function(entry)
         if entry.depth > 0 then
             return entry.path
         end
-    end)
+    end), 'Impossible: Lines is nil')
 
     return create_or_populate_buf(bufnr, lines)
 end
@@ -388,13 +388,13 @@ end
 
 --- @class EditorOpenOpts
 --- @field path string #Path to file or directory
---- @field bufnr number|nil #If not -1 and number, will use this buffer number instead of looking for a buffer
---- @field winnr number|nil #If not -1 and number, will use this window
---- @field line number|nil #If provided, will jump to the specified line (1-based index)
---- @field col number|nil #If provided, will jump to the specified column (1-based index)
---- @field reload boolean|nil #If true, will reload the buffer even if already open
---- @field timeout number|nil #Maximum time to wait for a response
---- @field interval number|nil #Time in milliseconds to wait between checks for a response
+--- @field bufnr? number #If not -1 and number, will use this buffer number instead of looking for a buffer
+--- @field winnr? number #If not -1 and number, will use this window
+--- @field line? number #If provided, will jump to the specified line (1-based index)
+--- @field col? number #If provided, will jump to the specified column (1-based index)
+--- @field reload? boolean #If true, will reload the buffer even if already open
+--- @field timeout? number #Maximum time to wait for a response
+--- @field interval? number #Time in milliseconds to wait between checks for a response
 
 --- Opens the provided path in one of three ways:
 ---
@@ -402,7 +402,7 @@ end
 --- 2. If path points to a directory, opens up a navigation interface
 --- 3. If path does not exist, opens a blank buffer that points to the file to be written
 ---
---- @param opts? EditorOpenOpts|string
+--- @param opts EditorOpenOpts|string
 --- @return number|nil #The handle of the created buffer for the remote file/directory, or nil if failed
 return function(opts)
     opts = opts or {}
@@ -428,7 +428,7 @@ return function(opts)
 
     -- Retrieve information about our path, capturing the canonicalized path
     -- if possible without the distant:// prefix
-    local p = check_path(local_path, opts)
+    local p = check_path(local_path, { timeout = opts.timeout, interval = opts.interval })
     log.fmt_debug('retrieved path info for %s', p.path)
 
     -- Construct universal remote buffer name (distant:// + canonicalized path)
@@ -494,7 +494,8 @@ return function(opts)
 
     -- Update position in buffer if provided new position
     if cursor.line ~= nil or cursor.col ~= nil then
-        local cur_line, cur_col = vim.api.nvim_win_get_cursor(opts.winnr or 0)
+        --- @type number, number
+        local cur_line, cur_col = unpack(vim.api.nvim_win_get_cursor(opts.winnr or 0))
         local line = cursor.line or cur_line
         local col = cursor.col
         -- Input col is base index 1, whereas vim takes index 0

@@ -4,16 +4,16 @@ local state = require('distant-core').state
 --- @class EditorConnectOpts
 --- @field destination string
 ---
---- @field auth AuthHandler|nil
---- @field interval number|nil
---- @field log_level DistantLogLevel|nil
---- @field log_file string|nil
---- @field options string|table<string, any>
---- @field timeout number|nil
+--- @field auth? AuthHandler
+--- @field interval? number
+--- @field log_level? 'off'|'error'|'warn'|'info'|'debug'|'trace'
+--- @field log_file? string
+--- @field options? string|table<string, any>
+--- @field timeout? number
 
 --- Connects to a running distance binary on the remote machine
 --- @param opts EditorConnectOpts
---- @param cb fun(err:string|nil, client:DistantClient|nil)
+--- @param cb fun(err?:string, client?:DistantClient)
 return function(opts, cb)
     opts = opts or {}
     cb = cb or function(err)

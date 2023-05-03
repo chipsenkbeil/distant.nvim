@@ -1,8 +1,7 @@
+local cli     = require('distant.cli')
 local editor  = require('distant.editor')
 local fn      = require('distant.fn')
-
-local cli     = require('distant-core').cli
-local state   = require('distant-core').state
+local state   = require('distant.state')
 local utils   = require('distant-core').utils
 
 local M       = {}
@@ -103,7 +102,7 @@ M.parse_input = function(input)
     for key, value in pairs(opts) do
         -- Support key in form of path.to.key = value
         -- to produce { path = { to = { key = value } } }
-        local path = vim.split(key, '.', true)
+        local path = vim.split(key, '.', { plain = true })
 
         if #path > 1 then
             local tbl = {}
@@ -145,7 +144,7 @@ local function paths_to_f(tbl, paths, f)
     local parts, inner
     for _, path in ipairs(paths) do
         --- @type string[]
-        parts = vim.split(path, '.', true)
+        parts = vim.split(path, '.', { plain = true })
 
         inner = tbl
         for i, part in ipairs(parts) do
@@ -350,8 +349,8 @@ M.cancel_search = function(input)
     paths_to_number(input.opts, { 'timeout', 'interval' })
 
     editor.cancel_search({
-        timeout = input.opts.timeout,
-        interval = input.opts.interval,
+        timeout = tonumber(input.opts.timeout),
+        interval = tonumber(input.opts.interval),
     })
 end
 
@@ -361,8 +360,8 @@ M.search = function(input)
     paths_to_number(input.opts, { 'pagination', 'limit', 'max_depth', 'timeout', 'interval' })
     paths_to_bool(input.opts, { 'follow_symbolic_links' })
 
-    local timeout = input.opts.timeout
-    local interval = input.opts.interval
+    local timeout = tonumber(input.opts.timeout)
+    local interval = tonumber(input.opts.interval)
 
     local pattern = input.args[1]
     local paths = {}
@@ -417,15 +416,12 @@ M.shell = function(input)
     --- @type DistantClient
     local client = assert(state.client, 'No client established')
 
-    client:shell():spawn({ cmd = cmd })
+    client:spawn_shell({ bufnr = 0, cmd = cmd })
 end
 
 --- DistantClientVersion
 M.client_version = function()
-    local Client = cli.client()
-    local client = Client:new()
-
-    local version = assert(client:version(), 'Could not get client version')
+    local version = assert(cli.version(), 'Could not get client version')
     print(utils.version_to_string(version))
 end
 

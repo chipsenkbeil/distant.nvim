@@ -6,8 +6,8 @@ local vars    = require('distant-core.vars')
 --- Represents a distant client
 --- @class DistantClient
 --- @field api DistantApi
---- @field config {binary:string, network:DistantClientNetwork}
---- @field __state DistantClientState
+--- @field private config {binary:string, network:DistantClientNetwork}
+--- @field private __state DistantClientState
 local M       = {}
 M.__index     = M
 
@@ -170,7 +170,7 @@ end
 --- * `bufnr` specifies the buffer to use. If -1, will create a new buffer.
 --- * `winnr` specifies the window to use. Default is current window.
 ---
---- @param opts {bufnr:number, winnr?:number, cmd?:string, cwd?:string, env?:table<string, string>}
+--- @param opts {bufnr:number, winnr?:number, cmd?:string|string[], cwd?:string, env?:table<string, string>}
 --- @return number job-id
 function M:spawn_shell(opts)
     -- Get or create the buffer we will be using with this terminal,
@@ -204,7 +204,8 @@ end
 --- a string if the input is a string, or a list if the input
 --- is a list.
 ---
---- @param opts {cmd:string|string[]|nil, lsp:string|string[]|nil, shell:string|string[]|true|nil, cwd:string|nil, env:table<string,string>|nil}
+--- @alias DistantClientWrapOpts {cmd?:string|string[], lsp?:string|string[], shell?:string|string[]|true, cwd?:string, env?:table<string,string>}
+--- @param opts DistantClientWrapOpts
 --- @return string|string[]
 function M:wrap(opts)
     opts = opts or {}

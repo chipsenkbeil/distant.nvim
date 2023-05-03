@@ -1,4 +1,4 @@
-local state = require('distant-core').state
+local state = require('distant.state')
 
 --- @param obj table<string, function>
 --- @param names string[]
@@ -20,7 +20,9 @@ local function make_fns(obj, names)
             state.client,
             'Client must be initialized before invoking fn'
         )
-        return client:system_info()
+        local err, system_info = client:cached_system_info({})
+        assert(not err, err)
+        return assert(system_info)
     end
 
     return obj

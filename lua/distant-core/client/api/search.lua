@@ -3,7 +3,7 @@ local utils = require('distant-core.utils')
 
 --- Represents an active search.
 --- @class DistantApiSearch
---- @field __internal DistantApiSearchInternal
+--- @field private __internal DistantApiSearchInternal
 local M     = {}
 M.__index   = M
 

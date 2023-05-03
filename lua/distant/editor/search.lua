@@ -1,5 +1,4 @@
 local fn                 = require('distant.fn')
-
 local log                = require('distant-core').log
 local state              = require('distant-core').state
 local vars               = require('distant-core').vars
@@ -9,7 +8,7 @@ local MAX_LINE_LEN       = 100
 
 --- Add matches to qflist
 --- @param id number #id of quickfix list
---- @param matches DistantSearchMatch[] #match(s) to add
+--- @param matches DistantApiSearchMatch[] #match(s) to add
 local function add_matches_to_qflist(id, matches)
     -- Quit if nothing to add
     if #matches == 0 then
@@ -107,11 +106,11 @@ local function add_matches_to_qflist(id, matches)
 end
 
 --- @class EditorSearchOpts
---- @field query DistantSearchQuery|string
---- @field on_results nil|fun(matches:DistantSearchMatch[])
---- @field on_done nil|fun(matches:DistantSearchMatch[])
---- @field timeout number|nil #Maximum time to wait for a response
---- @field interval number|nil #Time in milliseconds to wait between checks for a response
+--- @field query DistantApiSearchQuery|string
+--- @field on_results? fun(matches:DistantApiSearchMatch[])
+--- @field on_done? fun(matches:DistantApiSearchMatch[])
+--- @field timeout? number #Maximum time to wait for a response
+--- @field interval? number #Time in milliseconds to wait between checks for a response
 
 --- Performs a search using the provided query, displaying results in a new quickfix list
 --- @param opts EditorSearchOpts

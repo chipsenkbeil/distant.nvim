@@ -1,18 +1,18 @@
-local log = require('distant-core.log')
+local log      = require('distant-core.log')
 local settings = require('distant-core.settings')
-local utils = require('distant-core.utils')
+local utils    = require('distant-core.utils')
 
 --- @class EditorSearchState
 --- @field qfid number #id of quickfix list storing results
---- @field searcher DistantSearcher #searcher being used
+--- @field search DistantApiSearch #searcher being used
 
 --- @class State
---- @field client DistantClient|nil #active client
---- @field manager DistantManager|nil #active manager
---- @field search EditorSearchState|nil #active search via editor
+--- @field client? DistantClient #active client
+--- @field manager? DistantManager #active manager
+--- @field search? EditorSearchState #active search via editor
 --- @field settings DistantSettings #user settings
-local M = {}
-M.__index = M
+local M        = {}
+M.__index      = M
 
 --- @return State
 function M:new()
@@ -67,7 +67,7 @@ function M:load_manager(opts, cb)
 
     if not self.manager then
         -- NOTE: Lazily load cli to prevent loop
-        local cli = require('distant-core.cli')
+        local cli = require('distant.cli')
 
         cli.install(opts, function(err, path)
             if err then
