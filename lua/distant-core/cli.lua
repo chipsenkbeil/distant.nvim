@@ -1,5 +1,6 @@
 local Client      = require('distant-core.client')
 local installer   = require('distant-core.installer')
+local log         = require('distant-core.log')
 local Manager     = require('distant-core.manager')
 local utils       = require('distant-core.utils')
 
@@ -88,57 +89,66 @@ end
 --- Checks if the cli binary is available on path, and installs the binary if
 --- it is not. Will also check the version and attempt to install the binary if
 --- the available version fails our check.
---- @overload fun(cb:fun(err:string|nil, path:string|nil))
 --- @param opts {bin?:string, reinstall?:boolean, timeout?:number, interval?:number} #Optional installation options
---- @param cb fun(err:string|nil, path:string|nil) #Path is the path to the installed binary
+--- @param cb fun(err?:string, path?:string) #Path is the path to the installed binary
 function M.install(opts, cb)
-    if not cb then
-        cb = opts
-        opts = {}
-    end
-
-    if not opts then
-        opts = {}
-    end
+    vim.validate({
+        opts = { opts, 'table' },
+        cb = { cb, 'function' },
+    })
 
     local settings = M.settings(opts)
     local has_bin = vim.fn.executable(settings.bin) == 1
 
     --- @param bin string #Path to binary
-    --- @return boolean
+    --- @return 'fail-check-version'|'invalid-version'|'ok'
     local function validate_cli(bin)
         local version = M.version({ bin = bin })
         if not version then
-            return cb('Unable to detect binary version')
+            log.warn('Unable to detect binary version')
+            return 'fail-check-version'
         end
         local ok = utils.can_upgrade_version(
             MIN_VERSION,
             version,
             { allow_unstable_upgrade = true }
         )
-
         if ok then
-            vim.schedule(function() cb(nil, bin) end)
+            return 'ok'
+        else
+            return 'invalid-version'
         end
-
-        return ok
     end
 
     -- If the cli's binary is available, check if it's valid and
     -- if so we can exit
-    if has_bin and validate_cli(settings.bin) then
-        return
+    if has_bin then
+        local status = validate_cli(settings.bin)
+        if status == 'ok' then
+            vim.schedule(function() cb(nil, settings.bin) end)
+            return
+        elseif status == 'fail-check-version' then
+            vim.schedule(function() cb('Unable to detect binary version', nil) end)
+            return
+        end
     end
 
     -- Otherwise, try to install to our internal location and use it
     return installer.install({
         min_version = MIN_VERSION,
         reinstall = opts.reinstall,
-    }, function(success, result)
-        if not success then
-            return cb(result)
+    }, function(err, path)
+        if err then
+            return cb(err, nil)
         else
-            validate_cli(result)
+            local status = validate_cli(path)
+            if status == 'ok' then
+                cb(nil, path)
+            elseif status == 'invalid-version' then
+                cb('Incompatible version detected', nil)
+            elseif status == 'fail-check-version' then
+                cb('Unable to detect binary version', nil)
+            end
         end
     end)
 end
