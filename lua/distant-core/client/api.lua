@@ -39,12 +39,19 @@ local log = require('distant-core.log')
 local M = {}
 M.__index = M
 
---- @param opts {binary:string, network:DistantClientNetwork, auth_handler?:AuthHandler, timeout?:number, interval?:number}
+--- @param opts {binary:string, network?:DistantClientNetwork, auth_handler?:AuthHandler, timeout?:number, interval?:number}
 --- @return DistantApi
 function M:new(opts)
     local instance = {}
     setmetatable(instance, M)
-    instance.transport = Transport:new(opts)
+    instance.transport = Transport:new({
+        autostart = true,
+        binary = opts.binary,
+        network = opts.network,
+        auth_handler = opts.auth_handler,
+        timeout = opts.timeout,
+        interval = opts.interval,
+    })
 
     return instance
 end
@@ -199,6 +206,7 @@ function M:exists(opts, cb)
         cb = { cb, 'function', true },
     })
 
+    --- @diagnostic disable-next-line:return-type-mismatch
     return self.transport:send({
         payload = {
             type = 'exists',
@@ -327,6 +335,7 @@ function M:read_file_text(opts, cb)
         cb = { cb, 'function', true },
     })
 
+    --- @diagnostic disable-next-line:return-type-mismatch
     return self.transport:send({
         payload = {
             type = 'file_read_text',
@@ -514,7 +523,7 @@ function M:write_file(opts, cb)
 end
 
 --- @alias DistantApiWriteFileTextOpts {path:string, text:string, timeout?:number, interval?:number}
---- @param opts DistantApiWriteFileOpts
+--- @param opts DistantApiWriteFileTextOpts
 --- @param cb fun(err?:string, payload?:OkPayload)
 --- @return nil
 --- @overload fun(opts:DistantApiWriteFileTextOpts):string|nil,OkPayload|nil

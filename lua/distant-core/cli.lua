@@ -22,7 +22,7 @@ function M.client(opts)
     return Client:new(opts)
 end
 
---- @param opts ManagerConfig
+--- @param opts DistantManagerConfig
 --- @return DistantManager
 function M.manager(opts)
     local settings = M.settings(opts)

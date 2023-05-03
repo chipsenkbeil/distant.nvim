@@ -1,11 +1,10 @@
-local fn = require('distant.fn')
+local fn    = require('distant.fn')
 
-local core = require('distant-core')
-local data = core.data
-local log = core.log
-local state = core.state
-local utils = core.utils
-local vars = core.vars
+local data  = require('distant-core').data
+local log   = require('distant-core').log
+local state = require('distant-core').state
+local utils = require('distant-core').utils
+local vars  = require('distant-core').vars
 
 --- Applies neovim buffer-local mappings
 ---
@@ -403,7 +402,7 @@ end
 --- 2. If path points to a directory, opens up a navigation interface
 --- 3. If path does not exist, opens a blank buffer that points to the file to be written
 ---
---- @param opts? EditorOpenOpts
+--- @param opts? EditorOpenOpts|string
 --- @return number|nil #The handle of the created buffer for the remote file/directory, or nil if failed
 return function(opts)
     opts = opts or {}

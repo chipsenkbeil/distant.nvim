@@ -1,6 +1,5 @@
-local core = require('distant-core')
-local log = core.log
-local state = core.state
+local log   = require('distant-core').log
+local state = require('distant-core').state
 
 --- @class EditorConnectOpts
 --- @field destination string

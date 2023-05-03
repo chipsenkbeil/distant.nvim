@@ -7,19 +7,18 @@ local vars    = require('distant-core.vars')
 --- @class DistantClient
 --- @field api DistantApi
 --- @field config {binary:string, network:DistantClientNetwork}
---- @field __state ClientState
+--- @field __state DistantClientState
 local M       = {}
 M.__index     = M
 
 --- @class DistantClientNetwork
---- @field connection string|nil #id of the connection tied to the client
---- @field unix_socket string|nil #path to the unix socket of the manager
---- @field windows_pipe string|nil #name of the windows pipe of the manager
+--- @field connection? string #id of the connection tied to the client
+--- @field unix_socket? string #path to the unix socket of the manager
+--- @field windows_pipe? string #name of the windows pipe of the manager
 
---- @class ClientState
+--- @class DistantClientState
 --- @field cache {system_info?:DistantApiSystemInfoPayload}
 --- @field lsp {clients:table<string, number>} Mapping of label -> client id
---- @field transport DistantApiTransport|nil
 
 --- Creates a new instance of a distant client
 --- @param opts {binary:string, network:DistantClientNetwork}
@@ -46,8 +45,6 @@ function M:new(opts)
         lsp = {
             clients = {},
         },
-        transport = nil,
-        system_info = nil,
     }
 
     return instance
@@ -60,7 +57,7 @@ end
 --- @param opts {reload?:boolean, timeout?:number, interval?:number}
 --- @param cb? fun(err?:string, payload?:DistantApiSystemInfoPayload)
 --- @return string|nil, DistantApiSystemInfoPayload|nil
-function M:system_info(opts, cb)
+function M:cached_system_info(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
         cb = { cb, 'function', true },

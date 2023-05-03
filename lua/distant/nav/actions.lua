@@ -1,12 +1,11 @@
 local editor = require('distant.editor')
-local fn = require('distant.fn')
+local fn     = require('distant.fn')
 
-local core = require('distant-core')
-local log = core.log
-local utils = core.utils
-local vars = core.vars
+local log    = require('distant-core').log
+local utils  = require('distant-core').utils
+local vars   = require('distant-core').vars
 
-local actions = {}
+local M      = {}
 
 --- Returns the separator used by the remote system
 --- @return string
@@ -37,7 +36,7 @@ end
 --- 2. In the case of a directory, the navigator enters it
 ---
 --- @param opts table
-actions.edit = function(opts)
+M.edit = function(opts)
     opts = opts or {}
 
     local path = full_path_under_cursor()
@@ -53,7 +52,7 @@ end
 --- * reload: If provided, overrides the default (default: true)
 ---
 --- @param opts table
-actions.up = function(opts)
+M.up = function(opts)
     opts = opts or {}
 
     --- @type string|nil
@@ -78,7 +77,7 @@ end
 --- * path: If provided, is used as new file path joined to current directory
 ---
 --- @param opts table
-actions.newfile = function(opts)
+M.newfile = function(opts)
     opts = opts or {}
 
     --- @type string|nil
@@ -101,7 +100,7 @@ end
 --- * path: If provided, is used as new directory path joined to current directory
 ---
 --- @param opts table
-actions.mkdir = function(opts)
+M.mkdir = function(opts)
     opts = opts or {}
 
     --- @type string|nil
@@ -130,7 +129,7 @@ end
 --- * path: If provided, is used as new directory path joined to current directory
 ---
 --- @param opts table
-actions.rename = function(opts)
+M.rename = function(opts)
     opts = opts or {}
 
     --- @type string|nil
@@ -162,7 +161,7 @@ end
 --- * no_prompt: If true, will not prompt to delete current file/directory
 ---
 --- @param opts table
-actions.remove = function(opts)
+M.remove = function(opts)
     opts = opts or {}
 
     --- @type string|nil
@@ -188,4 +187,4 @@ actions.remove = function(opts)
     end
 end
 
-return actions
+return M

@@ -1,8 +1,7 @@
-local fn = require('distant.fn')
+local fn  = require('distant.fn')
 
-local core = require('distant-core')
-local log = core.log
-local ui = core.ui
+local log = require('distant-core').log
+local ui  = require('distant-core').ui
 
 --- Opens a new window to show metadata for some path
 return function(opts)

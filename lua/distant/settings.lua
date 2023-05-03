@@ -1,9 +1,9 @@
-local core = require('distant-core')
+local settings = require('distant-core').settings
 
-local M = core.settings
+local M = {}
 
 --- Retrieve settings with opinionated configuration for Chip's usage
---- @return Settings @The settings to apply to any remote machine (or empty table)
+--- @return DistantSettings @The settings to apply to any remote machine (or empty table)
 M.chip_default = function()
     local actions = require('distant.nav.actions')
 
@@ -26,7 +26,7 @@ M.chip_default = function()
                 ['D']        = actions.remove,
             }
         },
-    }, M.default())
+    }, settings.default())
 end
 
 return M

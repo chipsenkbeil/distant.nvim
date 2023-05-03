@@ -10,14 +10,14 @@ local utils = require('distant-core.utils')
 --- @field client DistantClient|nil #active client
 --- @field manager DistantManager|nil #active manager
 --- @field search EditorSearchState|nil #active search via editor
---- @field settings Settings #user settings
-local State = {}
-State.__index = State
+--- @field settings DistantSettings #user settings
+local M = {}
+M.__index = M
 
 --- @return State
-function State:new()
+function M:new()
     local instance = {}
-    setmetatable(instance, State)
+    setmetatable(instance, M)
     instance.client = nil
     instance.manager = nil
     instance.search = nil
@@ -31,8 +31,8 @@ end
 
 --- Loads into state the settings appropriate for the remote machine with the give label
 --- @param destination string Full destination to server, which can be in a form like SCHEME://USER:PASSWORD@HOST:PORT
---- @return Settings
-function State:load_settings(destination)
+--- @return DistantSettings
+function M:load_settings(destination)
     log.fmt_trace('Detecting settings for destination: %s', destination)
 
     -- Parse our destination into the host only
@@ -52,11 +52,11 @@ function State:load_settings(destination)
 end
 
 --- Loads the manager using the specified config, installing the underlying cli if necessary
---- @overload fun(opts:ManagerConfig):DistantManager
---- @param opts ManagerConfig
+--- @overload fun(opts:DistantManagerConfig):DistantManager
+--- @param opts DistantManagerConfig
 --- @param cb fun(err:string|nil, manager:DistantManager|nil) #if provided, will asynchronously return manager
 --- @return DistantManager|nil #if synchronous, returns manager
-function State:load_manager(opts, cb)
+function M:load_manager(opts, cb)
     local rx
     if not cb then
         cb, rx = utils.oneshot_channel(
@@ -112,7 +112,7 @@ function State:load_manager(opts, cb)
     end
 end
 
-function State:launch(opts, cb)
+function M:launch(opts, cb)
     assert(opts.destination, 'Destination is missing')
 
     self:load_manager(opts, function(err, manager)
@@ -133,7 +133,7 @@ function State:launch(opts, cb)
     end)
 end
 
-function State:connect(opts, cb)
+function M:connect(opts, cb)
     assert(opts.destination, 'Destination is missing')
 
     self:load_manager(opts, function(err, manager)
@@ -154,5 +154,5 @@ function State:connect(opts, cb)
     end)
 end
 
-local GLOBAL_STATE = State:new()
+local GLOBAL_STATE = M:new()
 return GLOBAL_STATE

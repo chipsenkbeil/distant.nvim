@@ -1,5 +1,4 @@
-local core = require('distant-core')
-local state = core.state
+local state = require('distant-core').state
 
 --- @param obj table<string, function>
 --- @param names string[]

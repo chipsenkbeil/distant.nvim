@@ -9,21 +9,21 @@ local DEFAULT_INTERVAL = 100
 
 --- Represents a distant manager
 --- @class DistantManager
---- @field config ManagerConfig
+--- @field config DistantManagerConfig
 --- @field connections table<string, {destination:string}> #mapping of id -> destination
 local M                = {}
 M.__index              = M
 
---- @class ManagerConfig
+--- @class DistantManagerConfig
 --- @field binary string #path to distant binary to use
---- @field network ManagerNetwork #manager-specific network settings
+--- @field network DistantManagerNetwork #manager-specific network settings
 
---- @class ManagerNetwork
---- @field unix_socket string|nil #path to the unix socket of the manager
---- @field windows_pipe string|nil #name of the windows pipe of the manager
+--- @class DistantManagerNetwork
+--- @field unix_socket? string #path to the unix socket of the manager
+--- @field windows_pipe? string #name of the windows pipe of the manager
 
 --- Creates a new instance of a distant manager
---- @param opts ManagerConfig
+--- @param opts DistantManagerConfig
 --- @return DistantManager
 function M:new(opts)
     opts = opts or {}
@@ -70,19 +70,19 @@ function M:client(connection)
 end
 
 --- @class ManagerSelectOpts
---- @field connection string|nil #If provided, will set manager's default connection to this connection
---- @field on_choices nil|fun(opts:{choices:string[], current:number}):number|nil #If provided,
---- @field timeout number|nil
---- @field interval number|nil
+--- @field connection? string #If provided, will set manager's default connection to this connection
+--- @field on_choices? fun(opts:{choices:string[], current:number}):number|nil #If provided,
+--- @field timeout? number
+--- @field interval? number
 
 --- @class ManagerConnectionSelector
 --- @field choices string[]
 --- @field current number
---- @field select fun(choice:number|nil, cb:fun(err:string|nil)|nil) #Perform a selection, or cancel if choice = nil
+--- @field select fun(choice?:number, cb?:fun(err?:string)) #Perform a selection, or cancel if choice = nil
 
 --- Changes the selected connection used as default by the manager
 --- @param opts ManagerSelectOpts
---- @param cb fun(err:string|nil, selector:ManagerConnectionSelector|nil) #Selector will be provided if no connection provided in opts
+--- @param cb fun(err?:string, selector?:ManagerConnectionSelector) #Selector will be provided if no connection provided in opts
 function M:select(opts, cb)
     opts = opts or {}
 
@@ -148,8 +148,8 @@ end
 
 --- Check if defined manager is listening. Note that this can be the case even when
 --- we have not spawned the manager ourselves
---- @param opts {timeout:number|nil, interval:number|nil}
---- @param cb fun(value:boolean)|nil
+--- @param opts {timeout?:number, interval?:number}
+--- @param cb? fun(value:boolean)
 --- @return boolean|nil
 function M:is_listening(opts, cb)
     opts = opts or {}
@@ -187,7 +187,7 @@ function M:is_listening(opts, cb)
 end
 
 --- Waits until the manager is listening, up to timeout
---- @param opts {timeout:number|nil, interval:number|nil}
+--- @param opts {timeout?:number, interval?:number}
 --- @return boolean
 function M:wait_for_listening(opts)
     opts = opts or {}
@@ -208,16 +208,16 @@ function M:wait_for_listening(opts)
 end
 
 --- @class ManagerListenOpts
---- @field access 'owner'|'group'|'anyone'|nil #access level for the unix socket or windows pipe
---- @field config string|nil #alternative config path to use
---- @field log_file string|nil #alternative log file path to use
---- @field log_level string|nil #alternative log level to use
---- @field user boolean|nil #if true, specifies that the manager should listen with user-level permissions (only applies if no explicit socket or pipe name provided)
+--- @field access? 'owner'|'group'|'anyone' #access level for the unix socket or windows pipe
+--- @field config? string #alternative config path to use
+--- @field log_file? string #alternative log file path to use
+--- @field log_level? string #alternative log level to use
+--- @field user? boolean #if true, specifies that the manager should listen with user-level permissions (only applies if no explicit socket or pipe name provided)
 
 --- Start a new manager that is listening on the local unix socket or windows pipe
 --- defined by the network configuration
 --- @param opts ManagerListenOpts
---- @param cb fun(err:string|nil) #invoked when the manager exits
+--- @param cb fun(err?:string) #invoked when the manager exits
 --- @return JobHandle #handle of listening manager job
 function M:listen(opts, cb)
     opts = opts or {}
@@ -292,19 +292,19 @@ end
 --- @class ManagerLaunchOpts
 --- @field destination string #uri representing the remote server
 ---
---- @field auth AuthHandler|nil #authentication handler to use
---- @field config string|nil #alternative config path to use
---- @field cache string|nil #alternative cache path to use
---- @field distant string|nil #alternative path to distant binary (on remote machine) to use
---- @field distant_args string|string[]|nil #additional arguments to supply to distant binary on remote machine
---- @field log_file string|nil #alternative log file path to use
---- @field log_level string|nil #alternative log level to use
---- @field no_shell boolean|nil #if true, will not attempt to execute distant binary within a shell on the remote machine
---- @field options string|table<string, any> #additional options tied to a specific destination handler
+--- @field auth? AuthHandler #authentication handler to use
+--- @field config? string #alternative config path to use
+--- @field cache? string #alternative cache path to use
+--- @field distant? string #alternative path to distant binary (on remote machine) to use
+--- @field distant_args? string|string[] #additional arguments to supply to distant binary on remote machine
+--- @field log_file? string #alternative log file path to use
+--- @field log_level? string #alternative log level to use
+--- @field no_shell? boolean #if true, will not attempt to execute distant binary within a shell on the remote machine
+--- @field options? string|table<string, any> #additional options tied to a specific destination handler
 
 --- Launches a server remotely and performs authentication using the given manager
 --- @param opts ManagerLaunchOpts
---- @param cb fun(err:string|nil, client:DistantClient|nil)
+--- @param cb fun(err?:string, client?:DistantClient)
 --- @return JobHandle|nil
 function M:launch(opts, cb)
     opts = opts or {}
@@ -387,16 +387,16 @@ end
 --- @class ManagerConnectOpts
 --- @field destination string #uri used to identify server's location
 ---
---- @field auth AuthHandler|nil #authentication handler to use
---- @field config string|nil #alternative config path to use
---- @field cache string|nil #alternative cache path to use
---- @field log_file string|nil #alternative log file path to use
---- @field log_level string|nil #alternative log level to use
---- @field options string|table<string, any> #additional options tied to a specific destination handler
+--- @field auth? AuthHandler #authentication handler to use
+--- @field config? string #alternative config path to use
+--- @field cache? string #alternative cache path to use
+--- @field log_file? string #alternative log file path to use
+--- @field log_level? string #alternative log level to use
+--- @field options? string|table<string, any> #additional options tied to a specific destination handler
 
 --- Connects to a remote server using the given manager
 --- @param opts ManagerConnectOpts
---- @param cb fun(err:string|nil, client:DistantClient|nil)
+--- @param cb fun(err?:string, client?:DistantClient)
 --- @return JobHandle|nil
 function M:connect(opts, cb)
     opts = opts or {}

@@ -1,12 +1,11 @@
-local fn = require('distant.fn')
+local fn                 = require('distant.fn')
 
-local core = require('distant-core')
-local log = core.log
-local state = core.state
-local vars = core.vars
+local log                = require('distant-core').log
+local state              = require('distant-core').state
+local vars               = require('distant-core').vars
 
 local DEFAULT_PAGINATION = 10
-local MAX_LINE_LEN = 100
+local MAX_LINE_LEN       = 100
 
 --- Add matches to qflist
 --- @param id number #id of quickfix list

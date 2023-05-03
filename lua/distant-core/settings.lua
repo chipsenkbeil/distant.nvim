@@ -1,21 +1,21 @@
 local log = require('distant-core.log')
 local utils = require('distant-core.utils')
 
---- @class Settings
---- @field client ClientSettings
+--- @class DistantSettings
+--- @field client DistantClientSettings
 --- @field max_timeout number
 --- @field timeout_interval number
---- @field file FileSettings
---- @field dir DirSettings
+--- @field file DistantFileSettings
+--- @field dir DistantDirSettings
 --- @field lsp table<string, LspSettings>
 
---- @class ClientSettings
+--- @class DistantClientSettings
 --- @field bin string
 
---- @class FileSettings
+--- @class DistantFileSettings
 --- @field mappings table<string, fun()>
 
---- @class DirSettings
+--- @class DistantDirSettings
 --- @field mappings table<string, fun()>
 
 --- @class LspSettings
@@ -29,7 +29,7 @@ local utils = require('distant-core.utils')
 local DEFAULT_LABEL = '*'
 
 --- Default settings to apply to any-and-all servers
---- @type Settings
+--- @type DistantSettings
 local DEFAULT_SETTINGS = {
     -- Settings to apply to the local distant binary used as a client
     client = {
@@ -64,11 +64,11 @@ M.__index = M
 --- associated by a label with '*' representing a blanket set of
 --- settings to apply first before adding in server-specific settings
 ---
---- @type table<string, Settings>
+--- @type table<string, DistantSettings>
 local inner = { [DEFAULT_LABEL] = vim.tbl_deep_extend('force', {}, DEFAULT_SETTINGS) }
 
 --- Merges current settings with provided, overwritting anything with provided
---- @param other table<string, Settings> The other settings to include
+--- @param other table<string, DistantSettings> The other settings to include
 M.merge = function(other)
     inner = vim.tbl_deep_extend('force', inner, other)
 end
@@ -86,11 +86,34 @@ M.labels = function(exclude_default)
     return labels
 end
 
+--- Retrieve settings for a specific remote machine defined by a destination,
+--- also applying any default settings.
+---
+--- @param destination string #Full destination to server, which can be in a form like SCHEME://USER:PASSWORD@HOST:PORT
+--- @param no_default? boolean #If true, will not apply default settings first
+--- @return DistantSettings
+M.for_destination = function(destination, no_default)
+    log.fmt_trace('settings.for_destination(%s, %s)', destination, vim.inspect(no_default))
+
+    -- Parse our destination into the host only
+    local label
+    local d = utils.parse_destination(destination)
+    if not d or not d.host then
+        error('Invalid destination: ' .. tostring(destination))
+    else
+        label = d.host
+        log.fmt_debug('Using settings label: %s', label)
+    end
+
+    return M.for_label(label, no_default)
+end
+
 --- Retrieve settings for a specific remote machine defined by a label, also
---- applying any default settings
---- @param label string The label associated with the remote server's settings
---- @param no_default? boolean If true, will not apply default settings first
---- @return Settings @The settings associated with the remote machine (or empty table)
+--- applying any default settings.
+---
+--- @param label string #The label associated with the remote server's settings
+--- @param no_default? boolean #If true, will not apply default settings first
+--- @return DistantSettings #The settings associated with the remote machine (or empty table)
 M.for_label = function(label, no_default)
     log.fmt_trace('settings.for_label(%s, %s)', label, vim.inspect(no_default))
 
@@ -106,7 +129,7 @@ M.for_label = function(label, no_default)
 end
 
 --- Retrieves settings that apply to any remote machine
---- @return Settings @The settings to apply to any remote machine (or empty table)
+--- @return DistantSettings #The settings to apply to any remote machine (or empty table)
 M.default = function()
     local tbl = inner[DEFAULT_LABEL] or {}
 

@@ -1,16 +1,15 @@
-local editor = require('distant.editor')
-local fn = require('distant.fn')
+local editor  = require('distant.editor')
+local fn      = require('distant.fn')
 
-local core = require('distant-core')
-local cli = core.cli
-local state = core.state
-local utils = core.utils
+local cli     = require('distant-core').cli
+local state   = require('distant-core').state
+local utils   = require('distant-core').utils
 
-local command = {}
+local M       = {}
 
 --- @param input string
 --- @return {args:string[], opts:table<string, string|table>}
-command.parse_input = function(input)
+M.parse_input = function(input)
     local args = {}
     local opts = {}
 
@@ -185,8 +184,8 @@ local function paths_to_bool(tbl, paths)
 end
 
 --- DistantOpen path [opt1=... opt2=...]
-command.open = function(input)
-    input = command.parse_input(input)
+M.open = function(input)
+    input = M.parse_input(input)
     paths_to_number(input.opts, { 'buf', 'win' })
 
     local path = input.args[1]
@@ -196,8 +195,8 @@ command.open = function(input)
 end
 
 --- DistantLaunch destination [opt1=..., opt2=...]
-command.launch = function(input)
-    input = command.parse_input(input)
+M.launch = function(input)
+    input = M.parse_input(input)
     paths_to_number(input.opts, { 'timeout', 'interval' })
 
     local destination = input.args[1]
@@ -218,8 +217,8 @@ command.launch = function(input)
 end
 
 --- DistantConnect destination [opt1=..., opt2=...]
-command.connect = function(input)
-    input = command.parse_input(input)
+M.connect = function(input)
+    input = M.parse_input(input)
     paths_to_number(input.opts, { 'timeout', 'interval' })
 
     local destination = input.args[1]
@@ -240,8 +239,8 @@ command.connect = function(input)
 end
 
 --- DistantInstall [reinstall]
-command.install = function(input)
-    input = command.parse_input(input)
+M.install = function(input)
+    input = M.parse_input(input)
     local reinstall = input.args[1] == 'reinstall'
     cli.install({ reinstall = reinstall }, function(err, path)
         if err then
@@ -253,8 +252,8 @@ command.install = function(input)
 end
 
 --- DistantMetadata path [opt1=... opt2=...]
-command.metadata = function(input)
-    input = command.parse_input(input)
+M.metadata = function(input)
+    input = M.parse_input(input)
     paths_to_number(input.opts, { 'timeout', 'interval' })
 
     local path = input.args[1]
@@ -264,18 +263,18 @@ command.metadata = function(input)
 end
 
 --- DistantSessionInfo
-command.session_info = function()
+M.session_info = function()
     editor.show_session_info()
 end
 
 --- DistantSystemInfo
-command.system_info = function()
+M.system_info = function()
     editor.show_system_info()
 end
 
 --- DistantCopy src dst [opt1=... opt2=...]
-command.copy = function(input)
-    input = command.parse_input(input)
+M.copy = function(input)
+    input = M.parse_input(input)
     paths_to_number(input.opts, { 'timeout', 'interval' })
 
     local src = input.args[1]
@@ -287,8 +286,8 @@ command.copy = function(input)
 end
 
 --- DistantMkdir path [opt1=... opt2=...]
-command.mkdir = function(input)
-    input = command.parse_input(input)
+M.mkdir = function(input)
+    input = M.parse_input(input)
     paths_to_number(input.opts, { 'timeout', 'interval' })
 
     local path = input.args[1]
@@ -298,8 +297,8 @@ command.mkdir = function(input)
 end
 
 --- DistantRemove path [opt1=... opt2=...]
-command.remove = function(input)
-    input = command.parse_input(input)
+M.remove = function(input)
+    input = M.parse_input(input)
     paths_to_number(input.opts, { 'timeout', 'interval' })
 
     local path = input.args[1]
@@ -309,8 +308,8 @@ command.remove = function(input)
 end
 
 --- DistantRename src dst [opt1=... opt2=...]
-command.rename = function(input)
-    input = command.parse_input(input)
+M.rename = function(input)
+    input = M.parse_input(input)
     paths_to_number(input.opts, { 'timeout', 'interval' })
 
     local src = input.args[1]
@@ -322,8 +321,8 @@ command.rename = function(input)
 end
 
 --- DistantRun cmd [arg1 arg2 ...]
-command.run = function(input)
-    input = command.parse_input(input)
+M.run = function(input)
+    input = M.parse_input(input)
     paths_to_number(input.opts, { 'timeout', 'interval' })
 
     local cmd = input.args[1]
@@ -346,8 +345,8 @@ command.run = function(input)
 end
 
 --- DistantCancelSearch
-command.cancel_search = function(input)
-    input = command.parse_input(input)
+M.cancel_search = function(input)
+    input = M.parse_input(input)
     paths_to_number(input.opts, { 'timeout', 'interval' })
 
     editor.cancel_search({
@@ -357,8 +356,8 @@ command.cancel_search = function(input)
 end
 
 --- DistantSearch pattern [paths ...] [opt1=... opt2=...]
-command.search = function(input)
-    input = command.parse_input(input)
+M.search = function(input)
+    input = M.parse_input(input)
     paths_to_number(input.opts, { 'pagination', 'limit', 'max_depth', 'timeout', 'interval' })
     paths_to_bool(input.opts, { 'follow_symbolic_links' })
 
@@ -403,8 +402,8 @@ command.search = function(input)
 end
 
 --- DistantShell [cmd arg1 arg2 ...]
-command.shell = function(input)
-    input = command.parse_input(input)
+M.shell = function(input)
+    input = M.parse_input(input)
     paths_to_number(input.opts, { 'timeout', 'interval' })
 
     local cmd = nil
@@ -422,7 +421,7 @@ command.shell = function(input)
 end
 
 --- DistantClientVersion
-command.client_version = function()
+M.client_version = function()
     local Client = cli.client()
     local client = Client:new()
 
@@ -430,4 +429,4 @@ command.client_version = function()
     print(utils.version_to_string(version))
 end
 
-return command
+return M

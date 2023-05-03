@@ -1,6 +1,5 @@
-local core = require('distant-core')
-local log = core.log
-local settings = core.settings
+local log      = require('distant-core').log
+local settings = require('distant-core').settings
 
 return function(opts)
     log.fmt_trace('setup(%s)', opts)

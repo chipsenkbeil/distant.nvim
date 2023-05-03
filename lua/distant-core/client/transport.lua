@@ -9,7 +9,7 @@ local DEFAULT_INTERVAL = 100
 --- Represents a JSON-formatted distant api transport.
 --- @class DistantApiTransport
 --- @field auth_handler AuthHandler
---- @field config {binary:string, network:DistantClientNetwork, timeout:number, interval:number}
+--- @field config {autostart:boolean, binary:string, network:DistantClientNetwork, timeout:number, interval:number}
 --- @field __state DistantApiTransportState
 local M                = {}
 M.__index              = M
@@ -20,8 +20,9 @@ M.__index              = M
 --- @field handle? JobHandle
 --- @field callbacks table<string, {callback:fun(payload:table), more:fun(payload:table):boolean}>
 
---- Creates a new instance of our api that wraps a job
---- @param opts {binary:string, network:DistantClientNetwork, auth_handler?:AuthHandler, timeout?:number, interval?:number}
+--- @alias DistantApiNewOpts {binary:string, network?:DistantClientNetwork, auth_handler?:AuthHandler, autostart?:boolean, timeout?:number, interval?:number}
+--- Creates a new instance of our api that wraps a job.
+--- @param opts DistantApiNewOpts
 --- @return DistantApiTransport
 function M:new(opts)
     opts = opts or {}
@@ -29,15 +30,12 @@ function M:new(opts)
     local instance = {}
     setmetatable(instance, M)
     instance.config = {
-        binary = opts.binary,
-        network = opts.network,
-        timeout = opts.timeout,
-        interval = opts.interval,
+        autostart = opts.autostart or false,
+        binary = assert(opts.binary, 'Transport missing binary'),
+        network = vim.deepcopy(opts.network) or {},
+        timeout = opts.timeout or DEFAULT_TIMEOUT,
+        interval = opts.interval or DEFAULT_INTERVAL,
     }
-    assert(instance.config.binary, 'Transport missing binary')
-    assert(instance.config.network, 'Transport missing network')
-    instance.config.timeout = instance.config.timeout or DEFAULT_TIMEOUT
-    instance.config.interval = instance.config.interval or DEFAULT_INTERVAL
 
     instance.auth_handler = opts.auth_handler or AuthHandler:new()
 
@@ -57,75 +55,78 @@ function M:is_running()
     return self.__state.handle ~= nil and self.__state.handle:running()
 end
 
---- Starts the api if it is not already running
+--- Starts the api if it is not already running. Will do nothing if running.
 --- @param cb? fun(code:number) Optional callback when the api exits
 function M:start(cb)
-    if not self:is_running() then
-        local auth = self.auth_handler
+    -- Do nothing if already running
+    if self:is_running() then
+        return
+    end
 
-        local cmd = builder.api():set_from_tbl(self.config.network):as_list()
-        table.insert(cmd, 1, self.config.binary)
+    local auth = self.auth_handler
 
-        local handle
-        handle = utils.job_start(cmd, {
-            on_success = function()
-                self:stop()
-                if type(cb) == 'function' then
-                    cb(0)
+    local cmd = builder.api():set_from_tbl(self.config.network):as_list()
+    table.insert(cmd, 1, self.config.binary)
+
+    local handle
+    handle = utils.job_start(cmd, {
+        on_success = function()
+            self:stop()
+            if type(cb) == 'function' then
+                cb(0)
+            end
+        end,
+        on_failure = function(code)
+            self:stop()
+            if type(cb) == 'function' then
+                cb(code)
+            end
+        end,
+        on_stdout_line = function(line)
+            if line ~= nil and line ~= "" then
+                --- @type boolean,table|nil
+                local success, msg = pcall(vim.fn.json_decode, line)
+
+                -- Quit if the decoding failed or we didn't get a msg
+                if not success then
+                    log.fmt_error('Failed to decode to json: "%s"', line)
+                    return
                 end
-            end,
-            on_failure = function(code)
-                self:stop()
-                if type(cb) == 'function' then
-                    cb(code)
+
+                if type(msg) ~= 'table' or type(msg.type) ~= 'string' then
+                    log.fmt_error('Invalid msg: %s', msg)
+                    return
                 end
-            end,
-            on_stdout_line = function(line)
-                if line ~= nil and line ~= "" then
-                    --- @type boolean,table|nil
-                    local success, msg = pcall(vim.fn.json_decode, line)
 
-                    -- Quit if the decoding failed or we didn't get a msg
-                    if not success then
-                        log.fmt_error('Failed to decode to json: "%s"', line)
-                        return
-                    end
+                -- Check if we are processing an authentication msg
+                -- or an API message
+                if auth:is_auth_request(msg) then
+                    --- @diagnostic disable-next-line:redefined-local
+                    auth:handle_request(msg, function(msg)
+                        handle.write(utils.compress(vim.fn.json_encode(msg)) .. '\n')
+                    end)
+                    self.__state.authenticated = auth.finished
 
-                    if not msg or type(msg.type) ~= 'string' then
-                        log.fmt_error('Invalid msg: %s', msg)
-                        return
-                    end
-
-                    -- Check if we are processing an authentication msg
-                    -- or an API message
-                    if auth:is_auth_request(msg) then
-                        --- @diagnostic disable-next-line:redefined-local
-                        auth:handle_request(msg, function(msg)
-                            handle.write(utils.compress(vim.fn.json_encode(msg)) .. '\n')
-                        end)
-                        self.__state.authenticated = auth.finished
-
-                        -- We have finished authentication, so write out
-                        -- all of our queued messages
-                        if auth.finished then
-                            for _, json in ipairs(self.__state.queue) do
-                                self.__state.handle.write(json)
-                            end
-                            self.__state.queue = {}
+                    -- We have finished authentication, so write out
+                    -- all of our queued messages
+                    if auth.finished then
+                        for _, json in ipairs(self.__state.queue) do
+                            self.__state.handle.write(json)
                         end
-                    else
-                        self:__handler(msg)
+                        self.__state.queue = {}
                     end
-                end
-            end,
-            on_stderr_line = function(line)
-                if line ~= nil and line ~= "" then
-                    log.error(line)
+                else
+                    self:__handler(msg)
                 end
             end
-        })
-        self.__state.handle = handle
-    end
+        end,
+        on_stderr_line = function(line)
+            if line ~= nil and line ~= "" then
+                log.error(line)
+            end
+        end
+    })
+    self.__state.handle = handle
 end
 
 --- Stops an instance of distant if running by killing the process
@@ -248,8 +249,23 @@ end
 --- @param opts {payload:table, more?:fun(payload:table):boolean}
 --- @param cb fun(payload:table)
 function M:send_async(opts, cb)
-    log.fmt_trace('Transport:send(%s, _)', opts)
-    assert(self:is_running(), 'distant api transport is not running!')
+    log.fmt_trace('Transport:send_async(%s, _)', opts)
+    if not self:is_running() then
+        if self.config.autostart == true then
+            log.warn('Transport not running and autostart enabled, so attempting to start')
+            self:start(function(code)
+                log.fmt_debug('API process exited: %s', code)
+            end)
+        else
+            log.warn('Transport not running and autostart disabled, so reporting error')
+            cb({
+                type = 'error',
+                kind = 'not_connected',
+                description = 'Transport not started',
+            })
+            return
+        end
+    end
 
     -- Build a full message that wraps the provided message as the payload and
     -- includes an id that our api uses when relaying a response for the
@@ -282,7 +298,7 @@ end
 --- @param opts {payload:table, timeout?:number, interval?:number, more?:fun(payload:table):boolean}
 --- @return string|nil, table|nil #Err?, Payload?
 function M:send_sync(opts)
-    log.fmt_trace('Transport:send_wait(%s)', opts)
+    log.fmt_trace('Transport:send_sync(%s)', opts)
     local tx, rx = utils.oneshot_channel(
         opts.timeout or self.config.timeout,
         opts.interval or self.config.interval
@@ -297,9 +313,7 @@ end
 --- Primary event handler, routing received events to the corresponding callbacks.
 --- @param msg {id:string, origin_id:string, payload:table}
 function M:__handler(msg)
-    assert(type(msg) == 'table', 'msg must be a table')
     log.fmt_trace('Transport:__handler(%s)', msg)
-
     local origin_id = msg.origin_id
     local payload = msg.payload
 

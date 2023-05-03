@@ -1,6 +1,5 @@
-local core = require('distant-core')
-local log = core.log
-local state = core.state
+local log   = require('distant-core').log
+local state = require('distant-core').state
 
 --- @class EditorCancelSearchOpts
 --- @field timeout number|nil #Maximum time to wait for a response
