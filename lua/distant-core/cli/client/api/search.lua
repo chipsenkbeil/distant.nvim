@@ -168,7 +168,10 @@ function M:execute(opts, cb)
         },
         more = function(payload)
             local ty = payload.type
-            return ty == 'search_started' or ty == 'search_results' or ty == 'search_done'
+
+            -- NOTE: We do NOT include search_done because we want the callback
+            --       to terminate once the done payload is received!
+            return ty == 'search_started' or ty == 'search_results'
         end,
     }, function(payload)
         if not self:handle(payload) then

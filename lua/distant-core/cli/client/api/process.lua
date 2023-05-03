@@ -238,7 +238,10 @@ function M:spawn(opts, cb)
         },
         more = function(payload)
             local ty = payload.type
-            return ty == 'proc_spawned' or ty == 'proc_done' or ty == 'proc_stdout' or ty == 'proc_stderr'
+
+            -- NOTE: We do NOT include proc_done because we want the callback
+            --       to terminate once the done payload is received!
+            return ty == 'proc_spawned' or ty == 'proc_stdout' or ty == 'proc_stderr'
         end,
     }, function(payload)
         if not self:handle(payload) then

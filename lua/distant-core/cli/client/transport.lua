@@ -159,8 +159,11 @@ end
 --- @param opts DistantApiTransportSendOpts
 --- @param cb? fun(err?:string, payload?:table)
 function M:send(opts, cb)
+    local verify = function(payload)
+        local success, value = pcall(opts.verify, payload)
+        return success == true and value == true
+    end
     local payload = opts.payload
-    local verify = opts.verify
 
     -- Asynchronous if cb provided, otherwise synchronous
     if type(cb) == 'function' then

@@ -1,15 +1,15 @@
-local builder   = require('distant-core.builder')
-local log       = require('distant-core.log')
-local vars      = require('distant-core.vars')
-
-local Transport = require('distant-core.cli.client.transport')
+local Api     = require('distant-core.cli.client.api')
+local builder = require('distant-core.builder')
+local log     = require('distant-core.log')
+local vars    = require('distant-core.vars')
 
 --- Represents a distant client
 --- @class DistantClient
+--- @field api DistantApi
 --- @field config {binary:string, network:DistantClientNetwork}
 --- @field __state ClientState
-local M         = {}
-M.__index       = M
+local M       = {}
+M.__index     = M
 
 --- @class DistantClientNetwork
 --- @field connection string|nil #id of the connection tied to the client
@@ -17,9 +17,9 @@ M.__index       = M
 --- @field windows_pipe string|nil #name of the windows pipe of the manager
 
 --- @class ClientState
+--- @field cache {system_info?:DistantApiSystemInfoPayload}
 --- @field lsp {clients:table<string, number>} Mapping of label -> client id
 --- @field transport DistantApiTransport|nil
---- @field system_info DistantSystemInfo|nil
 
 --- Creates a new instance of a distant client
 --- @param opts {binary:string, network:DistantClientNetwork}
@@ -35,7 +35,14 @@ function M:new(opts)
     }
     assert(instance.config.binary, 'Client missing binary')
     assert(instance.config.network, 'Client missing network')
+
+    instance.api = Api:new({
+        binary = instance.config.binary,
+        network = instance.config.network,
+    })
+
     instance.__state = {
+        cache = {},
         lsp = {
             clients = {},
         },
@@ -46,21 +53,46 @@ function M:new(opts)
     return instance
 end
 
---- @return ClientApi
-function M:api()
-    return self.__state.api
-end
+--- Loads the system information for the connected server. This will be cached
+--- for future requests. Specifying `reload` as true will result in a fresh
+--- request to the server for this information.
+---
+--- @param opts {reload?:boolean, timeout?:number, interval?:number}
+--- @param cb? fun(err?:string, payload?:DistantApiSystemInfoPayload)
+--- @return string|nil, DistantApiSystemInfoPayload|nil
+function M:system_info(opts, cb)
+    vim.validate({
+        opts = { opts, 'table' },
+        cb = { cb, 'function', true },
+    })
 
---- @return DistantSystemInfo
-function M:system_info()
-    if self.__state.system_info == nil then
-        local err, info = self:api().system_info({})
-        assert(not err, err)
-        assert(info, 'missing system info in response')
-        self.__state.system_info = info
+    if not opts.reload and self.__state.cache.system_info ~= nil then
+        if cb then
+            cb(nil, self.__state.cache.system_info)
+            return
+        else
+            return nil, self.__state.cache.system_info
+        end
     end
 
-    return self.__state.system_info
+    if cb then
+        self.api:system_info(opts, function(err, payload)
+            if err then
+                cb(err, nil)
+            else
+                self.__state.cache.system_info = payload
+                cb(nil, payload)
+            end
+        end)
+    else
+        local err, payload = self.api:system_info(opts)
+        if err then
+            return err, nil
+        else
+            self.__state.cache.system_info = payload
+            return nil, payload
+        end
+    end
 end
 
 --- Connects relevant LSP clients to the provided buffer, optionally starting clients if needed.
