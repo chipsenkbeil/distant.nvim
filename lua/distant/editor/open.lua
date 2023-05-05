@@ -69,6 +69,7 @@ local function check_path(path, opts)
 
     local missing = err and err.kind == 'not_found'
     assert(not err or missing, err)
+    assert(metadata, 'Metadata missing')
 
     local is_dir = not missing and metadata.file_type == 'dir'
     local is_file = not missing and metadata.file_type == 'file'

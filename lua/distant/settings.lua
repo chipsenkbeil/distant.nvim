@@ -3,9 +3,15 @@ local settings = require('distant-core').settings
 
 local M = {}
 
+--- Retrieves default settings.
+--- @return DistantSettings
+function M.default()
+    return settings.default()
+end
+
 --- Retrieve settings with opinionated configuration for Chip's usage
---- @return DistantSettings @The settings to apply to any remote machine (or empty table)
-M.chip_default = function()
+--- @return DistantSettings #The settings to apply to any remote machine (or empty table)
+function M.chip_default()
     return vim.tbl_deep_extend('keep', {
         distant = {
             args = { '--shutdown', 'lonely=60' },
@@ -25,7 +31,7 @@ M.chip_default = function()
                 ['D']        = nav.actions.remove,
             }
         },
-    }, settings.default())
+    }, M.default())
 end
 
 return M

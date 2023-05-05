@@ -24,6 +24,7 @@ function M:new(opts)
 end
 
 --- Creates a new version from parsing a string. Will throw an error if unable to parse.
+--- @param vstr string
 --- @return Version
 function M:parse(vstr)
     local semver, ext = unpack(vim.split(vstr, '-', { plain = true }))
@@ -44,6 +45,7 @@ function M:parse(vstr)
 end
 
 --- Creates a new version from parsing a string. Will return nil if unable to parse.
+--- @param vstr string
 --- @return Version|nil
 function M:try_parse(vstr)
     local success, version = pcall(self.parse, self, vstr)

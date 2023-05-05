@@ -80,9 +80,9 @@ end
 local is_initialized = false
 
 return {
-    --- Configures the autocmds associated with this plugin
+    --- Configures the autocmds associated with this plugin.
     ---
-    --- Subsequent calls will do nothing
+    --- Subsequent calls will do nothing.
     initialize = function()
         if not is_initialized then
             _initialize()

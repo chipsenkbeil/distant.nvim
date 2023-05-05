@@ -301,7 +301,7 @@ end
 
 --- Send one or more messages to the remote machine and wait synchronously for the result
 --- up to `timeout` milliseconds, checking every `interval` milliseconds for
---- a result (default timeout = 1000, interval = 200). Throws an error if timeout exceeded.
+--- a result (default timeout = 1000, interval = 200). Returns an error if timeout exceeded.
 --
 --- @param opts {payload:table, timeout?:number, interval?:number, more?:fun(payload:table):boolean}
 --- @return DistantApiError|nil, table|nil #Err?, Payload?
