@@ -1,5 +1,5 @@
-if !has('nvim-0.7')
-  echoerr "distant.nvim requires at least nvim-0.7. Please update or uninstall"
+if !has('nvim-0.8')
+  echoerr "distant.nvim requires at least nvim-0.8. Please update or uninstall"
   finish
 end
 

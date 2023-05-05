@@ -1,6 +1,9 @@
-local log      = require('distant-core.log')
-local settings = require('distant-core.settings')
-local utils    = require('distant-core.utils')
+local Cli         = require('distant-core').Cli
+local log         = require('distant-core').log
+local Manager     = require('distant-core').Manager
+local min_version = require('distant.version').minimum
+local settings    = require('distant-core').settings
+local utils       = require('distant-core').utils
 
 --- @class EditorSearchState
 --- @field qfid number #id of quickfix list storing results
@@ -11,8 +14,8 @@ local utils    = require('distant-core.utils')
 --- @field manager? DistantManager #active manager
 --- @field search? EditorSearchState #active search via editor
 --- @field settings DistantSettings #user settings
-local M        = {}
-M.__index      = M
+local M           = {}
+M.__index         = M
 
 --- @return State
 function M:new()
@@ -51,12 +54,13 @@ function M:load_settings(destination)
     return self.settings
 end
 
---- Loads the manager using the specified config, installing the underlying cli if necessary
---- @overload fun(opts:DistantManagerConfig):DistantManager
---- @param opts DistantManagerConfig
---- @param cb fun(err:string|nil, manager:DistantManager|nil) #if provided, will asynchronously return manager
---- @return DistantManager|nil #if synchronous, returns manager
+--- Loads the manager using the specified config, installing the underlying cli if necessary.
+--- @param opts {bin:string, network?:DistantManagerNetwork, timeout?:number, interval?:number}
+--- @param cb? fun(err?:string, manager?:DistantManager)
+--- @return string|nil, DistantManager|nil
 function M:load_manager(opts, cb)
+    assert(opts.bin, 'Bin is missing')
+
     local rx
     if not cb then
         cb, rx = utils.oneshot_channel(
@@ -66,16 +70,13 @@ function M:load_manager(opts, cb)
     end
 
     if not self.manager then
-        -- NOTE: Lazily load cli to prevent loop
-        local cli = require('distant.cli')
-
-        cli.install(opts, function(err, path)
+        Cli:new({ bin = opts.bin }):install({ min_version = min_version }, function(err, path)
             if err then
                 return cb(err)
             end
 
             -- Define manager using provided opts, overriding the default network settings
-            self.manager = cli.manager(vim.tbl_extend('keep', opts, {
+            self.manager = Manager:new(vim.tbl_extend('keep', opts, {
                 binary = path,
                 -- Create a neovim-local manager network setting as default
                 network = {
@@ -84,7 +85,11 @@ function M:load_manager(opts, cb)
                 },
             }))
 
-            if not self.manager:is_listening({}) then
+            local is_listening = self.manager:is_listening({
+                timeout = opts.timeout,
+                interval = opts.interval,
+            })
+            if not is_listening then
                 log.debug('Manager not listening, so starting process')
 
                 --- @diagnostic disable-next-line:redefined-local
@@ -112,8 +117,12 @@ function M:load_manager(opts, cb)
     end
 end
 
+--- Launches a remote server and connects to it.
+--- @param opts {destination:string, bin:string, network?:DistantManagerNetwork, timeout?:number, interval?:number}
+--- @param cb fun(err?:string, client?:DistantClient)
 function M:launch(opts, cb)
     assert(opts.destination, 'Destination is missing')
+    assert(opts.bin, 'Bin is missing')
 
     self:load_manager(opts, function(err, manager)
         if err then
@@ -133,8 +142,12 @@ function M:launch(opts, cb)
     end)
 end
 
+--- Connects to a remote server.
+--- @param opts {destination:string, bin:string, network?:DistantManagerNetwork, timeout?:number, interval?:number}
+--- @param cb fun(err?:string, client?:DistantClient)
 function M:connect(opts, cb)
     assert(opts.destination, 'Destination is missing')
+    assert(opts.bin, 'Bin is missing')
 
     self:load_manager(opts, function(err, manager)
         if err then

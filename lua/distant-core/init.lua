@@ -2,7 +2,7 @@ return {
     auth     = require('distant-core.auth'),
     builder  = require('distant-core.builder'),
     Client   = require('distant-core.client'),
-    cli      = require('distant-core.cli'),
+    Cli      = require('distant-core.cli'),
     data     = require('distant-core.data'),
     log      = require('distant-core.log'),
     Manager  = require('distant-core.manager'),

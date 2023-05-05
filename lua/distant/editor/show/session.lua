@@ -1,5 +1,6 @@
+local state = require('distant.state')
+
 local log   = require('distant-core').log
-local state = require('distant-core').state
 local ui    = require('distant-core').ui
 local utils = require('distant-core').utils
 

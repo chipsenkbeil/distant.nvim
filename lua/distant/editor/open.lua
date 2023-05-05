@@ -1,7 +1,8 @@
 local fn    = require('distant.fn')
+local state = require('distant.state')
+
 local data  = require('distant-core').data
 local log   = require('distant-core').log
-local state = require('distant-core').state
 local utils = require('distant-core').utils
 local vars  = require('distant-core').vars
 

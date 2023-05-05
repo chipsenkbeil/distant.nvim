@@ -1,19 +1,19 @@
 --- Provides editor-oriented operations
-local editor = {}
+local M             = {}
 
 -- Core editor commands
-editor.launch = require('distant.editor.launch')
-editor.connect = require('distant.editor.connect')
-editor.open = require('distant.editor.open')
-editor.write = require('distant.editor.write')
+M.launch            = require('distant.editor.launch')
+M.connect           = require('distant.editor.connect')
+M.open              = require('distant.editor.open')
+M.write             = require('distant.editor.write')
 
 -- Search commands
-editor.cancel_search = require('distant.editor.cancel_search')
-editor.search = require('distant.editor.search')
+M.search            = require('distant.editor.search')
+M.cancel_search     = require('distant.editor.cancel_search')
 
 -- General display commands
-editor.show_metadata = require('distant.editor.show.metadata')
-editor.show_session_info = require('distant.editor.show.session')
-editor.show_system_info = require('distant.editor.show.system')
+M.show_metadata     = require('distant.editor.show.metadata')
+M.show_session_info = require('distant.editor.show.session')
+M.show_system_info  = require('distant.editor.show.system')
 
-return editor
+return M

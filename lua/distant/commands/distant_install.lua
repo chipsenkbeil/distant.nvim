@@ -1,5 +1,5 @@
 local Cli         = require('distant-core.cli')
-local min_version = require('distant').version.minimum
+local min_version = require('distant.version').minimum
 local utils       = require('distant.commands.utils')
 
 --- DistantInstall [reinstall]

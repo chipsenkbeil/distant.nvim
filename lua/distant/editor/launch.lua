@@ -1,5 +1,5 @@
 local log   = require('distant-core').log
-local state = require('distant-core').state
+local state = require('distant.state')
 
 --- @class EditorLaunchOpts
 --- @field destination string

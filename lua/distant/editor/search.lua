@@ -1,6 +1,7 @@
 local fn                 = require('distant.fn')
+local state              = require('distant.state')
+
 local log                = require('distant-core').log
-local state              = require('distant-core').state
 local vars               = require('distant-core').vars
 
 local DEFAULT_PAGINATION = 10

@@ -3,8 +3,8 @@ local editor = require('distant.editor')
 local state = require('distant-core.state')
 local settings = require('distant-core.settings')
 
-local Driver = {}
-Driver.__index = Driver
+local M = {}
+M.__index = M
 
 --- Maximum random value (inclusive) in form of [1, MAX_RAND_VALUE]
 local MAX_RAND_VALUE = 100000
@@ -39,14 +39,14 @@ end
 -- DRIVER SETUP & TEARDOWN
 -------------------------------------------------------------------------------
 
---- @type Client|nil
+--- @type DistantClient|nil
 local client = nil
 
---- @type Manager|nil
+--- @type DistantManager|nil
 local manager = nil
 
 --- Initialize a client if one has not been initialized yet
---- @return Client
+--- @return DistantClient
 local function initialize_client(opts)
     opts = opts or {}
     if client ~= nil then
@@ -70,11 +70,14 @@ local function initialize_client(opts)
     --       the same connection and only have one perform an actual launch?
     local host = config.host
     local distant_bin = config.bin
+
+    --- @diagnostic disable-next-line:missing-parameter
     local distant_args = vim.list_extend({
         '--current-dir', config.root_dir,
         '--shutdown', 'lonely=60',
         '--port', '8080:8999',
     }, opts.args or {})
+
     local options = {}
     if config.ssh_backend then
         options['ssh.backend'] = config.ssh_backend
@@ -157,11 +160,12 @@ local function initialize_client(opts)
         return client ~= nil
     end, interval)
     assert(status == 0, 'Client not initialized in time (status == ' .. status .. ')')
-    return client
+    return assert(client)
 end
 
 --- Initialize a manager if one has not been initialized yet
---- @return Manager
+--- @param opts {bin:string, label:string, network?:DistantManagerNetwork, timeout?:number, interval?:number}
+--- @return DistantManager
 local function initialize_manager(opts)
     opts = opts or {}
     if manager ~= nil then
@@ -181,9 +185,9 @@ local function initialize_manager(opts)
     return manager
 end
 
---- Initializes a driver for e2e tests
---- @param opts {label:string} #must have label, everything else is optional
-function Driver:setup(opts)
+--- Initializes a driver for e2e tests.
+--- @param opts {label:string, lazy?:boolean, settings?:table<string, DistantSettings>}
+function M:setup(opts)
     opts = opts or {}
 
     if type(opts.settings) == 'table' then
@@ -192,7 +196,7 @@ function Driver:setup(opts)
 
     -- Create a new instance and assign the session to it
     local obj = {}
-    setmetatable(obj, Driver)
+    setmetatable(obj, M)
     obj.label = assert(opts.label, 'Missing label in setup')
     obj.__state = {
         client = nil,
@@ -207,8 +211,8 @@ function Driver:setup(opts)
     return obj
 end
 
---- Initializes the client of the driver
-function Driver:initialize(opts)
+--- Initializes the client of the driver.
+function M:initialize(opts)
     opts = opts or {}
 
     if type(opts.settings) == 'table' then
@@ -226,7 +230,7 @@ function Driver:initialize(opts)
 end
 
 --- Tears down driver, cleaning up resources
-function Driver:teardown()
+function M:teardown()
     self.__state.client = nil
     self.__state.manager = nil
 
@@ -236,7 +240,7 @@ function Driver:teardown()
 end
 
 --- Returns the mode the driver is in (distant|ssh)
-function Driver:mode()
+function M:mode()
     return self.__state.mode
 end
 
@@ -246,7 +250,7 @@ end
 
 --- Executes a program on the remote machine
 --- @return string|nil
-Driver.exec = function(cmd, args, opts)
+M.exec = function(cmd, args, opts)
     args = args or {}
     opts = opts or {}
 
@@ -289,7 +293,7 @@ end
 --- * ext string|nil: extension to use on the created file
 ---
 --- @return table fixture The new file fixture (remote_file)
-function Driver:new_file_fixture(opts)
+function M:new_file_fixture(opts)
     opts = opts or {}
     assert(type(opts) == 'table', 'opts must be a table')
     assert(
@@ -325,14 +329,14 @@ end
 --- * items string[]|nil: items to create within directory
 ---
 --- @return table fixture The new directory fixture (remote_dir)
-function Driver:new_dir_fixture(opts)
+function M:new_dir_fixture(opts)
     opts = opts or {}
     assert(type(opts) == 'table', 'opts must be a table')
     local base_path = opts.base_path or '/tmp'
     local path = base_path .. '/' .. random_dir_name()
 
     -- Create the remote directory
-    local rd = Driver.remote_dir(path)
+    local rd = M.remote_dir(path)
     assert(rd.make(), 'Failed to create directory fixture: ' .. rd.path())
 
     -- Store our new fixture in fixtures list
@@ -366,7 +370,7 @@ end
 --- * source string: path to source that will be linked to
 ---
 --- @return table fixture The new symlink fixture (remote_symlink)
-function Driver:new_symlink_fixture(opts)
+function M:new_symlink_fixture(opts)
     opts = opts or {}
     assert(type(opts) == 'table', 'opts must be a table')
     assert(type(opts.source) == 'string', 'opts.source must be a string')
@@ -374,7 +378,7 @@ function Driver:new_symlink_fixture(opts)
     local path = base_path .. '/' .. random_symlink_name()
 
     -- Create the remote symlink
-    local rl = Driver.remote_symlink(path)
+    local rl = M.remote_symlink(path)
     assert(rl.make(opts.source), 'Failed to create symlink: ' .. rl.path())
 
     -- Store our new fixture in fixtures list
@@ -388,7 +392,7 @@ end
 -------------------------------------------------------------------------------
 
 --- @return table window
-Driver.window = function(win)
+M.window = function(win)
     win = win or vim.api.nvim_get_current_win()
 
     local obj = {}
@@ -422,10 +426,10 @@ Driver.window = function(win)
     --- for the given pattern
     --- @param p string pattern to match against
     --- @param line_only? boolean if true, will only move to the line and not column
-    --- @return number line, number col The line and column position, or nil if no movement
+    --- @return number? line, number? col The line and column position, or nil if no movement
     obj.move_cursor_to = function(p, line_only)
         assert(type(p) == 'string', 'pattern must be a string')
-        local lines = Driver.buffer(obj.buf()).lines()
+        local lines = M.buffer(obj.buf()).lines()
 
         for ln, line in ipairs(lines) do
             local start = string.find(line, p)
@@ -467,16 +471,16 @@ end
 -------------------------------------------------------------------------------
 
 --- @return table buffer
-Driver.make_buffer = function(contents, opts)
+M.make_buffer = function(contents, opts)
     opts = opts or {}
     local buf = vim.api.nvim_create_buf(true, false)
     assert(buf ~= 0, 'failed to create buffer')
 
-    local buffer = Driver.buffer(buf)
+    local buffer = M.buffer(buf)
 
     local lines = contents
     if type(lines) == 'string' then
-        lines = vim.split(lines, '\n', true)
+        lines = vim.split(lines, '\n', { plain = true })
     else
         lines = {}
     end
@@ -487,7 +491,7 @@ Driver.make_buffer = function(contents, opts)
 end
 
 --- @return table buffer
-Driver.buffer = function(buf)
+M.buffer = function(buf)
     buf = buf or vim.api.nvim_get_current_buf()
 
     local obj = {}
@@ -593,7 +597,7 @@ Driver.buffer = function(buf)
     --- Asserts that the provided lines match the buffer
     obj.assert.same = function(lines)
         if type(lines) == 'string' then
-            lines = vim.split(lines, '\n', true)
+            lines = vim.split(lines, '\n', { plain = true })
         end
 
         -- same(expected, actual)
@@ -608,7 +612,7 @@ end
 -------------------------------------------------------------------------------
 
 --- @return table remote_dir
-Driver.remote_dir = function(remote_path)
+M.remote_dir = function(remote_path)
     assert(type(remote_path) == 'string', 'remote_path must be a string')
 
     local obj = {}
@@ -664,7 +668,7 @@ Driver.remote_dir = function(remote_path)
         if success then
             return vim.tbl_filter(function(item)
                 return item ~= ''
-            end, vim.split(out, '\n', true))
+            end, vim.split(out, '\n', { plain = true }))
         end
     end
 
@@ -675,7 +679,7 @@ Driver.remote_dir = function(remote_path)
     --- @return table
     obj.file = function(rel_path)
         rel_path = rel_path or random_file_name()
-        return Driver.remote_file(remote_path .. '/' .. rel_path)
+        return M.remote_file(remote_path .. '/' .. rel_path)
     end
 
     --- References a remote directory within the directory; if no relative path is provided
@@ -685,7 +689,7 @@ Driver.remote_dir = function(remote_path)
     --- @return table
     obj.dir = function(rel_path)
         rel_path = rel_path or random_dir_name()
-        return Driver.remote_dir(remote_path .. '/' .. rel_path)
+        return M.remote_dir(remote_path .. '/' .. rel_path)
     end
 
     --- References a remote symlink within the directory; if no relative path is provided
@@ -695,7 +699,7 @@ Driver.remote_dir = function(remote_path)
     --- @return table
     obj.symlink = function(rel_path)
         rel_path = rel_path or random_dir_name()
-        return Driver.remote_symlink(remote_path .. '/' .. rel_path)
+        return M.remote_symlink(remote_path .. '/' .. rel_path)
     end
 
     --- Checks if dir's path exists and is a directory
@@ -738,7 +742,7 @@ end
 -------------------------------------------------------------------------------
 
 --- @return table remote_file
-Driver.remote_file = function(remote_path)
+M.remote_file = function(remote_path)
     assert(type(remote_path) == 'string', 'remote_path must be a string')
 
     local obj = {}
@@ -767,12 +771,12 @@ Driver.remote_file = function(remote_path)
 
     --- Read remote file into list of lines
     --- @param opts? table
-    --- @return string[]
+    --- @return string[]|nil
     obj.lines = function(opts)
         local contents = obj.read(opts)
 
         if contents then
-            return vim.split(contents, '\n', true)
+            return vim.split(contents, '\n', { plain = true })
         end
     end
 
@@ -794,7 +798,7 @@ Driver.remote_file = function(remote_path)
 
         if success then
             -- Read the file into a string
-            local contents = Driver.local_file(path).read()
+            local contents = M.local_file(path).read()
             os.remove(path)
             return contents
         end
@@ -808,7 +812,7 @@ Driver.remote_file = function(remote_path)
         opts = opts or {}
 
         local path = os.tmpname()
-        Driver.local_file(path).write(contents)
+        M.local_file(path).write(contents)
 
         -- Copy the file locally
         local out = vim.fn.system({ 'scp', '-P', config.port, path, config.host .. ':' .. remote_path })
@@ -827,7 +831,7 @@ Driver.remote_file = function(remote_path)
     --- @param opts? table
     --- @return boolean
     obj.write_buf = function(buf, opts)
-        local contents = Driver.buffer(buf).lines()
+        local contents = M.buffer(buf).lines()
         return obj.write(contents, opts)
     end
 
@@ -885,7 +889,7 @@ Driver.remote_file = function(remote_path)
     --- Asserts that the provided lines match the remote file
     obj.assert.same = function(lines)
         if type(lines) == 'string' then
-            lines = vim.split(lines, '\n', true)
+            lines = vim.split(lines, '\n', { plain = true })
         end
 
         -- same(expected, actual)
@@ -900,7 +904,7 @@ end
 -------------------------------------------------------------------------------
 
 --- @return table remote_symlink
-Driver.remote_symlink = function(remote_path)
+M.remote_symlink = function(remote_path)
     assert(type(remote_path) == 'string', 'remote_path must be a string')
 
     local obj = {}
@@ -1002,7 +1006,7 @@ end
 -------------------------------------------------------------------------------
 
 --- @return table local_file
-Driver.local_file = function(path)
+M.local_file = function(path)
     assert(type(path) == 'string', 'path must be a string')
 
     local obj = {}
@@ -1021,18 +1025,18 @@ Driver.local_file = function(path)
 
     --- Read local file into list of lines
     --- @param opts? table
-    --- @return string[]
+    --- @return string[]|nil
     obj.lines = function(opts)
         local contents = obj.read(opts)
 
         if contents then
-            return vim.split(contents, '\n', true)
+            return vim.split(contents, '\n', { plain = true })
         end
     end
 
     --- Read local file into string
     --- @param opts? table
-    --- @return string
+    --- @return string|nil
     obj.read = function(opts)
         opts = opts or {}
 
@@ -1052,12 +1056,12 @@ Driver.local_file = function(path)
     end
 
     --- Writes local file with contents
+    --- @param contents string|string[]
     --- @param opts? table
-    --- @param contents string
     obj.write = function(contents, opts)
         opts = opts or {}
 
-        if vim.tbl_islist(contents) then
+        if type(contents) == 'table' then
             contents = table.concat(contents, '\n')
         end
 
@@ -1078,7 +1082,7 @@ Driver.local_file = function(path)
     --- Asserts that the provided lines match the file
     obj.assert.same = function(lines)
         if type(lines) == 'string' then
-            lines = vim.split(lines, '\n', true)
+            lines = vim.split(lines, '\n', { plain = true })
         end
 
         -- same(expected, actual)
@@ -1088,4 +1092,4 @@ Driver.local_file = function(path)
     return obj
 end
 
-return Driver
+return M
