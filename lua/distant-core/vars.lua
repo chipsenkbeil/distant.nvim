@@ -13,7 +13,7 @@ local utils = require('distant-core.utils')
 --- @param buf number #buffer number
 --- @param name string #name of the variable
 --- @param ty BufVarType|BufVarType[] #type(s) that the variable can be
---- @param set_map nil|fun(...):... #if provided, maps input to output of set(...)
+--- @param set_map? fun(...):... #if provided, maps input to output of set(...)
 --- @return BufVar
 local function buf_var(buf, name, ty, set_map)
     --- Fails with error if not valid type

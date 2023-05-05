@@ -1,3 +1,4 @@
+local Error = require('distant-core.client.api.error')
 local log   = require('distant-core.log')
 local utils = require('distant-core.utils')
 
@@ -184,7 +185,7 @@ end
 ---   This will result in no stderr being returned at the end of the process.
 ---
 --- @param opts DistantApiProcessSpawnOpts
---- @param cb? fun(err?:string, results?:DistantApiProcessSpawnResults)
+--- @param cb? fun(err?:DistantApiError, results?:DistantApiProcessSpawnResults)
 function M:spawn(opts, cb)
     local tx, rx = utils.oneshot_channel(
         opts.timeout or self.__internal.transport.config.timeout,
@@ -246,7 +247,10 @@ function M:spawn(opts, cb)
     }, function(payload)
         if not self:handle(payload) then
             if type(cb) == 'function' then
-                cb('Invalid response payload: ' .. vim.inspect(payload), nil)
+                cb(Error:new({
+                    kind = Error.kinds.invalid_data,
+                    description = 'Invalid response payload: ' .. vim.inspect(payload),
+                }), nil)
             else
                 tx({ err = 'Invalid response payload: ' .. vim.inspect(payload) })
             end
@@ -256,13 +260,25 @@ function M:spawn(opts, cb)
     -- Running synchronously, so pull in our results
     if not cb then
         local err, msg = rx()
-        return err or msg.err, msg.results
+        if err then
+            return Error:new({
+                kind = Error.kinds.timed_out,
+                description = err,
+            })
+        elseif msg.err then
+            return Error:new({
+                kind = Error.kinds.invalid_data,
+                description = msg.err,
+            })
+        else
+            return nil, msg.results
+        end
     end
 end
 
 --- Writes to the stdin of the process if it is running.
 --- @param data integer[]|string #initial stdin to feed to process
---- @param cb? fun(err?:string, payload?:{type:'ok'}) #optional callback to report write confirmation
+--- @param cb? fun(err?:DistantApiError, payload?:{type:'ok'}) #optional callback to report write confirmation
 function M:write_stdin(data, cb)
     -- Convert string to byte array
     if type(data) == 'string' then
@@ -305,7 +321,7 @@ end
 
 --- Resizes the pty if the process is using a pty.
 --- @param size PtySize
---- @param cb? fun(err?:string, payload?:{type:'ok'}) #optional callback to report resize confirmation
+--- @param cb? fun(err?:DistantApiError, payload?:{type:'ok'}) #optional callback to report resize confirmation
 function M:resize_pty(size, cb)
     return self.__internal.transport:send({
         payload = {
@@ -323,7 +339,7 @@ function M:resize_pty(size, cb)
 end
 
 --- Kills the process if it is running.
---- @param cb? fun(err?:string, payload?:{type:'ok'}) #optional callback to report kill confirmation
+--- @param cb? fun(err?:DistantApiError, payload?:{type:'ok'}) #optional callback to report kill confirmation
 function M:kill(cb)
     return self.__internal.transport:send({
         payload = {

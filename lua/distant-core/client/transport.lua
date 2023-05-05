@@ -1,5 +1,6 @@
 local AuthHandler      = require('distant-core.auth.handler')
 local builder          = require('distant-core.builder')
+local Error            = require('distant-core.client.api.error')
 local log              = require('distant-core.log')
 local utils            = require('distant-core.utils')
 
@@ -158,7 +159,8 @@ end
 --- `more` is used, this callback may be invoked more than once.
 ---
 --- @param opts DistantApiTransportSendOpts
---- @param cb? fun(err?:string, payload?:table)
+--- @param cb? fun(err?:DistantApiError, payload?:table)
+--- @return DistantApiError|nil, table|nil #Err?, Payload?
 function M:send(opts, cb)
     local verify = function(payload)
         local success, value = pcall(opts.verify, payload)
@@ -170,26 +172,29 @@ function M:send(opts, cb)
     if type(cb) == 'function' then
         self:send_async({ payload = payload }, function(res)
             if type(res) == 'table' and res.type == 'error' then
-                if type(res.description) == 'string' then
-                    local err = res.description
-
-                    if type(res.kind) == 'string' then
-                        err = '(' .. res.kind .. ') ' .. err
-                    end
-
-                    cb(err, nil)
+                if type(res.kind) ~= 'string' or type(res.description) ~= 'string' then
+                    cb(Error:new({
+                        kind = Error.kinds.invalid_data,
+                        description = 'Malformed error received: ' .. vim.inspect(res),
+                    }), nil)
                 else
-                    cb('Malformed error received: ' .. vim.inspect(res), nil)
+                    cb(Error:new(res), nil)
                 end
 
                 return
             end
 
             if not type(res) == 'table' then
-                cb('Invalid response payload: ' .. vim.inspect(res), nil)
+                cb(Error:new({
+                    kind = Error.kinds.invalid_data,
+                    description = 'Invalid response payload: ' .. vim.inspect(res),
+                }), nil)
                 return
             elseif type(verify) == 'function' and type(res) == 'table' and not verify(res) then
-                cb('Invalid response payload: ' .. vim.inspect(res), nil)
+                cb(Error:new({
+                    kind = Error.kinds.invalid_data,
+                    description = 'Invalid response payload: ' .. vim.inspect(res),
+                }), nil)
                 return
             end
 
@@ -211,23 +216,26 @@ function M:send(opts, cb)
         end
 
         if type(res) == 'table' and res.type == 'error' then
-            if type(res.description) == 'string' then
-                local res_err = res.description
-
-                if type(res.kind) == 'string' then
-                    res_err = '(' .. res.kind .. ') ' .. res_err
-                end
-
-                return res_err
+            if type(res.kind) ~= 'string' or type(res.description) ~= 'string' then
+                return Error:new({
+                    kind = Error.kinds.invalid_data,
+                    description = 'Malformed error received: ' .. vim.inspect(res),
+                })
             else
-                return 'Malformed error received: ' .. vim.inspect(res)
+                return Error:new(res), nil
             end
         end
 
         if not type(res) == 'table' then
-            return 'Invalid response payload: ' .. vim.inspect(res)
+            return Error:new({
+                kind = Error.kinds.invalid_data,
+                description = 'Invalid response payload: ' .. vim.inspect(res),
+            })
         elseif type(verify) == 'function' and type(res) == 'table' and not verify(res) then
-            return 'Invalid response payload: ' .. vim.inspect(res)
+            return Error:new({
+                kind = Error.kinds.invalid_data,
+                description = 'Invalid response payload: ' .. vim.inspect(res),
+            })
         end
 
         if type(opts.map) == 'function' and type(res) == 'table' then
@@ -260,7 +268,7 @@ function M:send_async(opts, cb)
             log.warn('Transport not running and autostart disabled, so reporting error')
             cb({
                 type = 'error',
-                kind = 'not_connected',
+                kind = Error.kinds.not_connected,
                 description = 'Transport not started',
             })
             return
@@ -296,7 +304,7 @@ end
 --- a result (default timeout = 1000, interval = 200). Throws an error if timeout exceeded.
 --
 --- @param opts {payload:table, timeout?:number, interval?:number, more?:fun(payload:table):boolean}
---- @return string|nil, table|nil #Err?, Payload?
+--- @return DistantApiError|nil, table|nil #Err?, Payload?
 function M:send_sync(opts)
     log.fmt_trace('Transport:send_sync(%s)', opts)
     local tx, rx = utils.oneshot_channel(
@@ -307,7 +315,11 @@ function M:send_sync(opts)
     self:send_async(opts, tx)
 
     local err, payload = rx()
-    return err, payload
+    if err then
+        return Error:new({ kind = Error.kinds.timed_out, description = err })
+    else
+        return nil, payload
+    end
 end
 
 --- Primary event handler, routing received events to the corresponding callbacks.

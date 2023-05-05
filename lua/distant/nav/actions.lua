@@ -9,7 +9,10 @@ local M      = {}
 --- Returns the separator used by the remote system
 --- @return string
 local function remote_sep()
-    return assert(fn.cached_system_info().main_separator, 'missing remote sep')
+    local err, system_info = fn.cached_system_info({})
+    assert(not err, err)
+    assert(system_info, 'Missing system info')
+    return assert(system_info.main_separator, 'missing remote sep')
 end
 
 --- Returns the path under the cursor without joining it to the base path
@@ -34,7 +37,7 @@ end
 --- 1. In the case of a file, it is loaded into a buffer
 --- 2. In the case of a directory, the navigator enters it
 ---
---- @param opts table
+--- @param opts? {bufnr?:number, winnr?:number, line?:number, col?:number, reload?:number, timeout?:number, interval?:number}
 M.edit = function(opts)
     opts = opts or {}
 
@@ -50,7 +53,7 @@ end
 ---
 --- * reload: If provided, overrides the default (default: true)
 ---
---- @param opts table
+--- @param opts? {reload?:boolean}
 M.up = function(opts)
     opts = opts or {}
 
@@ -75,7 +78,7 @@ end
 ---
 --- * path: If provided, is used as new file path joined to current directory
 ---
---- @param opts table
+--- @param opts? {path?:string}
 M.newfile = function(opts)
     opts = opts or {}
 
@@ -98,7 +101,7 @@ end
 ---
 --- * path: If provided, is used as new directory path joined to current directory
 ---
---- @param opts table
+--- @param opts? {path?:string}
 M.mkdir = function(opts)
     opts = opts or {}
 
@@ -127,7 +130,7 @@ end
 ---
 --- * path: If provided, is used as new directory path joined to current directory
 ---
---- @param opts table
+--- @param opts? {path?:string}
 M.rename = function(opts)
     opts = opts or {}
 
@@ -160,7 +163,7 @@ end
 --- * force: If true, will remove directories that are not empty
 --- * no_prompt: If true, will not prompt to delete current file/directory
 ---
---- @param opts table
+--- @param opts? {force?:boolean, no_prompt?:boolean, timeout?:number, interval?:number}
 M.remove = function(opts)
     opts = opts or {}
 

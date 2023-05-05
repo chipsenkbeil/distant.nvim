@@ -54,9 +54,10 @@ end
 --- for future requests. Specifying `reload` as true will result in a fresh
 --- request to the server for this information.
 ---
---- @param opts {reload?:boolean, timeout?:number, interval?:number}
---- @param cb? fun(err?:string, payload?:DistantApiSystemInfoPayload)
---- @return string|nil, DistantApiSystemInfoPayload|nil
+--- @alias DistantClientCachedSystemInfoOpts {reload?:boolean, timeout?:number, interval?:number}
+--- @param opts DistantClientCachedSystemInfoOpts
+--- @param cb? fun(err?:DistantApiError, payload?:DistantApiSystemInfoPayload)
+--- @return DistantApiError|nil, DistantApiSystemInfoPayload|nil
 function M:cached_system_info(opts, cb)
     vim.validate({
         opts = { opts, 'table' },

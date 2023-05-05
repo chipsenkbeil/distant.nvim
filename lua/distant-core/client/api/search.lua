@@ -1,3 +1,4 @@
+local Error = require('distant-core.client.api.error')
 local log   = require('distant-core.log')
 local utils = require('distant-core.utils')
 
@@ -137,7 +138,7 @@ end
 --- as they are received.
 ---
 --- @param opts {query:DistantApiSearchQuery, on_results?:fun(matches:DistantApiSearchMatch[]), timeout?:number, interval?:number}
---- @param cb? fun(err?:string, matches?:DistantApiSearchMatch[])
+--- @param cb? fun(err?:DistantApiError, matches?:DistantApiSearchMatch[])
 function M:execute(opts, cb)
     local tx, rx = utils.oneshot_channel(
         opts.timeout or self.__internal.transport.config.timeout,
@@ -186,12 +187,24 @@ function M:execute(opts, cb)
     -- Running synchronously, so pull in our results
     if not cb then
         local err, msg = rx()
-        return err or msg.err, msg.matches
+        if err then
+            return Error:new({
+                kind = Error.kinds.timed_out,
+                description = err,
+            })
+        elseif msg.err then
+            return Error:new({
+                kind = Error.kinds.invalid_data,
+                description = msg.err,
+            })
+        else
+            return nil, msg.matches
+        end
     end
 end
 
 --- Cancels the search if running asynchronously.
---- @param cb? fun(err?:string, payload?:{type:'ok'}) #optional callback to report cancel confirmation
+--- @param cb? fun(err?:DistantApiError, payload?:{type:'ok'}) #optional callback to report cancel confirmation
 function M:cancel(cb)
     return self.__internal.transport:send({
         payload = {

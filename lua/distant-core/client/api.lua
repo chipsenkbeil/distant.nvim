@@ -1,37 +1,8 @@
+local Error = require('distant-core.client.api.error')
 local Process = require('distant-core.client.api.process')
 local Search = require('distant-core.client.api.search')
 local Transport = require('distant-core.client.transport')
 local log = require('distant-core.log')
-
---- @class DistantApiError
---- @field kind string
---- @field description string
-
---- @alias DistantApiErrorKind
---- | '"not_found"' # An entity was not found, often a file
---- | '"permission_denied"' # The operation lacked the necessary privileges to complete
---- | '"connection_refused"' # The connection was refused by the remote server
---- | '"connection_reset"' # The connection was reset by the remote server
---- | '"connection_aborted"' # The connection was aborted (terminated) by the remote server
---- | '"not_connected"' # The network operation failed because it was not connected yet
---- | '"addr_in_use"' # A socket address could not be bound because the address is already in use elsewhere
---- | '"addr_not_available"' # A nonexistent interface was requested or the requested address was not local
---- | '"broken_pipe"' # The operation failed because a pipe was closed
---- | '"already_exists"' # An entity already exists, often a file
---- | '"would_block"' # The operation needs to block to complete, but the blocking operation was requested to not occur
---- | '"invalid_input"' # A parameter was incorrect
---- | '"invalid_data"' # Data not valid for the operation were encountered
---- | '"timed_out"' # The I/O operation's timeout expired, causing it to be cancelled
---- | '"write_zero"' # An error returned when an operation could not be completed because a call to `write` returned `Ok(0)`
---- | '"interrupted"' # This operation was interrupted
---- | '"other"' # Any I/O error not part of this list
---- | '"unexpected_eof"' # An error returned when an operation could not be completed because an "end of file" was reached prematurely
---- | '"unsupported"' # This operation is unsupported on this platform
---- | '"out_of_memory"' # An operation could not be completed, because it failed to allocate enough memory
---- | '"loop"' # When a loop is encountered when walking a directory
---- | '"task_cancelled"' # When a task is cancelled
---- | '"task_panicked"' # When a task panics
---- | '"unknown"' # Catchall for an error that has no specific type
 
 --- Represents an API that uses a transport to communicate payloads.
 --- @class DistantApi
@@ -73,9 +44,9 @@ end
 
 --- @alias DistantApiAppendFileOpts {path:string, data:integer[], timeout?:number, interval?:number}
 --- @param opts DistantApiAppendFileOpts
---- @param cb fun(err?:string, payload?:OkPayload)
+--- @param cb fun(err?:DistantApiError, payload?:OkPayload)
 --- @return nil
---- @overload fun(opts:DistantApiAppendFileOpts):string|nil,OkPayload|nil
+--- @overload fun(opts:DistantApiAppendFileOpts):DistantApiError|nil,OkPayload|nil
 function M:append_file(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -97,9 +68,9 @@ end
 
 --- @alias DistantApiAppendFileTextOpts {path:string, text:string, timeout?:number, interval?:number}
 --- @param opts DistantApiAppendFileTextOpts
---- @param cb fun(err?:string, payload?:OkPayload)
+--- @param cb fun(err?:DistantApiError, payload?:OkPayload)
 --- @return nil
---- @overload fun(opts:DistantApiAppendFileTextOpts):string|nil,OkPayload|nil
+--- @overload fun(opts:DistantApiAppendFileTextOpts):DistantApiError|nil,OkPayload|nil
 function M:append_file_text(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -122,9 +93,9 @@ end
 --- @alias DistantApiCapabilitiesOpts {timeout?:number, interval?:number}
 --- @alias DistantApiCapabilitiesPayload {type:'capabilities', supported:string[]}
 --- @param opts DistantApiCapabilitiesOpts
---- @param cb fun(err?:string, payload?:DistantApiCapabilitiesPayload)
+--- @param cb fun(err?:DistantApiError, payload?:DistantApiCapabilitiesPayload)
 --- @return nil
---- @overload fun(opts:DistantApiCapabilitiesOpts):string|nil,DistantApiCapabilitiesPayload|nil
+--- @overload fun(opts:DistantApiCapabilitiesOpts):DistantApiError|nil,DistantApiCapabilitiesPayload|nil
 function M:capabilities(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -149,9 +120,9 @@ end
 
 --- @alias DistantApiCopyOpts {src:string, dst:string, timeout?:number, interval?:number}
 --- @param opts DistantApiCopyOpts
---- @param cb fun(err?:string, payload?:OkPayload)
+--- @param cb fun(err?:DistantApiError, payload?:OkPayload)
 --- @return nil
---- @overload fun(opts:DistantApiCopyOpts):string|nil,OkPayload|nil
+--- @overload fun(opts:DistantApiCopyOpts):DistantApiError|nil,OkPayload|nil
 function M:copy(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -173,9 +144,9 @@ end
 
 --- @alias DistantApiCreateDirOpts {path:string, all?:boolean, timeout?:number, interval?:number}
 --- @param opts DistantApiCreateDirOpts
---- @param cb fun(err?:string, payload?:OkPayload)
+--- @param cb fun(err?:DistantApiError, payload?:OkPayload)
 --- @return nil
---- @overload fun(opts:DistantApiCreateDirOpts):string|nil,OkPayload|nil
+--- @overload fun(opts:DistantApiCreateDirOpts):DistantApiError|nil,OkPayload|nil
 function M:create_dir(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -197,17 +168,16 @@ end
 
 --- @alias DistantApiExistsOpts {path:string, timeout?:number, interval?:number}
 --- @param opts DistantApiExistsOpts
---- @param cb fun(err?:string, payload?:boolean)
+--- @param cb fun(err?:DistantApiError, payload?:boolean)
 --- @return nil
---- @overload fun(opts:DistantApiExistsOpts):string|nil,boolean|nil
+--- @overload fun(opts:DistantApiExistsOpts):DistantApiError|nil,boolean|nil
 function M:exists(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
         cb = { cb, 'function', true },
     })
 
-    --- @diagnostic disable-next-line:return-type-mismatch
-    return self.transport:send({
+    local err, value = self.transport:send({
         payload = {
             type = 'exists',
             path = opts.path,
@@ -218,6 +188,9 @@ function M:exists(opts, cb)
         timeout = opts.timeout,
         interval = opts.interval,
     })
+
+    --- @cast value -table, +boolean
+    return err, value
 end
 
 --- @class DistantApiMetadataPayload
@@ -234,9 +207,9 @@ end
 
 --- @alias DistantApiMetadataOpts {path:string, canonicalize?:boolean, resolve_file_type?:boolean, timeout?:number, interval?:number}
 --- @param opts DistantApiMetadataOpts
---- @param cb fun(err?:string, payload?:DistantApiMetadataPayload)
+--- @param cb fun(err?:DistantApiError, payload?:DistantApiMetadataPayload)
 --- @return nil
---- @overload fun(opts:DistantApiMetadataOpts):string|nil,DistantApiMetadataPayload|nil
+--- @overload fun(opts:DistantApiMetadataOpts):DistantApiError|nil,DistantApiMetadataPayload|nil
 function M:metadata(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -271,9 +244,9 @@ end
 --- @alias DistantApiReadDirOpts {path:string, depth?:number, absolute?:boolean, canonicalize?:boolean, include_root?:boolean, timeout?:number, interval?:number}
 --- @alias DistantApiReadDirPayload {type:'dir_entries', entries:DistantDirEntry[], errors:DistantApiError[]}
 --- @param opts DistantApiReadDirOpts
---- @param cb fun(err?:string, payload?:DistantApiReadDirPayload)
+--- @param cb fun(err?:DistantApiError, payload?:DistantApiReadDirPayload)
 --- @return nil
---- @overload fun(opts:DistantApiReadDirOpts):string|nil,DistantApiReadDirPayload|nil
+--- @overload fun(opts:DistantApiReadDirOpts):DistantApiError|nil,DistantApiReadDirPayload|nil
 function M:read_dir(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -293,6 +266,12 @@ function M:read_dir(opts, cb)
         verify = function(payload)
             return payload.type == 'dir_entries' and vim.tbl_islist(payload.entries) and vim.tbl_islist(payload.errors)
         end,
+        map = function(payload)
+            return {
+                entries = payload.entries,
+                errors = vim.tbl_map(function(e) return Error:new(e) end, payload.errors),
+            }
+        end,
         timeout = opts.timeout,
         interval = opts.interval,
     })
@@ -300,9 +279,9 @@ end
 
 --- @alias DistantApiReadFileOpts {path:string, timeout?:number, interval?:number}
 --- @param opts DistantApiReadFileOpts
---- @param cb fun(err?:string, payload?:number[])
+--- @param cb fun(err?:DistantApiError, payload?:number[])
 --- @return nil
---- @overload fun(opts:DistantApiReadFileOpts):string|nil,number[]|nil
+--- @overload fun(opts:DistantApiReadFileOpts):DistantApiError|nil,number[]|nil
 function M:read_file(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -326,17 +305,16 @@ end
 
 --- @alias DistantApiReadFileTextOpts {path:string, timeout?:number, interval?:number}
 --- @param opts DistantApiReadFileTextOpts
---- @param cb fun(err?:string, payload?:string)
+--- @param cb fun(err?:DistantApiError, payload?:string)
 --- @return nil
---- @overload fun(opts:DistantApiReadFileTextOpts):string|nil,string|nil
+--- @overload fun(opts:DistantApiReadFileTextOpts):DistantApiError|nil,string|nil
 function M:read_file_text(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
         cb = { cb, 'function', true },
     })
 
-    --- @diagnostic disable-next-line:return-type-mismatch
-    return self.transport:send({
+    local err, value = self.transport:send({
         payload = {
             type = 'file_read_text',
             path = opts.path,
@@ -349,13 +327,16 @@ function M:read_file_text(opts, cb)
         timeout = opts.timeout,
         interval = opts.interval,
     })
+
+    --- @cast value -table, +string
+    return err, value
 end
 
 --- @alias DistantApiRemoveOpts {path:string, force?:boolean, timeout?:number, interval?:number}
 --- @param opts DistantApiRemoveOpts
---- @param cb fun(err?:string, payload?:OkPayload)
+--- @param cb fun(err?:DistantApiError, payload?:OkPayload)
 --- @return nil
---- @overload fun(opts:DistantApiRemoveOpts):string|nil,OkPayload|nil
+--- @overload fun(opts:DistantApiRemoveOpts):DistantApiError|nil,OkPayload|nil
 function M:remove(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -377,9 +358,9 @@ end
 
 --- @alias DistantApiRenameOpts {src:string, dst:string, timeout?:number, interval?:number}
 --- @param opts DistantApiRenameOpts
---- @param cb fun(err?:string, payload?:OkPayload)
+--- @param cb fun(err?:DistantApiError, payload?:OkPayload)
 --- @return nil
---- @overload fun(opts:DistantApiRenameOpts):string|nil,OkPayload|nil
+--- @overload fun(opts:DistantApiRenameOpts):DistantApiError|nil,OkPayload|nil
 function M:rename(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -401,8 +382,8 @@ end
 
 --- @alias DistantApiSearchOpts {query:DistantApiSearchQuery, on_results?:fun(matches:DistantApiSearchMatch[]), timeout?:number, interval?:number}
 --- @param opts DistantApiSearchOpts
---- @param cb? fun(err?:string, matches?:DistantApiSearchMatch[])
---- @return string|nil, DistantApiSearch|DistantApiSearchMatch[]|nil
+--- @param cb? fun(err?:DistantApiError, matches?:DistantApiSearchMatch[])
+--- @return DistantApiError|nil, DistantApiSearch|DistantApiSearchMatch[]|nil
 function M:search(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -435,8 +416,8 @@ function M:search(opts, cb)
 end
 
 --- @param opts DistantApiProcessSpawnOpts
---- @param cb? fun(err?:string, results?:DistantApiProcessSpawnResults)
---- @return string|nil, DistantApiProcess|DistantApiProcessSpawnResults|nil
+--- @param cb? fun(err?:DistantApiError, results?:DistantApiProcessSpawnResults)
+--- @return DistantApiError|nil, DistantApiProcess|DistantApiProcessSpawnResults|nil
 function M:spawn(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -469,9 +450,9 @@ end
 
 --- @alias DistantApiSystemInfoOpts {timeout?:number, interval?:number}
 --- @param opts DistantApiSystemInfoOpts
---- @param cb fun(err?:string, payload?:DistantApiSystemInfoPayload)
+--- @param cb fun(err?:DistantApiError, payload?:DistantApiSystemInfoPayload)
 --- @return nil
---- @overload fun(opts:DistantApiSystemInfoOpts):string|nil,DistantApiSystemInfoPayload|nil
+--- @overload fun(opts:DistantApiSystemInfoOpts):DistantApiError|nil,DistantApiSystemInfoPayload|nil
 function M:system_info(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -500,9 +481,9 @@ end
 
 --- @alias DistantApiWriteFileOpts {path:string, data:integer[], timeout?:number, interval?:number}
 --- @param opts DistantApiWriteFileOpts
---- @param cb fun(err?:string, payload?:OkPayload)
+--- @param cb fun(err?:DistantApiError, payload?:OkPayload)
 --- @return nil
---- @overload fun(opts:DistantApiWriteFileOpts):string|nil,OkPayload|nil
+--- @overload fun(opts:DistantApiWriteFileOpts):DistantApiError|nil,OkPayload|nil
 function M:write_file(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -524,9 +505,9 @@ end
 
 --- @alias DistantApiWriteFileTextOpts {path:string, text:string, timeout?:number, interval?:number}
 --- @param opts DistantApiWriteFileTextOpts
---- @param cb fun(err?:string, payload?:OkPayload)
+--- @param cb fun(err?:DistantApiError, payload?:OkPayload)
 --- @return nil
---- @overload fun(opts:DistantApiWriteFileTextOpts):string|nil,OkPayload|nil
+--- @overload fun(opts:DistantApiWriteFileTextOpts):DistantApiError|nil,OkPayload|nil
 function M:write_file_text(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -579,9 +560,9 @@ end
 --- @alias DistantApiWatchOpts {path:string, recursive?:boolean, only?:ChangeKind[], except?:ChangeKind[], timeout?:number, interval?:number}
 --- @alias DistantApiWatchPayload {type:'changed', kind:ChangeKind, paths:string[]}
 --- @param opts DistantApiWatchOpts
---- @param cb fun(err?:string, payload?:DistantApiWatchPayload)
+--- @param cb fun(err?:DistantApiError, payload?:DistantApiWatchPayload)
 --- @return nil
---- @overload fun(opts:DistantApiWatchOpts):string|nil,DistantApiWatchPayload|nil
+--- @overload fun(opts:DistantApiWatchOpts):DistantApiError|nil,DistantApiWatchPayload|nil
 function M:watch(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -619,9 +600,9 @@ end
 
 --- @alias DistantApiUnwatchOpts {path:string, timeout?:number, interval?:number}
 --- @param opts DistantApiUnwatchOpts
---- @param cb fun(err?:string, payload?:OkPayload)
+--- @param cb fun(err?:DistantApiError, payload?:OkPayload)
 --- @return nil
---- @overload fun(opts:DistantApiUnwatchOpts):string|nil,OkPayload|nil
+--- @overload fun(opts:DistantApiUnwatchOpts):DistantApiError|nil,OkPayload|nil
 function M:unwatch(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
