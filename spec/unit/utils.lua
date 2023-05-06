@@ -1,11 +1,11 @@
-local c = require('spec.unit.config')
-local u = require('distant-core.utils')
+local config = require('spec.unit.config')
+local utils = require('distant-core.utils')
 
-local utils = {}
+local M = {}
 
 -- Returns done(), wait()
-utils.make_channel = function()
-    local tx, rx = u.oneshot_channel(c.timeout, c.timeout_interval)
+M.make_channel = function()
+    local tx, rx = utils.oneshot_channel(config.timeout, config.timeout_interval)
     local function done()
         tx(true)
     end
@@ -19,4 +19,4 @@ utils.make_channel = function()
     return done, wait
 end
 
-return utils
+return M

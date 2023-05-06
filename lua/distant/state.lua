@@ -5,14 +5,10 @@ local min_version = require('distant.version').minimum
 local settings    = require('distant-core').settings
 local utils       = require('distant-core').utils
 
---- @class EditorSearchState
---- @field qfid number #id of quickfix list storing results
---- @field search DistantApiSearch #searcher being used
-
 --- @class State
 --- @field client? DistantClient #active client
 --- @field manager? DistantManager #active manager
---- @field search? EditorSearchState #active search via editor
+--- @field active_search {qfid?:number, searcher?:DistantApiSearcher} #active search via editor
 --- @field settings DistantSettings #user settings
 local M           = {}
 M.__index         = M
@@ -23,7 +19,7 @@ function M:new()
     setmetatable(instance, M)
     instance.client = nil
     instance.manager = nil
-    instance.search = nil
+    instance.active_search = {}
 
     -- Set default settings so we don't get nil access errors even when no
     -- launch call has been made yet

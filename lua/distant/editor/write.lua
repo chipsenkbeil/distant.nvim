@@ -8,7 +8,7 @@ local vars = require('distant-core').vars
 --- @field interval? number #Time in milliseconds to wait between checks for a response
 
 --- Writes a buffer to disk on the remote machine
---- @param opts EditorWriteOpts
+--- @param opts number|EditorWriteOpts
 return function(opts)
     opts = opts or {}
     if type(opts) == 'number' then

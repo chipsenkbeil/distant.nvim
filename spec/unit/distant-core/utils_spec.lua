@@ -79,10 +79,12 @@ describe('utils', function()
     describe('oneshot_channel', function()
         it('should fail if timeout or interval are not numbers', function()
             assert.has.errors(function()
+                --- @diagnostic disable-next-line:param-type-mismatch
                 u.oneshot_channel(0, 'not a number')
             end)
 
             assert.has.errors(function()
+                --- @diagnostic disable-next-line:param-type-mismatch
                 u.oneshot_channel('not a number', 0)
             end)
         end)

@@ -88,7 +88,11 @@ local function add_matches_to_qflist(id, matches)
             -- If we have text, assign up to 100 characters, truncating with suffix ...
             -- if we have a longer line
             if match.lines.type == 'text' then
-                item.text = match.lines.value
+                local text = match.lines.value
+
+                --- @cast text string
+                item.text = text
+
                 if #item.text > MAX_LINE_LEN then
                     item.text = item.text:sub(1, MAX_LINE_LEN - 3) .. '...'
                 end
@@ -121,9 +125,10 @@ return function(opts)
     vim.validate({ opts = { opts, 'table' } })
 
     -- If it's a string, we want to transform it into a standard query
-    if type(opts.query) == 'string' then
-        local regex = opts.query
-        opts.query = {
+    local query = opts.query
+    if type(query) == 'string' then
+        local regex = query
+        query = {
             paths = { '.' },
             target = 'contents',
             condition = {
@@ -136,77 +141,87 @@ return function(opts)
     local user_on_results = opts.on_results
     local user_on_done = opts.on_done
 
-    if type(opts.query.options) ~= 'table' then
-        opts.query.options = {}
+    if type(query.options) ~= 'table' then
+        query.options = {}
     end
 
-    opts.query.options.pagination = opts.query.options.pagination or DEFAULT_PAGINATION
+    query.options.pagination = query.options.pagination or DEFAULT_PAGINATION
 
     -- Keep track of how many matches we have
+    --- @type integer|nil
     local qflist_id
     local match_cnt = 0
 
     -- For each set of matches, we add them to our quickfix list
-    opts.on_results = function(matches)
-        add_matches_to_qflist(qflist_id, matches)
+    --- @param matches DistantApiSearchMatch[]
+    local function on_results(matches)
+        if qflist_id ~= nil and #matches > 0 then
+            add_matches_to_qflist(qflist_id, matches)
+        end
         match_cnt = match_cnt + #matches
         vim.notify('Search matched ' .. tostring(match_cnt) .. ' times')
 
-        if user_on_results ~= nil and type(user_on_results) == 'function' then
+        if type(user_on_results) == 'function' then
             return user_on_results(matches)
         end
     end
 
-    opts.on_done = function(matches)
-        matches = matches or {}
+    --- @param id integer
+    local function on_start(id)
+        -- Create an empty list to be populated with results
+        vim.fn.setqflist({}, ' ', {
+            title = 'DistantSearch ' .. id,
+            context = { distant = true, search_id = id },
+        })
+
+        -- Set our list id by grabbing the id of the latest qflist
+        qflist_id = vim.fn.getqflist({ id = 0 }).id
+
+        -- Update state with our active search
+        state.active_search.qfid = qflist_id
+
+        vim.notify('Started search ' .. tostring(id))
+
+        vim.cmd([[ copen ]])
+    end
+
+    --- @param matches DistantApiSearchMatch[]
+    local function on_done(matches)
         match_cnt = match_cnt + #matches
 
-        add_matches_to_qflist(qflist_id, matches)
+        if qflist_id ~= nil and #matches > 0 then
+            add_matches_to_qflist(qflist_id, matches)
+        end
         vim.notify('Search finished with ' .. tostring(match_cnt) .. ' matches')
 
-        if user_on_done ~= nil and type(user_on_done) == 'function' then
+        if type(user_on_done) == 'function' then
             return user_on_done(matches)
         end
     end
 
-    local function do_search()
-        -- Callback is triggered when search is started
-        fn.search(opts, function(err, searcher)
-            assert(not err, err)
-
-            -- Create an empty list to be populated with results
-            vim.fn.setqflist({}, ' ', {
-                title = 'DistantSearch ' .. searcher.query.condition.value,
-                context = { distant = true, search_id = searcher.id },
-            })
-
-            -- Set our list id by grabbing the id of the latest qflist
-            qflist_id = vim.fn.getqflist({ id = 0 }).id
-
-            -- Update state with our active search
-            state.search = {
-                qfid = qflist_id,
-                searcher = searcher,
-            }
-
-            vim.notify('Started search ' .. tostring(searcher.id))
-
-            vim.cmd([[ copen ]])
-        end)
-    end
+    local search_opts = {
+        query = query,
+        on_results = on_results,
+        on_start = on_start,
+        timeout = opts.timeout,
+        interval = opts.interval,
+    }
 
     -- Stop any existing search being done by the editor
-    if state.search ~= nil then
-        local searcher = state.search.searcher
-        if not searcher.done then
-            searcher.cancel(function(err)
-                assert(not err, err)
-                do_search()
-            end)
-        else
-            do_search()
-        end
+    if state.active_search ~= nil and state.active_search.searcher ~= nil and not state.active_search.searcher:is_done() then
+        state.active_search.searcher:cancel(function(err, _)
+            assert(not err, err)
+
+            --- @type DistantApiError|nil, DistantApiSearcher|nil
+            local err, searcher = fn.search(search_opts, on_done)
+            assert(not err, err)
+
+            state.active_search.searcher = searcher
+        end)
     else
-        do_search()
+        --- @type DistantApiError|nil, DistantApiSearcher|nil
+        local err, searcher = fn.search(search_opts, on_done)
+        assert(not err, err)
+        state.active_search.searcher = searcher
     end
 end

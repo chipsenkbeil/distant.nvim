@@ -11,7 +11,7 @@ local DISPLAY_LINE_LEN = 40
 --- @field query DistantApiSearchQuery
 --- @field settings DistantFinderSettings
 --- @field results DistantFinderEntry[]
---- @field __search? DistantApiSearch #active search (internal)
+--- @field __search? DistantApiSearcher #active search (internal)
 local Finder = {}
 Finder.__index = Finder
 

@@ -3,16 +3,17 @@ local log   = require('distant-core.log')
 local utils = require('distant-core.utils')
 
 --- Represents an active search.
---- @class DistantApiSearch
---- @field private __internal DistantApiSearchInternal
+--- @class DistantApiSearcher
+--- @field private __internal DistantApiSearcherInternal
 local M     = {}
 M.__index   = M
 
---- @class DistantApiSearchInternal
+--- @class DistantApiSearcherInternal
 --- @field id? integer #unsigned 32-bit id, assigned once the search starts
 --- @field on_done? fun(matches:DistantApiSearchMatch[])
 --- @field on_results? fun(matches:DistantApiSearchMatch[])
---- @field matches DistantApiSearchMatch[] #will be populated if `on_results` and `on_done` are nil
+--- @field on_start? fun(id:integer)
+--- @field matches DistantApiSearchMatch[] #will be populated if `on_results`, `on_start`, `on_done` are nil
 --- @field transport DistantApiTransport
 --- @field status 'inactive'|'active'|'done'
 --- @field timeout? number
@@ -55,7 +56,7 @@ M.__index   = M
 --- @field pagination? integer
 
 --- @param opts {transport:DistantApiTransport}
---- @return DistantApiSearch
+--- @return DistantApiSearcher
 function M:new(opts)
     local instance = {}
     setmetatable(instance, M)
@@ -79,6 +80,10 @@ function M:handle(payload)
         end
         self.__internal.id = id
         self.__internal.status = 'active'
+
+        if type(self.__internal.on_start) == 'function' then
+            self.__internal.on_start(id)
+        end
         return true
     elseif payload.type == 'search_done' then
         local id = assert(tonumber(payload.id), 'Malformed search done event! Missing id.')
@@ -131,14 +136,22 @@ function M:is_done()
     return self:status() == 'done'
 end
 
+--- @class DistantApiSearcherExecuteOpts
+--- @field query DistantApiSearchQuery
+--- @field on_results? fun(matches:DistantApiSearchMatch[])
+--- @field on_start? fun(id:integer)
+--- @field timeout? number
+--- @field interval? number
+
 --- Starts the search. If a callback is provided, matches will be returned asynchronously,
 --- otherwise they will be returned synchronously.
 ---
 --- Alternatively, an `on_results` function can be provided to receive results asynchronously
 --- as they are received.
 ---
---- @param opts {query:DistantApiSearchQuery, on_results?:fun(matches:DistantApiSearchMatch[]), timeout?:number, interval?:number}
+--- @param opts DistantApiSearcherExecuteOpts
 --- @param cb? fun(err?:DistantApiError, matches?:DistantApiSearchMatch[])
+--- @return DistantApiError|nil, DistantApiSearchMatch[]|nil
 function M:execute(opts, cb)
     local tx, rx = utils.oneshot_channel(
         opts.timeout or self.__internal.transport.config.timeout,
@@ -159,6 +172,7 @@ function M:execute(opts, cb)
         end
     end
     self.__internal.on_results = opts.on_results
+    self.__internal.on_start = opts.on_start
     self.__internal.timeout = opts.timeout
     self.__internal.interval = opts.timeout
 
@@ -204,7 +218,8 @@ function M:execute(opts, cb)
 end
 
 --- Cancels the search if running asynchronously.
---- @param cb? fun(err?:DistantApiError, payload?:{type:'ok'}) #optional callback to report cancel confirmation
+--- @param cb? fun(err?:DistantApiError, payload?:OkPayload) #optional callback to report cancel confirmation
+--- @return DistantApiError|nil, OkPayload|nil
 function M:cancel(cb)
     return self.__internal.transport:send({
         payload = {

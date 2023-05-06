@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 anatolelucet/neovim:0.7.0-ubuntu
+FROM --platform=linux/amd64 anatolelucet/neovim:0.8.0-ubuntu
 
 # Install all of the packages we need
 #

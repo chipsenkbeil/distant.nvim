@@ -1,13 +1,13 @@
-local config = {}
-
-config.timeout = tonumber(os.getenv('DISTANT_TIMEOUT')) or 1000
-config.timeout_interval = tonumber(os.getenv('DISTANT_TIMEOUT_INTERVAL')) or 200
+local M = {
+    timeout          = tonumber(os.getenv('DISTANT_TIMEOUT')) or 1000,
+    timeout_interval = tonumber(os.getenv('DISTANT_TIMEOUT_INTERVAL')) or 200,
+}
 
 -- Clear out any empty config options
-for k, v in pairs(config) do
+for k, v in pairs(M) do
     if v == '' then
-        config[k] = nil
+        M[k] = nil
     end
 end
 
-return config
+return M

@@ -1,8 +1,8 @@
 local editor = require('distant.editor')
-local fn = require('distant.fn')
-local match = require('luassert.match')
-local stub = require('luassert.stub')
-local vars = require('distant-core.vars')
+local fn     = require('distant.fn')
+local match  = require('luassert.match')
+local stub   = require('luassert.stub')
+local vars   = require('distant-core.vars')
 
 --- Creates a stubbed vars.buf(...) instance
 --- that returns a table with only `remote_path`
@@ -36,7 +36,7 @@ describe('editor.write', function()
     it('should write all lines of the buffer to the remote file', function()
         local path = 'some/path'
         local contents = 'some lines\nof text\nfor a file'
-        local content_lines = vim.split(contents, '\n', true)
+        local content_lines = vim.split(contents, '\n', { plain = true })
         local opts = { a = 3, b = 'test' }
 
         local remote_path_get = stub_vars_buf_remote_path_get(path)
@@ -62,7 +62,7 @@ describe('editor.write', function()
     it('should not reset the modified flag if unsuccessful', function()
         local path = 'some/path'
         local contents = 'some lines\nof text\nfor a file'
-        local content_lines = vim.split(contents, '\n', true)
+        local content_lines = vim.split(contents, '\n', { plain = true })
         local opts = { a = 3, b = 'test' }
 
         stub_vars_buf_remote_path_get(path)

@@ -384,7 +384,7 @@ local function configure_buf(args)
 
         -- Launch any associated LSP clients
         assert(state.client, 'No connection has been established!')
-        state.client:lsp():connect(bufnr)
+        state.client:connect_lsp_clients({ bufnr = bufnr, settings = state.settings.lsp })
     end
 end
 

@@ -1,5 +1,6 @@
 local M = {}
 
+--- Parse <args> from a neovim command.
 --- @param input string
 --- @return {args:string[], opts:table<string, string|table>}
 function M.parse_args(input)

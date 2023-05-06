@@ -112,7 +112,7 @@ end
 
 --- @param opts DistantApiSearchOpts
 --- @param cb? fun(err?:DistantApiError, matches?:DistantApiSearchMatch[])
---- @return DistantApiError|nil, DistantApiSearch|DistantApiSearchMatch[]|nil
+--- @return DistantApiError|nil, DistantApiSearcher|DistantApiSearchMatch[]|nil
 function M.search(opts, cb)
     return api():search(opts, cb)
 end

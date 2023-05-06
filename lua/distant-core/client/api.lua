@@ -1,6 +1,6 @@
 local Error = require('distant-core.client.api.error')
 local Process = require('distant-core.client.api.process')
-local Search = require('distant-core.client.api.search')
+local Searcher = require('distant-core.client.api.searcher')
 local Transport = require('distant-core.client.transport')
 local log = require('distant-core.log')
 
@@ -368,35 +368,43 @@ function M:rename(opts, cb)
     })
 end
 
---- @alias DistantApiSearchOpts {query:DistantApiSearchQuery, on_results?:fun(matches:DistantApiSearchMatch[]), timeout?:number, interval?:number}
+--- @class DistantApiSearchOpts
+--- @field query DistantApiSearchQuery
+--- @field on_results? fun(matches:DistantApiSearchMatch[])
+--- @field on_start? fun(id:integer)
+--- @field timeout? number
+--- @field interval? number
+
 --- @param opts DistantApiSearchOpts
 --- @param cb? fun(err?:DistantApiError, matches?:DistantApiSearchMatch[])
---- @return DistantApiError|nil, DistantApiSearch|DistantApiSearchMatch[]|nil
+--- @return DistantApiError|nil, DistantApiSearcher|DistantApiSearchMatch[]|nil
 function M:search(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
         cb = { cb, 'function', true },
     })
 
-    local search = Search:new({
+    local searcher = Searcher:new({
         transport = self.transport
     })
 
     if type(cb) == 'function' then
         -- Asynchronous, so we start executing and return the search so it can be canceled
-        search:execute({
+        searcher:execute({
             query = opts.query,
             on_results = opts.on_results,
+            on_start = opts.on_start,
             timeout = opts.timeout,
             interval = opts.interval,
         }, cb)
 
-        return nil, search
+        return nil, searcher
     else
         -- Synchronous, so we block while executing in order to return search results
-        return search:execute({
+        return searcher:execute({
             query = opts.query,
             on_results = opts.on_results,
+            on_start = opts.on_start,
             timeout = opts.timeout,
             interval = opts.interval,
         })
