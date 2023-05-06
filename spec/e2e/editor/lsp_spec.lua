@@ -5,7 +5,7 @@ local Driver = require('spec.e2e.driver')
 local function d(level, text)
     local out = {}
     local start = (level * 4) + 1
-    for _, line in ipairs(vim.split(text, '\n', true)) do
+    for _, line in ipairs(vim.split(text, '\n', { plain = true })) do
         table.insert(out, string.sub(line, start))
     end
     return table.concat(out, '\n')
@@ -47,9 +47,11 @@ local function try_buf_request(bufnr, method, params)
             method,
             vim.tbl_deep_extend(
                 'keep',
+                --- @diagnostic disable-next-line:missing-parameter
                 vim.lsp.util.make_position_params(),
                 params
             ),
+            --- @diagnostic disable-next-line:param-type-mismatch
             90 * 1000
         )
     end
@@ -162,8 +164,11 @@ describe('editor.lsp', function()
         assert(res, 'Failed to get definition')
 
         -- Now perform the rename in blocking fashion
+        --- @diagnostic disable-next-line:missing-parameter
         local params = vim.lsp.util.make_position_params()
         params.newName = 'print_hello'
+
+        --- @diagnostic disable-next-line:param-type-mismatch
         local _, err = vim.lsp.buf_request_sync(buf.id(), 'textDocument/rename', params, 1000 * 10)
         assert(not err, err)
 

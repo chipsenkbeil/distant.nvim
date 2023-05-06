@@ -1,8 +1,8 @@
-local utils = require('distant-core.utils')
+local Destination = require('distant-core.destination')
 
-describe('distant-core.utils.parse_destination', function()
+describe('distant-core.destination.parse', function()
     it('should support parsing just a host', function()
-        local d = utils.parse_destination('some.destination')
+        local d = Destination:parse('some.destination')
 
         assert.are.same({
             scheme = nil,
@@ -14,7 +14,7 @@ describe('distant-core.utils.parse_destination', function()
     end)
 
     it('should support parsing a host & port', function()
-        local d = utils.parse_destination('some.destination:1234')
+        local d = Destination:parse('some.destination:1234')
 
         assert.are.same({
             scheme = nil,
@@ -26,7 +26,7 @@ describe('distant-core.utils.parse_destination', function()
     end)
 
     it('should support parsing a scheme & host', function()
-        local d = utils.parse_destination('scheme://some.destination')
+        local d = Destination:parse('scheme://some.destination')
 
         assert.are.same({
             scheme = 'scheme',
@@ -38,7 +38,7 @@ describe('distant-core.utils.parse_destination', function()
     end)
 
     it('should support parsing a username & host', function()
-        local d = utils.parse_destination('username@some.destination')
+        local d = Destination:parse('username@some.destination')
 
         assert.are.same({
             scheme = nil,
@@ -50,7 +50,7 @@ describe('distant-core.utils.parse_destination', function()
     end)
 
     it('should support parsing a password & host', function()
-        local d = utils.parse_destination(':password@some.destination')
+        local d = Destination:parse(':password@some.destination')
 
         assert.are.same({
             scheme = nil,
@@ -62,7 +62,7 @@ describe('distant-core.utils.parse_destination', function()
     end)
 
     it('should support parsing a username & password & host', function()
-        local d = utils.parse_destination('username:password@some.destination')
+        local d = Destination:parse('username:password@some.destination')
 
         assert.are.same({
             scheme = nil,
@@ -74,7 +74,7 @@ describe('distant-core.utils.parse_destination', function()
     end)
 
     it('should support parsing a scheme & username & password & host', function()
-        local d = utils.parse_destination('scheme://username:password@some.destination')
+        local d = Destination:parse('scheme://username:password@some.destination')
 
         assert.are.same({
             scheme = 'scheme',
@@ -86,7 +86,7 @@ describe('distant-core.utils.parse_destination', function()
     end)
 
     it('should support parsing a username & password & host & port', function()
-        local d = utils.parse_destination('username:password@some.destination:1234')
+        local d = Destination:parse('username:password@some.destination:1234')
 
         assert.are.same({
             scheme = nil,
@@ -98,7 +98,7 @@ describe('distant-core.utils.parse_destination', function()
     end)
 
     it('should support parsing a scheme & username & password & host & port', function()
-        local d = utils.parse_destination('scheme://username:password@some.destination:1234')
+        local d = Destination:parse('scheme://username:password@some.destination:1234')
 
         assert.are.same({
             scheme = 'scheme',
@@ -109,29 +109,51 @@ describe('distant-core.utils.parse_destination', function()
         }, d)
     end)
 
-    it('should yield nil if the destination is invalid', function()
-        local d = utils.parse_destination('')
-        assert.is.falsy(d)
+    it('should throw an error if destination is empty', function()
+        assert.has.error(function()
+            Destination:parse('')
+        end)
+    end)
 
-        local d = utils.parse_destination('scheme://')
-        assert.is.falsy(d)
+    it('should throw an error if destination is just a scheme (no host)', function()
+        assert.has.error(function()
+            Destination:parse('scheme://')
+        end)
+    end)
 
-        local d = utils.parse_destination(':')
-        assert.is.falsy(d)
+    it('should throw an error if destination is just a : (no host)', function()
+        assert.has.error(function()
+            Destination:parse(':')
+        end)
+    end)
 
-        local d = utils.parse_destination('@')
-        assert.is.falsy(d)
+    it('should throw an error if destination is just a @ (no host)', function()
+        assert.has.error(function()
+            Destination:parse('@')
+        end)
+    end)
 
-        local d = utils.parse_destination('username@')
-        assert.is.falsy(d)
+    it('should throw an error if destination is just a username (no host)', function()
+        assert.has.error(function()
+            Destination:parse('username@')
+        end)
+    end)
 
-        local d = utils.parse_destination(':password@')
-        assert.is.falsy(d)
+    it('should throw an error if destination is just a password (no host)', function()
+        assert.has.error(function()
+            Destination:parse(':password@')
+        end)
+    end)
 
-        local d = utils.parse_destination(':1234')
-        assert.is.falsy(d)
+    it('should throw an error if destination is just a port (no host)', function()
+        assert.has.error(function()
+            Destination:parse(':1234')
+        end)
+    end)
 
-        local d = utils.parse_destination('some.destination:asdf')
-        assert.is.falsy(d)
+    it('should throw an error if destination has a non-numeric port', function()
+        assert.has.error(function()
+            Destination:parse('some.destination:asdf')
+        end)
     end)
 end)

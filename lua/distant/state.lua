@@ -1,4 +1,5 @@
 local Cli         = require('distant-core').Cli
+local Destination = require('distant-core').Destination
 local log         = require('distant-core').log
 local Manager     = require('distant-core').Manager
 local min_version = require('distant.version').minimum
@@ -36,7 +37,7 @@ function M:load_settings(destination)
 
     -- Parse our destination into the host only
     local label
-    local d = utils.parse_destination(destination)
+    local d = Destination:try_parse(destination)
     if not d or not d.host then
         error('Invalid destination: ' .. tostring(destination))
     else

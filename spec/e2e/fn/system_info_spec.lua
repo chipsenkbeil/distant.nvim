@@ -14,7 +14,7 @@ describe('fn', function()
 
     describe('system_info', function()
         it('should report back information about remote machine', function()
-            local err, res = fn.system_info()
+            local err, res = fn.system_info({})
             assert(not err, err)
 
             -- TODO: Can we verify this any further? We'd need

@@ -3,6 +3,9 @@ local editor = require('distant.editor')
 local state = require('distant-core.state')
 local settings = require('distant-core.settings')
 
+--- @class Driver
+--- @field label string
+--- @field private __state {client?:DistantClient, manager?:DistantManager, fixtures:table[], mode:'distant'|'ssh'}
 local M = {}
 M.__index = M
 
@@ -187,6 +190,7 @@ end
 
 --- Initializes a driver for e2e tests.
 --- @param opts {label:string, lazy?:boolean, settings?:table<string, DistantSettings>}
+--- @return Driver
 function M:setup(opts)
     opts = opts or {}
 
@@ -212,6 +216,7 @@ function M:setup(opts)
 end
 
 --- Initializes the client of the driver.
+--- @return Driver
 function M:initialize(opts)
     opts = opts or {}
 
@@ -240,6 +245,7 @@ function M:teardown()
 end
 
 --- Returns the mode the driver is in (distant|ssh)
+--- @return 'distant'|'ssh'
 function M:mode()
     return self.__state.mode
 end

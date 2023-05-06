@@ -1,3 +1,4 @@
+local Destination = require('distant-core.destination')
 local log = require('distant-core.log')
 local utils = require('distant-core.utils')
 
@@ -97,7 +98,7 @@ M.for_destination = function(destination, no_default)
 
     -- Parse our destination into the host only
     local label
-    local d = utils.parse_destination(destination)
+    local d = Destination:try_parse(destination)
     if not d or not d.host then
         error('Invalid destination: ' .. tostring(destination))
     else
