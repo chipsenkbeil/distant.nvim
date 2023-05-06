@@ -23,7 +23,7 @@ local function stub_vars_buf_remote_path_get(value)
     return remote_path.get
 end
 
-describe('editor.write', function()
+describe('distant.editor.write', function()
     it('should do nothing if the buffer does not have a remote path', function()
         local remote_path_get = stub_vars_buf_remote_path_get(nil)
         stub(fn, 'write_file_text')
