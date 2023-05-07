@@ -311,6 +311,72 @@ function M:is_debug_enabled()
 end
 
 -------------------------------------------------------------------------------
+-- DRIVER DETECTION FUNCTIONS
+-------------------------------------------------------------------------------
+
+--- @alias spec.e2e.RemoteOperatingSystem 'linux'|'macos'|'windows'|'unknown'
+--- @alias spec.e2e.RemoteFamily 'unix'|'windows'|'unknown'
+
+--- @type spec.e2e.RemoteOperatingSystem|nil
+local cached_remote_os = nil
+
+--- Detects the remote operating system, caching the result for future requests.
+--- @param opts? {reload?:boolean}
+--- @return spec.e2e.RemoteOperatingSystem
+function M:detect_remote_os(opts)
+    opts = opts or {}
+
+    -- If we have a cached result and are not reloading, return it
+    if cached_remote_os and not opts.reload then
+        return cached_remote_os
+    end
+
+    local result
+
+    -- Will return "macOS" upon success
+    result = self:exec('sw_vers', { '-productName' }, { ignore_errors = true })
+    if result.success and vim.trim(result.output) == 'macOS' then
+        cached_remote_os = 'macos'
+        return cached_remote_os
+    end
+
+    -- Will return "Linux" upon success
+    result = self:exec('uname', { '-s' }, { ignore_errors = true })
+    if result.success and vim.trim(result.output) == 'Linux' then
+        cached_remote_os = 'linux'
+        return cached_remote_os
+    end
+
+    -- Will return "Windows_NT" upon success
+    result = self:exec('powershell.exe', {
+        '-NonInteractive',
+        '-Command',
+        '"& {[Environment]::GetEnvironmentVariable(\'OS\')}"',
+    }, { ignore_errors = true })
+    if result.success and vim.trim(result.output) == 'Windows_NT' then
+        cached_remote_os = 'windows'
+        return cached_remote_os
+    end
+
+    cached_remote_os = 'unknown'
+    return cached_remote_os
+end
+
+--- Detects the remote operating system family, caching the result for future requests.
+--- @param opts? {reload?:boolean}
+--- @return spec.e2e.RemoteFamily
+function M:detect_remote_family(opts)
+    local os = self:detect_remote_os(opts)
+    if os == 'linux' or os == 'macos' then
+        return 'unix'
+    elseif os == 'windows' then
+        return 'windows'
+    else
+        return 'unknown'
+    end
+end
+
+-------------------------------------------------------------------------------
 -- DRIVER EXECUTABLE FUNCTIONS
 -------------------------------------------------------------------------------
 

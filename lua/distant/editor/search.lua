@@ -210,18 +210,18 @@ return function(opts)
     -- Stop any existing search being done by the editor
     if state.active_search ~= nil and state.active_search.searcher ~= nil and not state.active_search.searcher:is_done() then
         state.active_search.searcher:cancel(function(err, _)
-            assert(not err, err)
+            assert(not err, tostring(err))
 
             --- @type distant.api.Error|nil, distant.client.api.Searcher|nil
             local err, searcher = fn.search(search_opts, on_done)
-            assert(not err, err)
+            assert(not err, tostring(err))
 
             state.active_search.searcher = searcher
         end)
     else
         --- @type distant.api.Error|nil, distant.client.api.Searcher|nil
         local err, searcher = fn.search(search_opts, on_done)
-        assert(not err, err)
+        assert(not err, tostring(err))
         state.active_search.searcher = searcher
     end
 end

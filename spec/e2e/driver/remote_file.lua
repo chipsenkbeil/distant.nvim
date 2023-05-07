@@ -31,9 +31,18 @@ end
 --- @param opts? spec.e2e.IgnoreErrorsOpts
 --- @return string|nil
 function M:canonicalized_path(opts)
-    local result = self.__driver:exec('realpath', { self.__path }, opts)
-    if result.success then
-        return vim.trim(result.output)
+    local os = self.__driver:detect_remote_os()
+    local results
+
+    -- On MacOS, `readlink -f` has replaced `realpath`
+    if os == 'macos' then
+        results = self.__driver:exec('readlink', { '-f', self.__path }, opts)
+    else
+        results = self.__driver:exec('realpath', { self.__path }, opts)
+    end
+
+    if results.success then
+        return vim.trim(results.output)
     end
 end
 
