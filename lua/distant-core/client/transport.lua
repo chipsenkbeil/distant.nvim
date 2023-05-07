@@ -8,23 +8,40 @@ local DEFAULT_TIMEOUT  = 15000
 local DEFAULT_INTERVAL = 100
 
 --- Represents a JSON-formatted distant api transport.
---- @class DistantApiTransport
---- @field private auth_handler AuthHandler
---- @field config {autostart:boolean, binary:string, network:DistantClientNetwork, timeout:number, interval:number}
---- @field private __state DistantApiTransportState
+--- @class distant.api.client.Transport
+--- @field private auth_handler distant.auth.Handler
+--- @field config {autostart:boolean, binary:string, network:distant.client.Network, timeout:number, interval:number}
+--- @field private __state distant.api.client.transport.State
 local M                = {}
 M.__index              = M
 
---- @class DistantApiTransportState
+--- @class distant.api.client.transport.State
 --- @field authenticated boolean True if authenticated and ready to send messages
 --- @field queue string[] Queue of outgoing json messages
---- @field handle? JobHandle
---- @field callbacks table<string, {callback:fun(payload:table), more:fun(payload:table):boolean}>
+--- @field handle? distant-core.utils.JobHandle
+--- @field callbacks table<string, {callback:distant.api.client.transport.Callback, more:distant.api.client.transport.More}>
 
---- @alias DistantApiNewOpts {binary:string, network?:DistantClientNetwork, auth_handler?:AuthHandler, autostart?:boolean, timeout?:number, interval?:number}
+--- @alias distant.api.client.transport.Callback fun(payload:distant.api.client.transport.msg.Payload)
+--- @alias distant.api.client.transport.More fun(payload:distant.api.client.transport.msg.Payload):boolean
+
+--- @class distant.api.client.transport.Msg
+--- @field id integer # unique id of the message
+--- @field origin_id? integer # if a response, will be set to the id of the request
+--- @field payload distant.api.client.transport.msg.Payload # a singular payload or multiple payloads
+
+--- @alias distant.api.client.transport.msg.Payload table|table[]
+
+--- @class distant.api.client.transport.NewOpts
+--- @field binary string
+--- @field network? distant.client.Network
+--- @field auth_handler? distant.auth.Handler
+--- @field autostart? boolean
+--- @field timeout? number
+--- @field interval? number
+
 --- Creates a new instance of our api that wraps a job.
---- @param opts DistantApiNewOpts
---- @return DistantApiTransport
+--- @param opts distant.api.client.transport.NewOpts
+--- @return distant.api.client.Transport
 function M:new(opts)
     opts = opts or {}
 
@@ -85,7 +102,7 @@ function M:start(cb)
         end,
         on_stdout_line = function(line)
             if line ~= nil and line ~= "" then
-                --- @type boolean,table|nil
+                --- @type boolean,distant.api.client.transport.Msg|nil
                 local success, msg = pcall(vim.fn.json_decode, line)
 
                 -- Quit if the decoding failed or we didn't get a msg
@@ -94,27 +111,57 @@ function M:start(cb)
                     return
                 end
 
-                if type(msg) ~= 'table' or type(msg.type) ~= 'string' then
-                    log.fmt_error('Invalid msg: %s', msg)
+                -- Validate our message format
+                if type(msg) ~= 'table' then
+                    log.fmt_error('type(msg) == \'%s\' (needed table): %s', type(msg), msg)
+                    return
+                elseif type(msg.id) ~= 'number' then
+                    log.fmt_error('type(msg.id) == \'%s\' (needed number)', type(msg.id))
+                    return
+                elseif msg.origin_id ~= nil and type(msg.origin_id) ~= 'number' then
+                    log.fmt_error('type(msg.origin_id) == \'%s\' (needed number)', type(msg.origin_id))
+                    return
+                elseif type(msg.payload) ~= 'table' then
+                    log.fmt_error('type(msg.payload) == \'%s\' (needed table)', type(msg.payload))
                     return
                 end
 
-                -- Check if we are processing an authentication msg
-                -- or an API message
-                if auth:is_auth_request(msg) then
-                    --- @diagnostic disable-next-line:redefined-local
-                    auth:handle_request(msg, function(msg)
-                        handle.write(utils.compress(vim.fn.json_encode(msg)) .. '\n')
-                    end)
-                    self.__state.authenticated = auth.finished
+                -- Our payload could be a single message or multiple messages. They can either
+                -- be authentication or regular message payloads, and we can assume that they
+                -- never mix together. So, we first check if the payload represents one or
+                -- more authentication messages. If so, we break up the payload into individual
+                -- requests and process them individually. Otherwise, we just pass along the
+                -- entire payload to our callback handler.
+                local is_auth = false
+                if vim.tbl_islist(msg.payload) then
+                else
+                end
 
-                    -- We have finished authentication, so write out
-                    -- all of our queued messages
-                    if auth.finished then
-                        for _, json in ipairs(self.__state.queue) do
-                            self.__state.handle.write(json)
+                if is_auth then
+                    --- @type {type:string}[]
+                    local requests = {}
+                    if vim.tbl_islist(msg.payload) then
+                        --- @type {type:string}[]
+                        requests = msg.payload
+                    else
+                        table.insert(requests, msg.payload)
+                    end
+
+                    for _, request in ipairs(requests) do
+                        --- @diagnostic disable-next-line:redefined-local
+                        auth:handle_request(request, function(msg)
+                            handle.write(utils.compress(vim.fn.json_encode(msg)) .. '\n')
+                        end)
+                        self.__state.authenticated = auth.finished
+
+                        -- We have finished authentication, so write out
+                        -- all of our queued messages
+                        if auth.finished then
+                            for _, json in ipairs(self.__state.queue) do
+                                self.__state.handle.write(json)
+                            end
+                            self.__state.queue = {}
                         end
-                        self.__state.queue = {}
                     end
                 else
                     self:__handler(msg)
@@ -142,7 +189,7 @@ function M:stop()
     self.__state.callbacks = {}
 end
 
---- @class DistantApiTransportSendOpts
+--- @class distant.api.client.transport.SendOpts
 --- @field payload table
 --- @field verify? fun(payload:table):boolean #if provided, will be invoked to verify the response payload is valid
 --- @field map? fun(payload:table):any #if provided, will transform the response payload before returning it
@@ -158,9 +205,9 @@ end
 --- Invokes the provided callback with the response payload once received. If
 --- `more` is used, this callback may be invoked more than once.
 ---
---- @param opts DistantApiTransportSendOpts
---- @param cb? fun(err?:DistantApiError, payload?:table)
---- @return DistantApiError|nil, table|nil #Err?, Payload?
+--- @param opts distant.api.client.transport.SendOpts
+--- @param cb? fun(err?:distant.api.Error, payload?:distant.api.client.transport.msg.Payload)
+--- @return distant.api.Error|nil, distant.api.client.transport.msg.Payload|nil
 function M:send(opts, cb)
     local verify = function(payload)
         local success, value = pcall(opts.verify, payload)
@@ -254,8 +301,8 @@ end
 --- Invokes the provided callback with the response payload once received. If
 --- `more` is used, this callback may be invoked more than once.
 ---
---- @param opts {payload:table, more?:fun(payload:table):boolean}
---- @param cb fun(payload:table)
+--- @param opts {payload:distant.api.client.transport.msg.Payload, more?:distant.api.client.transport.More}
+--- @param cb distant.api.client.transport.Callback
 function M:send_async(opts, cb)
     log.fmt_trace('Transport:send_async(%s, _)', opts)
     if not self:is_running() then
@@ -303,8 +350,8 @@ end
 --- up to `timeout` milliseconds, checking every `interval` milliseconds for
 --- a result (default timeout = 1000, interval = 200). Returns an error if timeout exceeded.
 --
---- @param opts {payload:table, timeout?:number, interval?:number, more?:fun(payload:table):boolean}
---- @return DistantApiError|nil, table|nil #Err?, Payload?
+--- @param opts {payload:distant.api.client.transport.msg.Payload, more?:distant.api.client.transport.More, timeout?:number, interval?:number}
+--- @return distant.api.Error|nil, distant.api.client.transport.msg.Payload|nil
 function M:send_sync(opts)
     log.fmt_trace('Transport:send_sync(%s)', opts)
     local tx, rx = utils.oneshot_channel(
@@ -323,7 +370,7 @@ function M:send_sync(opts)
 end
 
 --- Primary event handler, routing received events to the corresponding callbacks.
---- @param msg {id:string, origin_id:string, payload:table}
+--- @param msg {id:string, origin_id:string, payload:distant.api.client.transport.msg.Payload}
 function M:__handler(msg)
     log.fmt_trace('Transport:__handler(%s)', msg)
     local origin_id = msg.origin_id
@@ -333,6 +380,31 @@ function M:__handler(msg)
     if not payload then
         return
     end
+
+    --- @generic T
+    --- @param payload T
+    --- @return T
+    local function clean_payload(payload)
+        if type(payload) == 'table' then
+            if vim.tbl_islist(payload) then
+                return vim.tbl_map(clean_payload, payload)
+            else
+                for key, value in pairs(payload) do
+                    if value == vim.NIL then
+                        payload[key] = nil
+                    else
+                        payload[key] = clean_payload(value)
+                    end
+                end
+                return payload
+            end
+        else
+            return payload
+        end
+    end
+
+    -- Clean payload by converting vim.NIL values to nil
+    payload = clean_payload(payload)
 
     -- Look up our callback and, if it exists, invoke it
     if origin_id ~= nil and origin_id ~= vim.NIL then

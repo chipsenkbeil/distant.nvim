@@ -1,12 +1,12 @@
 local CmdBuilder = require('distant-core.builder.cmd')
 
---- @class DistantServerListenCmdBuilder
---- @field cmd DistantCmdBuilder
+--- @class distant.builder.server.ListenCmdBuilder
+--- @field cmd distant.builder.CmdBuilder
 local M = {}
 M.__index = M
 
 --- Creates new `server listen` cmd
---- @return DistantServerListenCmdBuilder
+--- @return distant.builder.server.ListenCmdBuilder
 function M:new()
     local instance = {}
     setmetatable(instance, M)
@@ -32,28 +32,28 @@ end
 
 --- Sets multiple arguments using the given table.
 --- @param tbl table<string, boolean|string>
---- @return DistantServerListenCmdBuilder
+--- @return distant.builder.server.ListenCmdBuilder
 function M:set_from_tbl(tbl)
     self.cmd:set_from_tbl(tbl)
     return self
 end
 
 --- Sets `--foreground`
---- @return DistantServerListenCmdBuilder
+--- @return distant.builder.server.ListenCmdBuilder
 function M:set_foreground()
     self.cmd:set('foreground')
     return self
 end
 
 --- Sets `--key-from-stdin`
---- @return DistantServerListenCmdBuilder
+--- @return distant.builder.server.ListenCmdBuilder
 function M:set_key_from_stdin()
     self.cmd:set('key-from-stdin')
     return self
 end
 
 --- Sets `--use-ipv6`
---- @return DistantServerListenCmdBuilder
+--- @return distant.builder.server.ListenCmdBuilder
 function M:set_use_ipv6()
     self.cmd:set('use-ipv6')
     return self
@@ -61,7 +61,7 @@ end
 
 --- Sets `--current-dir <value>`
 --- @param value string
---- @return DistantServerListenCmdBuilder
+--- @return distant.builder.server.ListenCmdBuilder
 function M:set_current_dir(value)
     vim.validate({ value = { value, 'string' } })
     self.cmd:set('current-dir', value)
@@ -70,7 +70,7 @@ end
 
 --- Sets `--host <value>`
 --- @param value 'ssh'|'any'|string
---- @return DistantServerListenCmdBuilder
+--- @return distant.builder.server.ListenCmdBuilder
 function M:set_host(value)
     vim.validate({ value = { value, 'string' } })
     self.cmd:set('host', value)
@@ -79,7 +79,7 @@ end
 
 --- Sets `--log-file <value>`
 --- @param value string
---- @return DistantServerListenCmdBuilder
+--- @return distant.builder.server.ListenCmdBuilder
 function M:set_log_file(value)
     vim.validate({ value = { value, 'string' } })
     self.cmd:set('log-file', value)
@@ -88,7 +88,7 @@ end
 
 --- Sets `--log-level <value>`
 --- @param value 'off'|'error'|'warn'|'info'|'debug'|'trace'
---- @return DistantServerListenCmdBuilder
+--- @return distant.builder.server.ListenCmdBuilder
 function M:set_log_level(value)
     vim.validate({ value = { value, 'string' } })
     self.cmd:set('log-level', value)
@@ -97,7 +97,7 @@ end
 
 --- Sets `--max-msg-capacity <value>`
 --- @param value number
---- @return DistantServerListenCmdBuilder
+--- @return distant.builder.server.ListenCmdBuilder
 function M:set_max_msg_capacity(value)
     vim.validate({ value = { value, 'number' } })
     self.cmd:set('max-msg-capacity', tostring(value))
@@ -107,7 +107,7 @@ end
 --- Sets `--port <value>[:n]`
 --- @param value number
 --- @param n? number #if provided, tries a range of ports from <value> to <n>
---- @return DistantServerListenCmdBuilder
+--- @return distant.builder.server.ListenCmdBuilder
 function M:set_port(value, n)
     vim.validate({ value = { value, 'number' }, n = { n, 'number', true } })
 
@@ -123,7 +123,7 @@ end
 --- Sets `--shutdown <key>[=<value>]`
 --- @param key 'after'|'lonely'|'never' #rule type
 --- @param value number|nil #time in seconds
---- @return DistantServerListenCmdBuilder
+--- @return distant.builder.server.ListenCmdBuilder
 function M:set_shutdown(key, value)
     vim.validate({
         key = { key, 'string' },
@@ -141,7 +141,7 @@ end
 
 --- Sets `--timeout <value>`
 --- @param value number #maximum timeout in seconds for network requests (0 is infinite)
---- @return DistantServerListenCmdBuilder
+--- @return distant.builder.server.ListenCmdBuilder
 function M:set_timeout(value)
     vim.validate({ value = { value, 'number' } })
     self.cmd:set('timeout', tostring(value))

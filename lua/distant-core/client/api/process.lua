@@ -3,20 +3,20 @@ local log   = require('distant-core.log')
 local utils = require('distant-core.utils')
 
 --- Represents a remote process.
---- @class DistantApiProcess
---- @field private __internal DistantApiProcessInternal
+--- @class distant.client.api.Process
+--- @field private __internal distant.client.api.process.Internal
 local M     = {}
 M.__index   = M
 
---- @alias Stdout integer[]
---- @alias Stderr integer[]
+--- @alias distant.client.api.process.Stdout integer[]
+--- @alias distant.client.api.process.Stderr integer[]
 
---- @class DistantApiProcessInternal
+--- @class distant.client.api.process.Internal
 --- @field id? integer
---- @field on_done? fun(opts:{success:boolean, exit_code:integer|nil, stdout:Stdout, stderr:Stderr})
---- @field on_stdout? fun(stdout:Stdout)
---- @field on_stderr? fun(stderr:Stderr)
---- @field transport DistantApiTransport
+--- @field on_done? fun(opts:distant.client.api.process.SpawnResults)
+--- @field on_stdout? fun(stdout:distant.client.api.process.Stdout)
+--- @field on_stderr? fun(stderr:distant.client.api.process.Stderr)
+--- @field transport distant.api.client.Transport
 --- @field status {state:'inactive'|'active'|'done', success:boolean, exit_code?:integer}
 --- @field stdin integer[]
 --- @field stdout integer[]
@@ -24,8 +24,8 @@ M.__index   = M
 --- @field timeout? integer
 --- @field interval? integer
 
---- @param opts {transport:DistantApiTransport}
---- @return DistantApiProcess
+--- @param opts {transport:distant.api.client.Transport}
+--- @return distant.client.api.Process
 function M:new(opts)
     local instance = {}
     setmetatable(instance, M)
@@ -153,23 +153,37 @@ function M:exit_code()
     return self.__internal.status.exit_code
 end
 
---- @class DistantApiProcessSpawnOpts
+--- Returns the stdout captured by the process. Only available
+--- when a process created without `on_stdout` or done callbacks.
+--- @return integer[]
+function M:stdout()
+    return self.__internal.stdout
+end
+
+--- Returns the stderr captured by the process. Only available
+--- when a process created without `on_stderr` or done callbacks.
+--- @return integer[]
+function M:stderr()
+    return self.__internal.stderr
+end
+
+--- @class distant.client.api.process.SpawnOpts
 --- @field cmd string|string[]
 --- @field env? table<string, string>
 --- @field cwd? string
---- @field pty? PtySize
+--- @field pty? distant.client.api.process.PtySize
 ---
 --- @field stdin? integer[]|string #initial stdin to feed to process
---- @field on_stdout? fun(stdout:Stdout)
---- @field on_stderr? fun(stderr:Stderr)
+--- @field on_stdout? fun(stdout:distant.client.api.process.Stdout)
+--- @field on_stderr? fun(stderr:distant.client.api.process.Stderr)
 --- @field timeout? number
 --- @field interval? number
 
---- @class DistantApiProcessSpawnResults
+--- @class distant.client.api.process.SpawnResults
 --- @field success boolean
 --- @field exit_code? integer
---- @field stdout Stdout
---- @field stderr Stderr
+--- @field stdout distant.client.api.process.Stdout
+--- @field stderr distant.client.api.process.Stderr
 
 --- Spawns the process. If a callback is provided, it will be invoked when the process
 --- finishes and be provided the exit code, stdout, and stderr of the process. If no
@@ -184,8 +198,9 @@ end
 --- * `on_stderr` can be provided to receive the stderr as it is received from the process.
 ---   This will result in no stderr being returned at the end of the process.
 ---
---- @param opts DistantApiProcessSpawnOpts
---- @param cb? fun(err?:DistantApiError, results?:DistantApiProcessSpawnResults)
+--- @param opts distant.client.api.process.SpawnOpts
+--- @param cb? fun(err?:distant.api.Error, results?:distant.client.api.process.SpawnResults)
+--- @return distant.api.Error|nil,distant.client.api.process.SpawnResults|nil
 function M:spawn(opts, cb)
     local tx, rx = utils.oneshot_channel(
         opts.timeout or self.__internal.transport.config.timeout,
@@ -278,7 +293,8 @@ end
 
 --- Writes to the stdin of the process if it is running.
 --- @param data integer[]|string #initial stdin to feed to process
---- @param cb? fun(err?:DistantApiError, payload?:{type:'ok'}) #optional callback to report write confirmation
+--- @param cb? fun(err?:distant.api.Error, payload?:distant.client.api.OkPayload) #optional callback to report write confirmation
+--- @return distant.api.Error|nil, distant.client.api.OkPayload|nil
 function M:write_stdin(data, cb)
     -- Convert string to byte array
     if type(data) == 'string' then
@@ -313,15 +329,16 @@ function M:write_stdin(data, cb)
     })
 end
 
---- @class PtySize
+--- @class distant.client.api.process.PtySize
 --- @field rows integer
 --- @field cols integer
 --- @field pixel_width? integer
 --- @field pixel_height? integer
 
 --- Resizes the pty if the process is using a pty.
---- @param size PtySize
---- @param cb? fun(err?:DistantApiError, payload?:{type:'ok'}) #optional callback to report resize confirmation
+--- @param size distant.client.api.process.PtySize
+--- @param cb? fun(err?:distant.api.Error, payload?:distant.client.api.OkPayload)
+--- @return distant.api.Error|nil, distant.client.api.OkPayload|nil
 function M:resize_pty(size, cb)
     return self.__internal.transport:send({
         payload = {
@@ -339,7 +356,8 @@ function M:resize_pty(size, cb)
 end
 
 --- Kills the process if it is running.
---- @param cb? fun(err?:DistantApiError, payload?:{type:'ok'}) #optional callback to report kill confirmation
+--- @param cb? fun(err?:distant.api.Error, payload?:distant.client.api.OkPayload)
+--- @return distant.api.Error|nil, distant.client.api.OkPayload|nil
 function M:kill(cb)
     return self.__internal.transport:send({
         payload = {

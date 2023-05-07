@@ -4,7 +4,7 @@ local state = require('distant.state')
 --- @class EditorLaunchOpts
 --- @field destination string
 ---
---- @field auth? AuthHandler
+--- @field auth? distant.auth.Handler
 --- @field distant? EditorLaunchDistantOpts
 --- @field interval? number
 --- @field log_level? 'off'|'error'|'warn'|'info'|'debug'|'trace'
@@ -21,7 +21,7 @@ local state = require('distant.state')
 --- up a session so clients are able to communicate with it
 ---
 --- @param opts EditorLaunchOpts
---- @param cb fun(err?:string, client?:DistantClient)
+--- @param cb fun(err?:string, client?:distant.Client)
 return function(opts, cb)
     opts = opts or {}
     cb = cb or function(err)

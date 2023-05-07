@@ -14,7 +14,7 @@ local function command(cmd)
 
     local opts = input.opts
 
-    --- @cast opts -table, +DistantApiRenameOpts
+    --- @cast opts -table, +distant.client.api.RenameOpts
     local err, _ = fn.rename(opts)
     assert(not err, err)
 end

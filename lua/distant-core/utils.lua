@@ -1,11 +1,12 @@
 local log = require('distant-core.log')
 
-local utils = {}
+--- @class distant-core.utils
+local M = {}
 
 local PLUGIN_NAME = 'distant.nvim'
 
 --- @return string
-utils.plugin_name = function() return PLUGIN_NAME end
+M.plugin_name = function() return PLUGIN_NAME end
 
 --- Represents the separator for use with local file system
 ---
@@ -28,24 +29,24 @@ local SEPARATOR = (function()
 end)()
 
 --- @return string
-utils.seperator = function() return SEPARATOR end
+M.seperator = function() return SEPARATOR end
 
 --- Returns path to cache directory for this plugin
 --- @param path string|string[]|nil #if provided, will be appended to path
 --- @return string
-utils.cache_path = function(path)
+M.cache_path = function(path)
     local full_path = (
         vim.fn.stdpath('cache') ..
-        utils.seperator() ..
-        utils.plugin_name()
+        M.seperator() ..
+        M.plugin_name()
         )
 
     if type(path) == 'table' and vim.tbl_islist(path) then
         for _, component in ipairs(path) do
-            full_path = full_path .. utils.seperator() .. component
+            full_path = full_path .. M.seperator() .. component
         end
     elseif path ~= nil then
-        full_path = full_path .. utils.seperator() .. path
+        full_path = full_path .. M.seperator() .. path
     end
 
     return full_path
@@ -54,31 +55,31 @@ end
 --- Returns path to data directory for this plugin
 --- @param path string|string[]|nil #if provided, will be appended to path
 --- @return string
-utils.data_path = function(path)
+M.data_path = function(path)
     local full_path = (
         vim.fn.stdpath('data') ..
-        utils.seperator() ..
-        utils.plugin_name()
+        M.seperator() ..
+        M.plugin_name()
         )
 
     if type(path) == 'table' and vim.tbl_islist(path) then
         for _, component in ipairs(path) do
-            full_path = full_path .. utils.seperator() .. component
+            full_path = full_path .. M.seperator() .. component
         end
     elseif path ~= nil then
-        full_path = full_path .. utils.seperator() .. path
+        full_path = full_path .. M.seperator() .. path
     end
 
     return full_path
 end
 
---- @alias OperatingSystem 'windows'|'linux'|'macos'|'bsd'|'solaris'|'unknown'
---- @alias Architecture 'x86'|'x86_64'|'powerpc'|'arm'|'mips'|'unknown'
+--- @alias distant-core.utils.OperatingSystem 'windows'|'linux'|'macos'|'bsd'|'solaris'|'unknown'
+--- @alias distant-core.utils.Architecture 'x86'|'x86_64'|'powerpc'|'arm'|'mips'|'unknown'
 
 --- Original from https://gist.github.com/soulik/82e9d02a818ce12498d1
 ---
---- @return OperatingSystem, Architecture
-utils.detect_os_arch = function()
+--- @return distant-core.utils.OperatingSystem, distant-core.utils.Architecture
+M.detect_os_arch = function()
     local raw_os_name, raw_arch_name = '', ''
 
     -- LuaJIT shortcut
@@ -149,13 +150,13 @@ utils.detect_os_arch = function()
     return os_name, arch_name
 end
 
---- @class JobHandle
+--- @class distant-core.utils.JobHandle
 --- @field id function():string
 --- @field write function(data):void
 --- @field stop function():void
 --- @field running function():boolean
 
---- @class JobStartOpts
+--- @class distant-core.utils.JobStartOpts
 --- @field env? table<string, string> @a table of process environment variables
 --- @field on_stdout_line fun(line:string) @a function that is triggered once per line of stdout
 --- @field on_stderr_line fun(line:string) @a function that is triggered once per line of stderr
@@ -165,9 +166,9 @@ end
 --- Start an async job using the given cmd and options
 ---
 --- @param cmd any
---- @param opts? JobStartOpts
---- @return JobHandle
-utils.job_start = function(cmd, opts)
+--- @param opts? distant-core.utils.JobStartOpts
+--- @return distant-core.utils.JobHandle
+M.job_start = function(cmd, opts)
     opts = opts or {}
 
     --- @param cb fun(line:string)
@@ -258,7 +259,7 @@ end
 --- @param s string
 --- @param prefix string
 --- @return string
-utils.strip_prefix = function(s, prefix)
+M.strip_prefix = function(s, prefix)
     local offset = string.find(s, prefix)
     if offset == 1 then
         return string.sub(s, string.len(prefix) + 1)
@@ -272,7 +273,7 @@ end
 ---
 --- @param s string
 --- @return string, number|nil, number|nil
-utils.strip_line_col = function(s)
+M.strip_line_col = function(s)
     local _, _, new_s, line, col = string.find(s, '^(.+):(%d+),(%d+)$', 1, false)
     if new_s == nil then
         return s
@@ -283,7 +284,7 @@ end
 
 --- Maps and filters out nil elements in an array using the given function,
 --- returning nil if given nil as the array
-utils.filter_map = function(array, f)
+M.filter_map = function(array, f)
     if array == nil then
         return nil
     end
@@ -299,7 +300,7 @@ utils.filter_map = function(array, f)
 end
 
 --- Returns the first value where the predicate returns true, otherwise returns nil
-utils.find = function(array, f)
+M.find = function(array, f)
     if array == nil then
         return nil
     end
@@ -316,9 +317,9 @@ end
 --- newlines with a single space so that it can be sent as a single
 --- line to command line interfaces while also ensuring that lines aren't
 --- accidentally merged together
-utils.compress = function(s)
-    return utils.concat_nonempty(
-        utils.filter_map(
+M.compress = function(s)
+    return M.concat_nonempty(
+        M.filter_map(
             vim.split(s, '\n', { plain = true }),
             (function(line)
                 return vim.trim(line)
@@ -330,14 +331,14 @@ end
 
 --- Concats an array using the provided separator, returning the resulting
 --- string if non-empty, otherwise will return nil
-utils.concat_nonempty = function(array, sep)
+M.concat_nonempty = function(array, sep)
     if array and #array > 0 then
         return table.concat(array, sep)
     end
 end
 
 --- Returns true if the provided table contains the given value
-utils.contains = function(tbl, value)
+M.contains = function(tbl, value)
     for _, v in pairs(tbl) do
         if v == value then
             return true
@@ -349,7 +350,7 @@ end
 
 --- Returns a new id for use in sending messages
 --- @return fun():number #Randomly generated id
-utils.next_id = (function()
+M.next_id = (function()
     -- Ensure that we have something kind-of random
     math.randomseed(os.time())
 
@@ -363,7 +364,7 @@ end)()
 --- @param n number The total number of lines to produce
 --- @param line string The line to replicate
 --- @return table lines The table of lines {'line', 'line', ...}
-utils.make_n_lines = function(n, line)
+M.make_n_lines = function(n, line)
     local lines = {}
 
     for _ = 1, n do
@@ -377,7 +378,7 @@ end
 ---
 --- @param path string Path to the file
 --- @return string[]|nil #List of lines split by newline, or nil if failed to read
-utils.read_lines = function(path)
+M.read_lines = function(path)
     local f = io.open(path, "rb")
     local contents = nil
     if f then
@@ -393,8 +394,8 @@ end
 ---
 --- @param path string Path to the file
 --- @return string[]|nil #List of lines split by newline, or nil if failed to read
-utils.read_lines_and_remove = function(path)
-    local lines = utils.read_lines(path)
+M.read_lines_and_remove = function(path)
+    local lines = M.read_lines(path)
     os.remove(path)
     return lines
 end
@@ -403,7 +404,7 @@ end
 ---
 --- @param text string The text to clean
 --- @return string #The cleaned text
-utils.clean_term_line = function(text)
+M.clean_term_line = function(text)
     local function strip_seq(s, p)
         s = string.gsub(s, '%c%[' .. p .. 'm', '')
         s = string.gsub(s, '%c%[' .. p .. 'K', '')
@@ -418,8 +419,9 @@ utils.clean_term_line = function(text)
 end
 
 --- Returns the parent path of the given path, or nil if there is no parent
+--- @param path string
 --- @return string|nil
-utils.parent_path = function(path)
+M.parent_path = function(path)
     -- Pattern from https://stackoverflow.com/a/12191225/3164172
     local parent = string.match(path, '(.-)([^\\/]-%.?([^%.\\/]*))$')
     if parent ~= nil and parent ~= '' and parent ~= path then
@@ -431,7 +433,7 @@ end
 --- @param sep string
 --- @param paths string[]
 --- @return string #The path as a string
-utils.join_path = function(sep, paths)
+M.join_path = function(sep, paths)
     assert(type(sep) == 'string', 'sep must be a string')
     assert(vim.tbl_islist(paths), 'paths must be a list')
     local path = ''
@@ -450,7 +452,7 @@ end
 
 --- @param opts {path:string, parents?:boolean, mode?:number}
 --- @param cb fun(err:string|nil)
-utils.mkdir = function(opts, cb)
+M.mkdir = function(opts, cb)
     opts = opts or {}
 
     local path = opts.path
@@ -474,14 +476,14 @@ utils.mkdir = function(opts, cb)
                 if success then
                     return cb(nil)
                 elseif parents then
-                    local parent_path = utils.parent_path(path)
+                    local parent_path = M.parent_path(path)
                     if not parent_path then
                         return cb('Cannot create parent directory: reached top!')
                     end
 
                     -- If cannot create directory on its own, we try to
                     -- recursively create it until we succeed or fail
-                    return utils.mkdir({
+                    return M.mkdir({
                             path = parent_path,
                             parents = parents,
                             mode = mode
@@ -509,7 +511,7 @@ end
 --- @param b integer #mask
 --- @param op 'or'|'xor'|'and'
 --- @return integer
-utils.bitmask = function(a, b, op)
+M.bitmask = function(a, b, op)
     --- @type number
     local oper
     if op == 'or' then
@@ -538,7 +540,7 @@ end
 --- @param timeout number is the milliseconds that rx will wait
 --- @param interval number is the milliseconds to wait inbetween checking for a message
 --- @return fun(...) tx, fun():string|nil, ... rx #tx sends the value and rx receives the value
-utils.oneshot_channel = function(timeout, interval)
+M.oneshot_channel = function(timeout, interval)
     vim.validate({
         timeout = { timeout, 'number' },
         interval = { interval, 'number' },
@@ -572,7 +574,7 @@ utils.oneshot_channel = function(timeout, interval)
 
             -- Otherwise, add our error argument to the front
         else
-            table.insert(result, 1, false)
+            table.insert(result, 1, nil)
         end
 
         return unpack(result)
@@ -584,7 +586,7 @@ end
 --- @param s string #json string
 --- @param key string #key whose value to retrieve
 --- @return string|nil #value of key if exists
-utils.parse_json_str_for_value = function(s, key)
+M.parse_json_str_for_value = function(s, key)
     s = vim.trim(s)
 
     -- Ensure is an object string
@@ -663,4 +665,4 @@ utils.parse_json_str_for_value = function(s, key)
     end
 end
 
-return utils
+return M

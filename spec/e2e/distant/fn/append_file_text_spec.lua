@@ -1,7 +1,8 @@
 local fn = require('distant.fn')
 local Driver = require('spec.e2e.driver')
 
-describe('fn', function()
+describe('distant.fn', function()
+    --- @type spec.e2e.Driver, spec.e2e.RemoteDir
     local driver, root
 
     before_each(function()
@@ -15,26 +16,26 @@ describe('fn', function()
 
     describe('append_file_text', function()
         it('should create file with given text if it does not exist', function()
-            local file = root.file()
-            local err = fn.append_file_text({ path = file.path(), text = 'some text' })
+            local file = root:file()
+            local err = fn.append_file_text({ path = file:path(), text = 'some text' })
             assert(not err, err)
             file.assert.same('some text')
         end)
 
         it('should append text to an existing file', function()
-            local file = root.file()
-            assert(file.write('abcdefg'), 'Failed to write to ' .. file.path())
+            local file = root:file()
+            assert(file:write('abcdefg'), 'Failed to write to ' .. file:path())
 
-            local err = fn.append_file_text({ path = file.path(), text = 'some text' })
+            local err = fn.append_file_text({ path = file:path(), text = 'some text' })
             assert(not err, err)
             file.assert.same('abcdefgsome text')
         end)
 
         it('should fail if file path has multiple missing components', function()
-            local file = root.file('file/file2')
-            local err = fn.append_file_text({ path = file.path(), text = 'some text' })
+            local file = root:file('file/file2')
+            local err = fn.append_file_text({ path = file:path(), text = 'some text' })
             assert.is.truthy(err)
-            assert.is.falsy(file.exists())
+            assert.is.falsy(file:exists())
         end)
     end)
 end)

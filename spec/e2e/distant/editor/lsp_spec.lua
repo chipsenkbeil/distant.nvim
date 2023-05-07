@@ -65,7 +65,8 @@ local function try_buf_request(bufnr, method, params)
     return value
 end
 
-describe('editor.lsp', function()
+describe('distant.editor.lsp', function()
+    --- @type spec.e2e.Driver, spec.e2e.RemoteDir
     local driver, root
 
     before_each(function()
@@ -78,7 +79,7 @@ describe('editor.lsp', function()
                         ['rust'] = {
                             cmd = { 'rls' },
                             filetypes = { 'rust' },
-                            root_dir = root.path(),
+                            root_dir = root:path(),
                         }
                     }
                 }
@@ -93,11 +94,11 @@ describe('editor.lsp', function()
 
     it('should support navigating to other files that are remote', function()
         make_rust_project(root)
-        driver.exec('sh', { '-c', '"cd ' .. root.path() .. ' && $HOME/.cargo/bin/cargo build"' })
+        driver:exec('sh', { '-c', '"cd ' .. root:path() .. ' && $HOME/.cargo/bin/cargo build"' })
 
         -- Open main.rs, which should start the LSP server
-        local main_rs = root.dir('src').file('main.rs')
-        local buf = driver.buffer(editor.open(main_rs.path()))
+        local main_rs = root:dir('src'):file('main.rs')
+        local buf = driver:buffer(editor.open(main_rs:path()))
 
         -- Wait for the language server to be ready
         assert(
@@ -106,13 +107,13 @@ describe('editor.lsp', function()
         )
 
         -- Jump to other::say_hello() and have cursor on say_hello
-        local ln, col = driver.window().move_cursor_to('say_hello')
+        local ln, col = driver:window():move_cursor_to('say_hello')
         assert.are.equal(4, ln)
         assert.are.equal(11, col)
 
         -- Perform request in blocking fashion to make sure that we're ready
         -- NOTE: This does not perform a jump or anything else
-        local res = try_buf_request(buf.id(), 'textDocument/definition')
+        local res = try_buf_request(buf:id(), 'textDocument/definition')
         assert(res, 'Failed to get definition')
 
         -- Now perform the actual engagement
@@ -122,16 +123,16 @@ describe('editor.lsp', function()
         -- NOTE: Wait up to a minute for this to occur
         local success = vim.wait(1000 * 10, function()
             local id = vim.api.nvim_get_current_buf()
-            return buf.id() ~= id
+            return buf:id() ~= id
         end, 500)
         assert(success, 'LSP never switched to new buffer')
 
         -- Ensure that we properly populated the new buffer
-        buf = driver.buffer()
-        assert.are.equal('rust', buf.filetype())
-        assert.are.equal('acwrite', buf.buftype())
-        assert.are.equal('distant://' .. root.dir('src').file('other.rs').path(), buf.name())
-        assert.are.equal(root.dir('src').file('other.rs').path(), buf.remote_path())
+        buf = driver:buffer()
+        assert.are.equal('rust', buf:filetype())
+        assert.are.equal('acwrite', buf:buftype())
+        assert.are.equal('distant://' .. root:dir('src'):file('other.rs'):path(), buf:name())
+        assert.are.equal(root:dir('src'):file('other.rs'):path(), buf:remote_path())
         buf.assert.same(d(3, [[
             pub fn say_hello() {
                 println!("Hello, world!");
@@ -141,11 +142,11 @@ describe('editor.lsp', function()
 
     pending('should support renaming symbols in remote files', function()
         make_rust_project(root)
-        driver.exec('sh', { '-c', '"cd ' .. root.path() .. ' && $HOME/.cargo/bin/cargo build"' })
+        driver:exec('sh', { '-c', '"cd ' .. root:path() .. ' && $HOME/.cargo/bin/cargo build"' })
 
         -- Open main.rs, which should start the LSP server
-        local main_rs = root.dir('src').file('main.rs')
-        local buf = driver.buffer(editor.open(main_rs.path()))
+        local main_rs = root:dir('src'):file('main.rs')
+        local buf = driver:buffer(editor.open(main_rs:path()))
 
         -- Wait for the language server to be ready
         assert(
@@ -154,13 +155,13 @@ describe('editor.lsp', function()
         )
 
         -- Jump to other::say_hello() and have cursor on say_hello
-        local ln, col = driver.window().move_cursor_to('say_hello')
+        local ln, col = driver:window():move_cursor_to('say_hello')
         assert.are.equal(4, ln)
         assert.are.equal(11, col)
 
         -- Perform request in blocking fashion to make sure that we're ready
         -- NOTE: This does not perform a jump or anything else
-        local res = try_buf_request(buf.id(), 'textDocument/definition')
+        local res = try_buf_request(buf:id(), 'textDocument/definition')
         assert(res, 'Failed to get definition')
 
         -- Now perform the rename in blocking fashion
@@ -169,7 +170,7 @@ describe('editor.lsp', function()
         params.newName = 'print_hello'
 
         --- @diagnostic disable-next-line:param-type-mismatch
-        local _, err = vim.lsp.buf_request_sync(buf.id(), 'textDocument/rename', params, 1000 * 10)
+        local _, err = vim.lsp.buf_request_sync(buf:id(), 'textDocument/rename', params, 1000 * 10)
         assert(not err, err)
 
         -- Verify that we did rename in the buffer
@@ -186,14 +187,14 @@ describe('editor.lsp', function()
         vim.cmd([[wall]])
 
         -- Verify that the underlying files changed
-        root.dir('src').file('main.rs').assert.same(d(3, [[
+        root:dir('src'):file('main.rs').assert.same(d(3, [[
             mod other;
 
             fn main() {
                 other::print_hello();
             }
         ]]))
-        root.dir('src').file('other.rs').assert.same(d(3, [[
+        root:dir('src'):file('other.rs').assert.same(d(3, [[
             pub fn print_hello() {
                 println!("Hello, world!");
             }

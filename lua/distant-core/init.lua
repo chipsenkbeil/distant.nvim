@@ -5,6 +5,7 @@ return {
     Cli         = require('distant-core.cli'),
     data        = require('distant-core.data'),
     Destination = require('distant-core.destination'),
+    installer   = require('distant-core.installer'),
     log         = require('distant-core.log'),
     Manager     = require('distant-core.manager'),
     settings    = require('distant-core.settings'),

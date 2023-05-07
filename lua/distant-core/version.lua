@@ -1,5 +1,5 @@
 --- Represents a structured version.
---- @class Version
+--- @class distant.Version
 --- @field major integer
 --- @field minor integer
 --- @field patch integer
@@ -10,7 +10,7 @@ M.__index = M
 
 --- Creates a new version.
 --- @param opts {major:integer, minor:integer, patch:integer, pre_release?:string, pre_release_version?:integer}
---- @return Version
+--- @return distant.Version
 function M:new(opts)
     local instance = {}
     setmetatable(instance, M)
@@ -25,7 +25,7 @@ end
 
 --- Creates a new version from parsing a string. Will throw an error if unable to parse.
 --- @param vstr string
---- @return Version
+--- @return distant.Version
 function M:parse(vstr)
     local semver, ext = unpack(vim.split(vstr, '-', { plain = true }))
     local major, minor, patch = unpack(vim.split(semver, '.', { plain = true }))
@@ -46,7 +46,7 @@ end
 
 --- Creates a new version from parsing a string. Will return nil if unable to parse.
 --- @param vstr string
---- @return Version|nil
+--- @return distant.Version|nil
 function M:try_parse(vstr)
     local success, version = pcall(self.parse, self, vstr)
     if success then
@@ -68,7 +68,7 @@ end
 --- * `allow_unstable_upgrade` - if true, then it will be considered valid for
 ---   unstable versions (e.g. 0.1.0) to upgrade to a newer unstable version (e.g. 0.1.1)
 ---
---- @param other Version #version to upgrade towards
+--- @param other distant.Version #version to upgrade towards
 --- @param opts? {allow_unstable_upgrade?:boolean}
 --- @return boolean
 function M:can_upgrade_to(other, opts)
@@ -113,7 +113,7 @@ end
 --- * `allow_unstable_upgrade` - if true, then it will be considered valid for
 ---   unstable versions (e.g. 0.1.0) to upgrade to a newer unstable version (e.g. 0.1.1)
 ---
---- @param other Version #version to upgrade towards
+--- @param other distant.Version #version to upgrade towards
 --- @param opts? {allow_unstable_upgrade?:boolean}
 --- @return boolean
 function M:can_upgrade_from(other, opts)

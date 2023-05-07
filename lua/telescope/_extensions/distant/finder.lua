@@ -8,10 +8,10 @@ local DISPLAY_LINE_LEN = 40
 --- @field minimum_len number #minimum length of input before sending a query
 
 --- @class DistantFinder
---- @field query DistantApiSearchQuery
+--- @field query distant.client.api.search.Query
 --- @field settings DistantFinderSettings
 --- @field results DistantFinderEntry[]
---- @field __search? DistantApiSearcher #active search (internal)
+--- @field __search? distant.client.api.Searcher #active search (internal)
 local Finder = {}
 Finder.__index = Finder
 
@@ -30,7 +30,7 @@ end
 --- @field lnum? number #jumps to this line (if set)
 --- @field col? number #jumps to this column (if set)
 
---- @param match DistantApiSearchMatch
+--- @param match distant.client.api.search.Match
 --- @return DistantFinderEntry|nil
 local function make_entry(match)
     local path_with_scheme = match.path
@@ -83,7 +83,7 @@ local function make_entry(match)
 end
 
 --- @class DistantFinderOpts
---- @field query DistantApiSearchQuery #query to execute whose results will be captured
+--- @field query distant.client.api.search.Query #query to execute whose results will be captured
 --- @field settings DistantFinderSettings|nil
 
 --- Creates a new finder that takes

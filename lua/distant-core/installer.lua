@@ -35,7 +35,7 @@ local BIN_NAME             = {
 -------------------------------------------------------------------------------
 
 --- @param tag string
---- @return Version|nil
+--- @return distant.Version|nil
 local function parse_tag_into_version(tag)
     return utils.parse_version(utils.strip_prefix(vim.trim(tag), 'v'))
 end
@@ -312,7 +312,7 @@ end
 
 --- @class DownloadBinaryOpts
 --- @field bin_name? string #Name of binary artifact to download, defaulting to platform choice
---- @field min_version? Version #Minimum version to list as a download choice
+--- @field min_version? distant.Version #Minimum version to list as a download choice
 
 --- @param opts DownloadBinaryOpts
 --- @param cb fun(err?:string, path?:string) #where result is an error message or the binary path
@@ -516,10 +516,18 @@ end
 -- PUBLIC API
 -------------------------------------------------------------------------------
 
-local M = {
-    path = bin_path,
-    dir = bin_dir,
-}
+--- @class distant.Installer
+local M = {}
+
+--- @return string #Path to directory that would contain the binary
+function M.dir()
+    return bin_dir()
+end
+
+--- @return string #Path to local binary
+function M.path()
+    return bin_path()
+end
 
 --- Returns true if the binary is loaded, otherwise return false
 --- @return boolean
@@ -549,7 +557,7 @@ end
 ---
 --- Upon completion, the callback is triggered with either an error or the path to the binary.
 ---
---- @param opts {reinstall?:boolean, bin?:string, prompt?:string, min_version?:Version}
+--- @param opts {reinstall?:boolean, bin?:string, prompt?:string, min_version?:distant.Version}
 --- @param cb fun(err?:string, path?:string)
 function M.install(opts, cb)
     vim.validate({

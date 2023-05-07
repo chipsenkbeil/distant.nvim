@@ -4,25 +4,25 @@ local log     = require('distant-core.log')
 local vars    = require('distant-core.vars')
 
 --- Represents a distant client
---- @class DistantClient
---- @field api DistantApi
---- @field private config {binary:string, network:DistantClientNetwork}
---- @field private __state DistantClientState
+--- @class distant.Client
+--- @field api distant.client.Api
+--- @field private config {binary:string, network:distant.client.Network}
+--- @field private __state distant.client.State
 local M       = {}
 M.__index     = M
 
---- @class DistantClientNetwork
+--- @class distant.client.Network
 --- @field connection? string #id of the connection tied to the client
 --- @field unix_socket? string #path to the unix socket of the manager
 --- @field windows_pipe? string #name of the windows pipe of the manager
 
---- @class DistantClientState
---- @field cache {system_info?:DistantApiSystemInfoPayload}
+--- @class distant.client.State
+--- @field cache {system_info?:distant.client.api.SystemInfoPayload}
 --- @field lsp {clients:table<string, number>} Mapping of label -> client id
 
 --- Creates a new instance of a distant client
---- @param opts {binary:string, network:DistantClientNetwork}
---- @return DistantClient
+--- @param opts {binary:string, network:distant.client.Network}
+--- @return distant.Client
 function M:new(opts)
     opts = opts or {}
 
@@ -54,10 +54,10 @@ end
 --- for future requests. Specifying `reload` as true will result in a fresh
 --- request to the server for this information.
 ---
---- @alias DistantClientCachedSystemInfoOpts {reload?:boolean, timeout?:number, interval?:number}
---- @param opts DistantClientCachedSystemInfoOpts
---- @param cb? fun(err?:DistantApiError, payload?:DistantApiSystemInfoPayload)
---- @return DistantApiError|nil, DistantApiSystemInfoPayload|nil
+--- @alias distant.client.CachedSystemInfoOpts {reload?:boolean, timeout?:number, interval?:number}
+--- @param opts distant.client.CachedSystemInfoOpts
+--- @param cb? fun(err?:distant.api.Error, payload?:distant.client.api.SystemInfoPayload)
+--- @return distant.api.Error|nil, distant.client.api.SystemInfoPayload|nil
 function M:cached_system_info(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -94,7 +94,7 @@ function M:cached_system_info(opts, cb)
 end
 
 --- Connects relevant LSP clients to the provided buffer, optionally starting clients if needed.
---- @param opts {bufnr:number, settings:table<string, LspSettings>}
+--- @param opts {bufnr:number, settings:table<string, distant.settings.LspSettings>}
 --- @return number[] client_ids All ids of the LSP clients (if any) established with the buffer
 function M:connect_lsp_clients(opts)
     log.fmt_trace('client.connect_lsp_clients(%s)', opts)
@@ -201,12 +201,18 @@ function M:spawn_shell(opts)
     return job_id
 end
 
+--- @class distant.client.WrapOpts
+--- @field cmd? string|string[]
+--- @field lsp? string|string[]
+--- @field shell? string|string[]|true
+--- @field cwd? string
+--- @field env? table<string,string>
+
 --- Wraps cmd, lsp, or shell to be invoked via distant. Returns
 --- a string if the input is a string, or a list if the input
 --- is a list.
 ---
---- @alias DistantClientWrapOpts {cmd?:string|string[], lsp?:string|string[], shell?:string|string[]|true, cwd?:string, env?:table<string,string>}
---- @param opts DistantClientWrapOpts
+--- @param opts distant.client.WrapOpts
 --- @return string|string[]
 function M:wrap(opts)
     opts = opts or {}

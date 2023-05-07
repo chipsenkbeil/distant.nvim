@@ -1,7 +1,8 @@
 local fn = require('distant.fn')
 local Driver = require('spec.e2e.driver')
 
-describe('fn', function()
+describe('distant.fn', function()
+    --- @type spec.e2e.Driver
     local driver
 
     before_each(function()

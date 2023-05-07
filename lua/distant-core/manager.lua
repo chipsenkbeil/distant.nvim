@@ -8,23 +8,23 @@ local DEFAULT_TIMEOUT  = 1000
 local DEFAULT_INTERVAL = 100
 
 --- Represents a distant manager
---- @class DistantManager
---- @field private config DistantManagerConfig
+--- @class distant.Manager
+--- @field private config distant.manager.Config
 --- @field private connections table<string, {destination:string}> #mapping of id -> destination
 local M                = {}
 M.__index              = M
 
---- @class DistantManagerConfig
+--- @class distant.manager.Config
 --- @field binary string #path to distant binary to use
---- @field network DistantManagerNetwork #manager-specific network settings
+--- @field network distant.manager.Network #manager-specific network settings
 
---- @class DistantManagerNetwork
+--- @class distant.manager.Network
 --- @field unix_socket? string #path to the unix socket of the manager
 --- @field windows_pipe? string #name of the windows pipe of the manager
 
 --- Creates a new instance of a distant manager
---- @param opts DistantManagerConfig
---- @return DistantManager
+--- @param opts distant.manager.Config
+--- @return distant.Manager
 function M:new(opts)
     opts = opts or {}
 
@@ -55,7 +55,7 @@ function M:connection_destination(connection)
 end
 
 --- @param connection string #id of the connection being managed
---- @return DistantClient|nil #client wrapper around connection if it exists, or nil
+--- @return distant.Client|nil #client wrapper around connection if it exists, or nil
 function M:client(connection)
     if self:has_connection(connection) then
         return Client:new({
@@ -69,20 +69,20 @@ function M:client(connection)
     end
 end
 
---- @class ManagerSelectOpts
+--- @class distant.manager.SelectOpts
 --- @field connection? string #If provided, will set manager's default connection to this connection
 --- @field on_choices? fun(opts:{choices:string[], current:number}):number|nil #If provided,
 --- @field timeout? number
 --- @field interval? number
 
---- @class ManagerConnectionSelector
+--- @class distant.manager.ConnectionSelector
 --- @field choices string[]
 --- @field current number
 --- @field select fun(choice?:number, cb?:fun(err?:string)) #Perform a selection, or cancel if choice = nil
 
 --- Changes the selected connection used as default by the manager
---- @param opts ManagerSelectOpts
---- @param cb fun(err?:string, selector?:ManagerConnectionSelector) #Selector will be provided if no connection provided in opts
+--- @param opts distant.manager.SelectOpts
+--- @param cb fun(err?:string, selector?:distant.manager.ConnectionSelector) #Selector will be provided if no connection provided in opts
 function M:select(opts, cb)
     opts = opts or {}
 
@@ -104,7 +104,7 @@ function M:select(opts, cb)
 
     assert(cb, 'Impossible: cb cannot be nil at this point')
 
-    --- @type JobHandle
+    --- @type distant-core.utils.JobHandle
     local handle
     local error_lines = {}
     handle = utils.job_start(cmd, {
@@ -207,7 +207,7 @@ function M:wait_for_listening(opts)
     return status == 0
 end
 
---- @class ManagerListenOpts
+--- @class distant.manager.ListenOpts
 --- @field access? 'owner'|'group'|'anyone' #access level for the unix socket or windows pipe
 --- @field config? string #alternative config path to use
 --- @field log_file? string #alternative log file path to use
@@ -216,9 +216,9 @@ end
 
 --- Start a new manager that is listening on the local unix socket or windows pipe
 --- defined by the network configuration
---- @param opts ManagerListenOpts
+--- @param opts distant.manager.ListenOpts
 --- @param cb fun(err?:string) #invoked when the manager exits
---- @return JobHandle #handle of listening manager job
+--- @return distant-core.utils.JobHandle #handle of listening manager job
 function M:listen(opts, cb)
     opts = opts or {}
 
@@ -289,10 +289,10 @@ local function build_options(opts)
     end
 end
 
---- @class ManagerLaunchOpts
+--- @class distant.manager.LaunchOpts
 --- @field destination string #uri representing the remote server
 ---
---- @field auth? AuthHandler #authentication handler to use
+--- @field auth? distant.auth.Handler #authentication handler to use
 --- @field config? string #alternative config path to use
 --- @field cache? string #alternative cache path to use
 --- @field distant? string #alternative path to distant binary (on remote machine) to use
@@ -303,9 +303,9 @@ end
 --- @field options? string|table<string, any> #additional options tied to a specific destination handler
 
 --- Launches a server remotely and performs authentication using the given manager
---- @param opts ManagerLaunchOpts
---- @param cb fun(err?:string, client?:DistantClient)
---- @return JobHandle|nil
+--- @param opts distant.manager.LaunchOpts
+--- @param cb fun(err?:string, client?:distant.Client)
+--- @return distant-core.utils.JobHandle|nil
 function M:launch(opts, cb)
     opts = opts or {}
     log.fmt_debug('Launching with options: %s', opts)
@@ -384,10 +384,10 @@ function M:launch(opts, cb)
     end)
 end
 
---- @class ManagerConnectOpts
+--- @class distant.manager.ConnectOpts
 --- @field destination string #uri used to identify server's location
 ---
---- @field auth? AuthHandler #authentication handler to use
+--- @field auth? distant.auth.Handler #authentication handler to use
 --- @field config? string #alternative config path to use
 --- @field cache? string #alternative cache path to use
 --- @field log_file? string #alternative log file path to use
@@ -395,9 +395,9 @@ end
 --- @field options? string|table<string, any> #additional options tied to a specific destination handler
 
 --- Connects to a remote server using the given manager
---- @param opts ManagerConnectOpts
---- @param cb fun(err?:string, client?:DistantClient)
---- @return JobHandle|nil
+--- @param opts distant.manager.ConnectOpts
+--- @param cb fun(err?:string, client?:distant.Client)
+--- @return distant-core.utils.JobHandle|nil
 function M:connect(opts, cb)
     opts = opts or {}
     log.fmt_debug('Connecting with options: %s', opts)

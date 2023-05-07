@@ -3,7 +3,7 @@ local spawn = require('distant-core.auth.spawn')
 
 return {
     --- Create a new handler for authentication events.
-    --- @return AuthHandler
+    --- @return distant.auth.Handler
     handler = function() return AuthHandler:new() end,
     spawn = spawn,
 }

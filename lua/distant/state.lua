@@ -1,5 +1,6 @@
 local Cli         = require('distant-core').Cli
 local Destination = require('distant-core').Destination
+local installer   = require('distant-core').installer
 local log         = require('distant-core').log
 local Manager     = require('distant-core').Manager
 local min_version = require('distant.version').minimum
@@ -7,10 +8,10 @@ local settings    = require('distant-core').settings
 local utils       = require('distant-core').utils
 
 --- @class State
---- @field client? DistantClient #active client
---- @field manager? DistantManager #active manager
---- @field active_search {qfid?:number, searcher?:DistantApiSearcher} #active search via editor
---- @field settings DistantSettings #user settings
+--- @field client? distant.Client #active client
+--- @field manager? distant.Manager #active manager
+--- @field active_search {qfid?:number, searcher?:distant.client.api.Searcher} #active search via editor
+--- @field settings distant.Settings #user settings
 local M           = {}
 M.__index         = M
 
@@ -31,7 +32,7 @@ end
 
 --- Loads into state the settings appropriate for the remote machine with the give label
 --- @param destination string Full destination to server, which can be in a form like SCHEME://USER:PASSWORD@HOST:PORT
---- @return DistantSettings
+--- @return distant.Settings
 function M:load_settings(destination)
     log.fmt_trace('Detecting settings for destination: %s', destination)
 
@@ -51,12 +52,37 @@ function M:load_settings(destination)
     return self.settings
 end
 
+--- Returns the path to the distant CLI binary.
+--- @param opts? {no_install_fallback?:boolean}
+--- @return string
+function M:path_to_cli(opts)
+    opts = opts or {}
+
+    local no_install_fallback = opts.no_install_fallback or false
+
+    -- If we are not given a custom bin path, the settings bin path
+    -- hasn't changed (from distant/distant.exe), and the current
+    -- bin path isn't executable, then check if the install path
+    -- exists and is executable and use it
+    local bin = self.settings.client.bin
+    local is_bin_generic = bin == 'distant' or bin == 'distant.exe'
+    if not no_install_fallback and is_bin_generic and vim.fn.executable(bin) ~= 1 then
+        bin = installer.path()
+    end
+
+    return bin
+end
+
 --- Loads the manager using the specified config, installing the underlying cli if necessary.
---- @param opts {bin:string, network?:DistantManagerNetwork, timeout?:number, interval?:number}
---- @param cb? fun(err?:string, manager?:DistantManager)
---- @return string|nil, DistantManager|nil
+--- @param opts {bin?:string, network?:distant.manager.Network, timeout?:number, interval?:number}
+--- @param cb? fun(err?:string, manager?:distant.Manager)
+--- @return string|nil, distant.Manager|nil
 function M:load_manager(opts, cb)
-    assert(opts.bin, 'Bin is missing')
+    -- If we are not given a custom bin path, the settings bin path
+    -- hasn't changed (from distant/distant.exe), and the current
+    -- bin path isn't executable, then check if the install path
+    -- exists and is executable and use it
+    local bin = opts.bin or self:path_to_cli()
 
     local rx
     if not cb then
@@ -67,7 +93,7 @@ function M:load_manager(opts, cb)
     end
 
     if not self.manager then
-        Cli:new({ bin = opts.bin }):install({ min_version = min_version }, function(err, path)
+        Cli:new({ bin = bin }):install({ min_version = min_version }, function(err, path)
             if err then
                 return cb(err)
             end
@@ -115,13 +141,17 @@ function M:load_manager(opts, cb)
 end
 
 --- Launches a remote server and connects to it.
---- @param opts {destination:string, bin:string, network?:DistantManagerNetwork, timeout?:number, interval?:number}
---- @param cb fun(err?:string, client?:DistantClient)
+--- @param opts {destination:string, bin?:string, network?:distant.manager.Network, timeout?:number, interval?:number}
+--- @param cb fun(err?:string, client?:distant.Client)
 function M:launch(opts, cb)
     assert(opts.destination, 'Destination is missing')
-    assert(opts.bin, 'Bin is missing')
-
-    self:load_manager(opts, function(err, manager)
+    self:load_manager({
+        destination = opts.destination,
+        bin = opts.bin,
+        network = opts.network,
+        timeout = opts.timeout,
+        interval = opts.interval,
+    }, function(err, manager)
         if err then
             return cb(err)
         end
@@ -140,13 +170,17 @@ function M:launch(opts, cb)
 end
 
 --- Connects to a remote server.
---- @param opts {destination:string, bin:string, network?:DistantManagerNetwork, timeout?:number, interval?:number}
---- @param cb fun(err?:string, client?:DistantClient)
+--- @param opts {destination:string, bin?:string, network?:distant.manager.Network, timeout?:number, interval?:number}
+--- @param cb fun(err?:string, client?:distant.Client)
 function M:connect(opts, cb)
     assert(opts.destination, 'Destination is missing')
-    assert(opts.bin, 'Bin is missing')
-
-    self:load_manager(opts, function(err, manager)
+    self:load_manager({
+        destination = opts.destination,
+        bin = opts.bin,
+        network = opts.network,
+        timeout = opts.timeout,
+        interval = opts.interval,
+    }, function(err, manager)
         if err then
             return cb(err)
         end

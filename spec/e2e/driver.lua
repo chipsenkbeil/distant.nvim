@@ -1,11 +1,22 @@
 local config = require('spec.e2e.config')
 local editor = require('distant.editor')
-local state = require('distant-core.state')
-local settings = require('distant-core.settings')
+local state = require('distant.state')
+local auth = require('distant-core').auth
+local settings = require('distant-core').settings
 
---- @class Driver
+local Buffer = require('spec.e2e.driver.buffer')
+local LocalFile = require('spec.e2e.driver.local_file')
+local RemoteDir = require('spec.e2e.driver.remote_dir')
+local RemoteFile = require('spec.e2e.driver.remote_file')
+local RemoteSymlink = require('spec.e2e.driver.remote_symlink')
+local Window = require('spec.e2e.driver.window')
+
+--- @class spec.e2e.Driver
 --- @field label string
---- @field private __state {client?:DistantClient, manager?:DistantManager, fixtures:table[], mode:'distant'|'ssh'}
+--- @field private __client? distant.Client #active client being used by this driver
+--- @field private __manager? distant.Manager #active manager being used by this driver
+--- @field private __fixtures table[] #fixtures managed by this driver
+--- @field private __mode 'distant'|'ssh' #mode in which the driver is being run
 local M = {}
 M.__index = M
 
@@ -23,6 +34,9 @@ local function next_id()
     return math.random(MAX_RAND_VALUE)
 end
 
+--- @param cmd string
+--- @param args string[]
+--- @return string[]
 local function ssh_cmd(cmd, args)
     return {
         'ssh',
@@ -42,14 +56,14 @@ end
 -- DRIVER SETUP & TEARDOWN
 -------------------------------------------------------------------------------
 
---- @type DistantClient|nil
+--- @type distant.Client|nil
 local client = nil
 
---- @type DistantManager|nil
+--- @type distant.Manager|nil
 local manager = nil
 
 --- Initialize a client if one has not been initialized yet
---- @return DistantClient
+--- @return distant.Client
 local function initialize_client(opts)
     opts = opts or {}
     if client ~= nil then
@@ -86,23 +100,28 @@ local function initialize_client(opts)
         options['ssh.backend'] = config.ssh_backend
     end
 
-    local dummy_auth = {
-        -- All password challenges return the same password
-        on_authenticate = function(ev)
-            local answers = {}
-            local i = 1
-            local n = tonumber(#ev.questions)
-            while i <= n do
-                table.insert(answers, config.password or '')
-                i = i + 1
-            end
-            return answers
-        end,
-        -- Verify any host received
-        on_host_verify = function(_) return true end,
-        -- Errors should fail completely
-        on_error = function(err) error(err) end,
-    }
+    local dummy_auth = auth.handler()
+
+    -- All password challenges return the same password
+    --- @diagnostic disable-next-line:duplicate-set-field
+    dummy_auth.on_challenge = function(_, msg)
+        local answers = {}
+        local i = 1
+        local n = tonumber(#msg.questions)
+        while i <= n do
+            table.insert(answers, config.password or '')
+            i = i + 1
+        end
+        return answers
+    end
+
+    -- Verify any host received
+    --- @diagnostic disable-next-line:duplicate-set-field
+    dummy_auth.on_verification = function(_, _) return true end
+
+    -- Errors should fail completely
+    --- @diagnostic disable-next-line:duplicate-set-field
+    dummy_auth.on_error = function(_, err) error(err) end
 
     -- If mode is distant, launch, otherwise if mode is ssh, connect
     local mode = launch_mode(opts)
@@ -163,12 +182,12 @@ local function initialize_client(opts)
         return client ~= nil
     end, interval)
     assert(status == 0, 'Client not initialized in time (status == ' .. status .. ')')
-    return assert(client)
+    return assert(client, 'Missing client')
 end
 
 --- Initialize a manager if one has not been initialized yet
---- @param opts {bin:string, label:string, network?:DistantManagerNetwork, timeout?:number, interval?:number}
---- @return DistantManager
+--- @param opts {label:string, bin?:string, network?:distant.manager.Network, timeout?:number, interval?:number}
+--- @return distant.Manager
 local function initialize_manager(opts)
     opts = opts or {}
     if manager ~= nil then
@@ -183,14 +202,21 @@ local function initialize_manager(opts)
         })
     end
 
-    manager = state:load_manager(opts)
+    local err, local_manager = state:load_manager({
+        bin = opts.bin,
+        network = opts.network,
+        timeout = opts.timeout,
+        interval = opts.interval,
+    })
+    assert(not err, err)
+    manager = assert(local_manager, 'Missing manager')
 
     return manager
 end
 
 --- Initializes a driver for e2e tests.
---- @param opts {label:string, lazy?:boolean, settings?:table<string, DistantSettings>}
---- @return Driver
+--- @param opts {label:string, lazy?:boolean, settings?:table<string, distant.Settings>}
+--- @return spec.e2e.Driver
 function M:setup(opts)
     opts = opts or {}
 
@@ -199,24 +225,24 @@ function M:setup(opts)
     end
 
     -- Create a new instance and assign the session to it
-    local obj = {}
-    setmetatable(obj, M)
-    obj.label = assert(opts.label, 'Missing label in setup')
-    obj.__state = {
-        client = nil,
-        fixtures = {},
-        mode = launch_mode(opts),
-    }
+    local instance = {}
+    setmetatable(instance, M)
+    instance.label = assert(opts.label, 'Missing label in setup')
+    instance.__client = nil
+    instance.__manager = nil
+    instance.__fixtures = {}
+    instance.__mode = launch_mode(opts)
 
     if not opts.lazy then
-        obj:initialize(opts)
+        instance:initialize(opts)
     end
 
-    return obj
+    return instance
 end
 
 --- Initializes the client of the driver.
---- @return Driver
+--- @param opts table
+--- @return spec.e2e.Driver
 function M:initialize(opts)
     opts = opts or {}
 
@@ -228,18 +254,18 @@ function M:initialize(opts)
     --       due to random not being random enough between driver tests
     --       to prevent the same socket/windows pipe conflicting between
     --       multiple managers
-    self.__state.manager = initialize_manager(opts)
+    self.__manager = initialize_manager(opts)
 
-    self.__state.client = initialize_client(opts)
+    self.__client = initialize_client(opts)
     return self
 end
 
 --- Tears down driver, cleaning up resources
 function M:teardown()
-    self.__state.client = nil
-    self.__state.manager = nil
+    self.__client = nil
+    self.__manager = nil
 
-    for _, fixture in ipairs(self.__state.fixtures) do
+    for _, fixture in ipairs(self.__fixtures) do
         fixture.remove({ ignore_errors = true })
     end
 end
@@ -247,16 +273,23 @@ end
 --- Returns the mode the driver is in (distant|ssh)
 --- @return 'distant'|'ssh'
 function M:mode()
-    return self.__state.mode
+    return self.__mode
 end
 
 -------------------------------------------------------------------------------
 -- DRIVER EXECUTABLE FUNCTIONS
 -------------------------------------------------------------------------------
 
---- Executes a program on the remote machine
---- @return string|nil
-M.exec = function(cmd, args, opts)
+--- Executes a program on the remote machine, returning its output.
+--- If the command fails to be executed, an error will be thrown,
+--- unless `ignore_errors` is specified as `true`, in which case
+--- success will be returned as `false` with the error as `output`.
+---
+--- @param cmd string
+--- @param args string[]
+--- @param opts? spec.e2e.IgnoreErrorsOpts
+--- @return {success:boolean, output:string}
+function M:exec(cmd, args, opts)
     args = args or {}
     opts = opts or {}
 
@@ -267,16 +300,49 @@ M.exec = function(cmd, args, opts)
     if not opts.ignore_errors then
         assert(success, 'ssh ' .. cmd .. ' failed (' .. errno .. '): ' .. out)
     end
-    if success then
-        return out
+    return { success = success, output = out }
+end
+
+--- @param src string #path to file to copy (remote or local)
+--- @param dst string #path to copy to (remote or local)
+--- @param opts {src:'local'|'remote', dst:'local'|'remote', ignore_errors?:boolean}
+--- @return boolean
+function M:scp(src, dst, opts)
+    local cmd = { 'scp', '-P', config.port }
+
+    if opts.src == 'local' then
+        table.insert(cmd, src)
+    elseif opts.src == 'remote' then
+        table.insert(cmd, config.host .. ':' .. src)
+    else
+        error('opts.src is invalid')
     end
+
+    if opts.dst == 'local' then
+        table.insert(cmd, dst)
+    elseif opts.dst == 'remote' then
+        table.insert(cmd, config.host .. ':' .. dst)
+    else
+        error('opts.dst is invalid')
+    end
+
+    local out = vim.fn.system(cmd)
+    local errno = tonumber(vim.v.shell_error)
+
+    local success = errno == 0
+    if not opts.ignore_errors then
+        assert(success, 'scp failed (' .. errno .. '): ' .. out)
+    end
+    return success
 end
 
 -------------------------------------------------------------------------------
 -- DRIVER FIXTURE OPERATIONS
 -------------------------------------------------------------------------------
 
-local function random_file_name(ext)
+--- @param ext? string
+--- @return string
+function M:random_file_name(ext)
     local filename = 'test_file_' .. next_id()
     if type(ext) == 'string' and string.len(ext) > 0 then
         filename = filename .. '.' .. ext
@@ -284,11 +350,13 @@ local function random_file_name(ext)
     return filename
 end
 
-local function random_dir_name()
+--- @return string
+function M:random_dir_name()
     return 'test_dir_' .. next_id()
 end
 
-local function random_symlink_name()
+--- @return string
+function M:random_symlink_name()
     return 'test_symlink_' .. next_id()
 end
 
@@ -298,7 +366,7 @@ end
 --- * lines string[]|string: list of lines or a singular string containing contents
 --- * ext string|nil: extension to use on the created file
 ---
---- @return table fixture The new file fixture (remote_file)
+--- @return spec.e2e.RemoteFile #The new file fixture (remote_file)
 function M:new_file_fixture(opts)
     opts = opts or {}
     assert(type(opts) == 'table', 'opts must be a table')
@@ -310,7 +378,7 @@ function M:new_file_fixture(opts)
     local base_path = opts.base_path or '/tmp'
 
     -- Define our file path
-    local path = base_path .. '/' .. random_file_name(opts.ext)
+    local path = base_path .. '/' .. self:random_file_name(opts.ext)
 
     -- Ensure our contents for the fixture is a string
     local contents = opts.lines
@@ -319,11 +387,11 @@ function M:new_file_fixture(opts)
     end
 
     -- Create the remote file
-    local rf = self.remote_file(path)
-    assert(rf.write(contents), 'Failed to populate file fixture: ' .. path)
+    local rf = self:remote_file(path)
+    assert(rf:write(contents), 'Failed to populate file fixture: ' .. path)
 
     -- Store our new fixture in fixtures list
-    table.insert(self.__state.fixtures, rf)
+    table.insert(self.__fixtures, rf)
 
     -- Also return the fixture
     return rf
@@ -334,19 +402,19 @@ end
 --- * base_path string|nil: base directory in which to create a fixture
 --- * items string[]|nil: items to create within directory
 ---
---- @return table fixture The new directory fixture (remote_dir)
+--- @return spec.e2e.RemoteDir  #The new directory fixture (remote_dir)
 function M:new_dir_fixture(opts)
     opts = opts or {}
     assert(type(opts) == 'table', 'opts must be a table')
     local base_path = opts.base_path or '/tmp'
-    local path = base_path .. '/' .. random_dir_name()
+    local path = base_path .. '/' .. self:random_dir_name()
 
     -- Create the remote directory
-    local rd = M.remote_dir(path)
-    assert(rd.make(), 'Failed to create directory fixture: ' .. rd.path())
+    local rd = self:remote_dir(path)
+    assert(rd:make(), 'Failed to create directory fixture: ' .. rd:path())
 
     -- Store our new fixture in fixtures list
-    table.insert(self.__state.fixtures, rd)
+    table.insert(self.__fixtures, rd)
 
     -- Create all additional items within fixture
     local items = opts.items or {}
@@ -354,16 +422,16 @@ function M:new_dir_fixture(opts)
         if type(item) == 'string' then
             local is_dir = vim.endswith(item, '/')
             if is_dir then
-                local dir = rd.dir(item)
-                assert(dir.make(), 'Failed to create dir: ' .. dir.path())
+                local dir = rd:dir(item)
+                assert(dir:make(), 'Failed to create dir: ' .. dir:path())
             else
-                local file = rd.file(item)
-                assert(file.touch(), 'Failed to create file: ' .. file.path())
+                local file = rd:file(item)
+                assert(file:touch(), 'Failed to create file: ' .. file:path())
             end
         elseif vim.tbl_islist(item) and #item == 2 then
-            local symlink = rd.symlink(item[1])
-            local target = rd.file(item[2]).path()
-            assert(symlink.make(target), 'Failed to create symlink: ' .. symlink.path() .. ' to ' .. target)
+            local symlink = rd:symlink(item[1])
+            local target = rd:file(item[2]):path()
+            assert(symlink:make(target), 'Failed to create symlink: ' .. symlink:path() .. ' to ' .. target)
         end
     end
 
@@ -375,20 +443,20 @@ end
 --- * base_path string|nil: base directory in which to create a fixture
 --- * source string: path to source that will be linked to
 ---
---- @return table fixture The new symlink fixture (remote_symlink)
+--- @return spec.e2e.RemoteSymlink #The new symlink fixture (remote_symlink)
 function M:new_symlink_fixture(opts)
     opts = opts or {}
     assert(type(opts) == 'table', 'opts must be a table')
     assert(type(opts.source) == 'string', 'opts.source must be a string')
     local base_path = opts.base_path or '/tmp'
-    local path = base_path .. '/' .. random_symlink_name()
+    local path = base_path .. '/' .. self:random_symlink_name()
 
     -- Create the remote symlink
-    local rl = M.remote_symlink(path)
-    assert(rl.make(opts.source), 'Failed to create symlink: ' .. rl.path())
+    local rl = self:remote_symlink(path)
+    assert(rl:make(opts.source), 'Failed to create symlink: ' .. rl:path())
 
     -- Store our new fixture in fixtures list
-    table.insert(self.__state.fixtures, rl)
+    table.insert(self.__fixtures, rl)
 
     return rl
 end
@@ -397,705 +465,90 @@ end
 -- DRIVER WINDOW OPERATIONS
 -------------------------------------------------------------------------------
 
---- @return table window
-M.window = function(win)
+--- @param win? number #if not provided, will default to current window
+--- @return spec.e2e.Window
+function M:window(win)
     win = win or vim.api.nvim_get_current_win()
-
-    local obj = {}
-
-    --- Returns window id
-    --- @return number
-    obj.id = function()
-        return win
-    end
-
-    --- Returns id of buffer attached to window
-    --- @return number
-    obj.buf = function()
-        return vim.api.nvim_win_get_buf(win)
-    end
-
-    --- Places the specific buffer in this window
-    --- @param buf number
-    obj.set_buf = function(buf)
-        vim.api.nvim_win_set_buf(win, buf)
-    end
-
-    --- Moves the cursor to the current line in the window
-    --- @param line number (1-based index)
-    obj.move_cursor_to_line = function(line)
-        assert(line ~= 0, 'line is 1-based index')
-        vim.api.nvim_win_set_cursor(win, { line, 0 })
-    end
-
-    --- Moves cursor to line and column where first match is found
-    --- for the given pattern
-    --- @param p string pattern to match against
-    --- @param line_only? boolean if true, will only move to the line and not column
-    --- @return number? line, number? col The line and column position, or nil if no movement
-    obj.move_cursor_to = function(p, line_only)
-        assert(type(p) == 'string', 'pattern must be a string')
-        local lines = M.buffer(obj.buf()).lines()
-
-        for ln, line in ipairs(lines) do
-            local start = string.find(line, p)
-            if start ~= nil then
-                local col = start - 1
-                if line_only then
-                    col = 0
-                end
-
-                vim.api.nvim_win_set_cursor(win, { ln, col })
-                return ln, col
-            end
-        end
-    end
-
-    --- Returns the line number (1-based index) of the cursor's position
-    --- @return number line (1-based index)
-    obj.cursor_line_number = function()
-        return vim.api.nvim_win_get_cursor(win)[1]
-    end
-
-    --- Retrieves content at line where cursor is
-    --- @return string
-    obj.line_at_cursor = function()
-        local ln = obj.cursor_line_number() - 1
-        return vim.api.nvim_buf_get_lines(
-            obj.buf(),
-            ln,
-            ln + 1,
-            true
-        )[1]
-    end
-
-    return obj
+    return Window:new({ driver = self, id = win })
 end
 
 -------------------------------------------------------------------------------
 -- DRIVER BUFFER OPERATIONS
 -------------------------------------------------------------------------------
 
---- @return table buffer
-M.make_buffer = function(contents, opts)
+--- Creates a new buffer.
+--- @param contents string|string[]
+--- @param opts? {modified?:boolean}
+--- @return spec.e2e.Buffer
+function M:make_buffer(contents, opts)
     opts = opts or {}
     local buf = vim.api.nvim_create_buf(true, false)
     assert(buf ~= 0, 'failed to create buffer')
 
-    local buffer = M.buffer(buf)
+    local buffer = self:buffer(buf)
 
     local lines = contents
     if type(lines) == 'string' then
+        --- @type string[]
         lines = vim.split(lines, '\n', { plain = true })
-    else
-        lines = {}
     end
 
-    buffer.set_lines(lines, opts)
+    buffer:set_lines(lines, opts)
 
     return buffer
 end
 
---- @return table buffer
-M.buffer = function(buf)
+--- @param buf? number #if not provided, will default to current buffer
+--- @return spec.e2e.Buffer
+function M:buffer(buf)
     buf = buf or vim.api.nvim_get_current_buf()
-
-    local obj = {}
-
-    --- Returns buffer id
-    --- @return number
-    obj.id = function()
-        return buf
-    end
-
-    --- Return name of buffer
-    --- @return string
-    obj.name = function()
-        return vim.api.nvim_buf_get_name(buf)
-    end
-
-    --- Return filetype of buffer
-    --- @return string
-    obj.filetype = function()
-        return vim.api.nvim_buf_get_option(buf, 'filetype')
-    end
-
-    --- Return buftype of buffer
-    --- @return string
-    obj.buftype = function()
-        return vim.api.nvim_buf_get_option(buf, 'buftype')
-    end
-
-    --- Return if modifiable
-    --- @return boolean
-    obj.modifiable = function()
-        return vim.api.nvim_buf_get_option(buf, 'modifiable')
-    end
-
-    --- Return buffer variable with given name
-    --- @return any
-    obj.get_var = function(name)
-        return vim.api.nvim_buf_get_var(buf, name)
-    end
-
-    --- Return the remote path associated with the buffer, if it has one
-    --- @return string|nil
-    obj.remote_path = function()
-        local success, data = pcall(obj.get_var, 'distant_remote_path')
-        if success then
-            return data
-        end
-    end
-
-    --- Return the remote type associated with the buffer, if it has one
-    --- @return string|nil
-    obj.remote_type = function()
-        local success, data = pcall(obj.get_var, 'distant_remote_type')
-        if success then
-            return data
-        end
-    end
-
-    --- Reads lines from buffer as a single string separated by newlines
-    --- @return string
-    obj.contents = function()
-        return table.concat(obj.lines(), '\n')
-    end
-
-    --- Read lines from buffer
-    --- @return string[]
-    obj.lines = function()
-        return vim.api.nvim_buf_get_lines(
-            buf,
-            0,
-            vim.api.nvim_buf_line_count(buf),
-            true
-        )
-    end
-
-    --- Set lines of buffer
-    --- @param lines string[]
-    --- @param opts table
-    obj.set_lines = function(lines, opts)
-        opts = opts or {}
-
-        vim.api.nvim_buf_set_lines(
-            buf,
-            0,
-            vim.api.nvim_buf_line_count(buf),
-            true,
-            lines
-        )
-
-        if opts.modified ~= nil then
-            vim.api.nvim_buf_set_option(buf, 'modified', opts.modified)
-        end
-    end
-
-    --- Return if buffer is focused
-    --- @return boolean
-    obj.is_focused = function()
-        return buf == vim.api.nvim_get_current_buf()
-    end
-
-    obj.assert = {}
-
-    --- Asserts that the provided lines match the buffer
-    obj.assert.same = function(lines)
-        if type(lines) == 'string' then
-            lines = vim.split(lines, '\n', { plain = true })
-        end
-
-        -- same(expected, actual)
-        assert.are.same(lines, obj.lines())
-    end
-
-    return obj
+    return Buffer:new({ id = buf })
 end
 
 -------------------------------------------------------------------------------
 -- DRIVER REMOTE DIRECTORY OPERATIONS
 -------------------------------------------------------------------------------
 
---- @return table remote_dir
-M.remote_dir = function(remote_path)
+--- @param remote_path string|string[]
+--- @return spec.e2e.RemoteDir
+function M:remote_dir(remote_path)
     assert(type(remote_path) == 'string', 'remote_path must be a string')
-
-    local obj = {}
-
-    --- Return path of directory on remote machine
-    --- @return string
-    obj.path = function()
-        return remote_path
-    end
-
-    --- Return canonicalized path of directory on remote machine
-    --- @param opts? table
-    --- @return string|nil
-    obj.canonicalized_path = function(opts)
-        opts = opts or {}
-        local out = vim.fn.system(ssh_cmd('realpath', { remote_path }))
-        local errno = tonumber(vim.v.shell_error)
-        local success = errno == 0
-        if not opts.ignore_errors then
-            assert(success, 'ssh realpath failed (' .. errno .. '): ' .. out)
-        end
-        if success then
-            return vim.trim(out)
-        end
-    end
-
-    --- Creates the directory and all of the parent components on the remote machine
-    --- @param opts? table
-    --- @return boolean
-    obj.make = function(opts)
-        opts = opts or {}
-        local out = vim.fn.system(ssh_cmd('mkdir', { '-p', remote_path }))
-        local errno = tonumber(vim.v.shell_error)
-
-        local success = errno == 0
-        if not opts.ignore_errors then
-            assert(success, 'ssh mkdir failed (' .. errno .. '): ' .. out)
-        end
-        return success
-    end
-
-    --- Lists directory contents as individual items
-    --- @param opts? table
-    --- @return string[]|nil
-    obj.items = function(opts)
-        opts = opts or {}
-        local out = vim.fn.system(ssh_cmd('ls', { remote_path }))
-        local errno = tonumber(vim.v.shell_error)
-        local success = errno == 0
-        if not opts.ignore_errors then
-            assert(success, 'ssh ls failed (' .. errno .. '): ' .. out)
-        end
-        if success then
-            return vim.tbl_filter(function(item)
-                return item ~= ''
-            end, vim.split(out, '\n', { plain = true }))
-        end
-    end
-
-    --- References a remote file within the directory; if no relative path is provided
-    --- then a random file path will be produced
-    ---
-    --- @param rel_path? string Relative path within the remote directory
-    --- @return table
-    obj.file = function(rel_path)
-        rel_path = rel_path or random_file_name()
-        return M.remote_file(remote_path .. '/' .. rel_path)
-    end
-
-    --- References a remote directory within the directory; if no relative path is provided
-    --- then a random directory path will be produced
-    ---
-    --- @param rel_path? string Relative path within the remote directory
-    --- @return table
-    obj.dir = function(rel_path)
-        rel_path = rel_path or random_dir_name()
-        return M.remote_dir(remote_path .. '/' .. rel_path)
-    end
-
-    --- References a remote symlink within the directory; if no relative path is provided
-    --- then a random symlink path will be produced
-    ---
-    --- @param rel_path? string Relative path within the remote directory
-    --- @return table
-    obj.symlink = function(rel_path)
-        rel_path = rel_path or random_dir_name()
-        return M.remote_symlink(remote_path .. '/' .. rel_path)
-    end
-
-    --- Checks if dir's path exists and is a directory
-    --- @param opts? table
-    --- @return boolean
-    obj.exists = function(opts)
-        opts = opts or {}
-
-        local cmd = 'test -d ' .. remote_path .. ' && echo yes || echo no'
-        local out = vim.fn.system(ssh_cmd('sh', { '-c', '"' .. cmd .. '"' }))
-        local errno = tonumber(vim.v.shell_error)
-
-        local success = errno == 0
-        if not opts.ignore_errors then
-            assert(success, 'ssh test failed (' .. errno .. '): ' .. out)
-        end
-        return vim.trim(out) == 'yes'
-    end
-
-    --- Removes the remote directory at the specified path along with any items within
-    --- @param opts? table
-    --- @return boolean
-    obj.remove = function(opts)
-        opts = opts or {}
-        local out = vim.fn.system(ssh_cmd('rm', { '-rf', remote_path }))
-        local errno = tonumber(vim.v.shell_error)
-
-        local success = errno == 0
-        if not opts.ignore_errors then
-            assert(success, 'ssh rm failed (' .. errno .. '): ' .. out)
-        end
-        return success
-    end
-
-    return obj
+    return RemoteDir:new({ driver = self, path = remote_path })
 end
 
 -------------------------------------------------------------------------------
 -- DRIVER REMOTE FILE OPERATIONS
 -------------------------------------------------------------------------------
 
---- @return table remote_file
-M.remote_file = function(remote_path)
+--- @alias spec.e2e.IgnoreErrorsOpts {ignore_errors?:boolean}
+
+--- @param remote_path string|string[]
+--- @return spec.e2e.RemoteFile
+function M:remote_file(remote_path)
     assert(type(remote_path) == 'string', 'remote_path must be a string')
-
-    local obj = {}
-
-    --- Return path of file on remote machine
-    --- @return string
-    obj.path = function()
-        return remote_path
-    end
-
-    --- Return canonicalized path of file on remote machine
-    --- @param opts? table
-    --- @return string|nil
-    obj.canonicalized_path = function(opts)
-        opts = opts or {}
-        local out = vim.fn.system(ssh_cmd('realpath', { remote_path }))
-        local errno = tonumber(vim.v.shell_error)
-        local success = errno == 0
-        if not opts.ignore_errors then
-            assert(success, 'ssh realpath failed (' .. errno .. '): ' .. out)
-        end
-        if success then
-            return vim.trim(out)
-        end
-    end
-
-    --- Read remote file into list of lines
-    --- @param opts? table
-    --- @return string[]|nil
-    obj.lines = function(opts)
-        local contents = obj.read(opts)
-
-        if contents then
-            return vim.split(contents, '\n', { plain = true })
-        end
-    end
-
-    --- Leverages scp and a temporary file to read a remote file into memory
-    --- @param opts? table
-    --- @return string|nil
-    obj.read = function(opts)
-        opts = opts or {}
-
-        local path = os.tmpname()
-
-        -- Copy the file locally
-        local out = vim.fn.system({ 'scp', '-P', config.port, config.host .. ':' .. remote_path, path })
-        local errno = tonumber(vim.v.shell_error)
-        local success = errno == 0
-        if not opts.ignore_errors then
-            assert(success, 'scp failed (' .. errno .. '): ' .. out)
-        end
-
-        if success then
-            -- Read the file into a string
-            local contents = M.local_file(path).read()
-            os.remove(path)
-            return contents
-        end
-    end
-
-    --- Leverages scp and a temporary file to write a remote file from some string
-    --- @param contents string
-    --- @param opts? table
-    --- @return boolean
-    obj.write = function(contents, opts)
-        opts = opts or {}
-
-        local path = os.tmpname()
-        M.local_file(path).write(contents)
-
-        -- Copy the file locally
-        local out = vim.fn.system({ 'scp', '-P', config.port, path, config.host .. ':' .. remote_path })
-        local errno = tonumber(vim.v.shell_error)
-        os.remove(path)
-
-        local success = errno == 0
-        if not opts.ignore_errors then
-            assert(success, 'scp failed (' .. errno .. '): ' .. out)
-        end
-        return success
-    end
-
-    --- Leverages scp and a temporary file to write a remote file from a buffer
-    --- @param buf number
-    --- @param opts? table
-    --- @return boolean
-    obj.write_buf = function(buf, opts)
-        local contents = M.buffer(buf).lines()
-        return obj.write(contents, opts)
-    end
-
-    --- Touches a remote file
-    --- @param opts? table
-    --- @return boolean
-    obj.touch = function(opts)
-        opts = opts or {}
-
-        local out = vim.fn.system(ssh_cmd('touch', { remote_path }))
-        local errno = tonumber(vim.v.shell_error)
-
-        local success = errno == 0
-        if not opts.ignore_errors then
-            assert(success, 'ssh touch failed (' .. errno .. '): ' .. out)
-        end
-        return success
-    end
-
-    --- Checks if file's path exists and is a regular file
-    --- @param opts? table
-    --- @return boolean
-    obj.exists = function(opts)
-        opts = opts or {}
-
-        local cmd = 'test -f ' .. remote_path .. ' && echo yes || echo no'
-        local out = vim.fn.system(ssh_cmd('sh', { '-c', '"' .. cmd .. '"' }))
-        local errno = tonumber(vim.v.shell_error)
-
-        local success = errno == 0
-        if not opts.ignore_errors then
-            assert(success, 'ssh test failed (' .. errno .. '): ' .. out)
-        end
-        return vim.trim(out) == 'yes'
-    end
-
-    --- Removes the remote file at the specified path
-    --- @param opts? table
-    --- @return boolean
-    obj.remove = function(opts)
-        opts = opts or {}
-
-        local out = vim.fn.system(ssh_cmd('rm', { '-f', remote_path }))
-        local errno = tonumber(vim.v.shell_error)
-
-        local success = errno == 0
-        if not opts.ignore_errors then
-            assert(success, 'ssh rm failed (' .. errno .. '): ' .. out)
-        end
-        return success
-    end
-
-    obj.assert = {}
-
-    --- Asserts that the provided lines match the remote file
-    obj.assert.same = function(lines)
-        if type(lines) == 'string' then
-            lines = vim.split(lines, '\n', { plain = true })
-        end
-
-        -- same(expected, actual)
-        assert.are.same(lines, obj.lines())
-    end
-
-    return obj
+    return RemoteFile:new({ driver = self, path = remote_path })
 end
 
 -------------------------------------------------------------------------------
 -- DRIVER REMOTE SYMLINK OPERATIONS
 -------------------------------------------------------------------------------
 
---- @return table remote_symlink
-M.remote_symlink = function(remote_path)
+--- @param remote_path string
+--- @return spec.e2e.RemoteSymlink
+function M:remote_symlink(remote_path)
     assert(type(remote_path) == 'string', 'remote_path must be a string')
-
-    local obj = {}
-
-    --- Return path of symlink on remote machine
-    --- @return string
-    obj.path = function()
-        return remote_path
-    end
-
-    --- Return canonicalized path of symlink on remote machine
-    --- @param opts? table
-    --- @return string|nil
-    obj.canonicalized_path = function(opts)
-        opts = opts or {}
-        local out = vim.fn.system(ssh_cmd('realpath', { remote_path }))
-        local errno = tonumber(vim.v.shell_error)
-        local success = errno == 0
-        if not opts.ignore_errors then
-            assert(success, 'ssh realpath failed (' .. errno .. '): ' .. out)
-        end
-        if success then
-            return vim.trim(out)
-        end
-    end
-
-    --- Return path of source of symlink, if it exists
-    --- @param opts? table
-    --- @return string|nil
-    obj.source_path = function(opts)
-        opts = opts or {}
-
-        local out = vim.fn.system(ssh_cmd('readlink', { remote_path }))
-        local errno = tonumber(vim.v.shell_error)
-
-        local success = errno == 0
-        if not opts.ignore_errors then
-            assert(success, 'ssh test failed (' .. errno .. '): ' .. out)
-        end
-        if success then
-            return vim.trim(out)
-        end
-    end
-
-    --- Creates the symlink, pointing to the specified location
-    --- @param source string Path that is the source for a symlink (what it points to)
-    --- @param opts? table
-    --- @return boolean
-    obj.make = function(source, opts)
-        opts = opts or {}
-        local out = vim.fn.system(ssh_cmd('ln', { '-s', source, remote_path }))
-        local errno = tonumber(vim.v.shell_error)
-
-        local success = errno == 0
-        if not opts.ignore_errors then
-            assert(success, 'ssh mkdir failed (' .. errno .. '): ' .. out)
-        end
-        return success
-    end
-
-    --- Checks if path exists and is a symlink
-    --- @param opts? table
-    --- @return boolean
-    obj.exists = function(opts)
-        opts = opts or {}
-
-        local cmd = 'test -L ' .. remote_path .. ' && echo yes || echo no'
-        local out = vim.fn.system(ssh_cmd('sh', { '-c', '"' .. cmd .. '"' }))
-        local errno = tonumber(vim.v.shell_error)
-
-        local success = errno == 0
-        if not opts.ignore_errors then
-            assert(success, 'ssh test failed (' .. errno .. '): ' .. out)
-        end
-        return vim.trim(out) == 'yes'
-    end
-
-    --- Removes the remote symlink at the specified path
-    --- @param opts? table
-    --- @return boolean
-    obj.remove = function(opts)
-        opts = opts or {}
-
-        local out = vim.fn.system(ssh_cmd('rm', { '-f', remote_path }))
-        local errno = tonumber(vim.v.shell_error)
-
-        local success = errno == 0
-        if not opts.ignore_errors then
-            assert(success, 'ssh rm failed (' .. errno .. '): ' .. out)
-        end
-        return success
-    end
-
-    return obj
+    return RemoteSymlink:new({ driver = self, path = remote_path })
 end
 
 -------------------------------------------------------------------------------
 -- DRIVER LOCAL FILE OPERATIONS
 -------------------------------------------------------------------------------
 
---- @return table local_file
-M.local_file = function(path)
+--- @param path string|string[]
+--- @return spec.e2e.LocalFile
+function M:local_file(path)
     assert(type(path) == 'string', 'path must be a string')
-
-    local obj = {}
-
-    --- Return path of file on local machine
-    --- @return string
-    obj.path = function()
-        return path
-    end
-
-    --- Return canonicalized path of file on local machine
-    --- @return string|nil
-    obj.canonicalized_path = function()
-        return vim.loop.fs_realpath(path)
-    end
-
-    --- Read local file into list of lines
-    --- @param opts? table
-    --- @return string[]|nil
-    obj.lines = function(opts)
-        local contents = obj.read(opts)
-
-        if contents then
-            return vim.split(contents, '\n', { plain = true })
-        end
-    end
-
-    --- Read local file into string
-    --- @param opts? table
-    --- @return string|nil
-    obj.read = function(opts)
-        opts = opts or {}
-
-        -- Read the file into a string
-        local f = io.open(path, 'rb')
-        if not opts.ignore_errors then
-            assert(f, 'Failed to open ' .. path)
-        end
-
-        if f then
-            local contents = f:read(_VERSION <= 'Lua 5.2' and '*a' or 'a')
-            f:close()
-            if type(contents) == 'string' then
-                return contents
-            end
-        end
-    end
-
-    --- Writes local file with contents
-    --- @param contents string|string[]
-    --- @param opts? table
-    obj.write = function(contents, opts)
-        opts = opts or {}
-
-        if type(contents) == 'table' then
-            contents = table.concat(contents, '\n')
-        end
-
-        local f = io.open(path, 'w')
-        if not opts.ignore_errors then
-            assert(f, 'Failed to open ' .. path)
-        end
-
-        if f then
-            f:write(contents)
-            f:flush()
-            f:close()
-        end
-    end
-
-    obj.assert = {}
-
-    --- Asserts that the provided lines match the file
-    obj.assert.same = function(lines)
-        if type(lines) == 'string' then
-            lines = vim.split(lines, '\n', { plain = true })
-        end
-
-        -- same(expected, actual)
-        assert.are.same(lines, obj.lines())
-    end
-
-    return obj
+    return LocalFile:new({ path = path })
 end
 
 return M

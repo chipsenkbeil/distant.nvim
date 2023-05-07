@@ -1,12 +1,12 @@
 local CmdBuilder = require('distant-core.builder.cmd')
 
---- @class DistantManagerListenCmdBuilder
---- @field cmd DistantCmdBuilder
+--- @class distant.builder.manager.ListenCmdBuilder
+--- @field cmd distant.builder.CmdBuilder
 local M = {}
 M.__index = M
 
 --- Creates new `manager listen` cmd
---- @return DistantManagerListenCmdBuilder
+--- @return distant.builder.manager.ListenCmdBuilder
 function M:new()
     local instance = {}
     setmetatable(instance, M)
@@ -29,7 +29,7 @@ end
 
 --- Sets multiple arguments using the given table.
 --- @param tbl table<string, boolean|string>
---- @return DistantManagerListenCmdBuilder
+--- @return distant.builder.manager.ListenCmdBuilder
 function M:set_from_tbl(tbl)
     self.cmd:set_from_tbl(tbl)
     return self
@@ -37,7 +37,7 @@ end
 
 --- Sets `--access <value>`
 --- @param value 'owner'|'group'|'anyone'
---- @return DistantManagerListenCmdBuilder
+--- @return distant.builder.manager.ListenCmdBuilder
 function M:set_access(value)
     vim.validate({ value = { value, 'string' } })
     self.cmd:set('access', value)
@@ -46,7 +46,7 @@ end
 
 --- Sets `--config <path>`
 --- @param path string
---- @return DistantManagerListenCmdBuilder
+--- @return distant.builder.manager.ListenCmdBuilder
 function M:set_config(path)
     vim.validate({ path = { path, 'string' } })
     self.cmd:set('config', path)
@@ -54,7 +54,7 @@ function M:set_config(path)
 end
 
 --- Sets `--daemon` flag
---- @return DistantManagerListenCmdBuilder
+--- @return distant.builder.manager.ListenCmdBuilder
 function M:set_daemon()
     self.cmd:set('daemon')
     return self
@@ -62,7 +62,7 @@ end
 
 --- Sets `--log-file <value>`
 --- @param value string
---- @return DistantManagerListenCmdBuilder
+--- @return distant.builder.manager.ListenCmdBuilder
 function M:set_log_file(value)
     vim.validate({ value = { value, 'string' } })
     self.cmd:set('log-file', value)
@@ -71,7 +71,7 @@ end
 
 --- Sets `--log-level <value>`
 --- @param value 'off'|'error'|'warn'|'info'|'debug'|'trace'
---- @return DistantManagerListenCmdBuilder
+--- @return distant.builder.manager.ListenCmdBuilder
 function M:set_log_level(value)
     vim.validate({ value = { value, 'string' } })
     self.cmd:set('log-level', value)
@@ -80,7 +80,7 @@ end
 
 --- Sets `--unix-socket <path>`
 --- @param path string
---- @return DistantManagerListenCmdBuilder
+--- @return distant.builder.manager.ListenCmdBuilder
 function M:set_unix_socket(path)
     vim.validate({ path = { path, 'string' } })
     self.cmd:set('unix-socket', path)
@@ -88,7 +88,7 @@ function M:set_unix_socket(path)
 end
 
 --- Sets `--user` flag
---- @return DistantManagerListenCmdBuilder
+--- @return distant.builder.manager.ListenCmdBuilder
 function M:set_user()
     self.cmd:set('user')
     return self
@@ -96,7 +96,7 @@ end
 
 --- Sets `--windows-pipe <name>`
 --- @param name string
---- @return DistantManagerListenCmdBuilder
+--- @return distant.builder.manager.ListenCmdBuilder
 function M:set_windows_pipe(name)
     vim.validate({ name = { name, 'string' } })
     self.cmd:set('windows-pipe', name)

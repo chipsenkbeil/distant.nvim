@@ -1,7 +1,8 @@
 local fn = require('distant.fn')
 local Driver = require('spec.e2e.driver')
 
-describe('fn', function()
+describe('distant.fn', function()
+    --- @type spec.e2e.Driver, spec.e2e.RemoteDir
     local driver, root
 
     before_each(function()
@@ -33,8 +34,9 @@ describe('fn', function()
 
     describe('read_dir', function()
         it('should list immediate directory contents', function()
-            local err, res = fn.read_dir({ path = root.path() })
+            local err, res = fn.read_dir({ path = root:path() })
             assert(not err, err)
+            assert(res)
             assert.are.same({
                 { path = 'dir',  file_type = 'dir',     depth = 1 },
                 { path = 'file', file_type = 'file',    depth = 1 },
@@ -43,8 +45,9 @@ describe('fn', function()
         end)
 
         it('should support infinite depth if specified', function()
-            local err, res = fn.read_dir({ path = root.path(), depth = 0 })
+            local err, res = fn.read_dir({ path = root:path(), depth = 0 })
             assert(not err, err)
+            assert(res)
             assert.are.same({
                 { path = 'dir',            file_type = 'dir',     depth = 1 },
                 { path = 'dir/dir2',       file_type = 'dir',     depth = 2 },
@@ -56,8 +59,9 @@ describe('fn', function()
         end)
 
         it('should support explicit depth beyond immediate if specified', function()
-            local err, res = fn.read_dir({ path = root.path(), depth = 2 })
+            local err, res = fn.read_dir({ path = root:path(), depth = 2 })
             assert(not err, err)
+            assert(res)
             assert.are.same({
                 { path = 'dir',       file_type = 'dir',     depth = 1 },
                 { path = 'dir/dir2',  file_type = 'dir',     depth = 2 },
@@ -68,18 +72,20 @@ describe('fn', function()
         end)
 
         it('should support absolute paths if specified', function()
-            local err, res = fn.read_dir({ path = root.path(), absolute = true })
+            local err, res = fn.read_dir({ path = root:path(), absolute = true })
             assert(not err, err)
+            assert(res)
             assert.are.same({
-                { path = root.dir('dir').path(),      file_type = 'dir',     depth = 1 },
-                { path = root.file('file').path(),    file_type = 'file',    depth = 1 },
-                { path = root.symlink('link').path(), file_type = 'symlink', depth = 1 },
+                { path = root:dir('dir'):path(),      file_type = 'dir',     depth = 1 },
+                { path = root:file('file'):path(),    file_type = 'file',    depth = 1 },
+                { path = root:symlink('link'):path(), file_type = 'symlink', depth = 1 },
             }, res.entries)
         end)
 
         it('should support canonicalized paths if specified', function()
-            local err, res = fn.read_dir({ path = root.path(), canonicalize = true })
+            local err, res = fn.read_dir({ path = root:path(), canonicalize = true })
             assert(not err, err)
+            assert(res)
 
             local f = function(a, b)
                 if a.path == b.path then
@@ -114,10 +120,11 @@ describe('fn', function()
         end)
 
         it('should include root path if specified', function()
-            local err, res = fn.read_dir({ path = root.path(), include_root = true })
+            local err, res = fn.read_dir({ path = root:path(), include_root = true })
             assert(not err, err)
+            assert(res)
             assert.are.same({
-                { path = root.canonicalized_path(), file_type = 'dir',     depth = 0 },
+                { path = root:canonicalized_path(), file_type = 'dir',     depth = 0 },
                 { path = 'dir',                     file_type = 'dir',     depth = 1 },
                 { path = 'file',                    file_type = 'file',    depth = 1 },
                 { path = 'link',                    file_type = 'symlink', depth = 1 },
@@ -125,30 +132,31 @@ describe('fn', function()
         end)
 
         it('should fail if the path does not exist', function()
-            local dir = root.dir()
-            local err, res = fn.read_dir({ path = dir.path() })
+            local dir = root:dir()
+            local err, res = fn.read_dir({ path = dir:path() })
             assert.is.truthy(err)
-            assert.is.falsy(res)
+            assert.is_nil(res)
         end)
 
         -- distant and ssh modes behave differently here
         if driver:mode() == 'distant' then
             it('should return empty entries if path is to a file', function()
-                local file = root.file()
-                assert(file.touch(), 'Failed to create file: ' .. file.path())
+                local file = root:file()
+                assert(file:touch(), 'Failed to create file: ' .. file:path())
 
-                local err, res = fn.read_dir({ path = file.path() })
-                assert.is.falsy(err)
+                local err, res = fn.read_dir({ path = file:path() })
+                assert(not err, err)
+                assert(res)
                 assert.are.same({}, res.entries)
             end)
         elseif driver:mode() == 'ssh' then
             it('should fail if path is to a file', function()
-                local file = root.file()
-                assert(file.touch(), 'Failed to create file: ' .. file.path())
+                local file = root:file()
+                assert(file:touch(), 'Failed to create file: ' .. file:path())
 
-                local err, res = fn.read_dir({ path = file.path() })
+                local err, res = fn.read_dir({ path = file:path() })
                 assert.is.truthy(err)
-                assert.is.falsy(res)
+                assert.is_nil(res)
             end)
         end
     end)

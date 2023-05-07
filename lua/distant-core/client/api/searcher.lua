@@ -3,60 +3,58 @@ local log   = require('distant-core.log')
 local utils = require('distant-core.utils')
 
 --- Represents an active search.
---- @class DistantApiSearcher
---- @field private __internal DistantApiSearcherInternal
+--- @class distant.client.api.Searcher
+--- @field private __internal distant.client.api.search.Internal
 local M     = {}
 M.__index   = M
 
---- @class DistantApiSearcherInternal
+--- @class distant.client.api.search.Internal
 --- @field id? integer #unsigned 32-bit id, assigned once the search starts
---- @field on_done? fun(matches:DistantApiSearchMatch[])
---- @field on_results? fun(matches:DistantApiSearchMatch[])
+--- @field on_done? fun(matches:distant.client.api.search.Match[])
+--- @field on_results? fun(matches:distant.client.api.search.Match[])
 --- @field on_start? fun(id:integer)
---- @field matches DistantApiSearchMatch[] #will be populated if `on_results`, `on_start`, `on_done` are nil
---- @field transport DistantApiTransport
+--- @field matches distant.client.api.search.Match[] #will be populated if `on_results`, `on_start`, `on_done` are nil
+--- @field transport distant.api.client.Transport
 --- @field status 'inactive'|'active'|'done'
 --- @field timeout? number
 --- @field interval? number
 
---- @class DistantApiSearchMatch
+--- @class distant.client.api.search.Match
 --- @field type 'contents'|'path'
 --- @field path string
---- @field submatches DistantApiSearchSubmatch[]
---- @field lines? DistantApiSearchMatchData #only provided when type == 'path'
+--- @field submatches distant.client.api.search.Submatch[]
+--- @field lines? distant.client.api.search.MatchData #only provided when type == 'path'
 --- @field line_number? integer #(base index 1) only provided when type == 'path'
 --- @field absolute_offset? integer #(base index 0) only provided when type == 'path'
 
---- @class DistantApiSearchSubmatch
---- @field match DistantApiSearchMatchData
+--- @class distant.client.api.search.Submatch
+--- @field match distant.client.api.search.MatchData
 --- @field start integer #(base index 0) inclusive byte offset representing start of match
 --- @field end integer #(base index 0) inclusive byte offset representing end of match
 
---- @class DistantApiSearchMatchData
---- @field type 'bytes'|'text'
---- @field value integer[]|string #if type is bytes, will be a list of bytes, otherwise type is text, will be string
+--- @alias distant.client.api.search.MatchData {type:'bytes', value:integer[]}|{type:'text', value:string}
 
---- @class DistantApiSearchQuery
+--- @class distant.client.api.search.Query
 --- @field target 'contents'|'path'
---- @field condition DistantApiSearchQueryCondition
+--- @field condition distant.client.api.search.QueryCondition
 --- @field paths string[]
---- @field options? DistantApiSearchQueryOptions
+--- @field options? distant.client.api.search.QueryOptions
 
---- @class DistantApiSearchQueryCondition
+--- @class distant.client.api.search.QueryCondition
 --- @field type 'contains'|'ends_with'|'equals'|'or'|'regex'|'starts_with'
---- @field value string|DistantApiSearchQueryCondition[]
+--- @field value string|distant.client.api.search.QueryCondition[]
 
---- @class DistantApiSearchQueryOptions
+--- @class distant.client.api.search.QueryOptions
 --- @field allow_file_types? 'dir'|'file'|'symlink'[]
---- @field include? DistantApiSearchQueryCondition
---- @field exclude? DistantApiSearchQueryCondition
+--- @field include? distant.client.api.search.QueryCondition
+--- @field exclude? distant.client.api.search.QueryCondition
 --- @field follow_symbolic_links? boolean
 --- @field limit? integer
 --- @field max_depth? integer
 --- @field pagination? integer
 
---- @param opts {transport:DistantApiTransport}
---- @return DistantApiSearcher
+--- @param opts {transport:distant.api.client.Transport}
+--- @return distant.client.api.Searcher
 function M:new(opts)
     local instance = {}
     setmetatable(instance, M)
@@ -70,7 +68,7 @@ function M:new(opts)
 end
 
 --- Processes the payload of a search event.
---- @param payload table
+--- @param payload {type:string, id:integer, matches?:distant.client.api.search.Match[]}
 --- @return boolean #true if valid payload, otherwise false
 function M:handle(payload)
     if payload.type == 'search_started' then
@@ -137,8 +135,8 @@ function M:is_done()
 end
 
 --- @class DistantApiSearcherExecuteOpts
---- @field query DistantApiSearchQuery
---- @field on_results? fun(matches:DistantApiSearchMatch[])
+--- @field query distant.client.api.search.Query
+--- @field on_results? fun(matches:distant.client.api.search.Match[])
 --- @field on_start? fun(id:integer)
 --- @field timeout? number
 --- @field interval? number
@@ -150,8 +148,8 @@ end
 --- as they are received.
 ---
 --- @param opts DistantApiSearcherExecuteOpts
---- @param cb? fun(err?:DistantApiError, matches?:DistantApiSearchMatch[])
---- @return DistantApiError|nil, DistantApiSearchMatch[]|nil
+--- @param cb? fun(err?:distant.api.Error, matches?:distant.client.api.search.Match[])
+--- @return distant.api.Error|nil, distant.client.api.search.Match[]|nil
 function M:execute(opts, cb)
     local tx, rx = utils.oneshot_channel(
         opts.timeout or self.__internal.transport.config.timeout,
@@ -218,8 +216,8 @@ function M:execute(opts, cb)
 end
 
 --- Cancels the search if running asynchronously.
---- @param cb? fun(err?:DistantApiError, payload?:OkPayload) #optional callback to report cancel confirmation
---- @return DistantApiError|nil, OkPayload|nil
+--- @param cb? fun(err?:distant.api.Error, payload?:distant.client.api.OkPayload)
+--- @return distant.api.Error|nil, distant.client.api.OkPayload|nil
 function M:cancel(cb)
     return self.__internal.transport:send({
         payload = {

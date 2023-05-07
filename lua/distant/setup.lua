@@ -2,7 +2,7 @@ local log      = require('distant-core').log
 local settings = require('distant-core').settings
 
 --- Applies provided settings to overall settings available.
---- @param opts table<string, DistantSettings>
+--- @param opts table<string, distant.Settings>
 return function(opts)
     log.fmt_trace('setup(%s)', opts)
     opts = opts or {}

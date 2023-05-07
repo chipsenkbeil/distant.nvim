@@ -3,9 +3,9 @@ local log = require('distant-core.log')
 local utils = require('distant-core.utils')
 
 --- Spawn a command that does some authentication and eventually returns an id upon success
---- @param opts {cmd:string|string[], auth:AuthHandler|nil}
+--- @param opts {cmd:string|string[], auth?:distant.auth.Handler}
 --- @param cb fun(err:string|nil, connection:string|nil)
---- @return JobHandle
+--- @return distant-core.utils.JobHandle
 return function(opts, cb)
     opts = opts or {}
     assert(opts.cmd, 'missing cmd')
@@ -15,7 +15,7 @@ return function(opts, cb)
     error_lines = {}
 
     -- Use provided auth handler, defaulting to a fresh instance if none provided
-    --- @type AuthHandler
+    --- @type distant.auth.Handler
     local auth = opts.auth or AuthHandler:new()
 
     handle = utils.job_start(opts.cmd, {

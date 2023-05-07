@@ -2,11 +2,11 @@ local utils = require('distant-core.utils')
 
 describe('distant-core.utils.parent_path', function()
     it('should return nil if provided root path', function()
-        assert.is.falsy(utils.parent_path('/'))
+        assert.is_nil(utils.parent_path('/'))
     end)
 
     it('should return nil if provided single relative component', function()
-        assert.is.falsy(utils.parent_path('something'))
+        assert.is_nil(utils.parent_path('something'))
     end)
 
     it('should return parent path by removing last component', function()

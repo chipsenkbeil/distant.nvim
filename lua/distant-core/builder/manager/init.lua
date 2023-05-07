@@ -2,22 +2,22 @@ local DistantManagerListCmdBuilder = require('distant-core.builder.manager.list'
 local DistantManagerListenCmdBuilder = require('distant-core.builder.manager.listen')
 local DistantManagerSelectCmdBuilder = require('distant-core.builder.manager.select')
 
---- @class DistantManagerCmdBuilder
+--- @class distant.builder.ManagerCmdBuilder
 local M = {}
 M.__index = M
 
---- @return DistantManagerListCmdBuilder
+--- @return distant.builder.manager.ListCmdBuilder
 function M.list()
     return DistantManagerListCmdBuilder:new()
 end
 
---- @return DistantManagerListenCmdBuilder
+--- @return distant.builder.manager.ListenCmdBuilder
 function M.listen()
     return DistantManagerListenCmdBuilder:new()
 end
 
 --- @param connection? string
---- @return DistantManagerSelectCmdBuilder
+--- @return distant.builder.manager.SelectCmdBuilder
 function M.select(connection)
     return DistantManagerSelectCmdBuilder:new(connection)
 end

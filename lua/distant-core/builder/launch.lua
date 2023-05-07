@@ -1,13 +1,13 @@
 local CmdBuilder = require('distant-core.builder.cmd')
 
---- @class DistantLaunchCmdBuilder
---- @field cmd DistantCmdBuilder
+--- @class distant.builder.LaunchCmdBuilder
+--- @field cmd distant.builder.CmdBuilder
 local M = {}
 M.__index = M
 
 --- Creates new `launch` cmd
 --- @param destination string
---- @return DistantLaunchCmdBuilder
+--- @return distant.builder.LaunchCmdBuilder
 function M:new(destination)
     local instance = {}
     setmetatable(instance, M)
@@ -34,7 +34,7 @@ end
 
 --- Sets multiple arguments using the given table.
 --- @param tbl table<string, boolean|string>
---- @return DistantLaunchCmdBuilder
+--- @return distant.builder.LaunchCmdBuilder
 function M:set_from_tbl(tbl)
     self.cmd:set_from_tbl(tbl)
     return self
@@ -42,7 +42,7 @@ end
 
 --- Sets `--config <path>`
 --- @param path string
---- @return DistantLaunchCmdBuilder
+--- @return distant.builder.LaunchCmdBuilder
 function M:set_config(path)
     vim.validate({ path = { path, 'string' } })
     self.cmd:set('config', path)
@@ -51,7 +51,7 @@ end
 
 --- Sets `--cache <path>`
 --- @param path string
---- @return DistantLaunchCmdBuilder
+--- @return distant.builder.LaunchCmdBuilder
 function M:set_cache(path)
     vim.validate({ path = { path, 'string' } })
     self.cmd:set('cache', path)
@@ -60,7 +60,7 @@ end
 
 --- Sets `--distant <value>`
 --- @param value string
---- @return DistantLaunchCmdBuilder
+--- @return distant.builder.LaunchCmdBuilder
 function M:set_distant(value)
     vim.validate({ value = { value, 'string' } })
     self.cmd:set('distant', value)
@@ -69,7 +69,7 @@ end
 
 --- Sets `--distant-args "<value> <sep> <by> <space>"`
 --- @param value string|string[] #if a string, will put verbatim as value. If list of strings, will place separated by space. If inherits Baseargs, will call __tostring and insert
---- @return DistantLaunchCmdBuilder
+--- @return distant.builder.LaunchCmdBuilder
 function M:set_distant_args(value)
     local svalue
     if type(value) == 'table' then
@@ -84,7 +84,7 @@ end
 
 --- Sets `--distant-bind-server <value>`
 --- @param value 'ssh'|'any'|string
---- @return DistantLaunchCmdBuilder
+--- @return distant.builder.LaunchCmdBuilder
 function M:set_distant_bind_server(value)
     vim.validate({ value = { value, 'string' } })
     self.cmd:set('distant-bind-server', value)
@@ -93,7 +93,7 @@ end
 
 --- Sets `--format <value>`
 --- @param value 'json'|'shell'
---- @return DistantLaunchCmdBuilder
+--- @return distant.builder.LaunchCmdBuilder
 function M:set_format(value)
     vim.validate({ value = { value, 'string' } })
     self.cmd:set('format', value)
@@ -102,7 +102,7 @@ end
 
 --- Sets `--log-file <value>`
 --- @param value string
---- @return DistantLaunchCmdBuilder
+--- @return distant.builder.LaunchCmdBuilder
 function M:set_log_file(value)
     vim.validate({ value = { value, 'string' } })
     self.cmd:set('log-file', value)
@@ -111,7 +111,7 @@ end
 
 --- Sets `--log-level <value>`
 --- @param value 'off'|'error'|'warn'|'info'|'debug'|'trace'
---- @return DistantLaunchCmdBuilder
+--- @return distant.builder.LaunchCmdBuilder
 function M:set_log_level(value)
     vim.validate({ value = { value, 'string' } })
     self.cmd:set('log-level', value)
@@ -119,7 +119,7 @@ function M:set_log_level(value)
 end
 
 --- Sets `--no-shell`
---- @return DistantLaunchCmdBuilder
+--- @return distant.builder.LaunchCmdBuilder
 function M:set_no_shell()
     self.cmd:set('no-shell')
     return self
@@ -127,7 +127,7 @@ end
 
 --- Sets `--options <options>`
 --- @param options string
---- @return DistantLaunchCmdBuilder
+--- @return distant.builder.LaunchCmdBuilder
 function M:set_options(options)
     vim.validate({ options = { options, 'string' } })
     self.cmd:set('options', options)
@@ -136,7 +136,7 @@ end
 
 --- Sets `--unix-socket <path>`
 --- @param path string
---- @return DistantLaunchCmdBuilder
+--- @return distant.builder.LaunchCmdBuilder
 function M:set_unix_socket(path)
     vim.validate({ path = { path, 'string' } })
     self.cmd:set('unix-socket', path)
@@ -145,7 +145,7 @@ end
 
 --- Sets `--windows-pipe <name>`
 --- @param name string
---- @return DistantLaunchCmdBuilder
+--- @return distant.builder.LaunchCmdBuilder
 function M:set_windows_pipe(name)
     vim.validate({ name = { name, 'string' } })
     self.cmd:set('windows-pipe', name)
