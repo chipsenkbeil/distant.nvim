@@ -14,7 +14,7 @@ describe('distant.fn', function()
     end)
 
     describe('spawn', function()
-        --- @param res distant.client.api.process.SpawnResults
+        --- @param res distant.api.process.SpawnResults
         local function to_tbl(res)
             return {
                 success = res.success,
@@ -28,7 +28,7 @@ describe('distant.fn', function()
             local err, res = fn.spawn({ cmd = 'echo some output' })
             assert(not err, tostring(err))
 
-            --- @cast res distant.client.api.process.SpawnResults
+            --- @cast res distant.api.process.SpawnResults
             assert(res)
 
             assert.are.same({
@@ -40,7 +40,7 @@ describe('distant.fn', function()
         end)
 
         it('should execute remote program and return process if callback provided', function()
-            --- @type distant.client.api.process.SpawnResults|nil
+            --- @type distant.api.process.SpawnResults|nil
             local results
 
             local err, process = fn.spawn({ cmd = 'echo some output' }, function(err, res)
@@ -49,7 +49,7 @@ describe('distant.fn', function()
             end)
             assert(not err, tostring(err))
 
-            --- @cast process distant.client.api.Process
+            --- @cast process distant.api.Process
             assert(process)
 
             local ok = vim.wait(1000, function() return process:is_done() end, 100)
@@ -80,7 +80,7 @@ describe('distant.fn', function()
                 local err, res = fn.spawn({ cmd = 'sh -c "echo some output 1>&2"' })
                 assert(not err, tostring(err))
 
-                --- @cast res distant.client.api.process.SpawnResults
+                --- @cast res distant.api.process.SpawnResults
                 assert(res)
 
                 assert.are.same({
@@ -95,7 +95,7 @@ describe('distant.fn', function()
                 local err, res = fn.spawn({ cmd = 'sh -c "exit 99"' })
                 assert(not err, tostring(err))
 
-                --- @cast res distant.client.api.process.SpawnResults
+                --- @cast res distant.api.process.SpawnResults
                 assert(res)
 
                 assert.are.same({

@@ -1,6 +1,7 @@
 local pickers = require('telescope.pickers')
 local DistantFinder = require('telescope._extensions.distant.finder')
 
+--- @class telescope.distant.Extension
 local M = {}
 
 function M.search(opts)

@@ -34,7 +34,7 @@ describe('distant.fn', function()
 
     describe('search', function()
         it('should return all matches when run synchronously', function()
-            --- @type distant.api.Error|nil, distant.client.api.search.Match[]|nil
+            --- @type distant.api.Error|nil, distant.api.search.Match[]|nil
             local err, matches = fn.search({
                 query = {
                     paths = { root:path() },
@@ -120,14 +120,14 @@ describe('distant.fn', function()
         end)
 
         it('should support on_results callback that will capture matches via pagination', function()
-            --- @type distant.client.api.search.Match[]
+            --- @type distant.api.search.Match[]
             local matches = {}
             local on_results_cnt = 0
 
             -- NOTE: Without a callback as second argument, we still wait to complete
             --       our search, but the on_results callback will be invoked. This means
             --       that an empty set of matches will be provided at the end!
-            --- @type distant.api.Error|nil, distant.client.api.search.Match[]|nil
+            --- @type distant.api.Error|nil, distant.api.search.Match[]|nil
             local err, done_matches = fn.search({
                 query = {
                     paths = { root:path() },
@@ -179,12 +179,12 @@ describe('distant.fn', function()
         end)
 
         it('should support callback that will trigger with no matches if on_results also provided', function()
-            --- @type distant.client.api.search.Match[]
+            --- @type distant.api.search.Match[]
             local matches = {}
             local on_results_cnt = 0
             local cb_triggered = false
 
-            --- @type distant.api.Error|nil, distant.client.api.Searcher|nil
+            --- @type distant.api.Error|nil, distant.api.Searcher|nil
             local err, searcher = fn.search({
                 query = {
                     paths = { root:path() },
@@ -251,10 +251,10 @@ describe('distant.fn', function()
         end)
 
         it('should support callback that will trigger with all matches if on_results not provided', function()
-            --- @type distant.client.api.search.Match[]
+            --- @type distant.api.search.Match[]
             local matches = {}
 
-            --- @type distant.api.Error|nil, distant.client.api.Searcher|nil
+            --- @type distant.api.Error|nil, distant.api.Searcher|nil
             local err, searcher = fn.search({
                 query = {
                     paths = { root:path() },

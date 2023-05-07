@@ -1,4 +1,4 @@
---- @enum distant.client.api.error.Kind
+--- @enum distant.api.error.Kind
 local ERROR_KIND = {
     not_found          = 'not_found',
     permission_denied  = 'permission_denied',
@@ -134,12 +134,12 @@ local ERROR_KIND_DETAILS = {
 
 --- @class distant.api.Error
 --- @field kind string
---- @field description distant.client.api.error.Kind
+--- @field description distant.api.error.Kind
 local M = { kinds = ERROR_KIND }
 M.__index = M
 
 --- Creates a new instance of an error.
---- @param opts {kind?:distant.client.api.error.Kind, description?:string}
+--- @param opts {kind?:distant.api.error.Kind, description?:string}
 --- @return distant.api.Error
 function M:new(opts)
     local instance = {}

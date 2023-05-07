@@ -9,7 +9,7 @@ local MAX_LINE_LEN       = 100
 
 --- Add matches to qflist
 --- @param id number #id of quickfix list
---- @param matches distant.client.api.search.Match[] #match(s) to add
+--- @param matches distant.api.search.Match[] #match(s) to add
 local function add_matches_to_qflist(id, matches)
     -- Quit if nothing to add
     if #matches == 0 then
@@ -111,9 +111,9 @@ local function add_matches_to_qflist(id, matches)
 end
 
 --- @class distant.editor.SearchOpts
---- @field query distant.client.api.search.Query|string
---- @field on_results? fun(matches:distant.client.api.search.Match[])
---- @field on_done? fun(matches:distant.client.api.search.Match[])
+--- @field query distant.api.search.Query|string
+--- @field on_results? fun(matches:distant.api.search.Match[])
+--- @field on_done? fun(matches:distant.api.search.Match[])
 --- @field timeout? number #Maximum time to wait for a response
 --- @field interval? number #Time in milliseconds to wait between checks for a response
 
@@ -153,7 +153,7 @@ return function(opts)
     local match_cnt = 0
 
     -- For each set of matches, we add them to our quickfix list
-    --- @param matches distant.client.api.search.Match[]
+    --- @param matches distant.api.search.Match[]
     local function on_results(matches)
         if qflist_id ~= nil and #matches > 0 then
             add_matches_to_qflist(qflist_id, matches)
@@ -185,7 +185,7 @@ return function(opts)
         vim.cmd([[ copen ]])
     end
 
-    --- @param matches distant.client.api.search.Match[]
+    --- @param matches distant.api.search.Match[]
     local function on_done(matches)
         match_cnt = match_cnt + #matches
 
@@ -212,14 +212,14 @@ return function(opts)
         state.active_search.searcher:cancel(function(err, _)
             assert(not err, tostring(err))
 
-            --- @type distant.api.Error|nil, distant.client.api.Searcher|nil
+            --- @type distant.api.Error|nil, distant.api.Searcher|nil
             local err, searcher = fn.search(search_opts, on_done)
             assert(not err, tostring(err))
 
             state.active_search.searcher = searcher
         end)
     else
-        --- @type distant.api.Error|nil, distant.client.api.Searcher|nil
+        --- @type distant.api.Error|nil, distant.api.Searcher|nil
         local err, searcher = fn.search(search_opts, on_done)
         assert(not err, tostring(err))
         state.active_search.searcher = searcher

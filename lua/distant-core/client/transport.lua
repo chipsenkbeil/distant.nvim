@@ -8,30 +8,30 @@ local DEFAULT_TIMEOUT  = 15000
 local DEFAULT_INTERVAL = 100
 
 --- Represents a JSON-formatted distant api transport.
---- @class distant.api.client.Transport
+--- @class distant.api.Transport
 --- @field private auth_handler distant.auth.Handler
 --- @field config {autostart:boolean, binary:string, network:distant.client.Network, timeout:number, interval:number}
---- @field private __state distant.api.client.transport.State
+--- @field private __state distant.api.transport.State
 local M                = {}
 M.__index              = M
 
---- @class distant.api.client.transport.State
+--- @class distant.api.transport.State
 --- @field authenticated boolean True if authenticated and ready to send messages
 --- @field queue string[] Queue of outgoing json messages
 --- @field handle? distant-core.utils.JobHandle
---- @field callbacks table<string, {callback:distant.api.client.transport.Callback, more:distant.api.client.transport.More}>
+--- @field callbacks table<string, {callback:distant.api.transport.Callback, more:distant.api.transport.More}>
 
---- @alias distant.api.client.transport.Callback fun(payload:distant.api.client.transport.msg.Payload)
---- @alias distant.api.client.transport.More fun(payload:distant.api.client.transport.msg.Payload):boolean
+--- @alias distant.api.transport.Callback fun(payload:distant.api.msg.Payload)
+--- @alias distant.api.transport.More fun(payload:distant.api.msg.Payload):boolean
 
---- @class distant.api.client.transport.Msg
+--- @class distant.api.Msg
 --- @field id string # unique id of the message
 --- @field origin_id? string # if a response, will be set to the id of the request
---- @field payload distant.api.client.transport.msg.Payload # a singular payload or multiple payloads
+--- @field payload distant.api.msg.Payload # a singular payload or multiple payloads
 
---- @alias distant.api.client.transport.msg.Payload table|table[]
+--- @alias distant.api.msg.Payload table|table[]
 
---- @class distant.api.client.transport.NewOpts
+--- @class distant.api.transport.NewOpts
 --- @field binary string
 --- @field network? distant.client.Network
 --- @field auth_handler? distant.auth.Handler
@@ -40,8 +40,8 @@ M.__index              = M
 --- @field interval? number
 
 --- Creates a new instance of our api that wraps a job.
---- @param opts distant.api.client.transport.NewOpts
---- @return distant.api.client.Transport
+--- @param opts distant.api.transport.NewOpts
+--- @return distant.api.Transport
 function M:new(opts)
     opts = opts or {}
 
@@ -102,7 +102,7 @@ function M:start(cb)
         end,
         on_stdout_line = function(line)
             if line ~= nil and line ~= "" then
-                --- @type boolean,distant.api.client.transport.Msg|distant.auth.Request|nil
+                --- @type boolean,distant.api.Msg|distant.auth.Request|nil
                 local success, msg = pcall(vim.fn.json_decode, line)
 
                 -- Quit if the decoding failed or we didn't get a msg
@@ -129,7 +129,7 @@ function M:start(cb)
                         return
                     end
 
-                    --- @cast msg distant.api.client.transport.Msg
+                    --- @cast msg distant.api.Msg
                     self:__handle_response(msg)
                 end
             end
@@ -155,7 +155,7 @@ function M:stop()
     self.__state.callbacks = {}
 end
 
---- @class distant.api.client.transport.SendOpts
+--- @class distant.api.transport.SendOpts
 --- @field payload table
 --- @field verify? fun(payload:table):boolean #if provided, will be invoked to verify the response payload is valid
 --- @field map? fun(payload:table):any #if provided, will transform the response payload before returning it
@@ -171,9 +171,9 @@ end
 --- Invokes the provided callback with the response payload once received. If
 --- `more` is used, this callback may be invoked more than once.
 ---
---- @param opts distant.api.client.transport.SendOpts
---- @param cb? fun(err?:distant.api.Error, payload?:distant.api.client.transport.msg.Payload)
---- @return distant.api.Error|nil, distant.api.client.transport.msg.Payload|nil
+--- @param opts distant.api.transport.SendOpts
+--- @param cb? fun(err?:distant.api.Error, payload?:distant.api.msg.Payload)
+--- @return distant.api.Error|nil, distant.api.msg.Payload|nil
 function M:send(opts, cb)
     local verify = function(payload)
         local success, value = pcall(opts.verify, payload)
@@ -267,8 +267,8 @@ end
 --- Invokes the provided callback with the response payload once received. If
 --- `more` is used, this callback may be invoked more than once.
 ---
---- @param opts {payload:distant.api.client.transport.msg.Payload, more?:distant.api.client.transport.More}
---- @param cb distant.api.client.transport.Callback
+--- @param opts {payload:distant.api.msg.Payload, more?:distant.api.transport.More}
+--- @param cb distant.api.transport.Callback
 function M:send_async(opts, cb)
     log.fmt_trace('Transport:send_async(%s, _)', opts)
     if not self:is_running() then
@@ -316,8 +316,8 @@ end
 --- up to `timeout` milliseconds, checking every `interval` milliseconds for
 --- a result (default timeout = 1000, interval = 200). Returns an error if timeout exceeded.
 --
---- @param opts {payload:distant.api.client.transport.msg.Payload, more?:distant.api.client.transport.More, timeout?:number, interval?:number}
---- @return distant.api.Error|nil, distant.api.client.transport.msg.Payload|nil
+--- @param opts {payload:distant.api.msg.Payload, more?:distant.api.transport.More, timeout?:number, interval?:number}
+--- @return distant.api.Error|nil, distant.api.msg.Payload|nil
 function M:send_sync(opts)
     log.fmt_trace('Transport:send_sync(%s)', opts)
     local tx, rx = utils.oneshot_channel(
@@ -327,13 +327,13 @@ function M:send_sync(opts)
 
     self:send_async(opts, tx)
 
-    --- @type boolean, string|distant.api.client.transport.msg.Payload
+    --- @type boolean, string|distant.api.msg.Payload
     local success, results = pcall(rx)
     if not success then
         --- @cast results string
         return Error:new({ kind = Error.kinds.timed_out, description = results })
     else
-        --- @cast results distant.api.client.transport.msg.Payload
+        --- @cast results distant.api.msg.Payload
         return nil, results
     end
 end
@@ -374,7 +374,7 @@ end
 
 --- Primary event handler, routing responses to the corresponding callbacks.
 --- @private
---- @param msg {id:string, origin_id:string, payload:distant.api.client.transport.msg.Payload}
+--- @param msg {id:string, origin_id:string, payload:distant.api.msg.Payload}
 function M:__handle_response(msg)
     log.fmt_trace('Transport:__handler(%s)', msg)
     local origin_id = msg.origin_id

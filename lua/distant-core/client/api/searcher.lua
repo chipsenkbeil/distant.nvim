@@ -3,58 +3,58 @@ local log   = require('distant-core.log')
 local utils = require('distant-core.utils')
 
 --- Represents an active search.
---- @class distant.client.api.Searcher
---- @field private __internal distant.client.api.search.Internal
+--- @class distant.api.Searcher
+--- @field private __internal distant.api.search.Internal
 local M     = {}
 M.__index   = M
 
---- @class distant.client.api.search.Internal
+--- @class distant.api.search.Internal
 --- @field id? integer #unsigned 32-bit id, assigned once the search starts
---- @field on_done? fun(matches:distant.client.api.search.Match[])
---- @field on_results? fun(matches:distant.client.api.search.Match[])
+--- @field on_done? fun(matches:distant.api.search.Match[])
+--- @field on_results? fun(matches:distant.api.search.Match[])
 --- @field on_start? fun(id:integer)
---- @field matches distant.client.api.search.Match[] #will be populated if `on_results`, `on_start`, `on_done` are nil
---- @field transport distant.api.client.Transport
+--- @field matches distant.api.search.Match[] #will be populated if `on_results`, `on_start`, `on_done` are nil
+--- @field transport distant.api.Transport
 --- @field status 'inactive'|'active'|'done'
 --- @field timeout? number
 --- @field interval? number
 
---- @class distant.client.api.search.Match
+--- @class distant.api.search.Match
 --- @field type 'contents'|'path'
 --- @field path string
---- @field submatches distant.client.api.search.Submatch[]
---- @field lines? distant.client.api.search.MatchData #only provided when type == 'path'
+--- @field submatches distant.api.search.Submatch[]
+--- @field lines? distant.api.search.MatchData #only provided when type == 'path'
 --- @field line_number? integer #(base index 1) only provided when type == 'path'
 --- @field absolute_offset? integer #(base index 0) only provided when type == 'path'
 
---- @class distant.client.api.search.Submatch
---- @field match distant.client.api.search.MatchData
+--- @class distant.api.search.Submatch
+--- @field match distant.api.search.MatchData
 --- @field start integer #(base index 0) inclusive byte offset representing start of match
 --- @field end integer #(base index 0) inclusive byte offset representing end of match
 
---- @alias distant.client.api.search.MatchData {type:'bytes', value:integer[]}|{type:'text', value:string}
+--- @alias distant.api.search.MatchData {type:'bytes', value:integer[]}|{type:'text', value:string}
 
---- @class distant.client.api.search.Query
+--- @class distant.api.search.Query
 --- @field target 'contents'|'path'
---- @field condition distant.client.api.search.QueryCondition
+--- @field condition distant.api.search.QueryCondition
 --- @field paths string[]
---- @field options? distant.client.api.search.QueryOptions
+--- @field options? distant.api.search.QueryOptions
 
---- @class distant.client.api.search.QueryCondition
+--- @class distant.api.search.QueryCondition
 --- @field type 'contains'|'ends_with'|'equals'|'or'|'regex'|'starts_with'
---- @field value string|distant.client.api.search.QueryCondition[]
+--- @field value string|distant.api.search.QueryCondition[]
 
---- @class distant.client.api.search.QueryOptions
+--- @class distant.api.search.QueryOptions
 --- @field allow_file_types? 'dir'|'file'|'symlink'[]
---- @field include? distant.client.api.search.QueryCondition
---- @field exclude? distant.client.api.search.QueryCondition
+--- @field include? distant.api.search.QueryCondition
+--- @field exclude? distant.api.search.QueryCondition
 --- @field follow_symbolic_links? boolean
 --- @field limit? integer
 --- @field max_depth? integer
 --- @field pagination? integer
 
---- @param opts {transport:distant.api.client.Transport}
---- @return distant.client.api.Searcher
+--- @param opts {transport:distant.api.Transport}
+--- @return distant.api.Searcher
 function M:new(opts)
     local instance = {}
     setmetatable(instance, M)
@@ -68,7 +68,7 @@ function M:new(opts)
 end
 
 --- Processes the payload of a search event.
---- @param payload {type:string, id:integer, matches?:distant.client.api.search.Match[]}
+--- @param payload {type:string, id:integer, matches?:distant.api.search.Match[]}
 --- @return boolean #true if valid payload, otherwise false
 function M:handle(payload)
     if payload.type == 'search_started' then
@@ -138,8 +138,8 @@ function M:is_done()
 end
 
 --- @class DistantApiSearcherExecuteOpts
---- @field query distant.client.api.search.Query
---- @field on_results? fun(matches:distant.client.api.search.Match[])
+--- @field query distant.api.search.Query
+--- @field on_results? fun(matches:distant.api.search.Match[])
 --- @field on_start? fun(id:integer)
 --- @field timeout? number
 --- @field interval? number
@@ -151,8 +151,8 @@ end
 --- as they are received.
 ---
 --- @param opts DistantApiSearcherExecuteOpts
---- @param cb? fun(err?:distant.api.Error, matches?:distant.client.api.search.Match[])
---- @return distant.api.Error|nil, distant.client.api.search.Match[]|nil
+--- @param cb? fun(err?:distant.api.Error, matches?:distant.api.search.Match[])
+--- @return distant.api.Error|nil, distant.api.search.Match[]|nil
 function M:execute(opts, cb)
     local tx, rx = utils.oneshot_channel(
         opts.timeout or self.__internal.transport.config.timeout,
@@ -201,7 +201,7 @@ function M:execute(opts, cb)
 
     -- Running synchronously, so pull in our results
     if not cb then
-        --- @type boolean, string|{err:string}|{matches:distant.client.api.search.Match[]}
+        --- @type boolean, string|{err:string}|{matches:distant.api.search.Match[]}
         local status, results = pcall(rx)
 
         if not status then
@@ -222,8 +222,8 @@ function M:execute(opts, cb)
 end
 
 --- Cancels the search if running asynchronously.
---- @param cb? fun(err?:distant.api.Error, payload?:distant.client.api.OkPayload)
---- @return distant.api.Error|nil, distant.client.api.OkPayload|nil
+--- @param cb? fun(err?:distant.api.Error, payload?:distant.api.OkPayload)
+--- @return distant.api.Error|nil, distant.api.OkPayload|nil
 function M:cancel(cb)
     return self.__internal.transport:send({
         payload = {

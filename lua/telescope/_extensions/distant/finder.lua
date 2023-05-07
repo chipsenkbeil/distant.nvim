@@ -4,14 +4,14 @@ local fn = require('distant.fn')
 local DEFAULT_LIMIT = 10000
 local DISPLAY_LINE_LEN = 40
 
---- @class DistantFinderSettings
+--- @class telescope.distant.finder.Settings
 --- @field minimum_len number #minimum length of input before sending a query
 
---- @class DistantFinder
---- @field query distant.client.api.search.Query
---- @field settings DistantFinderSettings
---- @field results DistantFinderEntry[]
---- @field __search? distant.client.api.Searcher #active search (internal)
+--- @class telescope.distant.Finder
+--- @field query distant.api.search.Query
+--- @field settings telescope.distant.finder.Settings
+--- @field results telescope.distant.finder.Entry[]
+--- @field __search? distant.api.Searcher #active search (internal)
 local Finder = {}
 Finder.__index = Finder
 
@@ -20,7 +20,7 @@ Finder.__call = function(t, ...)
     return t:__find(...)
 end
 
---- @class DistantFinderEntry
+--- @class telescope.distant.finder.Entry
 --- @field value any #required, but can be anything
 --- @field ordinal string #text used for filtering
 --- @field display string|function #either the text to display or a function that takes the entry and converts it into a string
@@ -30,8 +30,8 @@ end
 --- @field lnum? number #jumps to this line (if set)
 --- @field col? number #jumps to this column (if set)
 
---- @param match distant.client.api.search.Match
---- @return DistantFinderEntry|nil
+--- @param match distant.api.search.Match
+--- @return telescope.distant.finder.Entry|nil
 local function make_entry(match)
     local path_with_scheme = match.path
     if not vim.startswith(path_with_scheme, 'distant://') then
@@ -82,13 +82,13 @@ local function make_entry(match)
     end
 end
 
---- @class DistantFinderOpts
---- @field query distant.client.api.search.Query #query to execute whose results will be captured
---- @field settings DistantFinderSettings|nil
+--- @class telescope.distant.finder.NewOpts
+--- @field query distant.api.search.Query #query to execute whose results will be captured
+--- @field settings telescope.distant.finder.Settings|nil
 
 --- Creates a new finder that takes
---- @param opts DistantFinderOpts
---- @return DistantFinder
+--- @param opts telescope.distant.finder.NewOpts
+--- @return telescope.distant.Finder
 function Finder:new(opts)
     opts = opts or {}
 
@@ -192,7 +192,7 @@ function Finder:close(cb)
     if self.__search ~= nil then
         if not self.__search:is_done() then
             self.__search:cancel(function(err)
-                cb(err)
+                cb(tostring(err))
             end)
         else
             cb()

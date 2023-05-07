@@ -17,7 +17,7 @@ M.__index     = M
 --- @field windows_pipe? string #name of the windows pipe of the manager
 
 --- @class distant.client.State
---- @field cache {system_info?:distant.client.api.SystemInfoPayload}
+--- @field cache {system_info?:distant.api.SystemInfoPayload}
 --- @field lsp {clients:table<string, number>} Mapping of label -> client id
 
 --- Creates a new instance of a distant client
@@ -56,8 +56,8 @@ end
 ---
 --- @alias distant.client.CachedSystemInfoOpts {reload?:boolean, timeout?:number, interval?:number}
 --- @param opts distant.client.CachedSystemInfoOpts
---- @param cb? fun(err?:distant.api.Error, payload?:distant.client.api.SystemInfoPayload)
---- @return distant.api.Error|nil, distant.client.api.SystemInfoPayload|nil
+--- @param cb? fun(err?:distant.api.Error, payload?:distant.api.SystemInfoPayload)
+--- @return distant.api.Error|nil, distant.api.SystemInfoPayload|nil
 function M:cached_system_info(opts, cb)
     vim.validate({
         opts = { opts, 'table' },

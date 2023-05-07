@@ -214,7 +214,7 @@ end
 
 --- @param path string
 --- @param bufnr number
---- @param opts? distant.client.api.ReadFileTextOpts
+--- @param opts? distant.api.ReadFileTextOpts
 local function load_buf_from_file(path, bufnr, opts)
     opts = opts or {}
     log.fmt_trace('load_buf_from_file(%s, %s, %s)', path, bufnr, opts)
@@ -234,7 +234,7 @@ end
 
 --- @param path string
 --- @param bufnr number
---- @param opts? distant.client.api.ReadDirOpts
+--- @param opts? distant.api.ReadDirOpts
 local function load_buf_from_dir(path, bufnr, opts)
     opts = opts or {}
     log.fmt_trace('load_buf_from_dir(%s, %s, %s)', path, bufnr, opts)
@@ -254,7 +254,7 @@ end
 
 --- @param p distant.editor.open.CheckPathResult
 --- @param bufnr number
---- @param opts? distant.client.api.ReadDirOpts|distant.client.api.ReadFileTextOpts
+--- @param opts? distant.api.ReadDirOpts|distant.api.ReadFileTextOpts
 local function load_content(p, bufnr, opts)
     opts = opts or {}
     log.fmt_trace('load_content(%s, %s, %s)', p, bufnr, opts)

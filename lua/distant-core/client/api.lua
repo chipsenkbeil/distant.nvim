@@ -6,7 +6,7 @@ local log = require('distant-core.log')
 
 --- Represents an API that uses a transport to communicate payloads.
 --- @class distant.client.Api
---- @field private transport distant.api.client.Transport
+--- @field private transport distant.api.Transport
 local M = {}
 M.__index = M
 
@@ -37,15 +37,15 @@ function M:stop()
     self.transport:stop()
 end
 
---- @alias distant.client.api.OkPayload {type:'ok'}
+--- @alias distant.api.OkPayload {type:'ok'}
 local function verify_ok(payload)
     return type(payload) == 'table' and payload.type == 'ok'
 end
 
---- @alias distant.client.api.AppendFileOpts {path:string, data:integer[], timeout?:number, interval?:number}
---- @param opts distant.client.api.AppendFileOpts
---- @param cb? fun(err?:distant.api.Error, payload?:distant.client.api.OkPayload)
---- @return distant.api.Error|nil,distant.client.api.OkPayload|nil
+--- @alias distant.api.AppendFileOpts {path:string, data:integer[], timeout?:number, interval?:number}
+--- @param opts distant.api.AppendFileOpts
+--- @param cb? fun(err?:distant.api.Error, payload?:distant.api.OkPayload)
+--- @return distant.api.Error|nil,distant.api.OkPayload|nil
 function M:append_file(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -65,10 +65,10 @@ function M:append_file(opts, cb)
     })
 end
 
---- @alias distant.client.api.AppendFileTextOpts {path:string, text:string, timeout?:number, interval?:number}
---- @param opts distant.client.api.AppendFileTextOpts
---- @param cb? fun(err?:distant.api.Error, payload?:distant.client.api.OkPayload)
---- @return distant.api.Error|nil,distant.client.api.OkPayload|nil
+--- @alias distant.api.AppendFileTextOpts {path:string, text:string, timeout?:number, interval?:number}
+--- @param opts distant.api.AppendFileTextOpts
+--- @param cb? fun(err?:distant.api.Error, payload?:distant.api.OkPayload)
+--- @return distant.api.Error|nil,distant.api.OkPayload|nil
 function M:append_file_text(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -88,11 +88,11 @@ function M:append_file_text(opts, cb)
     })
 end
 
---- @alias distant.client.api.CapabilitiesOpts {timeout?:number, interval?:number}
---- @alias distant.client.api.CapabilitiesPayload {type:'capabilities', supported:string[]}
---- @param opts distant.client.api.CapabilitiesOpts
---- @param cb? fun(err?:distant.api.Error, payload?:distant.client.api.CapabilitiesPayload)
---- @return distant.api.Error|nil,distant.client.api.CapabilitiesPayload|nil
+--- @alias distant.api.CapabilitiesOpts {timeout?:number, interval?:number}
+--- @alias distant.api.CapabilitiesPayload {type:'capabilities', supported:string[]}
+--- @param opts distant.api.CapabilitiesOpts
+--- @param cb? fun(err?:distant.api.Error, payload?:distant.api.CapabilitiesPayload)
+--- @return distant.api.Error|nil,distant.api.CapabilitiesPayload|nil
 function M:capabilities(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -115,10 +115,10 @@ function M:capabilities(opts, cb)
     })
 end
 
---- @alias distant.client.api.CopyOpts {src:string, dst:string, timeout?:number, interval?:number}
---- @param opts distant.client.api.CopyOpts
---- @param cb? fun(err?:distant.api.Error, payload?:distant.client.api.OkPayload)
---- @return distant.api.Error|nil,distant.client.api.OkPayload|nil
+--- @alias distant.api.CopyOpts {src:string, dst:string, timeout?:number, interval?:number}
+--- @param opts distant.api.CopyOpts
+--- @param cb? fun(err?:distant.api.Error, payload?:distant.api.OkPayload)
+--- @return distant.api.Error|nil,distant.api.OkPayload|nil
 function M:copy(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -138,10 +138,10 @@ function M:copy(opts, cb)
     })
 end
 
---- @alias distant.client.api.CreateDirOpts {path:string, all?:boolean, timeout?:number, interval?:number}
---- @param opts distant.client.api.CreateDirOpts
---- @param cb? fun(err?:distant.api.Error, payload?:distant.client.api.OkPayload)
---- @return distant.api.Error|nil,distant.client.api.OkPayload|nil
+--- @alias distant.api.CreateDirOpts {path:string, all?:boolean, timeout?:number, interval?:number}
+--- @param opts distant.api.CreateDirOpts
+--- @param cb? fun(err?:distant.api.Error, payload?:distant.api.OkPayload)
+--- @return distant.api.Error|nil,distant.api.OkPayload|nil
 function M:create_dir(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -161,8 +161,8 @@ function M:create_dir(opts, cb)
     })
 end
 
---- @alias distant.client.api.ExistsOpts {path:string, timeout?:number, interval?:number}
---- @param opts distant.client.api.ExistsOpts
+--- @alias distant.api.ExistsOpts {path:string, timeout?:number, interval?:number}
+--- @param opts distant.api.ExistsOpts
 --- @param cb? fun(err?:distant.api.Error, payload?:boolean)
 --- @return distant.api.Error|nil,boolean|nil
 function M:exists(opts, cb)
@@ -189,7 +189,7 @@ function M:exists(opts, cb)
     return err, value
 end
 
---- @class distant.client.api.MetadataPayload
+--- @class distant.api.MetadataPayload
 --- @field type 'metadata'
 --- @field canonicalized_path? string
 --- @field file_type string
@@ -201,16 +201,16 @@ end
 --- @field unix? table
 --- @field windows? table
 
---- @class distant.client.api.MetadataOpts
+--- @class distant.api.MetadataOpts
 --- @field path string
 --- @field canonicalize? boolean
 --- @field resolve_file_type? boolean
 --- @field timeout? number
 --- @field interval? number
 
---- @param opts distant.client.api.MetadataOpts
---- @param cb? fun(err?:distant.api.Error, payload?:distant.client.api.MetadataPayload)
---- @return distant.api.Error|nil,distant.client.api.MetadataPayload|nil
+--- @param opts distant.api.MetadataOpts
+--- @param cb? fun(err?:distant.api.Error, payload?:distant.api.MetadataPayload)
+--- @return distant.api.Error|nil,distant.api.MetadataPayload|nil
 function M:metadata(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -237,12 +237,12 @@ function M:metadata(opts, cb)
     })
 end
 
---- @class distant.client.api.DirEntry
+--- @class distant.api.DirEntry
 --- @field path string
 --- @field file_type 'dir'|'file'|'symlink'
 --- @field depth number
 
---- @class distant.client.api.ReadDirOpts
+--- @class distant.api.ReadDirOpts
 --- @field path string
 --- @field depth? number
 --- @field absolute? boolean
@@ -251,14 +251,14 @@ end
 --- @field timeout? number
 --- @field interval? number
 
---- @class distant.client.api.ReadDirPayload
+--- @class distant.api.ReadDirPayload
 --- @field type 'dir_entries'
---- @field entries distant.client.api.DirEntry[]
+--- @field entries distant.api.DirEntry[]
 --- @field errors distant.api.Error[]
 
---- @param opts distant.client.api.ReadDirOpts
---- @param cb? fun(err?:distant.api.Error, payload?:distant.client.api.ReadDirPayload)
---- @return distant.api.Error|nil,distant.client.api.ReadDirPayload|nil
+--- @param opts distant.api.ReadDirOpts
+--- @param cb? fun(err?:distant.api.Error, payload?:distant.api.ReadDirPayload)
+--- @return distant.api.Error|nil,distant.api.ReadDirPayload|nil
 function M:read_dir(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -289,8 +289,8 @@ function M:read_dir(opts, cb)
     })
 end
 
---- @alias distant.client.api.ReadFileOpts {path:string, timeout?:number, interval?:number}
---- @param opts distant.client.api.ReadFileOpts
+--- @alias distant.api.ReadFileOpts {path:string, timeout?:number, interval?:number}
+--- @param opts distant.api.ReadFileOpts
 --- @param cb? fun(err?:distant.api.Error, payload?:number[])
 --- @return distant.api.Error|nil,number[]|nil
 function M:read_file(opts, cb)
@@ -314,8 +314,8 @@ function M:read_file(opts, cb)
     })
 end
 
---- @alias distant.client.api.ReadFileTextOpts {path:string, timeout?:number, interval?:number}
---- @param opts distant.client.api.ReadFileTextOpts
+--- @alias distant.api.ReadFileTextOpts {path:string, timeout?:number, interval?:number}
+--- @param opts distant.api.ReadFileTextOpts
 --- @param cb? fun(err?:distant.api.Error, payload?:string)
 --- @return distant.api.Error|nil,string|nil
 function M:read_file_text(opts, cb)
@@ -342,10 +342,10 @@ function M:read_file_text(opts, cb)
     return err, value
 end
 
---- @alias distant.client.api.RemoveOpts {path:string, force?:boolean, timeout?:number, interval?:number}
---- @param opts distant.client.api.RemoveOpts
---- @param cb? fun(err?:distant.api.Error, payload?:distant.client.api.OkPayload)
---- @return distant.api.Error|nil,distant.client.api.OkPayload|nil
+--- @alias distant.api.RemoveOpts {path:string, force?:boolean, timeout?:number, interval?:number}
+--- @param opts distant.api.RemoveOpts
+--- @param cb? fun(err?:distant.api.Error, payload?:distant.api.OkPayload)
+--- @return distant.api.Error|nil,distant.api.OkPayload|nil
 function M:remove(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -365,10 +365,10 @@ function M:remove(opts, cb)
     })
 end
 
---- @alias distant.client.api.RenameOpts {src:string, dst:string, timeout?:number, interval?:number}
---- @param opts distant.client.api.RenameOpts
---- @param cb? fun(err?:distant.api.Error, payload?:distant.client.api.OkPayload)
---- @return distant.api.Error|nil,distant.client.api.OkPayload|nil
+--- @alias distant.api.RenameOpts {src:string, dst:string, timeout?:number, interval?:number}
+--- @param opts distant.api.RenameOpts
+--- @param cb? fun(err?:distant.api.Error, payload?:distant.api.OkPayload)
+--- @return distant.api.Error|nil,distant.api.OkPayload|nil
 function M:rename(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -388,16 +388,16 @@ function M:rename(opts, cb)
     })
 end
 
---- @class distant.client.api.SearchOpts
---- @field query distant.client.api.search.Query
---- @field on_results? fun(matches:distant.client.api.search.Match[])
+--- @class distant.api.SearchOpts
+--- @field query distant.api.search.Query
+--- @field on_results? fun(matches:distant.api.search.Match[])
 --- @field on_start? fun(id:integer)
 --- @field timeout? number
 --- @field interval? number
 
---- @param opts distant.client.api.SearchOpts
---- @param cb? fun(err?:distant.api.Error, matches?:distant.client.api.search.Match[])
---- @return distant.api.Error|nil, distant.client.api.Searcher|distant.client.api.search.Match[]|nil
+--- @param opts distant.api.SearchOpts
+--- @param cb? fun(err?:distant.api.Error, matches?:distant.api.search.Match[])
+--- @return distant.api.Error|nil, distant.api.Searcher|distant.api.search.Match[]|nil
 function M:search(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -431,9 +431,9 @@ function M:search(opts, cb)
     end
 end
 
---- @param opts distant.client.api.process.SpawnOpts
---- @param cb? fun(err?:distant.api.Error, results?:distant.client.api.process.SpawnResults)
---- @return distant.api.Error|nil, distant.client.api.Process|distant.client.api.process.SpawnResults|nil
+--- @param opts distant.api.process.SpawnOpts
+--- @param cb? fun(err?:distant.api.Error, results?:distant.api.process.SpawnResults)
+--- @return distant.api.Error|nil, distant.api.Process|distant.api.process.SpawnResults|nil
 function M:spawn(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -456,7 +456,7 @@ function M:spawn(opts, cb)
     end
 end
 
---- @class distant.client.api.SystemInfoPayload
+--- @class distant.api.SystemInfoPayload
 --- @field type 'system_info'
 --- @field family string
 --- @field os string
@@ -464,10 +464,10 @@ end
 --- @field current_dir string
 --- @field main_separator string
 
---- @alias distant.client.api.SystemInfoOpts {timeout?:number, interval?:number}
---- @param opts distant.client.api.SystemInfoOpts
---- @param cb? fun(err?:distant.api.Error, payload?:distant.client.api.SystemInfoPayload)
---- @return distant.api.Error|nil,distant.client.api.SystemInfoPayload|nil
+--- @alias distant.api.SystemInfoOpts {timeout?:number, interval?:number}
+--- @param opts distant.api.SystemInfoOpts
+--- @param cb? fun(err?:distant.api.Error, payload?:distant.api.SystemInfoPayload)
+--- @return distant.api.Error|nil,distant.api.SystemInfoPayload|nil
 function M:system_info(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -494,10 +494,10 @@ function M:system_info(opts, cb)
     })
 end
 
---- @alias distant.client.api.WriteFileOpts {path:string, data:integer[], timeout?:number, interval?:number}
---- @param opts distant.client.api.WriteFileOpts
---- @param cb? fun(err?:distant.api.Error, payload?:distant.client.api.OkPayload)
---- @return distant.api.Error|nil,distant.client.api.OkPayload|nil
+--- @alias distant.api.WriteFileOpts {path:string, data:integer[], timeout?:number, interval?:number}
+--- @param opts distant.api.WriteFileOpts
+--- @param cb? fun(err?:distant.api.Error, payload?:distant.api.OkPayload)
+--- @return distant.api.Error|nil,distant.api.OkPayload|nil
 function M:write_file(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -517,10 +517,10 @@ function M:write_file(opts, cb)
     })
 end
 
---- @alias distant.client.api.WriteFileTextOpts {path:string, text:string, timeout?:number, interval?:number}
---- @param opts distant.client.api.WriteFileTextOpts
---- @param cb? fun(err?:distant.api.Error, payload?:distant.client.api.OkPayload)
---- @return distant.api.Error|nil,distant.client.api.OkPayload|nil
+--- @alias distant.api.WriteFileTextOpts {path:string, text:string, timeout?:number, interval?:number}
+--- @param opts distant.api.WriteFileTextOpts
+--- @param cb? fun(err?:distant.api.Error, payload?:distant.api.OkPayload)
+--- @return distant.api.Error|nil,distant.api.OkPayload|nil
 function M:write_file_text(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -540,7 +540,7 @@ function M:write_file_text(opts, cb)
     })
 end
 
---- @alias distant.client.api.watch.ChangeKind
+--- @alias distant.api.watch.ChangeKind
 --- | '"access"' # Something about a file or directory was accessed, but no specific details were known
 --- | '"access_close_execute"' # A file was closed for executing
 --- | '"access_close_read"' # A file was closed for reading
@@ -566,25 +566,25 @@ end
 --- | '"write_time"' # The write or modify time of a file or directory was changed
 --- | '"unknown"' # Catchall in case we have no insight as to the type of change
 
---- @class distant.client.api.WatchOpts
+--- @class distant.api.WatchOpts
 --- @field path string
 --- @field recursive? boolean
---- @field only? distant.client.api.watch.ChangeKind[]
---- @field except? distant.client.api.watch.ChangeKind[]
+--- @field only? distant.api.watch.ChangeKind[]
+--- @field except? distant.api.watch.ChangeKind[]
 --- @field timeout? number
 --- @field interval? number
 
---- @class distant.client.api.WatchPayload
+--- @class distant.api.WatchPayload
 --- @field type 'changed'
---- @field kind distant.client.api.watch.ChangeKind
+--- @field kind distant.api.watch.ChangeKind
 --- @field paths string[]
 
 --- Begins watching a path for changes.
 ---
 --- NOTE: This function does NOT have a synchronous equivalent!
 ---
---- @param opts distant.client.api.WatchOpts
---- @param cb fun(err?:distant.api.Error, payload?:distant.client.api.WatchPayload)
+--- @param opts distant.api.WatchOpts
+--- @param cb fun(err?:distant.api.Error, payload?:distant.api.WatchPayload)
 function M:watch(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -620,10 +620,10 @@ function M:watch(opts, cb)
     })
 end
 
---- @alias distant.client.api.UnwatchOpts {path:string, timeout?:number, interval?:number}
---- @param opts distant.client.api.UnwatchOpts
---- @param cb? fun(err?:distant.api.Error, payload?:distant.client.api.OkPayload)
---- @return distant.api.Error|nil,distant.client.api.OkPayload|nil
+--- @alias distant.api.UnwatchOpts {path:string, timeout?:number, interval?:number}
+--- @param opts distant.api.UnwatchOpts
+--- @param cb? fun(err?:distant.api.Error, payload?:distant.api.OkPayload)
+--- @return distant.api.Error|nil,distant.api.OkPayload|nil
 function M:unwatch(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
