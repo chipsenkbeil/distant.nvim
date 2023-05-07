@@ -11,12 +11,12 @@ local DISPLAY_LINE_LEN = 40
 --- @field query distant.api.search.Query
 --- @field settings telescope.distant.finder.Settings
 --- @field results telescope.distant.finder.Entry[]
---- @field __search? distant.api.Searcher #active search (internal)
-local Finder = {}
-Finder.__index = Finder
+--- @field private __search? distant.api.Searcher #active search (internal)
+local M = {}
+M.__index = M
 
 --- Invoking itself will call the internal `_find` method
-Finder.__call = function(t, ...)
+M.__call = function(t, ...)
     return t:__find(...)
 end
 
@@ -86,10 +86,10 @@ end
 --- @field query distant.api.search.Query #query to execute whose results will be captured
 --- @field settings telescope.distant.finder.Settings|nil
 
---- Creates a new finder that takes
+--- Creates a new finder.
 --- @param opts telescope.distant.finder.NewOpts
 --- @return telescope.distant.Finder
-function Finder:new(opts)
+function M:new(opts)
     opts = opts or {}
 
     assert(opts.query, 'query is required')
@@ -123,8 +123,9 @@ function Finder:new(opts)
     return obj
 end
 
---- Spawns the search task
-function Finder:__find(prompt, process_result, process_complete)
+--- Spawns the search task.
+--- @private
+function M:__find(prompt, process_result, process_complete)
     -- Make sure we aren't already searching by stopping anything running
     self:close(function(err)
         assert(not err, err)
@@ -182,9 +183,11 @@ function Finder:__find(prompt, process_result, process_complete)
     end)
 end
 
---- Cancels the finder's ongoing task
+--- Cancels the finder's ongoing task.
+---
+--- @private
 --- @param cb fun(err:string|nil)
-function Finder:close(cb)
+function M:close(cb)
     cb = cb or function()
     end
     self.results = {}
@@ -204,4 +207,4 @@ function Finder:close(cb)
     end
 end
 
-return Finder
+return M
