@@ -14,10 +14,10 @@ function M:new()
 end
 
 --- Returns true if the provided message with a type is an authentication request.
---- @param payload {type:string}
+--- @param msg {type:string}
 --- @return boolean
-function M:is_auth_request(payload)
-    return payload and type(payload.type) == 'string' and vim.tbl_contains({
+function M:is_auth_request(msg)
+    return msg and type(msg.type) == 'string' and vim.tbl_contains({
         'auth_initialization',
         'auth_start_method',
         'auth_challenge',
@@ -25,7 +25,7 @@ function M:is_auth_request(payload)
         'auth_info',
         'auth_error',
         'auth_finished',
-    }, payload.type)
+    }, msg.type)
 end
 
 --- @alias distant.auth.Request

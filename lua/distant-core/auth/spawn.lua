@@ -31,6 +31,12 @@ return function(opts, cb)
             end
         end,
         on_failure = function(code)
+            -- NOTE: We need to avoid exit code 143, which is neovim killing the process,
+            --       when we successfully got a connection
+            if code == 143 and connection then
+                return cb(nil, connection)
+            end
+
             local error_msg = '???'
             if not vim.tbl_isempty(error_lines) then
                 error_msg = table.concat(error_lines, '\n')

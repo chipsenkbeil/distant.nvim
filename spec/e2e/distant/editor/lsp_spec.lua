@@ -40,6 +40,15 @@ local function make_rust_project(root)
     ]])), 'Failed to create src/other.rs')
 end
 
+--- @param driver spec.e2e.Driver
+--- @param root spec.e2e.RemoteDir
+local function build_rust_project(driver, root)
+    local results = driver:exec('sh', { '-c', '"cd ' .. root:path() .. ' && $HOME/.cargo/bin/cargo build"' })
+    if not results.success then
+        error('Failed to build Rust project: ' .. results.output)
+    end
+end
+
 --- @param bufnr number
 --- @param method string
 --- @param params? table
@@ -74,7 +83,11 @@ describe('distant.editor.lsp', function()
     local driver, root
 
     before_each(function()
-        driver = Driver:setup({ lazy = true, label = 'editor.lsp' })
+        driver = Driver:setup({
+            label = 'editor.lsp',
+            lazy = true,
+            debug = true,
+        })
         root = driver:new_dir_fixture()
         driver:initialize({
             settings = {
@@ -97,34 +110,44 @@ describe('distant.editor.lsp', function()
     end)
 
     it('should support navigating to other files that are remote', function()
+        driver:debug_print('Making rust project')
         make_rust_project(root)
-        driver:exec('sh', { '-c', '"cd ' .. root:path() .. ' && $HOME/.cargo/bin/cargo build"' })
+
+        driver:debug_print('Building rust project')
+        build_rust_project(driver, root)
 
         -- Open main.rs, which should start the LSP server
+        driver:debug_print('Opening main.rs')
         local main_rs = root:dir('src'):file('main.rs')
         local buf = driver:buffer(editor.open(main_rs:path()))
 
         -- Wait for the language server to be ready
+        driver:debug_print('Waiting on language server')
+        local time = 1000 * 5
         assert(
-            vim.wait(1000 * 5, function() return vim.lsp.buf.server_ready() end),
-            'Language server not ready'
+            vim.wait(time, function() return vim.lsp.buf.server_ready() end),
+            string.format('Language server not ready after %0.2fs', time / 1000.0)
         )
 
         -- Jump to other::say_hello() and have cursor on say_hello
+        driver:debug_print('Jumping to say_hello')
         local ln, col = driver:window():move_cursor_to('say_hello')
         assert.are.equal(4, ln)
         assert.are.equal(11, col)
 
         -- Perform request in blocking fashion to make sure that we're ready
         -- NOTE: This does not perform a jump or anything else
+        driver:debug_print('Waiting to be ready')
         local res = try_buf_request(buf:id(), 'textDocument/definition')
         assert(res, 'Failed to get definition')
 
         -- Now perform the actual engagement
+        driver:debug_print('Performing definition request')
         vim.lsp.buf.definition()
 
         -- Verify that we eventually switch to a new buffer
         -- NOTE: Wait up to a minute for this to occur
+        driver:debug_print('Waiting to jump to definition')
         local success = vim.wait(1000 * 10, function()
             local id = vim.api.nvim_get_current_buf()
             return buf:id() ~= id
@@ -132,6 +155,7 @@ describe('distant.editor.lsp', function()
         assert(success, 'LSP never switched to new buffer')
 
         -- Ensure that we properly populated the new buffer
+        driver:debug_print('Checking buffer is properly populated')
         buf = driver:buffer()
         assert.are.equal('rust', buf:filetype())
         assert.are.equal('acwrite', buf:buftype())

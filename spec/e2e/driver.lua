@@ -15,6 +15,7 @@ local Window = require('spec.e2e.driver.window')
 
 --- @class spec.e2e.Driver
 --- @field label string
+--- @field private __debug boolean
 --- @field private __client? distant.Client #active client being used by this driver
 --- @field private __manager? distant.Manager #active manager being used by this driver
 --- @field private __fixtures spec.e2e.Fixture[] #fixtures managed by this driver
@@ -65,6 +66,7 @@ local client = nil
 local manager = nil
 
 --- Initialize a client if one has not been initialized yet
+--- @param opts? {args?:string[], mode?:'distant'|'ssh', timeout?:number, interval?:number}
 --- @return distant.Client
 local function initialize_client(opts)
     opts = opts or {}
@@ -180,11 +182,19 @@ local function initialize_client(opts)
         error('Unsupported mode: ' .. mode)
     end
 
-    local status = vim.fn.wait(timeout, function()
+    local _, status = vim.wait(timeout, function()
         return client ~= nil
     end, interval)
-    assert(status == 0, 'Client not initialized in time (status == ' .. status .. ')')
-    return assert(client, 'Missing client')
+
+    if client then
+        return client
+    end
+
+    if status then
+        error('Client not initialized in time (status == ' .. status .. ')')
+    else
+        error('Client not initialized in time (status == ???)')
+    end
 end
 
 --- Initialize a manager if one has not been initialized yet
@@ -217,7 +227,7 @@ local function initialize_manager(opts)
 end
 
 --- Initializes a driver for e2e tests.
---- @param opts {label:string, lazy?:boolean, settings?:table<string, distant.Settings>}
+--- @param opts {label:string, debug?:boolean, lazy?:boolean, settings?:table<string, distant.Settings>}
 --- @return spec.e2e.Driver
 function M:setup(opts)
     opts = opts or {}
@@ -230,6 +240,7 @@ function M:setup(opts)
     local instance = {}
     setmetatable(instance, M)
     instance.label = assert(opts.label, 'Missing label in setup')
+    instance.__debug = opts.debug or false
     instance.__client = nil
     instance.__manager = nil
     instance.__fixtures = {}
@@ -276,6 +287,27 @@ end
 --- @return 'distant'|'ssh'
 function M:mode()
     return self.__mode
+end
+
+-------------------------------------------------------------------------------
+-- DRIVER DEBUG FUNCTIONS
+-------------------------------------------------------------------------------
+
+--- Prints using `print` when configured for debugging.
+--- @param ... any
+function M:debug_print(...)
+    local unpack = unpack or table.unpack
+    if self:is_debug_enabled() then
+        local args = { ... }
+        table.insert(args, 1, '[DEBUG]')
+        print(unpack(args))
+    end
+end
+
+--- Returns whether or not debugging is enabled.
+--- @return boolean
+function M:is_debug_enabled()
+    return self.__debug
 end
 
 -------------------------------------------------------------------------------

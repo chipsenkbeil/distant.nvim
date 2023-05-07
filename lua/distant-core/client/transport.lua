@@ -25,8 +25,8 @@ M.__index              = M
 --- @alias distant.api.client.transport.More fun(payload:distant.api.client.transport.msg.Payload):boolean
 
 --- @class distant.api.client.transport.Msg
---- @field id integer # unique id of the message
---- @field origin_id? integer # if a response, will be set to the id of the request
+--- @field id string # unique id of the message
+--- @field origin_id? string # if a response, will be set to the id of the request
 --- @field payload distant.api.client.transport.msg.Payload # a singular payload or multiple payloads
 
 --- @alias distant.api.client.transport.msg.Payload table|table[]
@@ -102,69 +102,35 @@ function M:start(cb)
         end,
         on_stdout_line = function(line)
             if line ~= nil and line ~= "" then
-                --- @type boolean,distant.api.client.transport.Msg|nil
+                --- @type boolean,distant.api.client.transport.Msg|distant.auth.Request|nil
                 local success, msg = pcall(vim.fn.json_decode, line)
 
                 -- Quit if the decoding failed or we didn't get a msg
-                if not success then
+                if not success or not msg then
                     log.fmt_error('Failed to decode to json: "%s"', line)
                     return
                 end
 
-                -- Validate our message format
-                if type(msg) ~= 'table' then
-                    log.fmt_error('type(msg) == \'%s\' (needed table): %s', type(msg), msg)
-                    return
-                elseif type(msg.id) ~= 'number' then
-                    log.fmt_error('type(msg.id) == \'%s\' (needed number)', type(msg.id))
-                    return
-                elseif msg.origin_id ~= nil and type(msg.origin_id) ~= 'number' then
-                    log.fmt_error('type(msg.origin_id) == \'%s\' (needed number)', type(msg.origin_id))
-                    return
-                elseif type(msg.payload) ~= 'table' then
-                    log.fmt_error('type(msg.payload) == \'%s\' (needed table)', type(msg.payload))
-                    return
-                end
-
-                -- Our payload could be a single message or multiple messages. They can either
-                -- be authentication or regular message payloads, and we can assume that they
-                -- never mix together. So, we first check if the payload represents one or
-                -- more authentication messages. If so, we break up the payload into individual
-                -- requests and process them individually. Otherwise, we just pass along the
-                -- entire payload to our callback handler.
-                local is_auth = false
-                if vim.tbl_islist(msg.payload) then
+                if auth:is_auth_request(msg) then
+                    --- @cast msg distant.auth.Request
+                    self:__handle_auth_request(msg)
                 else
-                end
-
-                if is_auth then
-                    --- @type {type:string}[]
-                    local requests = {}
-                    if vim.tbl_islist(msg.payload) then
-                        --- @type {type:string}[]
-                        requests = msg.payload
-                    else
-                        table.insert(requests, msg.payload)
+                    if type(msg) ~= 'table' then
+                        log.fmt_error('type(msg) == \'%s\' (needed table): %s', type(msg), msg)
+                        return
+                    elseif type(msg.id) ~= 'string' then
+                        log.fmt_error('type(msg.id) == \'%s\' (needed string): %s', type(msg.id), msg)
+                        return
+                    elseif msg.origin_id ~= nil and type(msg.origin_id) ~= 'string' then
+                        log.fmt_error('type(msg.origin_id) == \'%s\' (needed string): %s', type(msg.origin_id), msg)
+                        return
+                    elseif type(msg.payload) ~= 'table' then
+                        log.fmt_error('type(msg.payload) == \'%s\' (needed table): %s', type(msg.payload), msg)
+                        return
                     end
 
-                    for _, request in ipairs(requests) do
-                        --- @diagnostic disable-next-line:redefined-local
-                        auth:handle_request(request, function(msg)
-                            handle.write(utils.compress(vim.fn.json_encode(msg)) .. '\n')
-                        end)
-                        self.__state.authenticated = auth.finished
-
-                        -- We have finished authentication, so write out
-                        -- all of our queued messages
-                        if auth.finished then
-                            for _, json in ipairs(self.__state.queue) do
-                                self.__state.handle.write(json)
-                            end
-                            self.__state.queue = {}
-                        end
-                    end
-                else
-                    self:__handler(msg)
+                    --- @cast msg distant.api.client.transport.Msg
+                    self:__handle_response(msg)
                 end
             end
         end,
@@ -372,9 +338,44 @@ function M:send_sync(opts)
     end
 end
 
---- Primary event handler, routing received events to the corresponding callbacks.
+--- Authentication event handler, processing authentication requests.
+--- @private
+--- @param msg distant.auth.Request
+function M:__handle_auth_request(msg)
+    local auth = self.auth_handler
+
+    -- The function passed is used to reply, and is NOT handled asynchronously.
+    -- It is a blocking function, so we can be sure that our state is updated
+    -- and any response is written prior to lines occurring later like checking
+    -- the finished status of authentication.
+    --
+    --- @diagnostic disable-next-line:redefined-local
+    auth:handle_request(msg, function(msg)
+        local handle = self.__state.handle
+        if handle then
+            handle.write(utils.compress(vim.fn.json_encode(msg)) .. '\n')
+        else
+            log.fmt_warn('Job handle dropped, so unable to write %s', msg)
+        end
+    end)
+
+    -- The above function is
+    self.__state.authenticated = auth.finished
+
+    -- We have finished authentication, so write out
+    -- all of our queued messages
+    if auth.finished then
+        for _, json in ipairs(self.__state.queue) do
+            self.__state.handle.write(json)
+        end
+        self.__state.queue = {}
+    end
+end
+
+--- Primary event handler, routing responses to the corresponding callbacks.
+--- @private
 --- @param msg {id:string, origin_id:string, payload:distant.api.client.transport.msg.Payload}
-function M:__handler(msg)
+function M:__handle_response(msg)
     log.fmt_trace('Transport:__handler(%s)', msg)
     local origin_id = msg.origin_id
     local payload = msg.payload
