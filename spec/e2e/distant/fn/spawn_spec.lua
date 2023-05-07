@@ -58,8 +58,8 @@ describe('distant.fn', function()
 
             assert.are.equal(true, process:is_success())
             assert.are.equal(0, process:exit_code())
-            assert.are.equal({}, process:stdout())
-            assert.are.equal({}, process:stderr())
+            assert.are.same({}, process:stdout())
+            assert.are.same({}, process:stderr())
 
             assert.are.same({
                 success = true,

@@ -72,7 +72,7 @@ end
 --- @return boolean #true if valid payload, otherwise false
 function M:handle(payload)
     if payload.type == 'search_started' then
-        local id = assert(tonumber(payload.id), 'Malformed search started event! Missing id.')
+        local id = assert(tonumber(payload.id), 'Malformed search started event! Missing id. ' .. vim.inspect(payload))
         if self:id() then
             log.fmt_warn('Received a "search_started" event with id %s, but already started with id %s', id, self:id())
         end
@@ -84,7 +84,7 @@ function M:handle(payload)
         end
         return true
     elseif payload.type == 'search_done' then
-        local id = assert(tonumber(payload.id), 'Malformed search done event! Missing id.')
+        local id = assert(tonumber(payload.id), 'Malformed search done event! Missing id. ' .. vim.inspect(payload))
         if self:id() ~= id then
             log.fmt_warn('Received a "search_done" event with id %s that does not match %s', id, self:id())
         end
@@ -96,8 +96,11 @@ function M:handle(payload)
         end
         return true
     elseif payload.type == 'search_results' then
-        local id = assert(tonumber(payload.id), 'Malformed search started event! Missing id.')
-        local matches = assert(payload.matches, 'Malformed search results event! Missing matches.')
+        local id = assert(tonumber(payload.id), 'Malformed search started event! Missing id. ' .. vim.inspect(payload))
+        local matches = assert(
+            payload.matches,
+            'Malformed search results event! Missing matches. ' .. vim.inspect(payload)
+        )
         if self:id() ~= id then
             log.fmt_warn('Received a "search_results" event with id %s that does not match %s', id, self:id())
         end

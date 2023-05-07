@@ -45,7 +45,7 @@ end
 --- @return boolean #true if valid payload, otherwise false
 function M:handle(payload)
     if payload.type == 'proc_spawned' then
-        local id = assert(tonumber(payload.id), 'Malformed process spawned event! Missing id.')
+        local id = assert(tonumber(payload.id), 'Malformed process spawned event! Missing id. ' .. vim.inspect(payload))
         if self:id() then
             log.fmt_warn('Received a "proc_spawned" event with id %s, but already started with id %s', id, self:id())
         end
@@ -64,8 +64,10 @@ function M:handle(payload)
 
         return true
     elseif payload.type == 'proc_done' then
-        local id = assert(tonumber(payload.id), 'Malformed process done event! Missing id.')
-        local success = assert(payload.success, 'Malformed process done event! Missing success.')
+        local id = assert(tonumber(payload.id), 'Malformed process done event! Missing id. ' .. vim.inspect(payload))
+        local success = payload.success
+        assert(success ~= nil, 'Malformed process done event! Missing success.' .. vim.inspect(payload))
+
         local exit_code = tonumber(payload.code)
         if self:id() ~= id then
             log.fmt_warn('Received a "proc_done" event with id %s that does not match %s', id, self:id())
@@ -86,9 +88,9 @@ function M:handle(payload)
         end
         return true
     elseif payload.type == 'proc_stdout' then
-        local id = assert(tonumber(payload.id), 'Malformed process stdout event! Missing id.')
+        local id = assert(tonumber(payload.id), 'Malformed process stdout event! Missing id. ' .. vim.inspect(payload))
         -- local id = string.format('%.f', payload.id)
-        local data = assert(payload.data, 'Malformed process stdout event! Missing data.')
+        local data = assert(payload.data, 'Malformed process stdout event! Missing data. ' .. vim.inspect(payload))
         if self:id() ~= id then
             log.fmt_warn('Received a "proc_stdout" event with id %s that does not match %s', id, self:id())
         end
@@ -102,9 +104,9 @@ function M:handle(payload)
         end
         return true
     elseif payload.type == 'proc_stderr' then
-        local id = assert(tonumber(payload.id), 'Malformed process stderr event! Missing id.')
+        local id = assert(tonumber(payload.id), 'Malformed process stderr event! Missing id. ' .. vim.inspect(payload))
         -- local id = string.format('%.f', payload.id)
-        local data = assert(payload.data, 'Malformed process stderr event! Missing data.')
+        local data = assert(payload.data, 'Malformed process stderr event! Missing data. ' .. vim.inspect(payload))
         if self:id() ~= id then
             log.fmt_warn('Received a "proc_stderr" event with id %s that does not match %s', id, self:id())
         end
