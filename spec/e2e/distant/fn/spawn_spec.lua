@@ -26,7 +26,7 @@ describe('distant.fn', function()
 
         it('should execute remote program and return results synchronously if no callback provided', function()
             local err, res = fn.spawn({ cmd = 'echo some output' })
-            assert(not err, err)
+            assert(not err, tostring(err))
 
             --- @cast res distant.client.api.process.SpawnResults
             assert(res)
@@ -44,10 +44,10 @@ describe('distant.fn', function()
             local results
 
             local err, process = fn.spawn({ cmd = 'echo some output' }, function(err, res)
-                assert(not err, err)
+                assert(not err, tostring(err))
                 results = res
             end)
-            assert(not err, err)
+            assert(not err, tostring(err))
 
             --- @cast process distant.client.api.Process
             assert(process)
@@ -78,7 +78,7 @@ describe('distant.fn', function()
         if driver:mode() == 'distant' then
             it('should support capturing stderr', function()
                 local err, res = fn.spawn({ cmd = 'sh -c "echo some output 1>&2"' })
-                assert(not err, err)
+                assert(not err, tostring(err))
 
                 --- @cast res distant.client.api.process.SpawnResults
                 assert(res)
@@ -93,7 +93,7 @@ describe('distant.fn', function()
 
             it('should support capturing exit code', function()
                 local err, res = fn.spawn({ cmd = 'sh -c "exit 99"' })
-                assert(not err, err)
+                assert(not err, tostring(err))
 
                 --- @cast res distant.client.api.process.SpawnResults
                 assert(res)

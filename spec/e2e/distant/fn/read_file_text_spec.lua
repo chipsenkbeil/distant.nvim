@@ -20,7 +20,7 @@ describe('distant.fn', function()
             assert(file:write('some text'), 'Failed to write to ' .. file:path())
 
             local err, res = fn.read_file_text({ path = file:path() })
-            assert(not err, err)
+            assert(not err, tostring(err))
             assert(res)
             assert.are.equal(res, 'some text')
         end)

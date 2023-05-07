@@ -45,7 +45,7 @@ describe('distant.fn', function()
                     },
                 },
             })
-            assert(not err, err)
+            assert(not err, tostring(err))
             assert(matches)
 
             -- Sort by path so we can guarantee test order
@@ -145,7 +145,7 @@ describe('distant.fn', function()
                     on_results_cnt = on_results_cnt + 1
                 end,
             })
-            assert(not err, err)
+            assert(not err, tostring(err))
             assert(done_matches)
 
             -- Verify that the done matches is an empty list
@@ -205,7 +205,7 @@ describe('distant.fn', function()
                 assert(vim.tbl_isempty(mm), 'cb got matches unexpectedly')
                 cb_triggered = true
             end)
-            assert(not err, err)
+            assert(not err, tostring(err))
             assert(searcher)
 
             -- Sort by path so we can guarantee test order
@@ -269,7 +269,7 @@ describe('distant.fn', function()
                     table.insert(matches, m)
                 end
             end)
-            assert(not err, err)
+            assert(not err, tostring(err))
             assert(searcher)
 
             -- Sort by path so we can guarantee test order

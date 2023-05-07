@@ -22,7 +22,7 @@ describe('distant.fn', function()
             local dst = root:file()
 
             local err = fn.copy({ src = src:path(), dst = dst:path() })
-            assert(not err, err)
+            assert(not err, tostring(err))
 
             src.assert.same({ 'some text' })
             dst.assert.same({ 'some text' })
@@ -38,7 +38,7 @@ describe('distant.fn', function()
             local dst = root:dir()
 
             local err = fn.copy({ src = src:path(), dst = dst:path() })
-            assert(not err, err)
+            assert(not err, tostring(err))
 
             assert.is.truthy(src:exists())
             src_file.assert.same({ 'some text' })

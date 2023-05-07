@@ -22,7 +22,7 @@ describe('distant.fn', function()
             local dst = root:file()
 
             local err = fn.rename({ src = src:path(), dst = dst:path() })
-            assert(not err, err)
+            assert(not err, tostring(err))
 
             assert.is.falsy(src:exists())
             dst.assert.same('some text')
@@ -38,7 +38,7 @@ describe('distant.fn', function()
             local dst = root:dir()
 
             local err = fn.rename({ src = src:path(), dst = dst:path() })
-            assert(not err, err)
+            assert(not err, tostring(err))
 
             assert.is.falsy(src:exists())
             assert.is.falsy(src_file:exists())

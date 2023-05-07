@@ -20,7 +20,7 @@ describe('distant.fn', function()
             assert(file:touch(), 'Failed to create file: ' .. file:path())
 
             local err, res = fn.metadata({ path = file:path() })
-            assert(not err, err)
+            assert(not err, tostring(err))
             assert(res)
 
             assert.are.equal(res.file_type, 'file')
@@ -32,7 +32,7 @@ describe('distant.fn', function()
             assert(dir:make(), 'Failed to create directory: ' .. dir:path())
 
             local err, res = fn.metadata({ path = dir:path() })
-            assert(not err, err)
+            assert(not err, tostring(err))
             assert(res)
 
             assert.are.equal(res.file_type, 'dir')
@@ -47,7 +47,7 @@ describe('distant.fn', function()
             assert(symlink:make(file:path()), 'Failed to create symlink: ' .. symlink:path())
 
             local err, res = fn.metadata({ path = symlink:path() })
-            assert(not err, err)
+            assert(not err, tostring(err))
             assert(res)
 
             assert.are.equal(res.file_type, 'symlink')
@@ -61,7 +61,7 @@ describe('distant.fn', function()
             assert(symlink:make(file:path()), 'Failed to create symlink: ' .. symlink:path())
 
             local err, res = fn.metadata({ path = symlink:path(), resolve_file_type = true })
-            assert(not err, err)
+            assert(not err, tostring(err))
             assert(res)
 
             assert.are.equal(res.file_type, 'file')
@@ -75,7 +75,7 @@ describe('distant.fn', function()
             assert(symlink:make(file:path()), 'Failed to create symlink: ' .. symlink:path())
 
             local err, res = fn.metadata({ path = symlink:path(), canonicalize = true })
-            assert(not err, err)
+            assert(not err, tostring(err))
             assert(res)
 
             assert.are.equal(res.file_type, 'symlink')

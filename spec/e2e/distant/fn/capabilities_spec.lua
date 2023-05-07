@@ -16,7 +16,7 @@ describe('distant.fn', function()
     describe('capabilities', function()
         it('should report back capabilities of the server', function()
             local err, res = fn.capabilities({})
-            assert(not err, err)
+            assert(not err, tostring(err))
             assert(res)
 
             -- TODO: Can we verify this any further? We'd need

@@ -16,7 +16,7 @@ describe('distant.fn', function()
     describe('system_info', function()
         it('should report back information about remote machine', function()
             local err, res = fn.system_info({})
-            assert(not err, err)
+            assert(not err, tostring(err))
 
             -- TODO: Can we verify this any further? We'd need
             --       to make assumptions about the remote machine

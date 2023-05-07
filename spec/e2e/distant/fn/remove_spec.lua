@@ -20,7 +20,7 @@ describe('distant.fn', function()
             assert(file:touch(), 'Failed to create file: ' .. file:path())
 
             local err = fn.remove({ path = file:path() })
-            assert(not err, err)
+            assert(not err, tostring(err))
             assert.is.falsy(file:exists())
         end)
 
@@ -29,7 +29,7 @@ describe('distant.fn', function()
             assert(dir:make(), 'Failed to create directory: ' .. dir:path())
 
             local err = fn.remove({ path = dir:path() })
-            assert(not err, err)
+            assert(not err, tostring(err))
             assert.is.falsy(dir:exists())
         end)
 
@@ -39,7 +39,7 @@ describe('distant.fn', function()
             assert(dir:file():touch(), 'Failed to create inner file')
 
             local err = fn.remove({ path = dir:path(), force = true })
-            assert(not err, err)
+            assert(not err, tostring(err))
             assert.is.falsy(dir:exists())
         end)
 

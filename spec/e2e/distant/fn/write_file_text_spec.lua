@@ -18,7 +18,7 @@ describe('distant.fn', function()
         it('should create file with given text if it does not exist', function()
             local file = root:file()
             local err = fn.write_file_text({ path = file:path(), text = 'some text' })
-            assert(not err, err)
+            assert(not err, tostring(err))
             file.assert.same('some text')
         end)
 
@@ -27,7 +27,7 @@ describe('distant.fn', function()
             assert(file:write('abcdefg'), 'Failed to write to ' .. file:path())
 
             local err = fn.write_file_text({ path = file:path(), text = 'some text' })
-            assert(not err, err)
+            assert(not err, tostring(err))
             file.assert.same('some text')
         end)
 

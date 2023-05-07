@@ -35,7 +35,7 @@ describe('distant.fn', function()
     describe('read_dir', function()
         it('should list immediate directory contents', function()
             local err, res = fn.read_dir({ path = root:path() })
-            assert(not err, err)
+            assert(not err, tostring(err))
             assert(res)
             assert.are.same({
                 { path = 'dir',  file_type = 'dir',     depth = 1 },
@@ -46,7 +46,7 @@ describe('distant.fn', function()
 
         it('should support infinite depth if specified', function()
             local err, res = fn.read_dir({ path = root:path(), depth = 0 })
-            assert(not err, err)
+            assert(not err, tostring(err))
             assert(res)
             assert.are.same({
                 { path = 'dir',            file_type = 'dir',     depth = 1 },
@@ -60,7 +60,7 @@ describe('distant.fn', function()
 
         it('should support explicit depth beyond immediate if specified', function()
             local err, res = fn.read_dir({ path = root:path(), depth = 2 })
-            assert(not err, err)
+            assert(not err, tostring(err))
             assert(res)
             assert.are.same({
                 { path = 'dir',       file_type = 'dir',     depth = 1 },
@@ -73,7 +73,7 @@ describe('distant.fn', function()
 
         it('should support absolute paths if specified', function()
             local err, res = fn.read_dir({ path = root:path(), absolute = true })
-            assert(not err, err)
+            assert(not err, tostring(err))
             assert(res)
             assert.are.same({
                 { path = root:dir('dir'):path(),      file_type = 'dir',     depth = 1 },
@@ -84,7 +84,7 @@ describe('distant.fn', function()
 
         it('should support canonicalized paths if specified', function()
             local err, res = fn.read_dir({ path = root:path(), canonicalize = true })
-            assert(not err, err)
+            assert(not err, tostring(err))
             assert(res)
 
             local f = function(a, b)
@@ -121,7 +121,7 @@ describe('distant.fn', function()
 
         it('should include root path if specified', function()
             local err, res = fn.read_dir({ path = root:path(), include_root = true })
-            assert(not err, err)
+            assert(not err, tostring(err))
             assert(res)
             assert.are.same({
                 { path = root:canonicalized_path(), file_type = 'dir',     depth = 0 },
@@ -145,7 +145,7 @@ describe('distant.fn', function()
                 assert(file:touch(), 'Failed to create file: ' .. file:path())
 
                 local err, res = fn.read_dir({ path = file:path() })
-                assert(not err, err)
+                assert(not err, tostring(err))
                 assert(res)
                 assert.are.same({}, res.entries)
             end)

@@ -199,7 +199,7 @@ describe('distant.editor.lsp', function()
 
         --- @diagnostic disable-next-line:param-type-mismatch
         local _, err = vim.lsp.buf_request_sync(buf:id(), 'textDocument/rename', params, 1000 * 10)
-        assert(not err, err)
+        assert(not err, tostring(err))
 
         -- Verify that we did rename in the buffer
         buf.assert.same(d(3, [[
