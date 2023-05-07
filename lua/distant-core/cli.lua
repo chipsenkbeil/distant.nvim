@@ -1,12 +1,11 @@
-local installer = require('distant-core.installer')
-local log       = require('distant-core.log')
-local utils     = require('distant-core.utils')
-local Version   = require('distant-core.version')
+local log     = require('distant-core.log')
+local utils   = require('distant-core.utils')
+local Version = require('distant-core.version')
 
 --- @class distant.core.Cli
 --- @field bin string #path to the distant cli binary
-local M         = {}
-M.__index       = M
+local M       = {}
+M.__index     = M
 
 --- Creates a new instance of the cli.
 --- @param opts {bin:string}
@@ -99,7 +98,8 @@ function M:install(opts, cb)
     end
 
     -- Otherwise, try to install to our internal location and use it
-    return installer.install({
+    -- NOTE: Lazy-require installer to avoid circular loop
+    return require('distant-core.installer').install({
         min_version = opts.min_version,
         reinstall = opts.reinstall,
     }, function(err, path)
