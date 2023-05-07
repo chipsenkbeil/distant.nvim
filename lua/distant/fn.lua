@@ -12,7 +12,7 @@ local function api()
     return client().api
 end
 
---- @class DistantFn
+--- @class distant.Fn
 local M = {}
 
 --- @param opts distant.client.api.AppendFileOpts

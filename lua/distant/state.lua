@@ -7,7 +7,7 @@ local min_version = require('distant.version').minimum
 local settings    = require('distant-core').settings
 local utils       = require('distant-core').utils
 
---- @class State
+--- @class distant.State
 --- @field client? distant.Client #active client
 --- @field manager? distant.Manager #active manager
 --- @field active_search {qfid?:number, searcher?:distant.client.api.Searcher} #active search via editor
@@ -15,7 +15,7 @@ local utils       = require('distant-core').utils
 local M           = {}
 M.__index         = M
 
---- @return State
+--- @return distant.State
 function M:new()
     local instance = {}
     setmetatable(instance, M)

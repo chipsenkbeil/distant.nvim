@@ -1,7 +1,7 @@
 local log   = require('distant-core').log
 local state = require('distant.state')
 
---- @class EditorConnectOpts
+--- @class distant.editor.ConnectOpts
 --- @field destination string
 ---
 --- @field auth? distant.auth.Handler
@@ -12,7 +12,7 @@ local state = require('distant.state')
 --- @field timeout? number
 
 --- Connects to a running distance binary on the remote machine
---- @param opts EditorConnectOpts
+--- @param opts distant.editor.ConnectOpts
 --- @param cb fun(err?:string, client?:distant.Client)
 return function(opts, cb)
     opts = opts or {}

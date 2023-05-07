@@ -110,7 +110,7 @@ local function add_matches_to_qflist(id, matches)
     vim.fn.setqflist({}, 'a', { id = id, items = items })
 end
 
---- @class EditorSearchOpts
+--- @class distant.editor.SearchOpts
 --- @field query distant.client.api.search.Query|string
 --- @field on_results? fun(matches:distant.client.api.search.Match[])
 --- @field on_done? fun(matches:distant.client.api.search.Match[])
@@ -118,7 +118,7 @@ end
 --- @field interval? number #Time in milliseconds to wait between checks for a response
 
 --- Performs a search using the provided query, displaying results in a new quickfix list
---- @param opts EditorSearchOpts
+--- @param opts distant.editor.SearchOpts
 return function(opts)
     opts = opts or {}
     log.trace('editor.search(%s)', opts)

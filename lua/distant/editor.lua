@@ -1,3 +1,4 @@
+--- @class distant.Editor
 --- Provides editor-oriented operations
 local M             = {}
 

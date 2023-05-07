@@ -3,7 +3,7 @@ local log    = require('distant-core').log
 local utils  = require('distant-core').utils
 local vars   = require('distant-core').vars
 
---- @class NeovimAutocmdOpts
+--- @class neovim.AutocmdOpts
 --- @field id number #autocommand id
 --- @field event string  #name of the triggered event
 --- @field group? number #autocommand group id, if any
@@ -20,7 +20,7 @@ local function _initialize()
     vim.api.nvim_create_autocmd({ 'BufEnter' }, {
         group = autogroup_id,
         pattern = 'distant://*',
-        --- @param opts NeovimAutocmdOpts
+        --- @param opts neovim.AutocmdOpts
         callback = function(opts)
             local bufnr = opts.buf
 
@@ -38,7 +38,7 @@ local function _initialize()
     vim.api.nvim_create_autocmd({ 'BufReadCmd', 'FileReadCmd' }, {
         group = autogroup_id,
         pattern = 'distant://*',
-        --- @param opts NeovimAutocmdOpts
+        --- @param opts neovim.AutocmdOpts
         callback = function(opts)
             local bufnr = opts.buf
             local fname = opts.match
@@ -66,7 +66,7 @@ local function _initialize()
     vim.api.nvim_create_autocmd({ 'BufWriteCmd' }, {
         group = autogroup_id,
         pattern = 'distant://*',
-        --- @param opts NeovimAutocmdOpts
+        --- @param opts neovim.AutocmdOpts
         callback = function(opts)
             local bufnr = opts.buf
             if type(bufnr) == 'number' and bufnr ~= -1 then

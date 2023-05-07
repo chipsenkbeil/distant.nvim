@@ -9,7 +9,7 @@ local vars  = require('distant-core').vars
 --- Applies neovim buffer-local mappings
 ---
 --- @param bufnr number
---- @param mappings table
+--- @param mappings table<string, fun()>
 local function apply_mappings(bufnr, mappings)
     log.fmt_trace('apply_mappings(%s, %s)', bufnr, mappings)
 
@@ -41,11 +41,11 @@ local function apply_mappings(bufnr, mappings)
     end
 end
 
---- @class EditorOpenCheckPathOpts
+--- @class distant.editor.open.CheckPathOpts
 --- @field timeout? number #Maximum time to wait for a response (optional)
 --- @field interval? number #Time in milliseconds to wait between checks for a response (optional)
 
---- @class EditorOpenCheckPathResult
+--- @class distant.editor.open.CheckPathResult
 --- @field path string #canonicalized path where possible, otherwise input path
 --- @field is_dir boolean #true if path represents a directory
 --- @field is_file boolean #true if path represents a normal file
@@ -54,8 +54,8 @@ end
 --- Checks a path to see if it exists, returning a table with information
 ---
 --- @param path string Path to directory to show
---- @param opts EditorOpenCheckPathOpts|nil
---- @return EditorOpenCheckPathResult
+--- @param opts? distant.editor.open.CheckPathOpts
+--- @return distant.editor.open.CheckPathResult
 local function check_path(path, opts)
     opts = opts or {}
     log.fmt_trace('check_path(%s, %s)', path, opts)
@@ -214,7 +214,7 @@ end
 
 --- @param path string
 --- @param bufnr number
---- @param opts table|nil
+--- @param opts? distant.client.api.ReadFileTextOpts
 local function load_buf_from_file(path, bufnr, opts)
     opts = opts or {}
     log.fmt_trace('load_buf_from_file(%s, %s, %s)', path, bufnr, opts)
@@ -234,7 +234,7 @@ end
 
 --- @param path string
 --- @param bufnr number
---- @param opts table|nil
+--- @param opts? distant.client.api.ReadDirOpts
 local function load_buf_from_dir(path, bufnr, opts)
     opts = opts or {}
     log.fmt_trace('load_buf_from_dir(%s, %s, %s)', path, bufnr, opts)
@@ -252,9 +252,9 @@ local function load_buf_from_dir(path, bufnr, opts)
     return create_or_populate_buf(bufnr, lines)
 end
 
---- @param p EditorOpenCheckPathResult
+--- @param p distant.editor.open.CheckPathResult
 --- @param bufnr number
---- @param opts table|nil
+--- @param opts? distant.client.api.ReadDirOpts|distant.client.api.ReadFileTextOpts
 local function load_content(p, bufnr, opts)
     opts = opts or {}
     log.fmt_trace('load_content(%s, %s, %s)', p, bufnr, opts)
@@ -278,31 +278,31 @@ local function load_content(p, bufnr, opts)
     end
 end
 
---- @class EditorOpenConfigureBufArgs
+--- @class distant.editor.open.ConfigureBufOpts
 --- @field bufnr number #number associated with the buffer
 --- @field name string #name of the buffer (e.g. distant://path/to/file.txt)
 --- @field canonicalized_path string #primary path (e.g. path/to/file.txt)
 --- @field raw_path string #raw input path, which could be an alt path
 --- @field is_dir boolean #true if buffer represents a directory
 --- @field is_file boolean #true if buffer represents a file
---- @field winnr number|nil #window number to use
+--- @field winnr? number #window number to use
 
---- @param args EditorOpenConfigureBufArgs
-local function configure_buf(args)
-    log.fmt_trace('configure_buf(%s)', args)
+--- @param opts distant.editor.open.ConfigureBufOpts
+local function configure_buf(opts)
+    log.fmt_trace('configure_buf(%s)', opts)
     vim.validate({
-        bufnr = { args.bufnr, 'number' },
-        name = { args.name, 'string' },
-        canonicalized_path = { args.canonicalized_path, 'string' },
-        raw_path = { args.raw_path, 'string' },
-        is_dir = { args.is_dir, 'boolean' },
-        is_file = { args.is_file, 'boolean' },
-        winnr = { args.winnr, 'number', true },
+        bufnr = { opts.bufnr, 'number' },
+        name = { opts.name, 'string' },
+        canonicalized_path = { opts.canonicalized_path, 'string' },
+        raw_path = { opts.raw_path, 'string' },
+        is_dir = { opts.is_dir, 'boolean' },
+        is_file = { opts.is_file, 'boolean' },
+        winnr = { opts.winnr, 'number', true },
     })
 
-    local bufnr = args.bufnr
-    local winnr = args.winnr or 0
-    local bufname = args.name
+    local bufnr = opts.bufnr
+    local winnr = opts.winnr or 0
+    local bufname = opts.name
 
     --- NOTE: We have to capture the old buffer name and then check
     ---       if setting a new name copies the old buffer name to be
@@ -340,7 +340,7 @@ local function configure_buf(args)
     set_bufname(bufnr, bufname)
 
     -- If a directory, we want to mark as such and prevent modifying
-    if args.is_dir then
+    if opts.is_dir then
         -- Mark the buftype as nofile and not modifiable as you cannot
         -- modify it or write it; also explicitly set a custom filetype
         vim.api.nvim_buf_set_option(bufnr, 'filetype', 'distant-dir')
@@ -361,20 +361,20 @@ local function configure_buf(args)
     -- Add stateful information to the buffer, helping keep track of it
     (function()
         local v = vars.buf(bufnr)
-        v.remote_path.set(args.canonicalized_path)
-        v.remote_type.set(args.is_dir and 'dir' or 'file')
+        v.remote_path.set(opts.canonicalized_path)
+        v.remote_type.set(opts.is_dir and 'dir' or 'file')
 
         -- Add the raw path as an alternative path that can be used
         -- to look up this buffer
         local alt_paths = v.remote_alt_paths.get() or {}
-        alt_paths[args.raw_path] = true
+        alt_paths[opts.raw_path] = true
         v.remote_alt_paths.set(alt_paths)
     end)()
 
     -- Display the buffer in the specified window, defaulting to current
     vim.api.nvim_win_set_buf(winnr, bufnr)
 
-    if args.is_file then
+    if opts.is_file then
         -- Set our filetype to whatever the contents actually are (or file extension is)
         -- TODO: This makes me feel uncomfortable as I do not yet understand why detecting
         --       the filetype as the real type does not trigger neovim's LSP. At the
@@ -393,7 +393,7 @@ local function configure_buf(args)
     end
 end
 
---- @class EditorOpenOpts
+--- @class distant.editor.OpenOpts
 --- @field path string #Path to file or directory
 --- @field bufnr? number #If not -1 and number, will use this buffer number instead of looking for a buffer
 --- @field winnr? number #If not -1 and number, will use this window
@@ -409,7 +409,7 @@ end
 --- 2. If path points to a directory, opens up a navigation interface
 --- 3. If path does not exist, opens a blank buffer that points to the file to be written
 ---
---- @param opts EditorOpenOpts|string
+--- @param opts distant.editor.OpenOpts|string
 --- @return number|nil #The handle of the created buffer for the remote file/directory, or nil if failed
 return function(opts)
     opts = opts or {}

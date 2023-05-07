@@ -4,6 +4,7 @@ local log    = require('distant-core').log
 local utils  = require('distant-core').utils
 local vars   = require('distant-core').vars
 
+--- @class distant.nav.Actions
 local M      = {}
 
 --- Returns the separator used by the remote system

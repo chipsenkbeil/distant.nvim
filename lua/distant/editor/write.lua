@@ -2,13 +2,13 @@ local fn   = require('distant.fn')
 local log  = require('distant-core').log
 local vars = require('distant-core').vars
 
---- @class EditorWriteOpts
+--- @class distant.editor.WriteOpts
 --- @field buf number #The handle of the buffer to write
 --- @field timeout? number #Maximum time to wait for a response
 --- @field interval? number #Time in milliseconds to wait between checks for a response
 
 --- Writes a buffer to disk on the remote machine
---- @param opts number|EditorWriteOpts
+--- @param opts number|distant.editor.WriteOpts
 return function(opts)
     opts = opts or {}
     if type(opts) == 'number' then
