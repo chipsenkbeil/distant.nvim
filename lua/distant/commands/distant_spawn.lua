@@ -16,7 +16,7 @@ local function command(cmd)
     }
 
     local err, res = fn.spawn(opts)
-    assert(not err, err)
+    assert(not err, tostring(err))
 
     --- @cast res -distant.client.api.Process
     assert(res, 'Missing results of process execution')

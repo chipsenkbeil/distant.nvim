@@ -17,7 +17,7 @@ local function command(cmd)
 
     --- @cast opts -table, +distant.client.api.RemoveOpts
     local err, _ = fn.remove(opts)
-    assert(not err, err)
+    assert(not err, tostring(err))
 end
 
 --- @type DistantCommand

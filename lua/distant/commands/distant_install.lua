@@ -13,7 +13,7 @@ local function command(cmd)
         min_version = min_version,
         reinstall = reinstall,
     }, function(err, path)
-        assert(not err, err)
+        assert(not err, tostring(err))
         assert(path, 'Cli not installed')
         vim.notify('Installed to ' .. path)
     end)

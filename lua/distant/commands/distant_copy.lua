@@ -16,7 +16,7 @@ local function command(cmd)
 
     --- @cast opts -table, +distant.client.api.CopyOpts
     local err, _ = fn.copy(opts)
-    assert(not err, err)
+    assert(not err, tostring(err))
 end
 
 --- @type DistantCommand

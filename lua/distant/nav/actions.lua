@@ -11,7 +11,7 @@ local M      = {}
 --- @return string
 local function remote_sep()
     local err, system_info = fn.cached_system_info({})
-    assert(not err, err)
+    assert(not err, tostring(err))
     assert(system_info, 'Missing system info')
     return assert(system_info.main_separator, 'missing remote sep')
 end

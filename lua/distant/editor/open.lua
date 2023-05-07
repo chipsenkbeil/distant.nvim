@@ -70,7 +70,7 @@ local function check_path(path, opts)
     -- Check if the error we got is a missing file. If we get
     -- any other kind of error, we want to throw the error
     local missing = (err and err.kind == 'not_found') or false
-    assert(not err or missing, err)
+    assert(not err or missing, tostring(err))
 
     local is_dir = false
     local is_file = false
@@ -219,7 +219,7 @@ local function load_buf_from_file(path, bufnr, opts)
     opts = opts or {}
     log.fmt_trace('load_buf_from_file(%s, %s, %s)', path, bufnr, opts)
     local err, text = fn.read_file_text(vim.tbl_extend('keep', { path = path }, opts))
-    assert(not err, err)
+    assert(not err, tostring(err))
 
     local lines
     if text ~= nil then
@@ -240,7 +240,7 @@ local function load_buf_from_dir(path, bufnr, opts)
     log.fmt_trace('load_buf_from_dir(%s, %s, %s)', path, bufnr, opts)
 
     local err, res = fn.read_dir(vim.tbl_extend('keep', { path = path }, opts))
-    assert(not err, err)
+    assert(not err, tostring(err))
     assert(res, 'Impossible: read_dir result nil')
 
     local lines = assert(utils.filter_map(res.entries, function(entry)

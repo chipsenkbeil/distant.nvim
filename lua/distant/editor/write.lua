@@ -40,7 +40,7 @@ return function(opts)
             path = path,
             text = table.concat(lines, '\n')
         }, opts))
-        assert(not err, err)
+        assert(not err, tostring(err))
 
         -- Update buffer as no longer modified
         vim.api.nvim_buf_set_option(buf, 'modified', false)

@@ -177,7 +177,9 @@ function M:exists(opts, cb)
             path = opts.path,
         },
         cb = cb,
-        verify = verify_ok,
+        verify = function(payload)
+            return payload.type == 'exists'
+        end,
         map = function(payload) return payload.value end,
         timeout = opts.timeout,
         interval = opts.interval,
@@ -474,7 +476,7 @@ function M:system_info(opts, cb)
 
     return self.transport:send({
         payload = {
-            type = 'file_write_text',
+            type = 'system_info',
         },
         cb = cb,
         verify = function(payload)

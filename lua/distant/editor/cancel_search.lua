@@ -11,7 +11,7 @@ return function()
         if searcher:status() == 'active' then
             local id = assert(searcher:id())
             searcher:cancel(function(err)
-                assert(not err, err)
+                assert(not err, tostring(err))
                 vim.notify('Cancelled search ' .. id)
             end)
         end

@@ -14,7 +14,7 @@ local function command(cmd)
 
     --- @cast opts -table, +distant.client.api.CreateDirOpts
     local err, _ = fn.create_dir(opts)
-    assert(not err, err)
+    assert(not err, tostring(err))
 end
 
 --- @type DistantCommand

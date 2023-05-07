@@ -150,6 +150,16 @@ function M:new(opts)
     return instance
 end
 
+--- Reports self as an error.
+function M:report()
+    -- NOTE: We support calling via `Error.report(err)`,
+    --       which means that this can be invokved with a non-error
+    --       or nil as a possibility.
+    if self and type(self.__tostring) == 'function' then
+        error(self:__tostring())
+    end
+end
+
 --- Returns a human label for an error kind.
 --- @return string|nil
 function M:kind_label()

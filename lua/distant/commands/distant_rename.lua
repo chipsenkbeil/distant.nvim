@@ -16,7 +16,7 @@ local function command(cmd)
 
     --- @cast opts -table, +distant.client.api.RenameOpts
     local err, _ = fn.rename(opts)
-    assert(not err, err)
+    assert(not err, tostring(err))
 end
 
 --- @type DistantCommand
