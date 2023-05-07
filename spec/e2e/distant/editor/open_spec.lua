@@ -33,10 +33,10 @@ describe('distant.editor.open', function()
 
         -- Load the directory into a buffer
         local test_path = dir:path()
-        local buf = driver:buffer(editor.open(test_path))
+        local buffer = driver:buffer(editor.open(test_path))
 
         -- Verify the buffer contains the items
-        buf.assert.same({
+        buffer.assert.same({
             'dir1',
             'dir2',
             'file1',
@@ -50,26 +50,26 @@ describe('distant.editor.open', function()
         assert(metadata)
 
         -- Verify we set a remote path variable to the absolute path
-        local remote_path = buf:remote_path()
+        local remote_path = buffer:remote_path()
         assert.are.equal(metadata.canonicalized_path, remote_path)
-        assert.are.equal('dir', buf:remote_type())
+        assert.are.equal('dir', buffer:remote_type())
 
         -- Verify we set dir-specific buffer properties
-        assert.are.equal('distant://' .. remote_path, buf:name())
-        assert.are.equal('distant-dir', buf:filetype())
-        assert.are.equal('nofile', buf:buftype())
-        assert.is.falsy(buf:modifiable())
+        assert.are.equal('distant://' .. remote_path, buffer:name())
+        assert.are.equal('distant-dir', buffer:filetype())
+        assert.are.equal('nofile', buffer:buftype())
+        assert.is.falsy(buffer:modifiable())
 
         -- Verify we switched our window to the current buffer
-        assert.is.truthy(buf:is_focused())
+        assert.is.truthy(buffer:is_focused())
     end)
 
     it('should open a file and set appropriate configuration', function()
         local test_path = file:path()
-        local buf = driver:buffer(editor.open(test_path))
+        local buffer = driver:buffer(editor.open(test_path))
 
         -- Read the contents of the buffer that should have been populated
-        buf.assert.same({
+        buffer.assert.same({
             'This is a file used for tests',
             'with multiple lines of text.',
         })
@@ -80,25 +80,25 @@ describe('distant.editor.open', function()
         assert(metadata)
 
         -- Verify we set a remote path variable to the absolute path
-        local remote_path = buf:remote_path()
+        local remote_path = buffer:remote_path()
         assert.are.equal(metadata.canonicalized_path, remote_path)
-        assert.are.equal('file', buf:remote_type())
+        assert.are.equal('file', buffer:remote_type())
 
         -- Verify we set file-specific buffer properties
-        assert.are.equal('distant://' .. remote_path, buf:name())
-        assert.are.equal('text', buf:filetype())
-        assert.are.equal('acwrite', buf:buftype())
+        assert.are.equal('distant://' .. remote_path, buffer:name())
+        assert.are.equal('text', buffer:filetype())
+        assert.are.equal('acwrite', buffer:buftype())
 
         -- Verify we switched our window to the current buffer
-        assert.is.truthy(buf:is_focused())
+        assert.is.truthy(buffer:is_focused())
     end)
 
     it('should configure file buffers to send contents to remote server on write', function()
         local test_path = file:path()
-        local buf = driver:buffer(editor.open(test_path))
+        local buffer = driver:buffer(editor.open(test_path))
 
         -- Change the buffer and write it back to the remote destination
-        buf:set_lines({ 'line 1', 'line 2' })
+        buffer:set_lines({ 'line 1', 'line 2' })
 
         -- NOTE: To have write work, we require an autocmd for BufReadCmd, which only
         --       appears if we have called the setup function; so, if you get an error
@@ -112,20 +112,20 @@ describe('distant.editor.open', function()
 
     it('should configure file buffers to reload contents from remote server on edit', function()
         local test_path = file:path()
-        local buf = driver:buffer(editor.open(test_path))
+        local buffer = driver:buffer(editor.open(test_path))
 
         -- Change our buffer to something new
-        buf:set_lines({ 'line 1', 'line 2' })
+        buffer:set_lines({ 'line 1', 'line 2' })
 
         -- Verify that buffer has been updated with new contents
-        buf.assert.same({ 'line 1', 'line 2' })
+        buffer.assert.same({ 'line 1', 'line 2' })
 
         -- Edit the buffer to reload (discard current contents)
         -- NOTE: This requires a blocking read
         vim.cmd([[edit!]])
 
         -- Verify that buffer has been updated with current remote contents
-        buf.assert.same(assert(file:lines()))
+        buffer.assert.same(assert(file:lines()))
     end)
 
     it('should support symlinks that are files', function()
@@ -133,10 +133,10 @@ describe('distant.editor.open', function()
 
         -- Load the file (symlink) into a buffer
         local test_path = symlink:path()
-        local buf = driver:buffer(editor.open(test_path))
+        local buffer = driver:buffer(editor.open(test_path))
 
         -- Read the contents of the buffer that should have been populated
-        buf.assert.same({
+        buffer.assert.same({
             'This is a file used for tests',
             'with multiple lines of text.',
         })
@@ -147,17 +147,17 @@ describe('distant.editor.open', function()
         assert(metadata)
 
         -- Verify we set a remote path variable to the absolute path
-        local remote_path = buf:remote_path()
+        local remote_path = buffer:remote_path()
         assert.are.equal(metadata.canonicalized_path, remote_path)
-        assert.are.equal('file', buf:remote_type())
+        assert.are.equal('file', buffer:remote_type())
 
         -- Verify we set file-specific buffer properties
-        assert.are.equal('distant://' .. remote_path, buf:name())
-        assert.are.equal('text', buf:filetype())
-        assert.are.equal('acwrite', buf:buftype())
+        assert.are.equal('distant://' .. remote_path, buffer:name())
+        assert.are.equal('text', buffer:filetype())
+        assert.are.equal('acwrite', buffer:buftype())
 
         -- Verify we switched our window to the current buffer
-        assert.is.truthy(buf:is_focused())
+        assert.is.truthy(buffer:is_focused())
     end)
 
     it('should support symlinks that are directories', function()
@@ -172,10 +172,10 @@ describe('distant.editor.open', function()
 
         -- Load the directory (symlink) into a buffer
         local test_path = symlink:path()
-        local buf = driver:buffer(editor.open(test_path))
+        local buffer = driver:buffer(editor.open(test_path))
 
         -- Verify the buffer contains the items
-        buf.assert.same({
+        buffer.assert.same({
             'dir1',
             'dir2',
             'file1',
@@ -189,17 +189,17 @@ describe('distant.editor.open', function()
         assert(metadata)
 
         -- Verify we set a remote path variable to the absolute path
-        local remote_path = buf:remote_path()
+        local remote_path = buffer:remote_path()
         assert.are.equal(metadata.canonicalized_path, remote_path)
-        assert.are.equal('dir', buf:remote_type())
+        assert.are.equal('dir', buffer:remote_type())
 
         -- Verify we set dir-specific buffer properties
-        assert.are.equal('distant://' .. remote_path, buf:name())
-        assert.are.equal('distant-dir', buf:filetype())
-        assert.are.equal('nofile', buf:buftype())
-        assert.is.falsy(buf:modifiable())
+        assert.are.equal('distant://' .. remote_path, buffer:name())
+        assert.are.equal('distant-dir', buffer:filetype())
+        assert.are.equal('nofile', buffer:buftype())
+        assert.is.falsy(buffer:modifiable())
 
         -- Verify we switched our window to the current buffer
-        assert.is.truthy(buf:is_focused())
+        assert.is.truthy(buffer:is_focused())
     end)
 end)

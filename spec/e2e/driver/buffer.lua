@@ -94,11 +94,17 @@ function M:lines()
 end
 
 --- Set lines of buffer.
+--- If `opts.modified` is provided, will update the modified status.
+---
 --- @param lines string[]
 --- @param opts? {modified?:boolean}
 function M:set_lines(lines, opts)
     opts = opts or {}
 
+    -- Save current modifiable state, ensuring buffer is modifiable
+    --[[ local modifiable = self:modifiable()
+    vim.api.nvim_buf_set_option(self.__id, 'modifiable', true) ]]
+    -- Write the lines to the buffer, overwriting any existing lines
     vim.api.nvim_buf_set_lines(
         self.__id,
         0,
@@ -107,6 +113,12 @@ function M:set_lines(lines, opts)
         lines
     )
 
+    -- Restore old value
+    -- vim.api.nvim_buf_set_option(self.__id, 'modifiable', modifiable)
+
+    -- If provided, overwrite modified state, which can be helpful
+    -- if we want to write lines without indicating the buffer
+    -- was modified
     if type(opts.modified) == 'boolean' then
         vim.api.nvim_buf_set_option(self.__id, 'modified', opts.modified)
     end

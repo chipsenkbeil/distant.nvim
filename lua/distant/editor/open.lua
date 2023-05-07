@@ -61,23 +61,28 @@ local function check_path(path, opts)
     log.fmt_trace('check_path(%s, %s)', path, opts)
 
     -- We need to figure out if we are working with a file or directory
-    -- TODO: Support distinguishing a network error from a missing file
     local err, metadata = fn.metadata(vim.tbl_extend('keep', {
         path = path,
         canonicalize = true,
         resolve_file_type = true,
     }, opts))
 
-    local missing = err and err.kind == 'not_found'
+    -- Check if the error we got is a missing file. If we get
+    -- any other kind of error, we want to throw the error
+    local missing = (err and err.kind == 'not_found') or false
     assert(not err or missing, err)
-    assert(metadata, 'Metadata missing')
 
-    local is_dir = not missing and metadata.file_type == 'dir'
-    local is_file = not missing and metadata.file_type == 'file'
-
-    -- Use canonicalized path if available
+    local is_dir = false
+    local is_file = false
     local full_path = path
+
     if not missing then
+        assert(metadata, 'Metadata missing')
+
+        is_dir = metadata.file_type == 'dir'
+        is_file = metadata.file_type == 'file'
+
+        -- Use canonicalized path if available
         full_path = metadata.canonicalized_path or path
     end
 
@@ -431,7 +436,7 @@ return function(opts)
     -- Retrieve information about our path, capturing the canonicalized path
     -- if possible without the distant:// prefix
     local p = check_path(local_path, { timeout = opts.timeout, interval = opts.interval })
-    log.fmt_debug('retrieved path info for %s', p.path)
+    log.fmt_debug('retrieved path info for %s: %s', p.path, p)
 
     -- Construct universal remote buffer name (distant:// + canonicalized path)
     local buf_name = 'distant://' .. p.path
@@ -510,5 +515,7 @@ return function(opts)
         end)
     end
 
+    -- Final check to make sure we aren't returning a garbage buffer number
+    assert(bufnr > 0, 'Invalid bufnr being returned')
     return bufnr
 end
