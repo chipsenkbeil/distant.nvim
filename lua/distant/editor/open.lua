@@ -200,7 +200,7 @@ local function create_or_populate_buf(bufnr, lines)
     --       which causes the lnum of quickfix, location-list, and marks to get moved
     --       incorrectly when we are first populating (going from 1 line to N lines);
     --       so, we want to spawn a task that will correct line numbers when shifted
-    if buf_exists and vars.buf(bufnr).remote_path.is_unset() then
+    if buf_exists and vars.buf(bufnr).remote_path:is_unset() then
         schedule_repair_markers(bufnr)
     end
 
@@ -361,14 +361,14 @@ local function configure_buf(opts)
     -- Add stateful information to the buffer, helping keep track of it
     (function()
         local v = vars.buf(bufnr)
-        v.remote_path.set(opts.canonicalized_path)
-        v.remote_type.set(opts.is_dir and 'dir' or 'file')
+        v.remote_path:set(opts.canonicalized_path)
+        v.remote_type:set(opts.is_dir and 'dir' or 'file')
 
         -- Add the raw path as an alternative path that can be used
         -- to look up this buffer
-        local alt_paths = v.remote_alt_paths.get() or {}
-        alt_paths[opts.raw_path] = true
-        v.remote_alt_paths.set(alt_paths)
+        local alt_paths = v.remote_alt_paths:get() or {}
+        table.insert(alt_paths, opts.raw_path)
+        v.remote_alt_paths:set(alt_paths)
     end)()
 
     -- Display the buffer in the specified window, defaulting to current
@@ -430,7 +430,7 @@ return function(opts)
     path = 'distant://' .. path
 
     -- Determine if we already have a buffer with the matching name
-    local bufnr = vars.buf.find_with_path(local_path) or -1
+    local bufnr = vars.find_buf_with_path(local_path) or -1
     local buf_exists = bufnr ~= -1
 
     -- Retrieve information about our path, capturing the canonicalized path
@@ -467,7 +467,7 @@ return function(opts)
             log.fmt_trace('buf %s, winsaveview() = %s', bufnr, view)
 
             -- Special case where a quickfix list created the buffer without content
-            if vars.buf(bufnr).remote_path.is_unset() then
+            if vars.buf(bufnr).remote_path:is_unset() then
                 local override = get_qflist_selection_cursor(bufnr)
                 if override then
                     cursor = override

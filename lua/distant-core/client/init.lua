@@ -101,7 +101,7 @@ function M:connect_lsp_clients(opts)
     local client_ids = {}
 
     --- @type string|nil
-    local path = vars.buf(opts.bufnr).remote_path.get()
+    local path = vars.buf(opts.bufnr).remote_path:get()
 
     -- Only perform a connection if we have connected and have a remote path.
     --

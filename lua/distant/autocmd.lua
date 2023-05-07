@@ -24,7 +24,7 @@ local function _initialize()
         callback = function(opts)
             local bufnr = opts.buf
 
-            if bufnr > 0 and vars.buf(bufnr).remote_path.is_unset() then
+            if bufnr > 0 and vars.buf(bufnr).remote_path:is_unset() then
                 log.fmt_debug('buf %s is not initialized, so triggering BufReadCmd', bufnr)
                 vim.api.nvim_exec_autocmds('BufReadCmd', {
                     group = 'distant',

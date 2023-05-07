@@ -24,8 +24,7 @@ return function(opts)
     end
 
     -- Load the remote path from the buffer being saved
-    --- @type string|nil
-    local path = vars.buf(buf).remote_path.get()
+    local path = vars.buf(buf).remote_path:get()
 
     if path ~= nil then
         -- Load the contents of the buffer

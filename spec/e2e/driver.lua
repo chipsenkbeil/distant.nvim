@@ -16,8 +16,8 @@ local Window = require('spec.e2e.driver.window')
 --- @class spec.e2e.Driver
 --- @field label string
 --- @field private __debug boolean
---- @field private __client? distant.Client #active client being used by this driver
---- @field private __manager? distant.Manager #active manager being used by this driver
+--- @field private __client? distant.core.Client #active client being used by this driver
+--- @field private __manager? distant.core.Manager #active manager being used by this driver
 --- @field private __fixtures spec.e2e.Fixture[] #fixtures managed by this driver
 --- @field private __mode 'distant'|'ssh' #mode in which the driver is being run
 local M = {}
@@ -59,15 +59,15 @@ end
 -- DRIVER SETUP & TEARDOWN
 -------------------------------------------------------------------------------
 
---- @type distant.Client|nil
+--- @type distant.core.Client|nil
 local client = nil
 
---- @type distant.Manager|nil
+--- @type distant.core.Manager|nil
 local manager = nil
 
 --- Initialize a client if one has not been initialized yet
 --- @param opts? {args?:string[], mode?:'distant'|'ssh', timeout?:number, interval?:number}
---- @return distant.Client
+--- @return distant.core.Client
 local function initialize_client(opts)
     opts = opts or {}
     if client ~= nil then
@@ -198,8 +198,8 @@ local function initialize_client(opts)
 end
 
 --- Initialize a manager if one has not been initialized yet
---- @param opts {label:string, bin?:string, network?:distant.manager.Network, timeout?:number, interval?:number}
---- @return distant.Manager
+--- @param opts {label:string, bin?:string, network?:distant.core.manager.Network, timeout?:number, interval?:number}
+--- @return distant.core.Manager
 local function initialize_manager(opts)
     opts = opts or {}
     if manager ~= nil then
@@ -227,7 +227,7 @@ local function initialize_manager(opts)
 end
 
 --- Initializes a driver for e2e tests.
---- @param opts {label:string, debug?:boolean, lazy?:boolean, settings?:table<string, distant.Settings>}
+--- @param opts {label:string, debug?:boolean, lazy?:boolean, settings?:table<string, distant.core.Settings>}
 --- @return spec.e2e.Driver
 function M:setup(opts)
     opts = opts or {}
@@ -578,7 +578,7 @@ end
 
 --- Creates a new buffer.
 --- @param contents string|string[]
---- @param opts? {modified?:boolean}
+--- @param opts? {force?:boolean, modified?:boolean}
 --- @return spec.e2e.Buffer
 function M:make_buffer(contents, opts)
     opts = opts or {}

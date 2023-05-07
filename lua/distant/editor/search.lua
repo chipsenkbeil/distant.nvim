@@ -38,7 +38,7 @@ local function add_matches_to_qflist(id, matches)
             item.end_col = match.submatches[1]['end']
         end
 
-        item.bufnr = vars.buf.find_with_path(match.path) or -1
+        item.bufnr = vars.find_buf_with_path(match.path) or -1
 
         -- Create the buffer as unlisted and not scratch for the filename
         if item.bufnr == -1 then
@@ -58,7 +58,7 @@ local function add_matches_to_qflist(id, matches)
         --
         -- Otherwise, the file has already been opened and should contain
         -- the lines we would be tracking
-        if vars.buf(item.bufnr).remote_path.is_unset() then
+        if vars.buf(item.bufnr).remote_path:is_unset() then
             local line_cnt = vim.api.nvim_buf_line_count(item.bufnr)
             local additional_line_cnt = item.end_lnum - line_cnt
             if additional_line_cnt > 0 then
