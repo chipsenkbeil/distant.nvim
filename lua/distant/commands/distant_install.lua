@@ -1,5 +1,6 @@
 local Cli         = require('distant-core.cli')
 local min_version = require('distant.version').minimum
+local state       = require('distant.state')
 local utils       = require('distant.commands.utils')
 
 --- DistantInstall [reinstall]
@@ -8,8 +9,7 @@ local function command(cmd)
     local input = utils.parse_input(cmd.args)
     local reinstall = cmd.bang or input.args[1] == 'reinstall'
 
-    -- TODO: Get binary path
-    Cli:new({ bin = '' }):install({
+    Cli:new({ bin = state:path_to_cli() }):install({
         min_version = min_version,
         reinstall = reinstall,
     }, function(err, path)
