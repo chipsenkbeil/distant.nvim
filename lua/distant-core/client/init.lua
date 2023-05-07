@@ -4,7 +4,7 @@ local log     = require('distant-core.log')
 local vars    = require('distant-core.vars')
 
 --- Represents a distant client
---- @class distant.Client
+--- @class distant.core.Client
 --- @field api distant.client.Api
 --- @field private config {binary:string, network:distant.client.Network}
 --- @field private __state distant.client.State
@@ -22,7 +22,7 @@ M.__index     = M
 
 --- Creates a new instance of a distant client
 --- @param opts {binary:string, network:distant.client.Network}
---- @return distant.Client
+--- @return distant.core.Client
 function M:new(opts)
     opts = opts or {}
 
@@ -94,7 +94,7 @@ function M:cached_system_info(opts, cb)
 end
 
 --- Connects relevant LSP clients to the provided buffer, optionally starting clients if needed.
---- @param opts {bufnr:number, settings:table<string, distant.settings.LspSettings>}
+--- @param opts {bufnr:number, settings:table<string, distant.core.settings.LspSettings>}
 --- @return number[] client_ids All ids of the LSP clients (if any) established with the buffer
 function M:connect_lsp_clients(opts)
     log.fmt_trace('client.connect_lsp_clients(%s)', opts)

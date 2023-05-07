@@ -3,14 +3,14 @@ local log       = require('distant-core.log')
 local utils     = require('distant-core.utils')
 local Version   = require('distant-core.version')
 
---- @class distant.Cli
+--- @class distant.core.Cli
 --- @field bin string #path to the distant cli binary
 local M         = {}
 M.__index       = M
 
 --- Creates a new instance of the cli.
 --- @param opts {bin:string}
---- @return distant.Cli
+--- @return distant.core.Cli
 function M:new(opts)
     local instance = {}
     setmetatable(instance, M)
@@ -19,7 +19,7 @@ function M:new(opts)
 end
 
 --- Retrieves the current version of the binary, returning it or nil if not available.
---- @return distant.Version|nil
+--- @return distant.core.Version|nil
 function M:version()
     if not self:is_executable() then
         return
@@ -58,7 +58,7 @@ end
 --- * `reinstall` indicates that the pre-existing `bin` will be ignored.
 --- * `allow_unstable_upgrade` indicates that we will allow `0.x.x`
 ---
---- @param opts {min_version:distant.Version, reinstall?:boolean, timeout?:number, interval?:number}
+--- @param opts {min_version:distant.core.Version, reinstall?:boolean, timeout?:number, interval?:number}
 --- @param cb fun(err?:string, path?:string) #Path is the path to the installed binary
 function M:install(opts, cb)
     vim.validate({

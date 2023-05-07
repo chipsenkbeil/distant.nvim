@@ -1,3 +1,4 @@
+--- @class distant.core.ui.State
 local M = {}
 
 ---@generic T : table

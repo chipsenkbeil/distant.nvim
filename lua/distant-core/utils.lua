@@ -1,6 +1,6 @@
 local log = require('distant-core.log')
 
---- @class distant-core.utils
+--- @class distant.core.Utils
 local M = {}
 
 local PLUGIN_NAME = 'distant.nvim'
@@ -73,12 +73,12 @@ M.data_path = function(path)
     return full_path
 end
 
---- @alias distant-core.utils.OperatingSystem 'windows'|'linux'|'macos'|'bsd'|'solaris'|'unknown'
---- @alias distant-core.utils.Architecture 'x86'|'x86_64'|'powerpc'|'arm'|'mips'|'unknown'
+--- @alias distant.core.utils.OperatingSystem 'windows'|'linux'|'macos'|'bsd'|'solaris'|'unknown'
+--- @alias distant.core.utils.Architecture 'x86'|'x86_64'|'powerpc'|'arm'|'mips'|'unknown'
 
 --- Original from https://gist.github.com/soulik/82e9d02a818ce12498d1
 ---
---- @return distant-core.utils.OperatingSystem, distant-core.utils.Architecture
+--- @return distant.core.utils.OperatingSystem, distant.core.utils.Architecture
 M.detect_os_arch = function()
     local raw_os_name, raw_arch_name = '', ''
 
@@ -150,13 +150,13 @@ M.detect_os_arch = function()
     return os_name, arch_name
 end
 
---- @class distant-core.utils.JobHandle
+--- @class distant.core.utils.JobHandle
 --- @field id function():string
 --- @field write function(data):void
 --- @field stop function():void
 --- @field running function():boolean
 
---- @class distant-core.utils.JobStartOpts
+--- @class distant.core.utils.JobStartOpts
 --- @field env? table<string, string> @a table of process environment variables
 --- @field on_stdout_line fun(line:string) @a function that is triggered once per line of stdout
 --- @field on_stderr_line fun(line:string) @a function that is triggered once per line of stderr
@@ -166,8 +166,8 @@ end
 --- Start an async job using the given cmd and options
 ---
 --- @param cmd any
---- @param opts? distant-core.utils.JobStartOpts
---- @return distant-core.utils.JobHandle
+--- @param opts? distant.core.utils.JobStartOpts
+--- @return distant.core.utils.JobHandle
 M.job_start = function(cmd, opts)
     opts = opts or {}
 

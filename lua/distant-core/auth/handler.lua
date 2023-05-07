@@ -1,12 +1,12 @@
 local log = require('distant-core.log')
 
---- @class distant.auth.Handler
+--- @class distant.core.auth.Handler
 --- @field finished boolean #true if handler has finished performing authentication
 local M = {}
 M.__index = M
 
 --- Creates a new instance of the authentication handler.
---- @return distant.auth.Handler
+--- @return distant.core.auth.Handler
 function M:new()
     local instance = {}
     setmetatable(instance, M)

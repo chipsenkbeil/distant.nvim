@@ -1,5 +1,5 @@
 --- Represents a structured destination.
---- @class distant.Destination
+--- @class distant.core.Destination
 --- @field host string
 --- @field port? integer
 --- @field scheme? string
@@ -10,7 +10,7 @@ M.__index = M
 
 --- Creates a new version.
 --- @param opts {host:string, port?:integer, scheme?:string, username?:string, password?:string}
---- @return distant.Destination
+--- @return distant.core.Destination
 function M:new(opts)
     local instance = {}
     setmetatable(instance, M)
@@ -29,7 +29,7 @@ end
 --- in square brackets is optional.
 ---
 --- @param input string
---- @return distant.Destination
+--- @return distant.core.Destination
 function M:parse(input)
     local destination = tostring(input)
 
@@ -182,7 +182,7 @@ end
 
 --- Creates a new destination from parsing a string. Will return nil if unable to parse.
 --- @param input string
---- @return distant.Destination|nil
+--- @return distant.core.Destination|nil
 function M:try_parse(input)
     local success, destination = pcall(self.parse, self, input)
     if success then

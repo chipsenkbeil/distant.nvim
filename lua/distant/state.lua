@@ -8,10 +8,10 @@ local settings    = require('distant-core').settings
 local utils       = require('distant-core').utils
 
 --- @class distant.State
---- @field client? distant.Client #active client
---- @field manager? distant.Manager #active manager
+--- @field client? distant.core.Client #active client
+--- @field manager? distant.core.Manager #active manager
 --- @field active_search {qfid?:number, searcher?:distant.api.Searcher} #active search via editor
---- @field settings distant.Settings #user settings
+--- @field settings distant.core.Settings #user settings
 local M           = {}
 M.__index         = M
 
@@ -32,7 +32,7 @@ end
 
 --- Loads into state the settings appropriate for the remote machine with the give label
 --- @param destination string Full destination to server, which can be in a form like SCHEME://USER:PASSWORD@HOST:PORT
---- @return distant.Settings
+--- @return distant.core.Settings
 function M:load_settings(destination)
     log.fmt_trace('Detecting settings for destination: %s', destination)
 
@@ -74,9 +74,9 @@ function M:path_to_cli(opts)
 end
 
 --- Loads the manager using the specified config, installing the underlying cli if necessary.
---- @param opts {bin?:string, network?:distant.manager.Network, timeout?:number, interval?:number}
---- @param cb? fun(err?:string, manager?:distant.Manager)
---- @return string|nil, distant.Manager|nil
+--- @param opts {bin?:string, network?:distant.core.manager.Network, timeout?:number, interval?:number}
+--- @param cb? fun(err?:string, manager?:distant.core.Manager)
+--- @return string|nil, distant.core.Manager|nil
 function M:load_manager(opts, cb)
     -- If we are not given a custom bin path, the settings bin path
     -- hasn't changed (from distant/distant.exe), and the current
@@ -135,15 +135,15 @@ function M:load_manager(opts, cb)
 
     -- If we have a receiver, this indicates that we are synchronous
     if rx then
-        --- @type boolean, string|nil, distant.Manager|nil
+        --- @type boolean, string|nil, distant.core.Manager|nil
         local _, err, manager = pcall(rx)
         return err, manager
     end
 end
 
 --- Launches a remote server and connects to it.
---- @param opts {destination:string, bin?:string, network?:distant.manager.Network, timeout?:number, interval?:number}
---- @param cb fun(err?:string, client?:distant.Client)
+--- @param opts {destination:string, bin?:string, network?:distant.core.manager.Network, timeout?:number, interval?:number}
+--- @param cb fun(err?:string, client?:distant.core.Client)
 function M:launch(opts, cb)
     assert(opts.destination, 'Destination is missing')
     self:load_manager({
@@ -171,8 +171,8 @@ function M:launch(opts, cb)
 end
 
 --- Connects to a remote server.
---- @param opts {destination:string, bin?:string, network?:distant.manager.Network, timeout?:number, interval?:number}
---- @param cb fun(err?:string, client?:distant.Client)
+--- @param opts {destination:string, bin?:string, network?:distant.core.manager.Network, timeout?:number, interval?:number}
+--- @param cb fun(err?:string, client?:distant.core.Client)
 function M:connect(opts, cb)
     assert(opts.destination, 'Destination is missing')
     self:load_manager({

@@ -9,7 +9,7 @@ local DEFAULT_INTERVAL = 100
 
 --- Represents a JSON-formatted distant api transport.
 --- @class distant.api.Transport
---- @field private auth_handler distant.auth.Handler
+--- @field private auth_handler distant.core.auth.Handler
 --- @field config {autostart:boolean, binary:string, network:distant.client.Network, timeout:number, interval:number}
 --- @field private __state distant.api.transport.State
 local M                = {}
@@ -18,7 +18,7 @@ M.__index              = M
 --- @class distant.api.transport.State
 --- @field authenticated boolean True if authenticated and ready to send messages
 --- @field queue string[] Queue of outgoing json messages
---- @field handle? distant-core.utils.JobHandle
+--- @field handle? distant.core.utils.JobHandle
 --- @field callbacks table<string, {callback:distant.api.transport.Callback, more:distant.api.transport.More}>
 
 --- @alias distant.api.transport.Callback fun(payload:distant.api.msg.Payload)
@@ -34,7 +34,7 @@ M.__index              = M
 --- @class distant.api.transport.NewOpts
 --- @field binary string
 --- @field network? distant.client.Network
---- @field auth_handler? distant.auth.Handler
+--- @field auth_handler? distant.core.auth.Handler
 --- @field autostart? boolean
 --- @field timeout? number
 --- @field interval? number

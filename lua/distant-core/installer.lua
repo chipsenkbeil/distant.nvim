@@ -1,4 +1,6 @@
+local Cli                  = require('distant-core.cli')
 local utils                = require('distant-core.utils')
+local Version              = require('distant-core.version')
 
 -------------------------------------------------------------------------------
 -- CONFIGURATION DEFAULTS
@@ -35,9 +37,9 @@ local BIN_NAME             = {
 -------------------------------------------------------------------------------
 
 --- @param tag string
---- @return distant.Version|nil
+--- @return distant.core.Version|nil
 local function parse_tag_into_version(tag)
-    return utils.parse_version(utils.strip_prefix(vim.trim(tag), 'v'))
+    return Version:try_parse(utils.strip_prefix(vim.trim(tag), 'v'))
 end
 
 --- @class QueryReleaseApiOpts
@@ -312,7 +314,7 @@ end
 
 --- @class DownloadBinaryOpts
 --- @field bin_name? string #Name of binary artifact to download, defaulting to platform choice
---- @field min_version? distant.Version #Minimum version to list as a download choice
+--- @field min_version? distant.core.Version #Minimum version to list as a download choice
 
 --- @param opts DownloadBinaryOpts
 --- @param cb fun(err?:string, path?:string) #where result is an error message or the binary path
@@ -371,8 +373,7 @@ local function download_binary(opts, cb)
             function(entry) return entry.description end,
             vim.tbl_filter(function(entry)
                 local version = parse_tag_into_version(entry.tag)
-                return not min_version or ((not not version) and utils.can_upgrade_version(
-                    min_version,
+                return not min_version or ((not not version) and min_version:can_upgrade_to(
                     version,
                     { allow_unstable_upgrade = true }
                 ))
@@ -516,7 +517,7 @@ end
 -- PUBLIC API
 -------------------------------------------------------------------------------
 
---- @class distant.Installer
+--- @class distant.core.Installer
 local M = {}
 
 --- @return string #Path to directory that would contain the binary
@@ -557,7 +558,7 @@ end
 ---
 --- Upon completion, the callback is triggered with either an error or the path to the binary.
 ---
---- @param opts {reinstall?:boolean, bin?:string, prompt?:string, min_version?:distant.Version}
+--- @param opts {reinstall?:boolean, bin?:string, prompt?:string, min_version?:distant.core.Version}
 --- @param cb fun(err?:string, path?:string)
 function M.install(opts, cb)
     vim.validate({
@@ -585,9 +586,8 @@ function M.install(opts, cb)
     -- If we are given a minimum version and have a pre-existing binary,
     -- we want to check the version to see if we can return it
     if has_bin and min_version and not opts.reinstall then
-        local version = has_bin and utils.exec_version(local_bin)
-        local valid_version = version and utils.can_upgrade_version(
-            min_version,
+        local version = has_bin and Cli:new({ bin = local_bin }):version()
+        local valid_version = version and min_version:can_upgrade_to(
             version,
             { allow_unstable_upgrade = true }
         )
@@ -599,8 +599,8 @@ function M.install(opts, cb)
             prompt = string.format(
                 'Installed cli version is %s, which is not backwards-compatible with %s! '
                 .. 'What would you like to do?',
-                utils.version_to_string(version),
-                utils.version_to_string(min_version)
+                version:as_string(),
+                min_version:as_string()
             )
         end
 

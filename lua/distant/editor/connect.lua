@@ -4,7 +4,7 @@ local state = require('distant.state')
 --- @class distant.editor.ConnectOpts
 --- @field destination string
 ---
---- @field auth? distant.auth.Handler
+--- @field auth? distant.core.auth.Handler
 --- @field interval? number
 --- @field log_level? 'off'|'error'|'warn'|'info'|'debug'|'trace'
 --- @field log_file? string
@@ -13,7 +13,7 @@ local state = require('distant.state')
 
 --- Connects to a running distance binary on the remote machine
 --- @param opts distant.editor.ConnectOpts
---- @param cb fun(err?:string, client?:distant.Client)
+--- @param cb fun(err?:string, client?:distant.core.Client)
 return function(opts, cb)
     opts = opts or {}
     cb = cb or function(err)

@@ -1,7 +1,7 @@
 local state = require('distant.state')
 
 --- Retrieves the active client. Throws an error if client not initialized.
---- @return distant.Client
+--- @return distant.core.Client
 local function client()
     return assert(state.client, 'Client must be initialized before invoking fn')
 end

@@ -1,22 +1,23 @@
 local log = require('distant-core.log')
 local state = require('distant-core.ui.state')
 
----@alias WinWidth number
+---@alias distant.core.ui.display.WinWidth number
 --- Width of the window. Accepts:
 --- - Integer greater than 1 for fixed width.
 --- - Float in the range of 0-1 for a percentage of screen width.
 
----@alias WinHeight number
+---@alias distant.core.ui.display.WinHeight number
 --- Height of the window. Accepts:
 --- - Integer greater than 1 for fixed height.
 --- - Float in the range of 0-1 for a percentage of screen height.
 
----@type WinWidth
+---@type distant.core.ui.display.WinWidth
 local DEFAULT_UI_WIDTH = 0.8
 
----@type WinHeight
+---@type distant.core.ui.display.WinHeight
 local DEFAULT_UI_HEIGHT = 0.9
 
+--- @class distant.core.ui.Display
 local M = {}
 
 ---@generic T
@@ -40,7 +41,7 @@ local function debounced(debounced_fn)
 end
 
 ---@param line string
----@param render_context RenderContext
+---@param render_context distant.core.ui.display.RenderContext
 local function get_styles(line, render_context)
     local indentation = 0
 
@@ -62,41 +63,41 @@ local function get_styles(line, render_context)
     }
 end
 
----@param viewport_context ViewportContext
----@param node INode
----@param _render_context RenderContext?
----@param _output RenderOutput?
+---@param viewport_context distant.core.ui.display.ViewportContext
+---@param node distant.core.ui.INode
+---@param _render_context distant.core.ui.display.RenderContext?
+---@param _output distant.core.ui.display.RenderOutput?
 local function render_node(viewport_context, node, _render_context, _output)
-    ---@class RenderContext
-    ---@field viewport_context ViewportContext
-    ---@field applied_block_styles CascadingStyle[]
+    ---@class distant.core.ui.display.RenderContext
+    ---@field viewport_context distant.core.ui.display.ViewportContext
+    ---@field applied_block_styles distant.core.ui.CascadingStyle[]
     local render_context = _render_context
         or {
             viewport_context = viewport_context,
             applied_block_styles = {},
         }
-    ---@class RenderHighlight
+    ---@class distant.core.ui.display.RenderHighlight
     ---@field hl_group string
     ---@field line number
     ---@field col_start number
     ---@field col_end number
 
-    ---@class RenderKeybind
+    ---@class distant.core.ui.display.RenderKeybind
     ---@field line number
     ---@field key string
     ---@field effect string
     ---@field payload any
 
-    ---@class RenderDiagnostic
+    ---@class distant.core.ui.display.RenderDiagnostic
     ---@field line number
     ---@field diagnostic {message: string, severity: integer, source: string|nil}
 
-    ---@class RenderOutput
+    ---@class distant.core.ui.display.RenderOutput
     ---@field lines string[]: The buffer lines.
     ---@field virt_texts {line: integer, content: table}[]: List of tuples.
-    ---@field highlights RenderHighlight[]
-    ---@field keybinds RenderKeybind[]
-    ---@field diagnostics RenderDiagnostic[]
+    ---@field highlights distant.core.ui.display.RenderHighlight[]
+    ---@field keybinds distant.core.ui.display.RenderKeybind[]
+    ---@field diagnostics distant.core.ui.display.RenderDiagnostic[]
     ---@field sticky_cursors { line_map: table<number, string>, id_map: table<string, number> }
     local output = _output
         or {
@@ -181,7 +182,7 @@ end
 -- exported for tests
 M._render_node = render_node
 
----@alias WindowOpts { effects?: table<string, fun()>, winhighlight?: string[], border?: string|table, width?: WinWidth, height?: WinHeight }
+---@alias distant.core.ui.display.WindowOpts { effects?: table<string, fun()>, winhighlight?: string[], border?: string|table, width?: distant.core.ui.display.WinWidth, height?: distant.core.ui.display.WinHeight }
 
 ---@param size integer | float
 ---@param viewport integer
@@ -192,8 +193,8 @@ local function calc_size(size, viewport)
     return math.min(size, viewport)
 end
 
----@param opts WindowOpts
----@param sizes_only boolean Whether to only return properties that control the window size.
+---@param opts distant.core.ui.display.WindowOpts
+---@param sizes_only boolean #Whether to only return properties that control the window size.
 local function create_popup_window_opts(opts, sizes_only)
     local lines = vim.o.lines - vim.o.cmdheight
     local columns = vim.o.columns
@@ -218,13 +219,13 @@ local function create_popup_window_opts(opts, sizes_only)
     return popup_layout
 end
 
----@param name string Human readable identifier.
+---@param name string #Human readable identifier.
 ---@param filetype string
 function M.new_view_only_win(name, filetype)
     local namespace = vim.api.nvim_create_namespace(('installer_%s'):format(name))
     local bufnr, renderer, mutate_state, get_state, unsubscribe, win_id, window_mgmt_augroup, autoclose_augroup, registered_keymaps, registered_keybinds, registered_effect_handlers, sticky_cursor
     local has_initiated = false
-    ---@type WindowOpts
+    ---@type distant.core.ui.display.WindowOpts
     local window_opts = {}
 
     vim.diagnostic.config({
@@ -291,7 +292,7 @@ function M.new_view_only_win(name, filetype)
         end
 
         local win_width = vim.api.nvim_win_get_width(win_id)
-        ---@class ViewportContext
+        ---@class distant.core.ui.display.ViewportContext
         local viewport_context = {
             win_width = win_width,
         }
@@ -494,7 +495,7 @@ function M.new_view_only_win(name, filetype)
 
             return mutate_state, get_state
         end,
-        ---@param opts WindowOpts
+        ---@param opts distant.core.ui.display.WindowOpts
         init = function(opts)
             assert(renderer ~= nil, 'No view function has been registered. Call .view() before .init().')
             assert(unsubscribe ~= nil, 'No state has been registered. Call .state() before .init().')

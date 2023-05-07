@@ -10,7 +10,7 @@ local log = require('distant-core.log')
 local M = {}
 M.__index = M
 
---- @param opts {binary:string, network?:distant.client.Network, auth_handler?:distant.auth.Handler, timeout?:number, interval?:number}
+--- @param opts {binary:string, network?:distant.client.Network, auth_handler?:distant.core.auth.Handler, timeout?:number, interval?:number}
 --- @return distant.client.Api
 function M:new(opts)
     local instance = {}

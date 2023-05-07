@@ -1,7 +1,7 @@
 local utils = require('distant-core.utils')
 
 --- Contains operations to apply against a global collection of functions
---- @class distant.Data
+--- @class distant.core.Data
 local M = {}
 
 -- Inner data that is not directly exposed

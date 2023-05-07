@@ -2,24 +2,24 @@ local Destination = require('distant-core.destination')
 local log = require('distant-core.log')
 local utils = require('distant-core.utils')
 
---- @class distant.Settings
---- @field client distant.settings.ClientSettings
+--- @class distant.core.Settings
+--- @field client distant.core.settings.ClientSettings
 --- @field max_timeout number
 --- @field timeout_interval number
---- @field file distant.settings.FileSettings
---- @field dir distant.settings.DirSettings
---- @field lsp table<string, distant.settings.LspSettings>
+--- @field file distant.core.settings.FileSettings
+--- @field dir distant.core.settings.DirSettings
+--- @field lsp table<string, distant.core.settings.LspSettings>
 
---- @class distant.settings.ClientSettings
+--- @class distant.core.settings.ClientSettings
 --- @field bin string
 
---- @class distant.settings.FileSettings
+--- @class distant.core.settings.FileSettings
 --- @field mappings table<string, fun()>
 
---- @class distant.settings.DirSettings
+--- @class distant.core.settings.DirSettings
 --- @field mappings table<string, fun()>
 
---- @class distant.settings.LspSettings
+--- @class distant.core.settings.LspSettings
 --- @field cmd string|string[]
 --- @field root_dir string
 --- @field filetypes? string[]
@@ -30,7 +30,7 @@ local utils = require('distant-core.utils')
 local DEFAULT_LABEL = '*'
 
 --- Default settings to apply to any-and-all servers
---- @type distant.Settings
+--- @type distant.core.Settings
 local DEFAULT_SETTINGS = {
     -- Settings to apply to the local distant binary used as a client
     client = {
@@ -54,10 +54,11 @@ local DEFAULT_SETTINGS = {
         mappings = {},
     },
     -- Settings to use to start LSP instances
-    --- @type distant.settings.LspSettings
+    --- @type distant.core.settings.LspSettings
     lsp = {},
 }
 
+--- @class distant.core.SettingsManager
 local M = {}
 M.__index = M
 
@@ -65,11 +66,11 @@ M.__index = M
 --- associated by a label with '*' representing a blanket set of
 --- settings to apply first before adding in server-specific settings
 ---
---- @type table<string, distant.Settings>
+--- @type table<string, distant.core.Settings>
 local inner = { [DEFAULT_LABEL] = vim.tbl_deep_extend('force', {}, DEFAULT_SETTINGS) }
 
 --- Merges current settings with provided, overwritting anything with provided
---- @param other table<string, distant.Settings> The other settings to include
+--- @param other table<string, distant.core.Settings> The other settings to include
 M.merge = function(other)
     inner = vim.tbl_deep_extend('force', inner, other)
 end
@@ -92,7 +93,7 @@ end
 ---
 --- @param destination string #Full destination to server, which can be in a form like SCHEME://USER:PASSWORD@HOST:PORT
 --- @param no_default? boolean #If true, will not apply default settings first
---- @return distant.Settings
+--- @return distant.core.Settings
 M.for_destination = function(destination, no_default)
     log.fmt_trace('settings.for_destination(%s, %s)', destination, vim.inspect(no_default))
 
@@ -114,7 +115,7 @@ end
 ---
 --- @param label string #The label associated with the remote server's settings
 --- @param no_default? boolean #If true, will not apply default settings first
---- @return distant.Settings #The settings associated with the remote machine (or empty table)
+--- @return distant.core.Settings #The settings associated with the remote machine (or empty table)
 M.for_label = function(label, no_default)
     log.fmt_trace('settings.for_label(%s, %s)', label, vim.inspect(no_default))
 
@@ -130,7 +131,7 @@ M.for_label = function(label, no_default)
 end
 
 --- Retrieves settings that apply to any remote machine
---- @return distant.Settings #The settings to apply to any remote machine (or empty table)
+--- @return distant.core.Settings #The settings to apply to any remote machine (or empty table)
 M.default = function()
     local tbl = inner[DEFAULT_LABEL] or {}
 

@@ -1,6 +1,7 @@
+--- @class distant.core.Ui
 local M = {}
 
----@alias NodeType
+---@alias distant.core.ui.NodeType
 ---| ''NODE''
 ---| ''CASCADING_STYLE''
 ---| ''VIRTUAL_TEXT''
@@ -9,11 +10,18 @@ local M = {}
 ---| ''KEYBIND_HANDLER''
 ---| ''STICKY_CURSOR''
 
----@alias INode Node | HlTextNode | CascadingStyleNode | VirtualTextNode | KeybindHandlerNode | DiagnosticsNode | StickyCursorNode
+---@alias distant.core.ui.INode
+--- | distant.core.ui.Node
+--- | distant.core.ui.HlTextNode
+--- | distant.core.ui.CascadingStyleNode
+--- | distant.core.ui.VirtualTextNode
+--- | distant.core.ui.KeybindHandlerNode
+--- | distant.core.ui.DiagnosticsNode
+--- | distant.core.ui.StickyCursorNode
 
----@param children INode[]
+---@param children distant.core.ui.INode[]
 function M.Node(children)
-    ---@class Node
+    ---@class distant.core.ui.Node
     local node = {
         type = 'NODE',
         children = children,
@@ -27,7 +35,7 @@ function M.HlTextNode(lines_with_span_tuples)
         -- this enables a convenience API for just rendering a single line (with just a single span)
         lines_with_span_tuples = { { lines_with_span_tuples } }
     end
-    ---@class HlTextNode
+    ---@class distant.core.ui.HlTextNode
     local node = {
         type = 'HL_TEXT',
         lines = lines_with_span_tuples,
@@ -50,14 +58,14 @@ function M.Text(lines)
     return M.HlTextNode(create_unhighlighted_lines(lines))
 end
 
----@alias CascadingStyle
+---@alias distant.core.ui.CascadingStyle
 ---| ''INDENT''
 ---| ''CENTERED''
 
----@param styles CascadingStyle[]
----@param children INode[]
+---@param styles distant.core.ui.CascadingStyle[]
+---@param children distant.core.ui.INode[]
 function M.CascadingStyleNode(styles, children)
-    ---@class CascadingStyleNode
+    ---@class distant.core.ui.CascadingStyleNode
     local node = {
         type = 'CASCADING_STYLE',
         styles = styles,
@@ -68,7 +76,7 @@ end
 
 ---@param virt_text string[][] List of (text, highlight) tuples.
 function M.VirtualTextNode(virt_text)
-    ---@class VirtualTextNode
+    ---@class distant.core.ui.VirtualTextNode
     local node = {
         type = 'VIRTUAL_TEXT',
         virt_text = virt_text,
@@ -78,7 +86,7 @@ end
 
 ---@param diagnostic {message: string, severity: integer, source: string?}
 function M.DiagnosticsNode(diagnostic)
-    ---@class DiagnosticsNode
+    ---@class distant.core.ui.DiagnosticsNode
     local node = {
         type = 'DIAGNOSTICS',
         diagnostic = diagnostic,
@@ -87,7 +95,7 @@ function M.DiagnosticsNode(diagnostic)
 end
 
 ---@param condition boolean
----@param node INode | fun(): INode
+---@param node distant.core.ui.INode | fun(): distant.core.ui.INode
 ---@param default_val any
 function M.When(condition, node, default_val)
     if condition then
@@ -105,7 +113,7 @@ end
 ---@param payload any The payload to pass to the effect handler when triggered.
 ---@param is_global boolean? Whether to register the keybind to apply on all lines in the buffer.
 function M.Keybind(key, effect, payload, is_global)
-    ---@class KeybindHandlerNode
+    ---@class distant.core.ui.KeybindHandlerNode
     local node = {
         type = 'KEYBIND_HANDLER',
         key = key,
@@ -147,7 +155,7 @@ end
 
 ---@param opts { id: string }
 function M.StickyCursor(opts)
-    ---@class StickyCursorNode
+    ---@class distant.core.ui.StickyCursorNode
     local node = {
         type = 'STICKY_CURSOR',
         id = opts.id,

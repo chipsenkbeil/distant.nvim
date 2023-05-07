@@ -1,6 +1,6 @@
 local utils = require('distant-core.utils')
 
---- @class distant.vars.BufVar
+--- @class distant.core.vars.BufVar
 --- @field set fun(value:any) #sets buffer variable to value
 --- @field get fun():any #retrieves buffer variable value (or nil if not set)
 --- @field set_if_unset fun(value:any) #sets buffer variable to value if it is not set
@@ -8,13 +8,13 @@ local utils = require('distant-core.utils')
 --- @field is_unset fun():boolean #returns true if variable is not set
 --- @field unset fun() #unsets the variable
 
---- @alias distant.vars.BufVarType 'string'|'number'|'boolean'
+--- @alias distant.core.vars.BufVarType 'string'|'number'|'boolean'
 
 --- @param buf number #buffer number
 --- @param name string #name of the variable
---- @param ty distant.vars.BufVarType|distant.vars.BufVarType[] #type(s) that the variable can be
+--- @param ty distant.core.vars.BufVarType|distant.core.vars.BufVarType[] #type(s) that the variable can be
 --- @param set_map? fun(...):... #if provided, maps input to output of set(...)
---- @return distant.vars.BufVar
+--- @return distant.core.vars.BufVar
 local function buf_var(buf, name, ty, set_map)
     --- Fails with error if not valid type
     --- @type fun(value:any)
