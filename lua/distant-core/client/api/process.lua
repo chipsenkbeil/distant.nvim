@@ -274,19 +274,22 @@ function M:spawn(opts, cb)
 
     -- Running synchronously, so pull in our results
     if not cb then
-        local err, msg = rx()
-        if err then
+        --- @type boolean, string|{err:string}|{results:distant.client.api.process.SpawnResults}
+        local status, results = pcall(rx)
+
+        if not status then
             return Error:new({
                 kind = Error.kinds.timed_out,
-                description = err,
+                --- @cast results string
+                description = results,
             })
-        elseif msg.err then
+        elseif results.err then
             return Error:new({
                 kind = Error.kinds.invalid_data,
-                description = msg.err,
+                description = results.err,
             })
-        else
-            return nil, msg.results
+        elseif results.results then
+            return nil, results.results
         end
     end
 end

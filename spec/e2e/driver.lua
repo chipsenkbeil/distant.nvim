@@ -11,11 +11,13 @@ local RemoteFile = require('spec.e2e.driver.remote_file')
 local RemoteSymlink = require('spec.e2e.driver.remote_symlink')
 local Window = require('spec.e2e.driver.window')
 
+--- @alias spec.e2e.Fixture spec.e2e.RemoteDir|spec.e2e.RemoteFile|spec.e2e.RemoteSymlink
+
 --- @class spec.e2e.Driver
 --- @field label string
 --- @field private __client? distant.Client #active client being used by this driver
 --- @field private __manager? distant.Manager #active manager being used by this driver
---- @field private __fixtures table[] #fixtures managed by this driver
+--- @field private __fixtures spec.e2e.Fixture[] #fixtures managed by this driver
 --- @field private __mode 'distant'|'ssh' #mode in which the driver is being run
 local M = {}
 M.__index = M
@@ -209,7 +211,7 @@ local function initialize_manager(opts)
         interval = opts.interval,
     })
     assert(not err, err)
-    manager = assert(local_manager, 'Missing manager')
+    manager = assert(local_manager, 'load_manager did not return a manager')
 
     return manager
 end
@@ -266,7 +268,7 @@ function M:teardown()
     self.__manager = nil
 
     for _, fixture in ipairs(self.__fixtures) do
-        fixture.remove({ ignore_errors = true })
+        fixture:remove({ ignore_errors = true })
     end
 end
 

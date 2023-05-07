@@ -79,7 +79,7 @@ function M:write(contents, opts)
     opts = opts or {}
 
     local path = os.tmpname()
-    self.__driver:local_file(self.__path):write(contents)
+    self.__driver:local_file(path):write(contents)
 
     --- Copy local file into remote one
     local success = self.__driver:scp(

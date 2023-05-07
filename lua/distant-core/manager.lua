@@ -83,6 +83,7 @@ end
 --- Changes the selected connection used as default by the manager
 --- @param opts distant.manager.SelectOpts
 --- @param cb fun(err?:string, selector?:distant.manager.ConnectionSelector) #Selector will be provided if no connection provided in opts
+--- @return string|nil, distant.manager.ConnectionSelector|nil
 function M:select(opts, cb)
     opts = opts or {}
 
@@ -141,8 +142,9 @@ function M:select(opts, cb)
     })
 
     if rx then
-        local err, result = rx()
-        return (not err) and result
+        --- @type boolean, string|nil, distant.manager.ConnectionSelector|nil
+        local _, err, selector = pcall(rx)
+        return err, selector
     end
 end
 
@@ -181,8 +183,9 @@ function M:is_listening(opts, cb)
     })
 
     if rx then
-        local err, result = rx()
-        return (not err) and result
+        --- @type boolean, string|boolean
+        local status, result = pcall(rx)
+        return status and result == true
     end
 end
 

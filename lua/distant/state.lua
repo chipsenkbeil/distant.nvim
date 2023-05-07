@@ -135,8 +135,9 @@ function M:load_manager(opts, cb)
 
     -- If we have a receiver, this indicates that we are synchronous
     if rx then
-        local err1, err2, result = rx()
-        return err1 or err2, result
+        --- @type boolean, string|nil, distant.Manager|nil
+        local _, err, manager = pcall(rx)
+        return err, manager
     end
 end
 

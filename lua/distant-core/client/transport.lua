@@ -361,11 +361,14 @@ function M:send_sync(opts)
 
     self:send_async(opts, tx)
 
-    local err, payload = rx()
-    if err then
-        return Error:new({ kind = Error.kinds.timed_out, description = err })
+    --- @type boolean, string|distant.api.client.transport.msg.Payload
+    local success, results = pcall(rx)
+    if not success then
+        --- @cast results string
+        return Error:new({ kind = Error.kinds.timed_out, description = results })
     else
-        return nil, payload
+        --- @cast results distant.api.client.transport.msg.Payload
+        return nil, results
     end
 end
 

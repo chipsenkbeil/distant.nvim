@@ -198,19 +198,22 @@ function M:execute(opts, cb)
 
     -- Running synchronously, so pull in our results
     if not cb then
-        local err, msg = rx()
-        if err then
+        --- @type boolean, string|{err:string}|{matches:distant.client.api.search.Match[]}
+        local status, results = pcall(rx)
+
+        if not status then
             return Error:new({
                 kind = Error.kinds.timed_out,
-                description = err,
+                --- @cast results string
+                description = results,
             })
-        elseif msg.err then
+        elseif results.err then
             return Error:new({
                 kind = Error.kinds.invalid_data,
-                description = msg.err,
+                description = results.err,
             })
-        else
-            return nil, msg.matches
+        elseif results.matches then
+            return nil, results.matches
         end
     end
 end

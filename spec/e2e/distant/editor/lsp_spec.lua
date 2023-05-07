@@ -11,9 +11,10 @@ local function d(level, text)
     return table.concat(out, '\n')
 end
 
--- Creates a rust project using the provided remote directory
+--- Creates a rust project using the provided remote directory
+--- @param root spec.e2e.RemoteDir
 local function make_rust_project(root)
-    assert(root.file('Cargo.toml').write(d(2, [[
+    assert(root:file('Cargo.toml'):write(d(2, [[
         [package]
         name = "testapp"
         version = "0.1.0"
@@ -22,9 +23,9 @@ local function make_rust_project(root)
         [dependencies]
     ]])), 'Failed to create Cargo.toml')
 
-    assert(root.dir('src').make(), 'Failed to make src/ dir')
+    assert(root:dir('src'):make(), 'Failed to make src/ dir')
 
-    assert(root.dir('src').file('main.rs').write(d(2, [[
+    assert(root:dir('src'):file('main.rs'):write(d(2, [[
         mod other;
 
         fn main() {
@@ -32,13 +33,16 @@ local function make_rust_project(root)
         }
     ]])), 'Failed to create src/main.rs')
 
-    assert(root.dir('src').file('other.rs').write(d(2, [[
+    assert(root:dir('src'):file('other.rs'):write(d(2, [[
         pub fn say_hello() {
             println!("Hello, world!");
         }
     ]])), 'Failed to create src/other.rs')
 end
 
+--- @param bufnr number
+--- @param method string
+--- @param params? table
 local function try_buf_request(bufnr, method, params)
     params = params or {}
     local function make_request_sync()

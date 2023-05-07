@@ -535,11 +535,14 @@ end
 
 --- Produces a send/receive pair in the form of {tx, rx} where
 --- tx is a function that sends a message and rx is a function that
---- waits for the message
+--- waits for the message.
+---
+--- The `rx` function will throw an error if timed out, so make sure to
+--- use `pcall` if you want to capture the error instead of throwing it.
 ---
 --- @param timeout number is the milliseconds that rx will wait
 --- @param interval number is the milliseconds to wait inbetween checking for a message
---- @return fun(...) tx, fun():string|nil, ... rx #tx sends the value and rx receives the value
+--- @return fun(...) tx, fun():...  rx #tx sends the value and rx receives the value
 M.oneshot_channel = function(timeout, interval)
     vim.validate({
         timeout = { timeout, 'number' },
@@ -557,25 +560,20 @@ M.oneshot_channel = function(timeout, interval)
 
     local rx = function()
         -- Wait for the result to be set, or time out
-        vim.wait(
+        local success = vim.wait(
             timeout,
             function() return data ~= nil end,
             interval
         )
 
+        -- If we failed, report the error
+        if not success then
+            error('Timeout of ' .. tostring(timeout) .. ' exceeded!')
+        end
+
         -- Grab and clear our temporary variable if it is set and return it's value
         local result = data
         data = nil
-
-        -- Add our error to beginning of the result list
-        if not vim.tbl_islist(result) then
-            local err = 'Timeout of ' .. tostring(timeout) .. ' exceeded!'
-            result = { err, result }
-
-            -- Otherwise, add our error argument to the front
-        else
-            table.insert(result, 1, nil)
-        end
 
         return unpack(result)
     end
