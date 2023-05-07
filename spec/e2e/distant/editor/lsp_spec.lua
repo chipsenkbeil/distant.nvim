@@ -84,7 +84,7 @@ describe('distant.editor.lsp', function()
 
     before_each(function()
         driver = Driver:setup({
-            label = 'editor.lsp',
+            label = 'distant.editor.lsp',
             lazy = true,
             debug = true,
         })

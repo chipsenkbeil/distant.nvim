@@ -6,7 +6,7 @@ describe('distant.fn', function()
     local driver, root
 
     before_each(function()
-        driver = Driver:setup({ label = 'fn.search' })
+        driver = Driver:setup({ label = 'distant.fn.search' })
 
         -- TODO: This is really expensive, but plenary doesn't offer setup/teardown
         --       functions that we could use to limit this to the the entire

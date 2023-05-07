@@ -8,7 +8,7 @@ describe('distant.actions', function()
     local driver, root
 
     before_each(function()
-        driver = Driver:setup({ label = 'nav.actions' })
+        driver = Driver:setup({ label = 'distant.nav.actions' })
 
         -- TODO: This is really expensive, but plenary doesn't offer setup/teardown
         --       functions that we could use to limit this to the the entire

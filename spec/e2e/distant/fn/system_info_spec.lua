@@ -6,7 +6,7 @@ describe('distant.fn', function()
     local driver
 
     before_each(function()
-        driver = Driver:setup({ label = 'fn.system_info' })
+        driver = Driver:setup({ label = 'distant.fn.system_info' })
     end)
 
     after_each(function()

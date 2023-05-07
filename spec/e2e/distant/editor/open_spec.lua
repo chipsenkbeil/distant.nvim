@@ -7,7 +7,7 @@ describe('distant.editor.open', function()
     local driver, file, dir
 
     before_each(function()
-        driver = Driver:setup({ label = 'editor.open' })
+        driver = Driver:setup({ label = 'distant.editor.open' })
         file = driver:new_file_fixture({
             ext = 'txt',
             lines = {

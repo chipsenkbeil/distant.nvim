@@ -6,7 +6,7 @@ describe('distant.fn', function()
     local driver, root
 
     before_each(function()
-        driver = Driver:setup({ label = 'fn.create_dir' })
+        driver = Driver:setup({ label = 'distant.fn.create_dir' })
         root = driver:new_dir_fixture()
     end)
 

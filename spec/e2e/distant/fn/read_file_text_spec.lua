@@ -6,7 +6,7 @@ describe('distant.fn', function()
     local driver, root
 
     before_each(function()
-        driver = Driver:setup({ label = 'fn.read_file_text' })
+        driver = Driver:setup({ label = 'distant.fn.read_file_text' })
         root = driver:new_dir_fixture()
     end)
 
