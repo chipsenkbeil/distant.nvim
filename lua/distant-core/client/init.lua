@@ -1,6 +1,7 @@
 local Api     = require('distant-core.client.api')
 local builder = require('distant-core.builder')
 local log     = require('distant-core.log')
+local utils   = require('distant-core.utils')
 local vars    = require('distant-core.vars')
 
 --- Represents a distant client
@@ -99,9 +100,8 @@ end
 function M:connect_lsp_clients(opts)
     log.fmt_trace('client.connect_lsp_clients(%s)', opts)
     local client_ids = {}
-
-    --- @type string|nil
     local path = vars.buf(opts.bufnr).remote_path:get()
+    log.fmt_trace('Seeking LSP clients that cover path = %s', path)
 
     -- Only perform a connection if we have connected and have a remote path.
     --
@@ -109,10 +109,33 @@ function M:connect_lsp_clients(opts)
     -- once per session as well as attach it to a buffer only once
     -- (not on enter).
     if path ~= nil then
+        --- @param prefix string
+        --- @return boolean
+        local function path_starts_with(prefix)
+            return vim.startswith(path, prefix)
+        end
+
         for label, config in pairs(opts.settings) do
+            --- @type string|nil
+            local root_dir
+
+            -- Look up the root directory following this logic:
+            --
+            -- 1. If config.root_dir is a string, check if it contains our path
+            -- 2. If config.root_dir is a list of strings, check if any contain our path
+            -- 3. If config.root_dir is a function, feed it our path and use whatever path is returned
+            local config_root_dir = config.root_dir
+            if type(config_root_dir) == 'string' and path_starts_with(config_root_dir) then
+                root_dir = config_root_dir
+            elseif type(config_root_dir) == 'table' then
+                root_dir = utils.find(config_root_dir, path_starts_with)
+            elseif type(config_root_dir) == 'function' then
+                root_dir = config_root_dir(path)
+            end
+
             -- Only apply client with a root directory that contains this file
-            if vim.startswith(path, config.root_dir) then
-                log.fmt_trace('File %s is within %s of %s', path, config.root_dir, label)
+            if root_dir then
+                log.fmt_trace('File %s is within %s of %s', path, root_dir, label)
 
                 -- Check if this lsp is filtered by filetype, and if so make sure that
                 -- this buffer's filetype matches
@@ -145,6 +168,7 @@ function M:connect_lsp_clients(opts)
                         local id = vim.lsp.start_client(vim.tbl_deep_extend('force', config, {
                             cmd = cmd,
                             on_exit = on_exit,
+                            root_dir = root_dir,
                         }))
                         self.__state.lsp.clients[label] = id
                     end

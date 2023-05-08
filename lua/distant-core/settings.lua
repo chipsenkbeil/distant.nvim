@@ -19,12 +19,13 @@ local utils = require('distant-core.utils')
 --- @class distant.core.settings.DirSettings
 --- @field mappings table<string, fun()>
 
+--- @alias distant.core.settings.lsp.RootDirFn fun(path:string):string|nil
+
 --- @class distant.core.settings.LspSettings
 --- @field cmd string|string[]
---- @field root_dir string
+--- @field root_dir string|string[]|distant.core.settings.lsp.RootDirFn
 --- @field filetypes? string[]
 --- @field on_exit? fun(code:number, signal:number|nil, client_id:string)
---- @field opts? table Additional options to feed directly to the language server
 
 -- Represents the label used to signify default/global settings
 local DEFAULT_LABEL = '*'

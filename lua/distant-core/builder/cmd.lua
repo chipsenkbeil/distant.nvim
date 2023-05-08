@@ -1,8 +1,8 @@
 --- @class distant.builder.CmdBuilder
---- @field __cmd string
---- @field __internal table<string, boolean|string>
---- @field __tail? string
---- @field __allowed? table<string, boolean>
+--- @field private __cmd string
+--- @field private __internal table<string, boolean|string>
+--- @field private __tail? string
+--- @field private __allowed? table<string, boolean>
 local M = {}
 M.__index = M
 
@@ -136,6 +136,11 @@ function M:as_list()
         if type(v) == 'string' then
             table.insert(lst, v)
         end
+    end
+
+    if self.__tail then
+        table.insert(lst, '--')
+        table.insert(lst, self.__tail)
     end
 
     return lst

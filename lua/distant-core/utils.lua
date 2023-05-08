@@ -300,17 +300,16 @@ M.filter_map = function(array, f)
 end
 
 --- Returns the first value where the predicate returns true, otherwise returns nil
+--- @generic T
+--- @param array T[]
+--- @param f fun(x:T):boolean
+--- @return T|nil
 M.find = function(array, f)
-    if array == nil then
-        return nil
-    end
-
     for _, v in ipairs(array) do
         if f(v) then
             return v
         end
     end
-    return nil
 end
 
 --- Compresses a string by trimming whitespace on each line and replacing

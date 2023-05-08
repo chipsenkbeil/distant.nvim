@@ -89,6 +89,15 @@ describe('distant.editor.lsp', function()
             debug = true,
         })
         root = driver:new_dir_fixture()
+
+        local root_dir = { root:path() }
+        local root_canonicalized_path = root:canonicalized_path({
+            ignore_errors = true
+        })
+        if root_canonicalized_path then
+            table.insert(root_dir, root_canonicalized_path)
+        end
+
         driver:initialize({
             settings = {
                 ['*'] = {
@@ -96,7 +105,7 @@ describe('distant.editor.lsp', function()
                         ['rust'] = {
                             cmd = { 'rls' },
                             filetypes = { 'rust' },
-                            root_dir = root:path(),
+                            root_dir = root_dir,
                         }
                     }
                 }
