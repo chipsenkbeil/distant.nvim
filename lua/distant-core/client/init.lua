@@ -159,7 +159,7 @@ function M:connect_lsp_clients(opts)
                             end
                         end
 
-                        local cmd = self:wrap({ cmd = config.cmd })
+                        local cmd = self:wrap({ lsp = config.cmd })
                         log.fmt_debug('Starting LSP %s: %s', label, cmd)
 
                         -- Start LSP server using the provided configuration, replacing the
