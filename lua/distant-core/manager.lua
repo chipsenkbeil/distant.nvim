@@ -318,11 +318,15 @@ function M:launch(opts, cb)
         return
     end
 
+    --- @param text string|string[]|nil
+    --- @return string|nil
     local wrap_args = function(text)
-        if vim.tbl_islist(text) then
+        if type(text) == 'table' then
             text = table.concat(text, ' ')
+        elseif type(text) == 'string' then
+            text = text
         else
-            text = tostring(text)
+            return
         end
 
         local quote = '"'
@@ -359,10 +363,10 @@ function M:launch(opts, cb)
             config              = opts.config,
             distant             = opts.distant,
             distant_bind_server = opts.distant_bind_server,
-            distant_args        = wrap_args(opts.distant_args),
+            distant_args        = wrap_args(opts.distant_args) or false,
             log_file            = opts.log_file,
             log_level           = opts.log_level,
-            options             = build_options(opts.options) or '',
+            options             = build_options(opts.options) or false,
         })
         :as_list()
     table.insert(cmd, 1, self.config.binary)
