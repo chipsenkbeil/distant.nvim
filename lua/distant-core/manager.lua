@@ -299,10 +299,10 @@ end
 --- @field config? string #alternative config path to use
 --- @field cache? string #alternative cache path to use
 --- @field distant? string #alternative path to distant binary (on remote machine) to use
+--- @field distant_bind_server? 'any'|'ssh'|string #control the IP address that the server binds to
 --- @field distant_args? string|string[] #additional arguments to supply to distant binary on remote machine
 --- @field log_file? string #alternative log file path to use
 --- @field log_level? string #alternative log level to use
---- @field no_shell? boolean #if true, will not attempt to execute distant binary within a shell on the remote machine
 --- @field options? string|table<string, any> #additional options tied to a specific destination handler
 
 --- Launches a server remotely and performs authentication using the given manager
@@ -351,18 +351,18 @@ function M:launch(opts, cb)
         :set_from_tbl({
             -- Explicitly set to use JSON for communication and point to
             -- manager's unix socket or windows pipe
-            format       = 'json',
-            unix_socket  = self.config.network.unix_socket,
-            windows_pipe = self.config.network.windows_pipe,
+            format              = 'json',
+            unix_socket         = self.config.network.unix_socket,
+            windows_pipe        = self.config.network.windows_pipe,
             -- Optional user settings
-            cache        = opts.cache,
-            config       = opts.config,
-            distant      = opts.distant,
-            distant_args = wrap_args(opts.distant_args),
-            log_file     = opts.log_file,
-            log_level    = opts.log_level,
-            no_shell     = opts.no_shell,
-            options      = build_options(opts.options) or '',
+            cache               = opts.cache,
+            config              = opts.config,
+            distant             = opts.distant,
+            distant_bind_server = opts.distant_bind_server,
+            distant_args        = wrap_args(opts.distant_args),
+            log_file            = opts.log_file,
+            log_level           = opts.log_level,
+            options             = build_options(opts.options) or '',
         })
         :as_list()
     table.insert(cmd, 1, self.config.binary)

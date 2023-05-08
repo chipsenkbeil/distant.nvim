@@ -1,9 +1,8 @@
 local Driver      = require('spec.e2e.driver')
 local Destination = require('distant-core').Destination
 local editor      = require('distant.editor')
-local Server      = require('distant-core').Server
 
-describe('distant.editor.connect', function()
+describe('distant.editor.launch', function()
     --- @type spec.e2e.Driver
     local driver
 
@@ -12,7 +11,7 @@ describe('distant.editor.connect', function()
         -- as our test should verify that a manager and client
         -- are started automatically for us.
         driver = Driver:setup({
-            label = 'distant.editor.connect',
+            label = 'distant.editor.launch',
             lazy = true,
         })
     end)
@@ -22,25 +21,19 @@ describe('distant.editor.connect', function()
         driver:teardown()
     end)
 
-    it('should establish a connection with the specified server', function()
-        -- Spawn a server locally for us to connect to
-        local server = Server:new({ binary = driver:path_to_cli() })
-        local err, details = server:listen({
-            shutdown = { key = 'lonely', value = 30 },
-        })
-        assert(not err, err)
-        assert(details)
-
-        -- Connect to the server
+    it('should spawn a new server and establish a connection with it', function()
+        -- Specialized format of manager://localhost to start it through the manager
         local destination = Destination:new({
+            scheme = 'manager',
             host = 'localhost',
-            port = details.port,
-            password = details.key,
         })
 
         --- @type distant.core.Client|nil
         local client
-        editor.connect({ destination = destination }, function(err, c)
+        editor.launch({
+            destination = destination,
+            distant_args = '--shutdown lonely=10',
+        }, function(err, c)
             assert(not err, err)
             client = assert(c)
         end)
@@ -56,8 +49,5 @@ describe('distant.editor.connect', function()
         local err, info = assert(client):cached_system_info({})
         assert(not err, tostring(err))
         assert(info)
-
-        -- Kill the server
-        server:kill()
     end)
 end)

@@ -141,13 +141,32 @@ function M:load_manager(opts, cb)
     end
 end
 
+--- @class distant.core.state.LaunchOpts
+--- @field destination string|distant.core.Destination
+--- @field bin? string # path to local cli binary to use to facilitate launch
+--- @field network? distant.core.manager.Network
+--- @field config? string #alternative config path to use
+--- @field cache? string #alternative cache path to use
+--- @field distant? string #alternative path to distant binary (on remote machine) to use
+--- @field distant_bind_server? 'any'|'ssh'|string #control the IP address that the server binds to
+--- @field distant_args? string|string[] #additional arguments to supply to distant binary on remote machine
+--- @field log_file? string #alternative log file path to use
+--- @field log_level? string #alternative log level to use
+--- @field options? string|table<string, any> #additional options tied to a specific destination handler
+--- @field timeout? number
+--- @field interval? number
+
 --- Launches a remote server and connects to it.
---- @param opts {destination:string, bin?:string, network?:distant.core.manager.Network, timeout?:number, interval?:number}
+--- @param opts distant.core.state.LaunchOpts
 --- @param cb fun(err?:string, client?:distant.core.Client)
 function M:launch(opts, cb)
-    assert(opts.destination, 'Destination is missing')
+    local destination = opts.destination
+    assert(destination, 'Destination is missing')
+    if type(destination) == 'table' then
+        destination = destination:as_string()
+    end
+
     self:load_manager({
-        destination = opts.destination,
         bin = opts.bin,
         network = opts.network,
         timeout = opts.timeout,
@@ -160,7 +179,20 @@ function M:launch(opts, cb)
         assert(manager, 'Impossible: manager is nil')
 
         --- @diagnostic disable-next-line:redefined-local
-        manager:launch(opts, function(err, client)
+        manager:launch({
+            --- @cast destination string
+            destination         = destination,
+            -- User-defined settings
+            cache               = opts.cache,
+            config              = opts.config,
+            distant             = opts.distant,
+            distant_bind_server = opts.distant_bind_server,
+            distant_args        = opts.distant_args,
+            log_file            = opts.log_file,
+            log_level           = opts.log_level,
+            network             = opts.network,
+            options             = opts.options,
+        }, function(err, client)
             if client then
                 self.client = client
             end
@@ -170,16 +202,32 @@ function M:launch(opts, cb)
     end)
 end
 
+--- @class distant.core.state.ConnectOpts
+--- @field destination string|distant.core.Destination
+--- @field bin? string # path to local cli binary to use to facilitate launch
+--- @field network? distant.core.manager.Network
+--- @field config? string #alternative config path to use
+--- @field cache? string #alternative cache path to use
+--- @field log_file? string #alternative log file path to use
+--- @field log_level? string #alternative log level to use
+--- @field options? string|table<string, any> #additional options tied to a specific destination handler
+--- @field timeout? number
+--- @field interval? number
+
 --- Connects to a remote server.
---- @param opts {destination:string, bin?:string, network?:distant.core.manager.Network, timeout?:number, interval?:number}
+--- @param opts distant.core.state.ConnectOpts
 --- @param cb fun(err?:string, client?:distant.core.Client)
 function M:connect(opts, cb)
-    assert(opts.destination, 'Destination is missing')
+    local destination = opts.destination
+    assert(destination, 'Destination is missing')
+    if type(destination) == 'table' then
+        destination = destination:as_string()
+    end
+
     self:load_manager({
-        destination = opts.destination,
-        bin = opts.bin,
-        network = opts.network,
-        timeout = opts.timeout,
+        bin      = opts.bin,
+        network  = opts.network,
+        timeout  = opts.timeout,
         interval = opts.interval,
     }, function(err, manager)
         if err then
@@ -189,7 +237,16 @@ function M:connect(opts, cb)
         assert(manager, 'Impossible: manager is nil')
 
         --- @diagnostic disable-next-line:redefined-local
-        manager:connect(opts, function(err, client)
+        manager:connect({
+            --- @cast destination string
+            destination = destination,
+            -- User-defined settings
+            cache       = opts.cache,
+            config      = opts.config,
+            log_file    = opts.log_file,
+            log_level   = opts.log_level,
+            options     = opts.options,
+        }, function(err, client)
             if client then
                 self.client = client
             end
