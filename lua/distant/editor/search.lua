@@ -7,6 +7,20 @@ local vars               = require('distant-core').vars
 local DEFAULT_PAGINATION = 10
 local MAX_LINE_LEN       = 100
 
+--- @class neovim.qflist.Item
+--- @field bufnr number #buffer that has the file name
+--- @field module string #module name
+--- @field lnum integer #line number within buffer (index 1)
+--- @field end_lnum integer #line number of final line if multiline (index 1)
+--- @field col integer #column number within buffer (index 1)
+--- @field end_col integer #col number of final column if item has range (index 1)
+--- @field vcol boolean #true if 'col' is visual column, false if byte index
+--- @field nr number #error number
+--- @field pattern string #search pattern used to locate error
+--- @field text string #description of error
+--- @field type string #type of error such as 'E' or '1'
+--- @field valid boolean #if true, recognized as an error message
+
 --- Add matches to qflist
 --- @param id number #id of quickfix list
 --- @param matches distant.api.search.Match[] #match(s) to add
@@ -111,15 +125,17 @@ local function add_matches_to_qflist(id, matches)
 end
 
 --- @class distant.editor.SearchOpts
---- @field query distant.api.search.Query|string
---- @field on_results? fun(matches:distant.api.search.Match[])
---- @field on_done? fun(matches:distant.api.search.Match[])
+--- @field query distant.api.search.Query|string #if a string, will treat as regex to target file contents
+--- @field on_start? fun(id:number) #if provided, called with the search id when started
+--- @field on_results? fun(matches:distant.api.search.Match[]) #if provided, will be provided matches as they appear
 --- @field timeout? number #Maximum time to wait for a response
 --- @field interval? number #Time in milliseconds to wait between checks for a response
 
---- Performs a search using the provided query, displaying results in a new quickfix list
+--- Performs a search using the provided query, displaying results in a new quickfix list.
+---
 --- @param opts distant.editor.SearchOpts
-return function(opts)
+--- @param cb? fun(err?:distant.api.Error, matches?:distant.api.search.Match[]) #if provided, will be invoked with matches once finished
+return function(opts, cb)
     opts = opts or {}
     log.trace('editor.search(%s)', opts)
     vim.validate({ opts = { opts, 'table' } })
@@ -138,8 +154,9 @@ return function(opts)
         }
     end
 
+    local user_on_start = opts.on_start
     local user_on_results = opts.on_results
-    local user_on_done = opts.on_done
+    local user_on_done = cb
 
     if type(query.options) ~= 'table' then
         query.options = {}
@@ -183,19 +200,37 @@ return function(opts)
         vim.notify('Started search ' .. tostring(id))
 
         vim.cmd([[ copen ]])
+
+        if type(user_on_start) == 'function' then
+            return user_on_start(id)
+        end
     end
 
-    --- @param matches distant.api.search.Match[]
-    local function on_done(matches)
-        match_cnt = match_cnt + #matches
+    --- @param err? distant.api.Error
+    --- @param matches? distant.api.search.Match[]
+    local function on_done(err, matches)
+        -- Process any final matches
+        if matches then
+            match_cnt = match_cnt + #matches
 
-        if qflist_id ~= nil and #matches > 0 then
-            add_matches_to_qflist(qflist_id, matches)
+            if qflist_id ~= nil and #matches > 0 then
+                add_matches_to_qflist(qflist_id, matches)
+            end
         end
+
+        -- Report the error if we have one
+        if err then
+            vim.notify('Search encountered an error: ' .. tostring(err))
+        end
+
         vim.notify('Search finished with ' .. tostring(match_cnt) .. ' matches')
 
+        -- Reset the active search to be nothing
+        state.active_search.qfid = nil
+        state.active_search.searcher = nil
+
         if type(user_on_done) == 'function' then
-            return user_on_done(matches)
+            return user_on_done(err, matches)
         end
     end
 

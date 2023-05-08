@@ -42,7 +42,7 @@ describe('distant.editor.launch', function()
         local time = 1000 * 5
         assert(
             vim.wait(time, function() return client ~= nil end),
-            string.format('No connection established after %.2fs', time)
+            string.format('No connection established after %.2fs', time / 1000.0)
         )
 
         -- Verify it works
