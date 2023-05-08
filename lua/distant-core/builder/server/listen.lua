@@ -5,7 +5,7 @@ local CmdBuilder = require('distant-core.builder.cmd')
 local M = {}
 M.__index = M
 
---- Creates new `server listen` cmd
+--- Creates new `server listen` cmd.
 --- @return distant.builder.server.ListenCmdBuilder
 function M:new()
     local instance = {}
@@ -13,17 +13,17 @@ function M:new()
 
     instance.cmd = CmdBuilder:new('server listen', {
         allowed = {
-            'foreground',
-            'key-from-stdin',
-            'use-ipv6',
+            'config',
             'current-dir',
+            'daemon',
             'host',
+            'key-from-stdin',
             'log-file',
             'log-level',
-            'max-msg-capacity',
             'port',
             'shutdown',
             'timeout',
+            'use-ipv6',
         }
     })
 
@@ -38,24 +38,12 @@ function M:set_from_tbl(tbl)
     return self
 end
 
---- Sets `--foreground`
+--- Sets `--config <path>`
+--- @param path string
 --- @return distant.builder.server.ListenCmdBuilder
-function M:set_foreground()
-    self.cmd:set('foreground')
-    return self
-end
-
---- Sets `--key-from-stdin`
---- @return distant.builder.server.ListenCmdBuilder
-function M:set_key_from_stdin()
-    self.cmd:set('key-from-stdin')
-    return self
-end
-
---- Sets `--use-ipv6`
---- @return distant.builder.server.ListenCmdBuilder
-function M:set_use_ipv6()
-    self.cmd:set('use-ipv6')
+function M:set_config(path)
+    vim.validate({ path = { path, 'string' } })
+    self.cmd:set('config', path)
     return self
 end
 
@@ -68,12 +56,26 @@ function M:set_current_dir(value)
     return self
 end
 
+--- Sets `--daemon`
+--- @return distant.builder.server.ListenCmdBuilder
+function M:set_daemon()
+    self.cmd:set('daemon')
+    return self
+end
+
 --- Sets `--host <value>`
 --- @param value 'ssh'|'any'|string
 --- @return distant.builder.server.ListenCmdBuilder
 function M:set_host(value)
     vim.validate({ value = { value, 'string' } })
     self.cmd:set('host', value)
+    return self
+end
+
+--- Sets `--key-from-stdin`
+--- @return distant.builder.server.ListenCmdBuilder
+function M:set_key_from_stdin()
+    self.cmd:set('key-from-stdin')
     return self
 end
 
@@ -92,15 +94,6 @@ end
 function M:set_log_level(value)
     vim.validate({ value = { value, 'string' } })
     self.cmd:set('log-level', value)
-    return self
-end
-
---- Sets `--max-msg-capacity <value>`
---- @param value number
---- @return distant.builder.server.ListenCmdBuilder
-function M:set_max_msg_capacity(value)
-    vim.validate({ value = { value, 'number' } })
-    self.cmd:set('max-msg-capacity', tostring(value))
     return self
 end
 
@@ -145,6 +138,13 @@ end
 function M:set_timeout(value)
     vim.validate({ value = { value, 'number' } })
     self.cmd:set('timeout', tostring(value))
+    return self
+end
+
+--- Sets `--use-ipv6`
+--- @return distant.builder.server.ListenCmdBuilder
+function M:set_use_ipv6()
+    self.cmd:set('use-ipv6')
     return self
 end
 

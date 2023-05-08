@@ -1,8 +1,12 @@
 local log   = require('distant-core').log
 local state = require('distant.state')
 
+--- @alias distant.editor.connect.Destination
+--- | string
+--- | distant.core.Destination
+
 --- @class distant.editor.ConnectOpts
---- @field destination string
+--- @field destination distant.editor.connect.Destination
 ---
 --- @field auth? distant.core.auth.Handler
 --- @field interval? number
@@ -25,12 +29,19 @@ return function(opts, cb)
     log.fmt_trace('editor.connect(%s)', opts)
 
     -- Load settings for the particular host
-    state:load_settings(opts.destination)
+    local destination = opts.destination
+    if type(destination) == 'table' then
+        --- @type string
+        destination = destination:as_string()
+    end
+
+    --- @cast destination string
+    state:load_settings(destination)
     opts = vim.tbl_deep_extend('keep', opts, state.settings or {})
 
     -- Connect and update our active client
     return state:connect({
-        destination = opts.destination,
+        destination = destination,
         -- User-defined settings
         auth = opts.auth,
         log_file = opts.log_file,

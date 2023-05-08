@@ -231,6 +231,15 @@ local function initialize_manager(opts)
 end
 
 --- Initializes a driver for e2e tests.
+---
+--- ### Options
+---
+--- * `label` - used to distinguish this driver from others.
+--- * `debug` - if true, will enable debug printing.
+--- * `lazy` - if true, will not initialize the driver (no client/manager).
+---   Will need to invoke `Driver:initialize` in order to set up client & manager.
+--- * `settings` - if provided, will merge with global settings.
+---
 --- @param opts {label:string, debug?:boolean, lazy?:boolean, settings?:table<string, distant.core.Settings>}
 --- @return spec.e2e.Driver
 function M:setup(opts)
@@ -291,6 +300,12 @@ end
 --- @return 'distant'|'ssh'
 function M:mode()
     return self.__mode
+end
+
+--- Returns the path to the CLI used by this driver.
+--- @return string
+function M:path_to_cli()
+    return state:path_to_cli()
 end
 
 -------------------------------------------------------------------------------
