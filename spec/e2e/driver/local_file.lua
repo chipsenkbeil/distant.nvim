@@ -2,6 +2,7 @@ local make_assert = require('spec.e2e.driver.assert')
 
 --- @class spec.e2e.LocalFile
 --- @field private __path string #path on the local machine
+--- @field assert spec.e2e.Assert
 local M = {}
 M.__index = M
 
@@ -62,7 +63,7 @@ function M:read(opts)
     end
 end
 
---- Writes local file with contents
+--- Writes local file with contents.
 --- @param contents string|string[]
 --- @param opts? spec.e2e.IgnoreErrorsOpts
 function M:write(contents, opts)
@@ -81,7 +82,34 @@ function M:write(contents, opts)
         f:write(contents)
         f:flush()
         f:close()
+        return true
+    else
+        return false
     end
+end
+
+--- Writes a local file from a buffer.
+--- @param buf number
+--- @param opts? spec.e2e.IgnoreErrorsOpts
+--- @return boolean
+function M:write_buf(buf, opts)
+    --- @diagnostic disable-next-line:param-type-mismatch
+    local lines = vim.fn.getbufline(buf, 1, '$')
+    return self:write(lines, opts)
+end
+
+--- Checks if file's path exists and is a regular file.
+--- @return boolean
+function M:exists()
+    local stat = vim.loop.fs_stat(self.__path)
+    return stat ~= nil
+end
+
+--- Removes the remote file at the specified path
+--- @return boolean
+function M:remove()
+    local success = vim.loop.fs_unlink(self.__path)
+    return success == true
 end
 
 return M

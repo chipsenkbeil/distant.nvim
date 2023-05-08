@@ -4,7 +4,7 @@ local utils = require('distant.commands.utils')
 --- DistantCancelSearch
 --- @param cmd NvimCommand
 local function command(cmd)
-    local input = utils.parse_input(cmd.args)
+    local input = utils.parse_args(cmd.args)
     utils.paths_to_number(input.opts, { 'timeout', 'interval' })
 
     editor.cancel_search()

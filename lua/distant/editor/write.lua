@@ -9,6 +9,7 @@ local vars = require('distant-core').vars
 
 --- Writes a buffer to disk on the remote machine
 --- @param opts number|distant.editor.WriteOpts
+--- @return boolean
 return function(opts)
     opts = opts or {}
     if type(opts) == 'number' then
@@ -26,22 +27,26 @@ return function(opts)
     -- Load the remote path from the buffer being saved
     local path = vars.buf(buf).remote_path:get()
 
-    if path ~= nil then
-        -- Load the contents of the buffer
-        -- TODO: This only works if the buffer is not hidden, but is
-        --       this a problem for the write cmd since the buffer
-        --       shouldn't be hidden?
-        --- @diagnostic disable-next-line:param-type-mismatch
-        local lines = vim.fn.getbufline(buf, 1, '$')
-
-        -- Write the buffer contents
-        local err, _ = fn.write_file_text(vim.tbl_extend('keep', {
-            path = path,
-            text = table.concat(lines, '\n')
-        }, opts))
-        assert(not err, tostring(err))
-
-        -- Update buffer as no longer modified
-        vim.api.nvim_buf_set_option(buf, 'modified', false)
+    -- Not a remote file, so don't do anything
+    if path == nil then
+        return false
     end
+
+    -- Load the contents of the buffer
+    -- TODO: This only works if the buffer is not hidden, but is
+    --       this a problem for the write cmd since the buffer
+    --       shouldn't be hidden?
+    --- @diagnostic disable-next-line:param-type-mismatch
+    local lines = vim.fn.getbufline(buf, 1, '$')
+
+    -- Write the buffer contents
+    local err, _ = fn.write_file_text(vim.tbl_extend('keep', {
+        path = path,
+        text = table.concat(lines, '\n')
+    }, opts))
+    assert(not err, tostring(err))
+
+    -- Update buffer as no longer modified
+    vim.api.nvim_buf_set_option(buf, 'modified', false)
+    return true
 end

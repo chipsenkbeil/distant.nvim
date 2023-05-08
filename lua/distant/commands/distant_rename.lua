@@ -4,7 +4,7 @@ local utils = require('distant.commands.utils')
 --- DistantRename src dst [opt1=... opt2=...]
 --- @param cmd NvimCommand
 local function command(cmd)
-    local input = utils.parse_input(cmd.args)
+    local input = utils.parse_args(cmd.args)
     utils.paths_to_number(input.opts, { 'timeout', 'interval' })
 
     local src = input.args[1]

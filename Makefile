@@ -93,6 +93,9 @@ test: test-unit test-e2e ## Runs all tests in a headless neovim instance on the 
 test-arg: vendor ## Runs all tests for the given custom path (ARG) inside spec/ in a headless neovim instance on the local machine
 	$(call test_exec,$(ARG))
 
+test-arg-seq: vendor ## Runs all tests for the given custom path (ARG) inside spec/ in a headless neovim instance on the local machine (in sequence)
+	$(call test_exec,$(ARG),sequential = true)
+
 test-unit: vendor ## Runs unit tests in a headless neovim instance on the local machine
 	$(call test_exec,unit/)
 

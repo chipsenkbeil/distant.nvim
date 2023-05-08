@@ -11,7 +11,11 @@ local RemoteFile = require('spec.e2e.driver.remote_file')
 local RemoteSymlink = require('spec.e2e.driver.remote_symlink')
 local Window = require('spec.e2e.driver.window')
 
---- @alias spec.e2e.Fixture spec.e2e.RemoteDir|spec.e2e.RemoteFile|spec.e2e.RemoteSymlink
+--- @alias spec.e2e.Fixture
+--- | spec.e2e.LocalFile
+--- | spec.e2e.RemoteDir
+--- | spec.e2e.RemoteFile
+--- | spec.e2e.RemoteSymlink
 
 --- @class spec.e2e.Driver
 --- @field label string
@@ -466,12 +470,13 @@ end
 --- * lines string[]|string: list of lines or a singular string containing contents
 --- * ext string|nil: extension to use on the created file
 ---
+--- @param opts {lines:string|string[], base_path?:string, ext?:string}
 --- @return spec.e2e.RemoteFile #The new file fixture (remote_file)
 function M:new_file_fixture(opts)
     opts = opts or {}
     assert(type(opts) == 'table', 'opts must be a table')
     assert(
-        type(opts.lines) == 'string' or vim.tbl_islist(opts.lines),
+        type(opts.lines) == 'string' or type(opts.lines) == 'table',
         'opts.lines invalid or missing'
     )
 
@@ -482,7 +487,7 @@ function M:new_file_fixture(opts)
 
     -- Ensure our contents for the fixture is a string
     local contents = opts.lines
-    if vim.tbl_islist(contents) then
+    if type(contents) == 'table' then
         contents = table.concat(contents, '\n')
     end
 
@@ -497,11 +502,50 @@ function M:new_file_fixture(opts)
     return rf
 end
 
+--- Creates a new fixture for a local file using the provided arguments
+---
+--- * base_path string|nil: base directory in which to create a fixture
+--- * lines string[]|string: list of lines or a singular string containing contents
+--- * ext string|nil: extension to use on the created file
+---
+--- @param opts {lines:string|string[], base_path?:string, ext?:string}
+--- @return spec.e2e.LocalFile #The new file fixture (local_file)
+function M:new_local_file_fixture(opts)
+    opts = opts or {}
+    assert(type(opts) == 'table', 'opts must be a table')
+    assert(
+        type(opts.lines) == 'string' or type(opts.lines) == 'table',
+        'opts.lines invalid or missing'
+    )
+
+    local base_path = opts.base_path or '/tmp'
+
+    -- Define our file path
+    local path = base_path .. '/' .. self:random_file_name(opts.ext)
+
+    -- Ensure our contents for the fixture is a string
+    local contents = opts.lines
+    if type(contents) == 'table' then
+        contents = table.concat(contents, '\n')
+    end
+
+    -- Create the remote file
+    local lf = self:local_file(path)
+    assert(lf:write(contents), 'Failed to populate file fixture: ' .. path)
+
+    -- Store our new fixture in fixtures list
+    table.insert(self.__fixtures, lf)
+
+    -- Also return the fixture
+    return lf
+end
+
 --- Creates a new fixture for a directory using the provided arguments
 ---
 --- * base_path string|nil: base directory in which to create a fixture
 --- * items string[]|nil: items to create within directory
 ---
+--- @param opts {items?:string[], base_path?:string}
 --- @return spec.e2e.RemoteDir  #The new directory fixture (remote_dir)
 function M:new_dir_fixture(opts)
     opts = opts or {}
@@ -543,6 +587,7 @@ end
 --- * base_path string|nil: base directory in which to create a fixture
 --- * source string: path to source that will be linked to
 ---
+--- @param opts {source:string, base_path?:string}
 --- @return spec.e2e.RemoteSymlink #The new symlink fixture (remote_symlink)
 function M:new_symlink_fixture(opts)
     opts = opts or {}

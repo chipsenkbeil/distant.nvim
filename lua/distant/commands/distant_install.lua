@@ -6,7 +6,7 @@ local utils       = require('distant.commands.utils')
 --- DistantInstall [reinstall]
 --- @param cmd NvimCommand
 local function command(cmd)
-    local input = utils.parse_input(cmd.args)
+    local input = utils.parse_args(cmd.args)
     local reinstall = cmd.bang or input.args[1] == 'reinstall'
 
     Cli:new({ bin = state:path_to_cli() }):install({
