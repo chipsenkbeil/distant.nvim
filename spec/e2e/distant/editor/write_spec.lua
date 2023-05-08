@@ -31,7 +31,7 @@ describe('distant.editor.write', function()
         buffer.assert.same({ 'I am a local file!' })
 
         -- Modify the contents
-        buffer:set_lines({ 'I have been edited!' })
+        buffer:set_lines({ 'I have been edited!' }, { modified = true })
 
         -- Attempt to write the content, which will just do nothing
         assert.is.falsy(editor.write(buffer:id()))
@@ -43,15 +43,20 @@ describe('distant.editor.write', function()
     it('should update the remote file using the buffer\'s contents', function()
         -- Load the remote file into a buffer
         local buffer = driver:buffer(editor.open(remote_file:path()))
+        assert.is.falsy(buffer:is_modified())
 
         -- Verify we loaded the remote file
         buffer.assert.same({ 'I am a remote file!' })
 
         -- Modify the contents
-        buffer:set_lines({ 'I have been edited!' })
+        buffer:set_lines({ 'I have been edited!' }, { modified = true })
+        assert.is.truthy(buffer:is_modified())
 
         -- Attempt to write the content
         assert.is.truthy(editor.write(buffer:id()))
+
+        -- Verify buffer is no longer modified
+        assert.is.falsy(buffer:is_modified())
 
         -- Verify that our remote file has changed
         remote_file.assert.same({ 'I have been edited!' })

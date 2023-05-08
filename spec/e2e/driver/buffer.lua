@@ -146,4 +146,10 @@ function M:is_focused()
     return self.__id == vim.api.nvim_get_current_buf()
 end
 
+--- Return true if buffer is marked as modified.
+--- @return boolean
+function M:is_modified()
+    return vim.api.nvim_buf_get_option(self.__id, 'modified') == true
+end
+
 return M
