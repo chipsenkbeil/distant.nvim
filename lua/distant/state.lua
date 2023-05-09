@@ -73,8 +73,16 @@ function M:path_to_cli(opts)
     return bin
 end
 
+--- @class distant.state.LoadManagerOpts
+--- @field bin? string
+--- @field network? distant.core.manager.Network
+--- @field log_file? string
+--- @field log_level? distant.core.log.Level
+--- @field timeout? number
+--- @field interval? number
+
 --- Loads the manager using the specified config, installing the underlying cli if necessary.
---- @param opts {bin?:string, network?:distant.core.manager.Network, timeout?:number, interval?:number}
+--- @param opts distant.state.LoadManagerOpts
 --- @param cb? fun(err?:string, manager?:distant.core.Manager)
 --- @return string|nil, distant.core.Manager|nil
 function M:load_manager(opts, cb)
@@ -116,7 +124,10 @@ function M:load_manager(opts, cb)
                 log.debug('Manager not listening, so starting process')
 
                 --- @diagnostic disable-next-line:redefined-local
-                self.manager:listen({}, function(err)
+                self.manager:listen({
+                    log_file = opts.log_file,
+                    log_level = opts.log_level,
+                }, function(err)
                     if err then
                         log.fmt_error('Manager failed: %s', err)
                     end

@@ -5,6 +5,14 @@ local DistantLaunchCmdBuilder = require('distant-core.builder.launch')
 local DistantShellCmdBuilder = require('distant-core.builder.shell')
 local DistantSpawnCmdBuilder = require('distant-core.builder.spawn')
 
+--- @alias distant.core.log.Level
+--- | 'trace'
+--- | 'debug'
+--- | 'info'
+--- | 'warn'
+--- | 'error'
+--- | 'off'
+
 --- @class distant.builder.CmdBuilder
 --- @field manager distant.builder.ManagerCmdBuilder
 --- @field server distant.builder.ServerCmdBuilder

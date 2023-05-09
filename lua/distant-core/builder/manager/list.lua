@@ -61,7 +61,7 @@ function M:set_log_file(value)
 end
 
 --- Sets `--log-level <value>`
---- @param value 'off'|'error'|'warn'|'info'|'debug'|'trace'
+--- @param value distant.core.log.Level
 --- @return distant.builder.manager.ListCmdBuilder
 function M:set_log_level(value)
     vim.validate({ value = { value, 'string' } })

@@ -22,7 +22,6 @@ function M:new(destination)
             'format',
             'log-file',
             'log-level',
-            'no-shell',
             'options',
             'unix-socket',
             'windows-pipe',
@@ -71,11 +70,12 @@ end
 --- @param value string|string[] #if a string, will put verbatim as value. If list of strings, will place separated by space. If inherits Baseargs, will call __tostring and insert
 --- @return distant.builder.LaunchCmdBuilder
 function M:set_distant_args(value)
+    --- @type string|nil
     local svalue
     if type(value) == 'table' then
         svalue = table.concat(value, ' ')
-    else
-        svalue = tostring(value)
+    elseif type(value) == 'string' then
+        svalue = value
     end
 
     self.cmd:set('distant-args', svalue)
@@ -110,18 +110,11 @@ function M:set_log_file(value)
 end
 
 --- Sets `--log-level <value>`
---- @param value 'off'|'error'|'warn'|'info'|'debug'|'trace'
+--- @param value distant.core.log.Level
 --- @return distant.builder.LaunchCmdBuilder
 function M:set_log_level(value)
     vim.validate({ value = { value, 'string' } })
     self.cmd:set('log-level', value)
-    return self
-end
-
---- Sets `--no-shell`
---- @return distant.builder.LaunchCmdBuilder
-function M:set_no_shell()
-    self.cmd:set('no-shell')
     return self
 end
 

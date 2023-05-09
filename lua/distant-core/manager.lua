@@ -214,7 +214,7 @@ end
 --- @field access? 'owner'|'group'|'anyone' #access level for the unix socket or windows pipe
 --- @field config? string #alternative config path to use
 --- @field log_file? string #alternative log file path to use
---- @field log_level? string #alternative log level to use
+--- @field log_level? distant.core.log.Level #alternative log level to use
 --- @field user? boolean #if true, specifies that the manager should listen with user-level permissions (only applies if no explicit socket or pipe name provided)
 
 --- Start a new manager that is listening on the local unix socket or windows pipe

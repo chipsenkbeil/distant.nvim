@@ -275,7 +275,11 @@ function M:send_async(opts, cb)
         if self.config.autostart == true then
             log.warn('Transport not running and autostart enabled, so attempting to start')
             self:start(function(code)
-                log.fmt_debug('API process exited: %s', code)
+                -- Ignore code 143, which is neovim terminating, as this will get
+                -- printed when neovim exits
+                if code ~= 0 and code ~= 143 then
+                    log.fmt_debug('API process exited: %s', code)
+                end
             end)
         else
             log.warn('Transport not running and autostart disabled, so reporting error')
