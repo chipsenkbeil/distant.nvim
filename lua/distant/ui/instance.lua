@@ -5,9 +5,6 @@ local Header  = require('distant.ui.components.header')
 local Help    = require('distant.ui.components.help')
 local Tabs    = require('distant.ui.components.tabs')
 
--- Activate our colors
-require('distant.ui.colors')
-
 --- @param state distant.ui.State
 --- @return distant.core.ui.Node
 local function GlobalKeybinds(state)

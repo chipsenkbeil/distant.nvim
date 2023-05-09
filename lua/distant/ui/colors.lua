@@ -78,6 +78,18 @@ local hl_groups = {
     },
 }
 
-for name, hl in pairs(hl_groups) do
-    vim.api.nvim_set_hl(0, name, hl)
-end
+local is_initialized = false
+
+return {
+    initialize = function()
+        if is_initialized then
+            return
+        end
+
+        for name, hl in pairs(hl_groups) do
+            vim.api.nvim_set_hl(0, name, hl)
+        end
+
+        is_initialized = true
+    end
+}

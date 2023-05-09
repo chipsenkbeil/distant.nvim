@@ -13,3 +13,6 @@ lua require('distant.autocmd').initialize()
 
 " Ensure our commands are initialized
 lua require('distant.commands').initialize()
+
+" Ensure our user interface is initialized
+lua require('distant.ui').initialize()

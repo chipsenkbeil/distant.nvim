@@ -1,5 +1,6 @@
 local log = require('distant-core.log')
 local state = require('distant-core.ui.state')
+local utils = require('distant-core.utils')
 
 --- @alias distant.core.ui.display.WinWidth number
 --- Width of the window. Accepts:
@@ -261,7 +262,7 @@ end
 --- @param filetype string
 --- @return distant.core.ui.display.Window
 function M.new_view_only_win(name, filetype)
-    local namespace = vim.api.nvim_create_namespace(('installer_%s'):format(name))
+    local namespace = vim.api.nvim_create_namespace(('%s_%s'):format(name, utils.next_id()))
 
     --- @type integer|nil
     local bufnr
