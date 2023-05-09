@@ -5,6 +5,7 @@ return {
     nav      = require('distant.nav'),
     settings = require('distant.settings'),
     setup    = require('distant.setup'),
+    ui       = require('distant.ui'),
     version  = require('distant.version'),
     wrap     = require('distant.wrap'),
 }

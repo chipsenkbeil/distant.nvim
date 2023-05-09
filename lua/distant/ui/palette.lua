@@ -1,4 +1,21 @@
---- @class distant.ui.Palette
+--- Specialized table that provides highlight groups.
+---
+--- Out of the box, there are a series of pre-defined custom
+--- highlight groups, but this table implements `__index`,
+--- so any other indexed name will be treated as a group
+--- as well.
+---
+--- For example:
+---
+--- ```
+--- -- This uses a pre-defined highlight group
+--- p.header 'My Header'
+---
+--- -- This isn't pre-defined, but is a highlight group
+--- p.Bold 'My Bold Text'
+--- ```
+---
+--- @type table<string, fun(text:string):distant.core.ui.Span>
 local M = {}
 
 --- @param highlight string

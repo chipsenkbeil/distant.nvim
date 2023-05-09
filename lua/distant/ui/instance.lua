@@ -1,11 +1,9 @@
-local Ui       = require('distant-core.ui')
-local display  = require('distant-core.ui.display')
-local settings = require('distant.settings')
+local Ui      = require('distant-core.ui')
+local display = require('distant-core.ui.display')
 
-local Header   = require('distant.ui.components.header')
-local Help     = require('distant.ui.components.help')
-local Main     = require('distant.ui.components.main')
-local Tabs     = require('distant.ui.components.tabs')
+local Header  = require('distant.ui.components.header')
+local Help    = require('distant.ui.components.help')
+local Tabs    = require('distant.ui.components.tabs')
 
 -- Activate our colors
 require('distant.ui.colors')
@@ -61,7 +59,6 @@ window.view(
             end),
             Ui.When(not state.view.is_showing_help, function()
                 return Ui.Node {
-                    Main(state),
                 }
             end),
         }
@@ -112,6 +109,12 @@ local function toggle_help()
     end)
 end
 
+local function toggle_expand_current_settings()
+    mutate_state(function(state)
+        state.view.is_current_settings_expanded = not state.view.is_current_settings_expanded
+    end)
+end
+
 local function set_view(event)
     local view = event.payload
     mutate_state(function(state)
@@ -130,11 +133,12 @@ local effects = {
     ['CLOSE_WINDOW'] = window.close,
     ['SET_VIEW'] = set_view,
     ['TOGGLE_HELP'] = toggle_help,
+    ['TOGGLE_EXPAND_CURRENT_SETTINGS'] = toggle_expand_current_settings,
 }
 
 window.init({
     effects = effects,
-    border = settings.current.ui.border,
+    border = 'none',
     winhighlight = {
         'NormalFloat:DistantNormal',
     },

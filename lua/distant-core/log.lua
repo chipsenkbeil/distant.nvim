@@ -46,7 +46,38 @@ local default_config = {
     float_precision = 0.01,
 }
 
--- {{{ NO NEED TO CHANGE
+--- @class distant.core.Logger
+--- @field outfile string # path to the file where the log is written
+---
+--- @field trace fun(...)
+--- @field fmt_trace fun(...)
+--- @field lazy_trace fun(f:fun())
+--- @field file_trace fun(vals:table, override:{info_level:integer})
+---
+--- @field debug fun(...)
+--- @field fmt_debug fun(...)
+--- @field lazy_debug fun(f:fun())
+--- @field file_debug fun(vals:table, override:{info_level:integer})
+---
+--- @field info fun(...)
+--- @field fmt_info fun(...)
+--- @field lazy_info fun(f:fun())
+--- @field file_info fun(vals:table, override:{info_level:integer})
+---
+--- @field warn fun(...)
+--- @field fmt_warn fun(...)
+--- @field lazy_warn fun(f:fun())
+--- @field file_warn fun(vals:table, override:{info_level:integer})
+---
+--- @field error fun(...)
+--- @field fmt_error fun(...)
+--- @field lazy_error fun(f:fun())
+--- @field file_error fun(vals:table, override:{info_level:integer})
+---
+--- @field fatal fun(...)
+--- @field fmt_fatal fun(...)
+--- @field lazy_fatal fun(f:fun())
+--- @field file_fatal fun(vals:table, override:{info_level:integer})
 local M = {}
 
 local unpack = unpack or table.unpack
@@ -181,6 +212,9 @@ M.new = function(config, standalone)
             config.info_level = nil
         end
     end
+
+    --- Represents where log is being written
+    obj.outfile = outfile
 
     return obj
 end

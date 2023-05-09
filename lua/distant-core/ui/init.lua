@@ -56,14 +56,21 @@ end
 --- }
 --- ```
 ---
---- @param lines_with_span_tuples distant.core.ui.Span[][]|string[]
+--- Another example:
+---
+--- ```
+--- Ui.HlTextNode { 'some bold text', 'MyBoldHlGroup' }
+--- ```
+---
+--- @param lines_with_span_tuples distant.core.ui.Span|distant.core.ui.Span[][]
 --- @return distant.core.ui.HlTextNode
 function M.HlTextNode(lines_with_span_tuples)
-    -- If given string[], we convert it into distant.core.ui.Span[][].
+    -- If given single span, we convert it into distant.core.ui.Span[][].
     --
     -- This enables a convenience API for just rendering a
     -- single line (with just a single span).
     if type(lines_with_span_tuples[1]) == 'string' then
+        --- @cast lines_with_span_tuples distant.core.ui.Span
         lines_with_span_tuples = { { lines_with_span_tuples } }
     end
 
@@ -83,12 +90,15 @@ end
 --- where the highlight group is empty.
 ---
 --- @param lines string[]
---- @return {[1]: string, [2]: ''}[] # List of tuples being (line, blank str)
+--- @return distant.core.ui.Span[][] # List of tuples being (line, blank str)
 local function create_unhighlighted_lines(lines)
     local unhighlighted_lines = {}
+
+    -- For each line, we create a single span
     for _, line in ipairs(lines) do
-        table.insert(unhighlighted_lines, { line, '' })
+        table.insert(unhighlighted_lines, { { line, '' } })
     end
+
     return unhighlighted_lines
 end
 
