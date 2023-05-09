@@ -1,9 +1,10 @@
 --- @class distant.core.ui.State
 local M = {}
 
----@generic T : table
----@param initial_state T
----@param subscriber fun(state: T)
+--- @generic T: table
+--- @param initial_state T
+--- @param subscriber fun(state:T)
+--- @return fun(current_state:T) mutate_state, fun():T get_state, fun(val:boolean) unsubscribe
 function M.create_state_container(initial_state, subscriber)
     -- we do deepcopy to make sure instances of state containers doesn't mutate the initial state
     local state = vim.deepcopy(initial_state)
