@@ -1,9 +1,9 @@
 local Driver      = require('spec.e2e.driver')
 local Destination = require('distant-core').Destination
-local editor      = require('distant.editor')
+local fn          = require('distant').fn
 local Server      = require('distant-core').Server
 
-describe('distant.editor.connect', function()
+describe('distant.commands.DistantConnect', function()
     --- @type spec.e2e.Driver
     local driver
 
@@ -12,7 +12,7 @@ describe('distant.editor.connect', function()
         -- as our test should verify that a manager and client
         -- are started automatically for us.
         driver = Driver:setup({
-            label = 'distant.editor.connect',
+            label = 'distant.commands.DistantConnect',
             lazy = true,
         })
     end)
@@ -39,22 +39,18 @@ describe('distant.editor.connect', function()
             password = details.key,
         })
 
-        --- @type distant.core.Client|nil
-        local client
-        editor.connect({ destination = destination }, function(err, c)
-            assert(not err, err)
-            client = assert(c)
-        end)
+        -- :DistantConnect {destination}<CR>
+        vim.cmd('DistantConnect ' .. destination:as_string())
 
         -- Wait for client to be ready
         local time = 1000 * 5
         assert(
-            vim.wait(time, function() return client ~= nil end),
+            vim.wait(time, function() return fn.is_ready() end),
             string.format('No connection established after %.2fs', time / 1000.0)
         )
 
         -- Verify it works
-        local err, info = assert(client):cached_system_info({})
+        local err, info = fn.cached_system_info({})
         assert(not err, tostring(err))
         assert(info)
 

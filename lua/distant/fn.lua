@@ -15,6 +15,12 @@ end
 --- @class distant.Fn
 local M = {}
 
+--- Returns whether or not `fn` is ready for use.
+--- @return boolean
+function M.is_ready()
+    return state.client ~= nil
+end
+
 --- @param opts distant.api.AppendFileOpts
 --- @param cb? fun(err?:distant.api.Error, payload?:distant.api.OkPayload)
 --- @return distant.api.Error|nil,distant.api.OkPayload|nil
