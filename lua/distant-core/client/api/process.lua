@@ -325,13 +325,12 @@ function M:write_stdin(data, cb)
             id = self:id(),
             data = data,
         },
-        cb = cb,
         verify = function(payload)
             return payload.type == 'ok'
         end,
         timeout = self.__internal.timeout,
         interval = self.__internal.interval,
-    })
+    }, cb)
 end
 
 --- @class distant.api.process.PtySize
@@ -351,13 +350,12 @@ function M:resize_pty(size, cb)
             id = self:id(),
             size = size,
         },
-        cb = cb,
         verify = function(payload)
             return payload.type == 'ok'
         end,
         timeout = self.__internal.timeout,
         interval = self.__internal.interval,
-    })
+    }, cb)
 end
 
 --- Kills the process if it is running.
@@ -369,13 +367,12 @@ function M:kill(cb)
             type = 'proc_kill',
             id = self:id(),
         },
-        cb = cb,
         verify = function(payload)
             return payload.type == 'ok'
         end,
         timeout = self.__internal.timeout,
         interval = self.__internal.interval,
-    })
+    }, cb)
 end
 
 return M

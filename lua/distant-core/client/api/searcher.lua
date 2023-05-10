@@ -192,7 +192,10 @@ function M:execute(opts, cb)
     }, function(payload)
         if not self:handle(payload) then
             if type(cb) == 'function' then
-                cb('Invalid response payload: ' .. vim.inspect(payload), nil)
+                cb(Error:new({
+                    kind = Error.kinds.invalid_data,
+                    description = 'Invalid response payload: ' .. vim.inspect(payload)
+                }), nil)
             else
                 tx({ err = 'Invalid response payload: ' .. vim.inspect(payload) })
             end
@@ -230,13 +233,12 @@ function M:cancel(cb)
             type = 'cancel_search',
             id = self:id(),
         },
-        cb = cb,
         verify = function(payload)
             return payload.type == 'ok'
         end,
         timeout = self.__internal.timeout,
         interval = self.__internal.interval,
-    })
+    }, cb)
 end
 
 return M
