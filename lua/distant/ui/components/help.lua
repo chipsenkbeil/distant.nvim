@@ -55,7 +55,6 @@ local function GenericHelp(state)
         Ui.HlTextNode {
             { p.muted 'Distant log: ', p.none(log.outfile) },
         },
-        Ui.Keybind('<CR>', 'TOGGLE_EXPAND_LOG_FILE', nil),
         Ui.EmptyLine(),
         Ui.Table {
             {
