@@ -115,6 +115,10 @@ function M:load_manager(opts, cb)
             end
 
             -- Whether or not to create a private network
+            -- TODO: This does not work right now! The settings are loaded AFTER
+            --       the manager begins to listen as a connection has to happen to load
+            --       the settings. We need to revamp how settings work so we have
+            --       network settings separate from server settings!
             local private = opts.network and opts.network.private or self.settings.network.private
 
             --- @type distant.core.manager.Network

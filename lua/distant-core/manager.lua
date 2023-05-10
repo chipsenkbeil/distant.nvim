@@ -40,6 +40,12 @@ function M:new(opts)
     return instance
 end
 
+--- Returns a copy of this manager's network settings.
+--- @return distant.core.manager.Network
+function M:network()
+    return vim.deepcopy(self.config.network)
+end
+
 --- @param connection string #id of the connection being managed
 --- @return boolean
 function M:has_connection(connection)

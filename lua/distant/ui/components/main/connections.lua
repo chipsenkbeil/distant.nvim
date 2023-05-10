@@ -1,6 +1,65 @@
 local Ui = require('distant-core.ui')
 local p = require('distant.ui.palette')
 
+--- @return distant.core.ui.INode
+local function ManagerConnection()
+    local plugin = require('distant.state')
+
+    local function ListeningLine()
+        local value
+        if plugin.manager and plugin.manager:is_listening({}) then
+            value = p.highlight 'yes'
+        else
+            value = p.warning 'no'
+        end
+
+        return { p.Bold '', p.Bold 'Listening', value }
+    end
+
+    local function PrivateLine()
+        local value
+        if plugin.settings.network.private then
+            value = p.highlight 'yes'
+        else
+            value = p.warning 'no'
+        end
+
+        return { p.Bold '', p.Bold 'Private', value }
+    end
+
+    local function WindowsPipeLine()
+        if plugin.manager and plugin.manager:network().windows_pipe then
+            return {
+                p.Bold '',
+                p.Bold 'Windows Pipe',
+                p.highlight(plugin.manager:network().windows_pipe),
+            }
+        end
+    end
+
+    local function UnixSocketLine()
+        if plugin.manager and plugin.manager:network().unix_socket then
+            return {
+                p.Bold '',
+                p.Bold 'Unix Socket',
+                p.highlight(plugin.manager:network().unix_socket),
+            }
+        end
+    end
+
+    return Ui.Node {
+        Ui.HlTextNode(p.heading 'Manager Connection'),
+        Ui.EmptyLine(),
+        Ui.Table(vim.tbl_filter(function(line) return line ~= nil end, {
+            ListeningLine(),
+            PrivateLine(),
+            WindowsPipeLine(),
+            UnixSocketLine(),
+        })),
+        Ui.EmptyLine(),
+    }
+end
+
 --- @param opts {connections:table<string, distant.core.Destination>, selected?:string}
 --- @return distant.core.ui.INode
 local function AvailableConnections(opts)
@@ -89,6 +148,7 @@ end
 return function(state)
     return Ui.Node {
         Ui.EmptyLine(),
+        ManagerConnection(),
         AvailableConnections({
             connections = state.info.connections.available,
             selected = state.info.connections.selected,
