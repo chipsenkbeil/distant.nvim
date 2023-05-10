@@ -65,7 +65,7 @@ local function AvailableConnections(opts)
         extra[#rows][1] = Ui.Keybind(
             '<CR>',
             'SWITCH_ACTIVE_CONNECTION',
-            id
+            { id = id, destination = destination }
         )
     end
 

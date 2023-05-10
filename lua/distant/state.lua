@@ -333,5 +333,62 @@ function M:connections(opts, cb)
     end)
 end
 
+--- @class distant.core.state.SelectOpts
+--- @field connection string # connection to select
+--- @field bin? string # path to local cli binary to use to facilitate launch
+--- @field network? distant.core.manager.Network
+--- @field cache? string #alternative cache path to use
+--- @field config? string #alternative config path to use
+--- @field log_file? string #alternative log file path to use
+--- @field log_level? distant.core.log.Level #alternative log level to use
+--- @field timeout? number
+--- @field interval? number
+
+--- Selects a connection, which includes changing the active client and
+--- reloading settings according to the host.
+---
+--- @param opts distant.core.state.SelectOpts
+--- @param cb fun(err?:string, client?:distant.core.Client)
+function M:select(opts, cb)
+    local connection = opts.connection
+
+    -- Load our manager and refresh the connections
+    -- before attempting to assign the client
+    self:connections({
+        bin       = opts.bin,
+        cache     = opts.cache,
+        config    = opts.config,
+        log_file  = opts.log_file,
+        log_level = opts.log_level,
+        network   = opts.network,
+        timeout   = opts.timeout,
+        interval  = opts.interval,
+    }, function(err, _)
+        if err then
+            cb(err)
+            return
+        end
+
+        -- Manager should exist if we're loading connections
+        local manager = assert(self.manager)
+
+        self.client = assert(
+            manager:client(connection),
+            'Neovim manager lost track of client'
+        )
+
+        -- Should exist if the client above exists
+        local destination = assert(manager:connection_destination(connection))
+
+        -- Reload our settings based on the destination
+        self:load_settings(destination:as_string())
+
+        -- Report the change
+        events.emit_connection_changed(self.client)
+
+        cb(nil, self.client)
+    end)
+end
+
 local GLOBAL_STATE = M:new()
 return GLOBAL_STATE

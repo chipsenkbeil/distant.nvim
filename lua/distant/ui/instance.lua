@@ -4,6 +4,7 @@ local fn      = require('distant.fn')
 local Ui      = require('distant-core.ui')
 local display = require('distant-core.ui.display')
 
+local Footer  = require('distant.ui.components.footer')
 local Header  = require('distant.ui.components.header')
 local Help    = require('distant.ui.components.help')
 local Main    = require('distant.ui.components.main')
@@ -66,6 +67,7 @@ window.view(
             Ui.When(not state.view.is_showing_help, function()
                 return Main(state)
             end),
+            Footer(state),
         }
     end
 )
@@ -161,23 +163,16 @@ local function reload_tab(event)
     end
 end
 
---- @param event {payload:string}
+--- @param event {payload:{id:string, destination:distant.core.Destination}}
 local function switch_active_connection(event)
     -- Update our active client connection
     local plugin = require('distant.state')
-    local id = event.payload
+    local id = event.payload.id
 
     -- Load our manager and refresh the connections
     -- before attempting to assign the client
-    plugin:connections({}, function(err, _)
+    plugin:select({ connection = id }, function(err, _)
         assert(not err, err)
-        if plugin.manager then
-            plugin.client = assert(
-                plugin.manager:client(id),
-                'Neovim manager lost track of client'
-            )
-            events.emit_connection_changed(plugin.client)
-        end
     end)
 end
 
