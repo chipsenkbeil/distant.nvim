@@ -28,34 +28,40 @@ local function ManagerConnection()
     end
 
     local function WindowsPipeLine()
+        local text = ''
         if plugin.manager and plugin.manager:network().windows_pipe then
-            return {
-                p.Bold '',
-                p.Bold 'Windows Pipe',
-                p.highlight(plugin.manager:network().windows_pipe),
-            }
+            text = plugin.manager:network().windows_pipe or ''
         end
+
+        return {
+            p.Bold '',
+            p.Bold 'Windows Pipe',
+            p.highlight(text),
+        }
     end
 
     local function UnixSocketLine()
+        local text = ''
         if plugin.manager and plugin.manager:network().unix_socket then
-            return {
-                p.Bold '',
-                p.Bold 'Unix Socket',
-                p.highlight(plugin.manager:network().unix_socket),
-            }
+            text = plugin.manager:network().unix_socket or ''
         end
+
+        return {
+            p.Bold '',
+            p.Bold 'Unix Socket',
+            p.highlight(text),
+        }
     end
 
     return Ui.Node {
         Ui.HlTextNode(p.heading 'Manager Connection'),
         Ui.EmptyLine(),
-        Ui.Table(vim.tbl_filter(function(line) return line ~= nil end, {
+        Ui.Table {
             ListeningLine(),
             PrivateLine(),
             WindowsPipeLine(),
             UnixSocketLine(),
-        })),
+        },
         Ui.EmptyLine(),
     }
 end
