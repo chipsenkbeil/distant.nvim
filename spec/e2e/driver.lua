@@ -560,7 +560,7 @@ end
 --- * base_path string|nil: base directory in which to create a fixture
 --- * items string[]|nil: items to create within directory
 ---
---- @param opts? {items?:string[], base_path?:string}
+--- @param opts? {items?:(string|string[])[], base_path?:string}
 --- @return spec.e2e.RemoteDir  #The new directory fixture (remote_dir)
 function M:new_dir_fixture(opts)
     opts = opts or {}

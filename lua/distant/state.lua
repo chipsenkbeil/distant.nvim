@@ -1,5 +1,6 @@
 local Cli         = require('distant-core').Cli
 local Destination = require('distant-core').Destination
+local events      = require('distant.events')
 local installer   = require('distant-core').installer
 local log         = require('distant-core').log
 local Manager     = require('distant-core').Manager
@@ -49,6 +50,10 @@ function M:load_settings(destination)
     self.settings = settings.for_label(label)
     log.fmt_debug('Settings loaded: %s', self.settings)
 
+    -- Emit that the settings have changed and provide a copy
+    -- of the settings (copy to avoid them being changed)
+    events.emit_settings_changed(vim.deepcopy(self.settings))
+
     return self.settings
 end
 
@@ -75,7 +80,7 @@ end
 
 --- @class distant.state.LoadManagerOpts
 --- @field bin? string
---- @field network? distant.core.manager.Network
+--- @field network? {private?:boolean, unix_socket?:string, windows_pipe?:string}
 --- @field log_file? string
 --- @field log_level? distant.core.log.Level
 --- @field timeout? number
@@ -84,7 +89,7 @@ end
 --- Loads the manager using the specified config, installing the underlying cli if necessary.
 --- @param opts distant.state.LoadManagerOpts
 --- @param cb? fun(err?:string, manager?:distant.core.Manager)
---- @return string|nil, distant.core.Manager|nil
+--- @return string|nil err, distant.core.Manager|nil manager
 function M:load_manager(opts, cb)
     -- If we are not given a custom bin path, the settings bin path
     -- hasn't changed (from distant/distant.exe), and the current
@@ -92,12 +97,15 @@ function M:load_manager(opts, cb)
     -- exists and is executable and use it
     local bin = opts.bin or self:path_to_cli()
 
+    -- Update our opts with default setting values if not overwritten
+    local timeout = opts.timeout or self.settings.max_timeout
+    local interval = opts.interval or self.settings.timeout_interval
+    local log_file = opts.log_file or self.settings.manager.log_file
+    local log_level = opts.log_level or self.settings.manager.log_level
+
     local rx
     if not cb then
-        cb, rx = utils.oneshot_channel(
-            self.settings.max_timeout,
-            self.settings.timeout_interval
-        )
+        cb, rx = utils.oneshot_channel(timeout, interval)
     end
 
     if not self.manager then
@@ -106,30 +114,42 @@ function M:load_manager(opts, cb)
                 return cb(err)
             end
 
-            -- Define manager using provided opts, overriding the default network settings
-            self.manager = Manager:new(vim.tbl_extend('keep', opts, {
-                binary = path,
-                -- Create a neovim-local manager network setting as default
-                network = {
+            -- Whether or not to create a private network
+            local private = opts.network and opts.network.private or self.settings.network.private
+
+            --- @type distant.core.manager.Network
+            local network = opts.network or {}
+            if private then
+                --- Create a private network if `private` is true, which means a network limited
+                --- to this specific neovim instance. Any pre-existing defined windows pipe
+                --- and unix socket will persist and not be overwritten
+                network = vim.tbl_extend('keep', network, {
                     windows_pipe = 'nvim-' .. utils.next_id(),
                     unix_socket = utils.cache_path('nvim-' .. utils.next_id() .. '.sock'),
-                },
-            }))
+                })
+            end
+
+            local manager_opts = { binary = path, network = network }
+            log.fmt_debug('Defining manager configuration as %s', manager_opts)
+            self.manager = Manager:new(manager_opts)
 
             local is_listening = self.manager:is_listening({
-                timeout = opts.timeout,
-                interval = opts.interval,
+                timeout = timeout,
+                interval = interval,
             })
             if not is_listening then
                 log.debug('Manager not listening, so starting process')
 
                 --- @diagnostic disable-next-line:redefined-local
                 self.manager:listen({
-                    log_file = opts.log_file,
-                    log_level = opts.log_level,
+                    log_file = log_file,
+                    log_level = log_level,
                 }, function(err)
                     if err then
                         log.fmt_error('Manager failed: %s', err)
+                    else
+                        -- Emit that the manager was successfully started
+                        events.emit_manager_started(self.manager)
                     end
                 end)
 
@@ -137,6 +157,10 @@ function M:load_manager(opts, cb)
                     log.error('Manager still does not appear to be listening')
                 end
             end
+
+            -- Emit that the manager was successfully loaded, which only happens
+            -- once as we don't count subsequent calls to this method
+            events.emit_manager_loaded(self.manager)
 
             return cb(nil, self.manager)
         end)
@@ -162,7 +186,7 @@ end
 --- @field distant_bind_server? 'any'|'ssh'|string #control the IP address that the server binds to
 --- @field distant_args? string|string[] #additional arguments to supply to distant binary on remote machine
 --- @field log_file? string #alternative log file path to use
---- @field log_level? string #alternative log level to use
+--- @field log_level? distant.core.log.Level #alternative log level to use
 --- @field options? string|table<string, any> #additional options tied to a specific destination handler
 --- @field timeout? number
 --- @field interval? number
@@ -179,8 +203,6 @@ function M:launch(opts, cb)
 
     self:load_manager({
         bin = opts.bin,
-        log_file = '/tmp/nvim.manager.log',
-        log_level = 'trace',
         network = opts.network,
         timeout = opts.timeout,
         interval = opts.interval,
@@ -208,6 +230,9 @@ function M:launch(opts, cb)
         }, function(err, client)
             if client then
                 self.client = client
+
+                -- Emit that the connection (client) was successfully changed
+                events.emit_connection_changed(self.client)
             end
 
             return cb(err, client)
@@ -222,7 +247,7 @@ end
 --- @field config? string #alternative config path to use
 --- @field cache? string #alternative cache path to use
 --- @field log_file? string #alternative log file path to use
---- @field log_level? string #alternative log level to use
+--- @field log_level? distant.core.log.Level #alternative log level to use
 --- @field options? string|table<string, any> #additional options tied to a specific destination handler
 --- @field timeout? number
 --- @field interval? number
@@ -262,6 +287,9 @@ function M:connect(opts, cb)
         }, function(err, client)
             if client then
                 self.client = client
+
+                -- Emit that the connection (client) was successfully changed
+                events.emit_connection_changed(self.client)
             end
 
             return cb(err, client)

@@ -95,7 +95,7 @@ function M:cached_system_info(opts, cb)
 end
 
 --- Connects relevant LSP clients to the provided buffer, optionally starting clients if needed.
---- @param opts {bufnr:number, settings:table<string, distant.core.settings.LspSettings>}
+--- @param opts {bufnr:number, settings:distant.core.settings.LspSettings}
 --- @return number[] client_ids All ids of the LSP clients (if any) established with the buffer
 function M:connect_lsp_clients(opts)
     log.fmt_trace('client.connect_lsp_clients(%s)', opts)

@@ -1,6 +1,7 @@
 return {
     core     = require('distant-core'),
     editor   = require('distant.editor'),
+    events   = require('distant.events'),
     fn       = require('distant.fn'),
     nav      = require('distant.nav'),
     settings = require('distant.settings'),

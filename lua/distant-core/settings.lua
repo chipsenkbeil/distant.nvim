@@ -2,59 +2,87 @@ local Destination = require('distant-core.destination')
 local log = require('distant-core.log')
 local utils = require('distant-core.utils')
 
---- @class distant.core.Settings
---- @field client distant.core.settings.ClientSettings
---- @field max_timeout number
---- @field timeout_interval number
---- @field file distant.core.settings.FileSettings
---- @field dir distant.core.settings.DirSettings
---- @field lsp table<string, distant.core.settings.LspSettings>
-
---- @class distant.core.settings.ClientSettings
---- @field bin string
-
---- @class distant.core.settings.FileSettings
---- @field mappings table<string, fun()>
-
---- @class distant.core.settings.DirSettings
---- @field mappings table<string, fun()>
-
---- @alias distant.core.settings.lsp.RootDirFn fun(path:string):string|nil
-
---- @class distant.core.settings.LspSettings
---- @field cmd string|string[]
---- @field root_dir string|string[]|distant.core.settings.lsp.RootDirFn
---- @field filetypes? string[]
---- @field on_exit? fun(code:number, signal:number|nil, client_id:string)
-
 -- Represents the label used to signify default/global settings
 local DEFAULT_LABEL = '*'
 
---- Default settings to apply to any-and-all servers
---- @type distant.core.Settings
+--- @class distant.core.Settings
 local DEFAULT_SETTINGS = {
-    -- Settings to apply to the local distant binary used as a client
+    --- Settings to apply to the local distant binary used as a client
+    --- @class distant.core.settings.ClientSettings
     client = {
-        -- Will be filled in lazily
+        --- Binary to use locally with the client
         --- @type 'distant'|'distant.exe'
         bin = nil,
+
+        --- @type string|nil
+        log_file = nil,
+
+        --- @type distant.core.log.Level|nil
+        log_level = nil,
     },
-    -- Maximimum time to wait (in milliseconds) for requests to finish
+
+    --- @class distant.core.settings.ManagerSettings
+    manager = {
+        --- @type string|nil
+        log_file = nil,
+
+        --- @type distant.core.log.Level|nil
+        log_level = nil,
+    },
+
+    --- @class distant.core.settings.Network
+    network = {
+        --- If true, will create a private network for all operations
+        --- associated with a singular neovim instance
+        --- @type boolean
+        private = false,
+
+        --- If provided, will overwrite the pipe name used for network
+        --- communication on Windows machines
+        --- @type string|nil
+        windows_pipe = nil,
+
+        --- If provided, will overwrite the unix socket path used for network
+        --- communication on Unix machines
+        --- @type string|nil
+        unix_socket = nil,
+    },
+
+    --- Maximimum time to wait (in milliseconds) for requests to finish
+    --- @type integer
     max_timeout = 15 * 1000,
-    -- Time to wait (in milliseconds) inbetween checks to see
-    -- if a request timed out
+
+    --- Time to wait (in milliseconds) inbetween checks to see
+    --- if a request timed out
+    --- @type integer
     timeout_interval = 250,
-    -- Settings that apply when editing a remote file
+
+    --- Settings that apply when editing a remote file
+    --- @class distant.core.settings.FileSettings
     file = {
-        -- Mappings to apply to remote files
+        --- Mappings to apply to remote files
+        --- @type table<string, fun()>
         mappings = {},
     },
-    -- Settings that apply to the navigation interface
+
+    --- Settings that apply to the navigation interface
+    --- @class distant.core.settings.DirSettings
     dir = {
-        -- Mappings to apply to the navigation interface
+        --- Mappings to apply to the navigation interface
+        --- @type table<string, fun()>
         mappings = {},
     },
-    -- Settings to use to start LSP instances
+
+    --- @alias distant.core.settings.lsp.RootDirFn fun(path:string):string|nil
+    --- @class distant.core.settings.lsp.ServerSettings
+    --- @field cmd string|string[]
+    --- @field root_dir string|string[]|distant.core.settings.lsp.RootDirFn
+    --- @field filetypes? string[]
+    --- @field on_exit? fun(code:number, signal?:number, client_id:string)
+
+    --- Settings to use to start LSP instances. Mapping of a label
+    --- to the settings for that specific LSP server
+    --- @alias distant.core.settings.LspSettings table<string, distant.core.settings.lsp.ServerSettings>
     --- @type distant.core.settings.LspSettings
     lsp = {},
 }

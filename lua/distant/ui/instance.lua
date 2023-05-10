@@ -1,3 +1,4 @@
+local events  = require('distant.events')
 local fn      = require('distant.fn')
 
 local Ui      = require('distant-core.ui')
@@ -61,6 +62,7 @@ window.view(
     end
 )
 
+--- @type fun(mutate_fn:fun(current_state:distant.ui.State)), fun():distant.ui.State
 local mutate_state, get_state = window.state(INITIAL_STATE)
 
 local help_animation
@@ -114,7 +116,7 @@ end
 --- @param event {payload:{tab:string, force:boolean}}
 local function reload_tab(event)
     local payload = event.payload
-    if payload.tab == 'System Info' then
+    if payload.tab == 'System Info' and fn.is_ready() then
         fn.cached_system_info({ reload = payload.force }, function(err, system_info)
             assert(not err, tostring(err))
             assert(system_info)
@@ -154,6 +156,15 @@ window.init({
         'NormalFloat:DistantNormal',
     },
 })
+
+events.on_connection_changed(function()
+    reload_tab({
+        payload = {
+            tab = 'System Info',
+            force = true,
+        }
+    })
+end)
 
 return {
     window = window,
