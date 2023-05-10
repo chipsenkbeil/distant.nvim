@@ -1,5 +1,18 @@
 local Ui = require('distant-core.ui')
 local p = require('distant.ui.palette')
+local version = require('distant.version')
+
+--- @return distant.core.ui.HlTextNode
+local function version_node()
+    local is_prerelease = version.plugin:is_prerelease()
+    local text = ' (' .. version.plugin:as_string() .. ')'
+
+    if is_prerelease then
+        return p.warning(text)
+    else
+        return p.Comment(text)
+    end
+end
 
 ---@param state distant.ui.State
 return function(state)
@@ -8,12 +21,12 @@ return function(state)
             Ui.When(state.view.is_showing_help, {
                 p.none '             ',
                 p.header_secondary(' ' .. state.header.title_prefix .. ' distant.nvim '),
-                p.Comment ' alpha branch',
+                version_node(),
                 p.none((' '):rep(#state.header.title_prefix + 1)),
             }, {
                 p.none '             ',
                 p.header ' distant.nvim ',
-                p.Comment ' alpha branch',
+                version_node(),
             }),
             Ui.When(
                 state.view.is_showing_help,

@@ -54,6 +54,11 @@ function M:try_parse(vstr)
     end
 end
 
+--- @return boolean
+function M:is_prerelease()
+    return self.pre_release ~= nil or self.pre_release_version ~= nil
+end
+
 --- Determines if safe to upgrade from this version to the `other` version.
 --- This follows semver 2.0.0 specification.
 ---
@@ -85,9 +90,9 @@ function M:can_upgrade_to(other, opts)
             self.minor == other.minor and
             self.patch <= other.patch and
             (
-            self.pre_release < other.pre_release or
-            (self.pre_release ~= nil and other.pre_release == nil) or
-            (self.pre_release == other.pre_release and self.pre_release_version <= other.pre_release_version)
+                self.pre_release < other.pre_release or
+                (self.pre_release ~= nil and other.pre_release == nil) or
+                (self.pre_release == other.pre_release and self.pre_release_version <= other.pre_release_version)
             )
     elseif unstable then
         return self.major == other.major and
