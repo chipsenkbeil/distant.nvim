@@ -45,6 +45,7 @@ end
 local function GenericHelp(state)
     local keymap_tuples = {
         { 'Toggle help',  'g?' },
+        { 'Refresh tab',  'r' },
         { 'Close window', 'q' },
         { 'Close window', '<Esc>' },
     }

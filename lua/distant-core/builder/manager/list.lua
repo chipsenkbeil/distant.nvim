@@ -15,6 +15,7 @@ function M:new()
         allowed = {
             'cache',
             'config',
+            'format',
             'log-file',
             'log-level',
             'unix-socket',
@@ -48,6 +49,15 @@ end
 function M:set_config(path)
     vim.validate({ path = { path, 'string' } })
     self.cmd:set('config', path)
+    return self
+end
+
+--- Sets `--format <value>`
+--- @param value distant.core.builder.Format
+--- @return distant.builder.manager.ListCmdBuilder
+function M:set_format(value)
+    vim.validate({ value = { value, 'string' } })
+    self.cmd:set('format', value)
     return self
 end
 

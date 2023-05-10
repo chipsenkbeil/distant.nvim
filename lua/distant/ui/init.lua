@@ -18,14 +18,14 @@ function M.open()
 
     api.window.open()
 
-    -- Atempt to load our system information the
-    -- first time we open the window
+    -- Atempt to load our connections and system
+    -- information the first time we open the window
     --
     -- NOTE: Must be invoked after opening window
     --       as the effect handlers aren't set
     --       until after it is opened!
     api.dispatch('RELOAD_TAB', {
-        tab = 'System Info',
+        tab = { 'Connections', 'System Info' },
         force = false,
     })
 end

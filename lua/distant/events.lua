@@ -13,6 +13,7 @@ M.__emitter = EventEmitter:new()
 --- | '"manager:started"' # when the manager was not running and was started by the plugin
 --- | '"manager:loaded"' # when the manager is loaded for the first time
 --- | '"settings:changed"' # when the stateful settings are changed
+--- | '"setup:finished"' # when setup of the plugin has finished
 
 -------------------------------------------------------------------------------
 -- GENERAL API
@@ -105,6 +106,15 @@ end
 --- @param handler fun(settings:distant.core.Settings)
 function M.on_settings_changed(handler)
     M.on('settings:changed', handler)
+end
+
+function M.emit_setup_finished()
+    M.emit('setup:finished')
+end
+
+--- @param handler fun()
+function M.on_setup_finished(handler)
+    M.on('setup:finished', handler)
 end
 
 return M

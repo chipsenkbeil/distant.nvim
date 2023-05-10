@@ -92,7 +92,7 @@ function M:set_distant_bind_server(value)
 end
 
 --- Sets `--format <value>`
---- @param value 'json'|'shell'
+--- @param value distant.core.builder.Format
 --- @return distant.builder.LaunchCmdBuilder
 function M:set_format(value)
     vim.validate({ value = { value, 'string' } })

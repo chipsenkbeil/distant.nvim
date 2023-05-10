@@ -2,21 +2,32 @@ local AuthHandler = require('distant-core.auth.handler')
 local log = require('distant-core.log')
 local utils = require('distant-core.utils')
 
---- Spawn a command that does some authentication and eventually returns an id upon success
---- @param opts {cmd:string|string[], auth?:distant.core.auth.Handler}
---- @param cb fun(err:string|nil, connection:string|nil)
+--- @class distant.core.auth.SpawnOpts
+--- @field cmd string|string[]
+--- @field auth? distant.core.auth.Handler
+--- @field skip? fun(msg:table):boolean # if provided and returns true, will skip the result
+
+--- Spawn a command that does some authentication and invokes `cb`
+--- upon receiving a non-authentication message (or an error).
+---
+--- @param opts distant.core.auth.SpawnOpts
+--- @param cb fun(err:string|nil, result:{line:string, msg:table}|nil)
 --- @return distant.core.utils.JobHandle
 return function(opts, cb)
     opts = opts or {}
     assert(opts.cmd, 'missing cmd')
 
-    local handle, connection, error_lines
-    connection = nil
+    local handle, result, error_lines
     error_lines = {}
+
+    --- @type {line:string, msg:table}|nil
+    result = nil
 
     -- Use provided auth handler, defaulting to a fresh instance if none provided
     --- @type distant.core.auth.Handler
     local auth = opts.auth or AuthHandler:new()
+
+    local skip = opts.skip or function(_) return false end
 
     handle = utils.job_start(opts.cmd, {
         on_success = function()
@@ -24,17 +35,17 @@ return function(opts, cb)
                 log.error(table.concat(error_lines, '\n'))
             end
 
-            if not connection then
-                return cb('Completed, but missing connection')
+            if not result then
+                return cb('Completed, but missing result')
             else
-                return cb(nil, connection)
+                return cb(nil, result)
             end
         end,
         on_failure = function(code)
             -- NOTE: We need to avoid exit code 143, which is neovim killing the process,
             --       when we successfully got a connection
-            if code == 143 and connection then
-                return cb(nil, connection)
+            if code == 143 and result then
+                return cb(nil, result)
             end
 
             local error_msg = '???'
@@ -55,13 +66,12 @@ return function(opts, cb)
                     auth:handle_request(msg, function(msg)
                         handle.write(utils.compress(vim.fn.json_encode(msg)) .. '\n')
                     end)
-                elseif msg.type == 'launched' or msg.type == 'connected' then
-                    -- NOTE: Lua 5.1 cannot handle an unsigned 64-bit integer as it loses
-                    --       some of the precision resulting in the wrong connection id
-                    --       being captured during json_decode. Because of this, we have
-                    --       to parse by hand the connection id from a string
-                    connection = utils.parse_json_str_for_value(line, 'id')
-                else
+                elseif result == nil and not skip(msg) then
+                    result = {
+                        line = line,
+                        msg = msg,
+                    }
+                elseif result ~= nil then
                     log.fmt_error('Unexpected msg: %s', msg)
                 end
             end

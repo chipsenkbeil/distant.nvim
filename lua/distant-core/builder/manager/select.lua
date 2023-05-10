@@ -60,7 +60,7 @@ function M:set_cache(path)
 end
 
 --- Sets `--format <format>`
---- @param format 'json'|'shell'
+--- @param format distant.core.builder.Format
 --- @return distant.builder.manager.SelectCmdBuilder
 function M:set_format(format)
     vim.validate({ format = { format, 'string' } })

@@ -261,8 +261,9 @@ end
 --- ```
 ---
 --- @param rows distant.core.ui.Span[][]
---- @return distant.core.ui.HlTextNode
-function M.Table(rows)
+--- @param extra? {[integer]: distant.core.ui.INode[]}
+--- @return distant.core.ui.INode
+function M.Table(rows, extra)
     local col_maxwidth = {}
     for i = 1, #rows do
         local row = rows[i]
@@ -283,7 +284,37 @@ function M.Table(rows)
         end
     end
 
-    return M.HlTextNode(rows)
+    if type(extra) == 'table' and vim.tbl_islist(extra) then
+        --- @type distant.core.ui.INode[]
+        local rows_with_extra = {}
+
+        -- For each row, we are going to construct a singular
+        -- visual line and then augment it with the extra nodes
+        for i = 1, #rows do
+            --- @type distant.core.ui.INode[]
+            local row = {}
+
+            -- First, add the row itself as a single-line visual node
+            table.insert(row, M.HlTextNode { rows[i] })
+
+            -- Second, add all other nodes for this row to the list
+            local extra_cnt = 0
+            if type(extra[i]) == 'table' then
+                extra_cnt = #extra[i]
+            end
+
+            for j = 1, extra_cnt do
+                table.insert(row, extra[i][j])
+            end
+
+            -- Third, add row as a node
+            table.insert(rows_with_extra, M.Node(row))
+        end
+
+        return M.Node(rows_with_extra)
+    else
+        return M.HlTextNode(rows)
+    end
 end
 
 --- Creates a node that assigns `opts.id` to the last physical line prior to this node.

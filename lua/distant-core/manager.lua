@@ -1,6 +1,7 @@
 local auth             = require('distant-core.auth')
 local builder          = require('distant-core.builder')
 local Client           = require('distant-core.client')
+local Destination      = require('distant-core.destination')
 local log              = require('distant-core.log')
 local utils            = require('distant-core.utils')
 
@@ -296,8 +297,8 @@ end
 --- @field destination string #uri representing the remote server
 ---
 --- @field auth? distant.core.auth.Handler #authentication handler to use
---- @field config? string #alternative config path to use
 --- @field cache? string #alternative cache path to use
+--- @field config? string #alternative config path to use
 --- @field distant? string #alternative path to distant binary (on remote machine) to use
 --- @field distant_bind_server? 'any'|'ssh'|string #control the IP address that the server binds to
 --- @field distant_args? string|string[] #additional arguments to supply to distant binary on remote machine
@@ -375,19 +376,35 @@ function M:launch(opts, cb)
     return auth.spawn({
         cmd = cmd,
         auth = opts.auth,
-    }, function(err, connection)
+        skip = function(msg)
+            return msg.type ~= 'launched'
+        end,
+    }, function(err, result)
         if err then
             return cb(err)
         end
 
-        assert(connection, 'Connection nil while error is nil!')
+        -- NOTE: Lua 5.1 cannot handle an unsigned 64-bit integer as it loses
+        --       some of the precision resulting in the wrong connection id
+        --       being captured during json_decode. Because of this, we have
+        --       to parse by hand the connection id from a string
+        --- @type string|nil
+        local id
+        if result ~= nil then
+            id = utils.parse_json_str_for_value(result.line, 'id')
+        end
+
+        if id == nil then
+            cb('Invalid result failed to yield connection id')
+            return
+        end
 
         -- Update manager to reflect connection
-        self.connections[connection] = {
+        self.connections[id] = {
             destination = destination
         }
 
-        return cb(nil, self:client(connection))
+        return cb(nil, self:client(id))
     end)
 end
 
@@ -395,8 +412,8 @@ end
 --- @field destination string #uri used to identify server's location
 ---
 --- @field auth? distant.core.auth.Handler #authentication handler to use
---- @field config? string #alternative config path to use
 --- @field cache? string #alternative cache path to use
+--- @field config? string #alternative config path to use
 --- @field log_file? string #alternative log file path to use
 --- @field log_level? string #alternative log level to use
 --- @field options? string|table<string, any> #additional options tied to a specific destination handler
@@ -437,19 +454,107 @@ function M:connect(opts, cb)
     return auth.spawn({
         cmd = cmd,
         auth = opts.auth,
-    }, function(err, connection)
+        skip = function(msg)
+            return msg.type ~= 'connected'
+        end,
+    }, function(err, result)
         if err then
             return cb(err)
         end
 
-        assert(connection, 'Connection nil while error is nil!')
+        -- NOTE: Lua 5.1 cannot handle an unsigned 64-bit integer as it loses
+        --       some of the precision resulting in the wrong connection id
+        --       being captured during json_decode. Because of this, we have
+        --       to parse by hand the connection id from a string
+        --- @type string|nil
+        local id
+        if result ~= nil then
+            id = utils.parse_json_str_for_value(result.line, 'id')
+        end
+
+        if id == nil then
+            cb('Invalid result failed to yield connection id')
+            return
+        end
 
         -- Update manager to reflect connection
-        self.connections[connection] = {
+        self.connections[id] = {
             destination = destination
         }
 
-        return cb(nil, self:client(connection))
+        return cb(nil, self:client(id))
+    end)
+end
+
+--- @class distant.core.manager.ListOpts
+--- @field auth? distant.core.auth.Handler # authentication handler to use
+--- @field cache? string # alternative cache path to use
+--- @field config? string # alternative config path to use
+--- @field log_file? string # alternative log file path to use
+--- @field log_level? string # alternative log level to use
+--- @field refresh? boolean # (default true) if true, will use the updated list to update the internally-tracked clients
+
+--- Retrieves a list of connections being managed. Will also update the
+--- internally-tracked state to reflect these connections.
+---
+--- @param opts distant.core.manager.ListOpts
+--- @param cb fun(err?:string, connections?:table<string, distant.core.Destination>)
+--- @return distant.core.utils.JobHandle|nil
+function M:list(opts, cb)
+    log.fmt_trace('Manager:list(%s, _)', opts)
+
+    if vim.fn.executable(self.config.binary) ~= 1 then
+        log.fmt_error('Executable %s is not on path', self.config.binary)
+        return
+    end
+
+    local cmd = builder
+        .manager
+        .list()
+        :set_from_tbl({
+            format       = 'json',
+            unix_socket  = self.config.network.unix_socket,
+            windows_pipe = self.config.network.windows_pipe,
+            -- Optional user settings
+            cache        = opts.cache,
+            config       = opts.config,
+            log_file     = opts.log_file,
+            log_level    = opts.log_level,
+        })
+        :as_list()
+    table.insert(cmd, 1, self.config.binary)
+
+    log.fmt_debug('Manager list cmd: %s', cmd)
+    return auth.spawn({
+        cmd = cmd,
+        auth = opts.auth,
+    }, function(err, result)
+        if err then
+            return cb(err)
+        end
+
+        if result == nil then
+            return cb('Invalid result failed to yield connections')
+        end
+
+        --- @type table<string, distant.core.Destination>
+        local connections = {}
+
+        for id, destination_str in pairs(result.msg) do
+            if type(id) == 'string' and type(destination_str) == 'string' then
+                local destination = Destination:try_parse(destination_str)
+                if destination then
+                    connections[id] = destination
+                end
+            end
+        end
+
+        -- Update our stateful tracking of connections (default is to refresh)
+        if opts.refresh == nil or opts.refresh == true then
+            self.connections = connections
+        end
+
+        return cb(nil, connections)
     end)
 end
 

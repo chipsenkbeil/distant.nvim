@@ -51,6 +51,12 @@ function M:new(opts)
     return instance
 end
 
+--- Returns a copy of this client's network settings.
+--- @return distant.client.Network
+function M:network()
+    return vim.deepcopy(self.config.network)
+end
+
 --- Loads the system information for the connected server. This will be cached
 --- for future requests. Specifying `reload` as true will result in a fresh
 --- request to the server for this information.

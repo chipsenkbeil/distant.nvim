@@ -1,3 +1,4 @@
+local events   = require('distant.events')
 local log      = require('distant-core').log
 local settings = require('distant-core').settings
 
@@ -9,4 +10,7 @@ return function(opts)
 
     -- Update our global settings
     settings.merge(opts)
+
+    -- Notify listeners that our setup has finished
+    events.emit_setup_finished()
 end

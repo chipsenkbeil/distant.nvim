@@ -297,5 +297,41 @@ function M:connect(opts, cb)
     end)
 end
 
+--- @class distant.core.state.ConnectionsOpts
+--- @field bin? string # path to local cli binary to use to facilitate launch
+--- @field network? distant.core.manager.Network
+--- @field config? string #alternative config path to use
+--- @field cache? string #alternative cache path to use
+--- @field log_file? string #alternative log file path to use
+--- @field log_level? distant.core.log.Level #alternative log level to use
+--- @field timeout? number
+--- @field interval? number
+
+--- Returns a list of connections being managed.
+--- @param opts distant.core.state.ConnectionsOpts
+--- @param cb fun(err?:string, connections?:table<string, distant.core.Destination>)
+function M:connections(opts, cb)
+    self:load_manager({
+        bin      = opts.bin,
+        network  = opts.network,
+        timeout  = opts.timeout,
+        interval = opts.interval,
+    }, function(err, manager)
+        if err then
+            return cb(err)
+        end
+
+        assert(manager, 'Impossible: manager is nil')
+
+        manager:list({
+            -- User-defined settings
+            cache     = opts.cache,
+            config    = opts.config,
+            log_file  = opts.log_file,
+            log_level = opts.log_level,
+        }, cb)
+    end)
+end
+
 local GLOBAL_STATE = M:new()
 return GLOBAL_STATE

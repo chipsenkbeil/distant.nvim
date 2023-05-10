@@ -1,10 +1,11 @@
-local editor = require('distant.editor')
+local Ui = require('distant.ui')
 
 --- DistantSessionInfo
 --- @param cmd NvimCommand
 --- @diagnostic disable-next-line:unused-local
 local function command(cmd)
-    editor.show_session_info()
+    Ui.set_view('Connections')
+    Ui.open()
 end
 
 --- @type DistantCommand

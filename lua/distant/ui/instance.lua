@@ -26,6 +26,14 @@ end
 ---@class distant.ui.State
 local INITIAL_STATE = {
     info = {
+        connections = {
+            --- @type string|nil
+            selected = nil,
+
+            --- @type table<string, distant.core.Destination>
+            available = {},
+        },
+
         ---@type distant.api.SystemInfoPayload|nil
         system_info = nil,
     },
@@ -113,20 +121,67 @@ local function toggle_expand_current_settings()
     end)
 end
 
---- @param event {payload:{tab:string, force:boolean}}
+--- @param event {payload:{tab:string|string[], force:boolean}}
 local function reload_tab(event)
     local payload = event.payload
-    if payload.tab == 'System Info' and fn.is_ready() then
-        fn.cached_system_info({ reload = payload.force }, function(err, system_info)
-            assert(not err, tostring(err))
-            assert(system_info)
-            mutate_state(function(state)
-                state.info.system_info = system_info
+
+    -- If we got a single tab, convert it to a list of one
+    local tabs = payload.tab
+    if type(tabs) == 'string' then
+        tabs = { tabs }
+    end
+
+    -- For each tab we want to refresh, do so
+    for _, tab in ipairs(tabs) do
+        if tab == 'Connections' then
+            -- Update our available connections
+            local plugin = require('distant.state')
+            plugin:connections({}, function(err, connections)
+                assert(not err, err)
+                mutate_state(function(state)
+                    state.info.connections.available = connections
+                end)
             end)
-        end)
+            mutate_state(function(state)
+                local id
+                if plugin.client then
+                    id = plugin.client:network().connection
+                end
+                state.info.connections.selected = id
+            end)
+        elseif tab == 'System Info' and fn.is_ready() then
+            fn.cached_system_info({ reload = payload.force }, function(err, system_info)
+                assert(not err, tostring(err))
+                assert(system_info)
+                mutate_state(function(state)
+                    state.info.system_info = system_info
+                end)
+            end)
+        end
     end
 end
 
+--- @param event {payload:string}
+local function switch_active_connection(event)
+    -- Update our active client connection
+    local plugin = require('distant.state')
+    local id = event.payload
+
+    -- Load our manager and refresh the connections
+    -- before attempting to assign the client
+    plugin:connections({}, function(err, _)
+        assert(not err, err)
+        if plugin.manager then
+            plugin.client = assert(
+                plugin.manager:client(id),
+                'Neovim manager lost track of client'
+            )
+            events.emit_connection_changed(plugin.client)
+        end
+    end)
+end
+
+--- @param event {payload:string}
 local function set_view(event)
     local view = event.payload
     mutate_state(function(state)
@@ -147,6 +202,7 @@ local effects = {
     ['TOGGLE_HELP'] = toggle_help,
     ['TOGGLE_EXPAND_CURRENT_SETTINGS'] = toggle_expand_current_settings,
     ['RELOAD_TAB'] = reload_tab,
+    ['SWITCH_ACTIVE_CONNECTION'] = switch_active_connection,
 }
 
 window.init({
@@ -158,6 +214,13 @@ window.init({
 })
 
 events.on_connection_changed(function()
+    reload_tab({
+        payload = {
+            tab = 'Connections',
+            force = false,
+        }
+    })
+
     reload_tab({
         payload = {
             tab = 'System Info',

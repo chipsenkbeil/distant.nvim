@@ -6,12 +6,16 @@ local DistantShellCmdBuilder = require('distant-core.builder.shell')
 local DistantSpawnCmdBuilder = require('distant-core.builder.spawn')
 
 --- @alias distant.core.log.Level
---- | 'trace'
---- | 'debug'
---- | 'info'
---- | 'warn'
---- | 'error'
---- | 'off'
+--- | '"trace"'
+--- | '"debug"'
+--- | '"info"'
+--- | '"warn"'
+--- | '"error"'
+--- | '"off"'
+
+--- @alias distant.core.builder.Format
+--- | '"json"'
+--- | '"shell"'
 
 --- @class distant.builder.CmdBuilder
 --- @field manager distant.builder.ManagerCmdBuilder
