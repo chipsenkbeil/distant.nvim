@@ -418,14 +418,18 @@ function M:__handle_response(msg)
     if origin_id ~= nil and origin_id ~= vim.NIL then
         local cb_state = self.__state.callbacks[origin_id]
         if cb_state ~= nil then
+            log.fmt_trace('Transport has found callback for %s', origin_id)
             local cb = cb_state.callback
             local more = cb_state.more
 
             if not more(payload) then
+                log.fmt_trace('Transport will stop receiving msgs for %s', origin_id)
                 self.__state.callbacks[origin_id] = nil
             end
 
-            return cb(payload)
+            log.fmt_trace('Transport triggering callback for %s', origin_id)
+            cb(payload)
+            return
         else
             log.fmt_warn('Discarding message with origin %s as no callback exists', origin_id)
         end

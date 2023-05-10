@@ -179,6 +179,8 @@ function M:launch(opts, cb)
 
     self:load_manager({
         bin = opts.bin,
+        log_file = '/tmp/nvim.manager.log',
+        log_level = 'trace',
         network = opts.network,
         timeout = opts.timeout,
         interval = opts.interval,

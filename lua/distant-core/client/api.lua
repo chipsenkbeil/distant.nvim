@@ -58,11 +58,10 @@ function M:append_file(opts, cb)
             path = opts.path,
             data = opts.data,
         },
-        cb = cb,
         verify = verify_ok,
         timeout = opts.timeout,
         interval = opts.interval,
-    })
+    }, cb)
 end
 
 --- @alias distant.api.AppendFileTextOpts {path:string, text:string, timeout?:number, interval?:number}
@@ -81,11 +80,10 @@ function M:append_file_text(opts, cb)
             path = opts.path,
             text = opts.text,
         },
-        cb = cb,
         verify = verify_ok,
         timeout = opts.timeout,
         interval = opts.interval,
-    })
+    }, cb)
 end
 
 --- @alias distant.api.CapabilitiesOpts {timeout?:number, interval?:number}
@@ -103,7 +101,6 @@ function M:capabilities(opts, cb)
         payload = {
             type = 'capabilities',
         },
-        cb = cb,
         verify = function(payload)
             return (
                 payload.type == 'capabilities'
@@ -112,7 +109,7 @@ function M:capabilities(opts, cb)
         end,
         timeout = opts.timeout,
         interval = opts.interval,
-    })
+    }, cb)
 end
 
 --- @alias distant.api.CopyOpts {src:string, dst:string, timeout?:number, interval?:number}
@@ -131,11 +128,10 @@ function M:copy(opts, cb)
             src = opts.src,
             dst = opts.dst,
         },
-        cb = cb,
         verify = verify_ok,
         timeout = opts.timeout,
         interval = opts.interval,
-    })
+    }, cb)
 end
 
 --- @alias distant.api.CreateDirOpts {path:string, all?:boolean, timeout?:number, interval?:number}
@@ -154,11 +150,10 @@ function M:create_dir(opts, cb)
             path = opts.path,
             all = opts.all,
         },
-        cb = cb,
         verify = verify_ok,
         timeout = opts.timeout,
         interval = opts.interval,
-    })
+    }, cb)
 end
 
 --- @alias distant.api.ExistsOpts {path:string, timeout?:number, interval?:number}
@@ -176,14 +171,13 @@ function M:exists(opts, cb)
             type = 'exists',
             path = opts.path,
         },
-        cb = cb,
         verify = function(payload)
             return payload.type == 'exists'
         end,
         map = function(payload) return payload.value end,
         timeout = opts.timeout,
         interval = opts.interval,
-    })
+    }, cb)
 
     --- @cast value -table, +boolean
     return err, value
@@ -224,7 +218,6 @@ function M:metadata(opts, cb)
             canonicalize = opts.canonicalize,
             resolve_file_type = opts.resolve_file_type,
         },
-        cb = cb,
         verify = function(payload)
             return (
                 payload.type == 'metadata'
@@ -234,7 +227,7 @@ function M:metadata(opts, cb)
         end,
         timeout = opts.timeout,
         interval = opts.interval,
-    })
+    }, cb)
 end
 
 --- @class distant.api.DirEntry
@@ -274,7 +267,6 @@ function M:read_dir(opts, cb)
             canonicalize = opts.canonicalize,
             include_root = opts.include_root,
         },
-        cb = cb,
         verify = function(payload)
             return payload.type == 'dir_entries' and vim.tbl_islist(payload.entries) and vim.tbl_islist(payload.errors)
         end,
@@ -286,7 +278,7 @@ function M:read_dir(opts, cb)
         end,
         timeout = opts.timeout,
         interval = opts.interval,
-    })
+    }, cb)
 end
 
 --- @alias distant.api.ReadFileOpts {path:string, timeout?:number, interval?:number}
@@ -304,14 +296,13 @@ function M:read_file(opts, cb)
             type = 'file_read',
             path = opts.path,
         },
-        cb = cb,
         verify = function(payload)
             return payload.type == 'blob' and vim.tbl_islist(payload.data)
         end,
         map = function(payload) return payload.data end,
         timeout = opts.timeout,
         interval = opts.interval,
-    })
+    }, cb)
 end
 
 --- @alias distant.api.ReadFileTextOpts {path:string, timeout?:number, interval?:number}
@@ -329,14 +320,13 @@ function M:read_file_text(opts, cb)
             type = 'file_read_text',
             path = opts.path,
         },
-        cb = cb,
         verify = function(payload)
             return payload.type == 'text' and type(payload.data) == 'string'
         end,
         map = function(payload) return payload.data end,
         timeout = opts.timeout,
         interval = opts.interval,
-    })
+    }, cb)
 
     --- @cast value -table, +string
     return err, value
@@ -358,11 +348,10 @@ function M:remove(opts, cb)
             path = opts.path,
             force = opts.force,
         },
-        cb = cb,
         verify = verify_ok,
         timeout = opts.timeout,
         interval = opts.interval,
-    })
+    }, cb)
 end
 
 --- @alias distant.api.RenameOpts {src:string, dst:string, timeout?:number, interval?:number}
@@ -381,11 +370,10 @@ function M:rename(opts, cb)
             src = opts.src,
             dst = opts.dst,
         },
-        cb = cb,
         verify = verify_ok,
         timeout = opts.timeout,
         interval = opts.interval,
-    })
+    }, cb)
 end
 
 --- @class distant.api.SearchOpts
@@ -463,6 +451,8 @@ end
 --- @field arch string
 --- @field current_dir string
 --- @field main_separator string
+--- @field username string
+--- @field shell string
 
 --- @alias distant.api.SystemInfoOpts {timeout?:number, interval?:number}
 --- @param opts distant.api.SystemInfoOpts
@@ -478,7 +468,6 @@ function M:system_info(opts, cb)
         payload = {
             type = 'system_info',
         },
-        cb = cb,
         verify = function(payload)
             return (
                 payload.type == 'system_info'
@@ -487,11 +476,13 @@ function M:system_info(opts, cb)
                 and type(payload.arch) == 'string'
                 and type(payload.current_dir) == 'string'
                 and type(payload.main_separator) == 'string'
-                )
+                and type(payload.username) == 'string'
+                and type(payload.shell) == 'string'
+            )
         end,
         timeout = opts.timeout,
         interval = opts.interval,
-    })
+    }, cb)
 end
 
 --- @alias distant.api.WriteFileOpts {path:string, data:integer[], timeout?:number, interval?:number}
@@ -510,11 +501,10 @@ function M:write_file(opts, cb)
             path = opts.path,
             data = opts.data,
         },
-        cb = cb,
         verify = verify_ok,
         timeout = opts.timeout,
         interval = opts.interval,
-    })
+    }, cb)
 end
 
 --- @alias distant.api.WriteFileTextOpts {path:string, text:string, timeout?:number, interval?:number}
@@ -533,11 +523,10 @@ function M:write_file_text(opts, cb)
             path = opts.path,
             text = opts.text,
         },
-        cb = cb,
         verify = verify_ok,
         timeout = opts.timeout,
         interval = opts.interval,
-    })
+    }, cb)
 end
 
 --- @alias distant.api.watch.ChangeKind
@@ -599,16 +588,6 @@ function M:watch(opts, cb)
             only = opts.only,
             except = opts.except,
         },
-        cb = function(err, payload)
-            -- NOTE: It's possible to get a payload of "ok" when
-            --       as it is sent in response to the initial
-            --       watch request. We want to skip that payload!
-            if err then
-                cb(err, nil)
-            elseif payload.type == 'changed' then
-                cb(nil, payload)
-            end
-        end,
         verify = verify_ok,
         more = function(payload)
             -- TODO: We need some way to cleanup the callback when
@@ -617,7 +596,16 @@ function M:watch(opts, cb)
         end,
         timeout = opts.timeout,
         interval = opts.interval,
-    })
+    }, function(err, payload)
+        -- NOTE: It's possible to get a payload of "ok" when
+        --       as it is sent in response to the initial
+        --       watch request. We want to skip that payload!
+        if err then
+            cb(err, nil)
+        elseif payload.type == 'changed' then
+            cb(nil, payload)
+        end
+    end)
 end
 
 --- @alias distant.api.UnwatchOpts {path:string, timeout?:number, interval?:number}
@@ -635,11 +623,10 @@ function M:unwatch(opts, cb)
             type = 'unwatch',
             path = opts.path,
         },
-        cb = cb,
         verify = verify_ok,
         timeout = opts.timeout,
         interval = opts.interval,
-    })
+    }, cb)
 end
 
 return M

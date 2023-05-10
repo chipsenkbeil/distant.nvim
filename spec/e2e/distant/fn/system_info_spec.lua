@@ -22,5 +22,19 @@ describe('distant.fn', function()
             --       to make assumptions about the remote machine
             assert.is.truthy(res)
         end)
+
+        it('should support being performed asynchronously', function()
+            local info
+            fn.system_info({}, function(err, res)
+                assert(not err, tostring(err))
+                info = res
+            end)
+
+            local time = 1000 * 5
+            assert(
+                vim.wait(time, function() return info ~= nil end),
+                string.format('System information failed to be retrieved after %.2fs', time / 1000.0)
+            )
+        end)
     end)
 end)

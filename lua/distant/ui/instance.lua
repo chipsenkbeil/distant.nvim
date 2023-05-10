@@ -1,8 +1,11 @@
+local fn      = require('distant.fn')
+
 local Ui      = require('distant-core.ui')
 local display = require('distant-core.ui.display')
 
 local Header  = require('distant.ui.components.header')
 local Help    = require('distant.ui.components.help')
+local Main    = require('distant.ui.components.main')
 local Tabs    = require('distant.ui.components.tabs')
 
 --- @param state distant.ui.State
@@ -12,6 +15,7 @@ local function GlobalKeybinds(state)
         Ui.Keybind('g?', 'TOGGLE_HELP', nil, true),
         Ui.Keybind('q', 'CLOSE_WINDOW', nil, true),
         Ui.Keybind('<Esc>', 'CLOSE_WINDOW', nil, true),
+        Ui.Keybind('r', 'RELOAD_TAB', state.view.current, true),
 
         Ui.Keybind('1', 'SET_VIEW', 'Connections', true),
         Ui.Keybind('2', 'SET_VIEW', 'System Info', true),
@@ -21,12 +25,8 @@ end
 ---@class distant.ui.State
 local INITIAL_STATE = {
     info = {
-        ---@type string | nil
-        used_disk_space = nil,
-        ---@type { name: string, is_installed: boolean }[]
-        registries = {},
-        ---@type string?
-        registry_update_error = nil,
+        ---@type distant.api.SystemInfoPayload|nil
+        system_info = nil,
     },
     view = {
         is_showing_help = false,
@@ -55,8 +55,7 @@ window.view(
                 return Help(state)
             end),
             Ui.When(not state.view.is_showing_help, function()
-                return Ui.Node {
-                }
+                return Main(state)
             end),
         }
     end
@@ -112,6 +111,21 @@ local function toggle_expand_current_settings()
     end)
 end
 
+local function reload_tab(event)
+    -- NOTE: Seems like the transport doesn't trigger unless we do this
+    vim.schedule(function()
+        if event.payload == 'System Info' then
+            fn.cached_system_info({ reload = true }, function(err, system_info)
+                assert(not err, tostring(err))
+                assert(system_info)
+                mutate_state(function(state)
+                    state.info.system_info = system_info
+                end)
+            end)
+        end
+    end)
+end
+
 local function set_view(event)
     local view = event.payload
     mutate_state(function(state)
@@ -131,6 +145,7 @@ local effects = {
     ['SET_VIEW'] = set_view,
     ['TOGGLE_HELP'] = toggle_help,
     ['TOGGLE_EXPAND_CURRENT_SETTINGS'] = toggle_expand_current_settings,
+    ['RELOAD_TAB'] = reload_tab,
 }
 
 window.init({
