@@ -15,9 +15,19 @@ end
 
 function M.open()
     local api = require('distant.ui.instance')
-    --[[ require('mason-registry').refresh(function()
-    end) ]]
+
     api.window.open()
+
+    -- Atempt to load our system information the
+    -- first time we open the window
+    --
+    -- NOTE: Must be invoked after opening window
+    --       as the effect handlers aren't set
+    --       until after it is opened!
+    api.dispatch('RELOAD_TAB', {
+        tab = 'System Info',
+        force = false,
+    })
 end
 
 ---@param view string

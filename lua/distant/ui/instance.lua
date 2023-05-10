@@ -15,7 +15,7 @@ local function GlobalKeybinds(state)
         Ui.Keybind('g?', 'TOGGLE_HELP', nil, true),
         Ui.Keybind('q', 'CLOSE_WINDOW', nil, true),
         Ui.Keybind('<Esc>', 'CLOSE_WINDOW', nil, true),
-        Ui.Keybind('r', 'RELOAD_TAB', state.view.current, true),
+        Ui.Keybind('r', 'RELOAD_TAB', { tab = state.view.current, force = true }, true),
 
         Ui.Keybind('1', 'SET_VIEW', 'Connections', true),
         Ui.Keybind('2', 'SET_VIEW', 'System Info', true),
@@ -111,19 +111,18 @@ local function toggle_expand_current_settings()
     end)
 end
 
+--- @param event {payload:{tab:string, force:boolean}}
 local function reload_tab(event)
-    -- NOTE: Seems like the transport doesn't trigger unless we do this
-    vim.schedule(function()
-        if event.payload == 'System Info' then
-            fn.cached_system_info({ reload = true }, function(err, system_info)
-                assert(not err, tostring(err))
-                assert(system_info)
-                mutate_state(function(state)
-                    state.info.system_info = system_info
-                end)
+    local payload = event.payload
+    if payload.tab == 'System Info' then
+        fn.cached_system_info({ reload = payload.force }, function(err, system_info)
+            assert(not err, tostring(err))
+            assert(system_info)
+            mutate_state(function(state)
+                state.info.system_info = system_info
             end)
-        end
-    end)
+        end)
+    end
 end
 
 local function set_view(event)
@@ -163,5 +162,10 @@ return {
     end,
     set_sticky_cursor = function(tag)
         window.set_sticky_cursor(tag)
+    end,
+    --- @param name string
+    --- @param payload? table
+    dispatch = function(name, payload)
+        window.dispatch(name, payload)
     end,
 }

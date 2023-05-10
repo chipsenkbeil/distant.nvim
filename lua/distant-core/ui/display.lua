@@ -257,6 +257,7 @@ end
 --- @field is_open fun():boolean
 --- @field set_sticky_cursor fun(tag:any)
 --- @field get_win_config fun():table<string, any>
+--- @field dispatch fun(effect:string, payload?:table)
 
 --- @param name string #Human readable identifier.
 --- @param filetype string
@@ -549,6 +550,7 @@ function M.new_view_only_win(name, filetype)
         view = function(_renderer)
             renderer = _renderer
         end,
+        --- Update the effects for the next time the window is opened.
         --- @alias distant.core.ui.display.Effects table<string, distant.core.ui.display.EffectFn>
         --- @alias distant.core.ui.display.EffectFn fun(event?:{payload:any})
         --- @param _effects distant.core.ui.display.Effects
@@ -645,6 +647,17 @@ function M.new_view_only_win(name, filetype)
             assert(win_id ~= nil, 'Window has not been opened, cannot get config.')
             return vim.api.nvim_win_get_config(win_id)
         end,
+
+        --- @param effect string
+        --- @param payload? table
+        dispatch = vim.schedule_wrap(function(effect, payload)
+            local effect_handler = registered_effect_handlers[effect]
+            if effect_handler then
+                log.fmt_trace('Calling handler for effect %s through direct dispatch', name)
+                effect_handler({ payload = payload })
+                return true
+            end
+        end),
     }
 end
 
