@@ -11,7 +11,7 @@ local DEFAULT_INTERVAL = 100
 --- Represents a distant manager
 --- @class distant.core.Manager
 --- @field private config distant.core.manager.Config
---- @field private connections table<string, {destination:string}> #mapping of id -> destination
+--- @field private connections table<string, distant.core.Destination> #mapping of id -> destination
 local M                = {}
 M.__index              = M
 
@@ -47,12 +47,9 @@ function M:has_connection(connection)
 end
 
 --- @param connection string #id of the connection being managed
---- @return string|nil #destination if connection exists
+--- @return distant.core.Destination|nil #destination if connection exists
 function M:connection_destination(connection)
-    local c = self.connections[connection]
-    if c then
-        return c.destination
-    end
+    return self.connections[connection]
 end
 
 --- @param connection string #id of the connection being managed
@@ -349,10 +346,10 @@ function M:launch(opts, cb)
         return text
     end
 
-    local destination = opts.destination
+    local destination = Destination:parse(opts.destination)
     log.fmt_trace('Launch destination: %s', destination)
     local cmd = builder
-        .launch(destination)
+        .launch(destination:as_string())
         :set_from_tbl({
             -- Explicitly set to use JSON for communication and point to
             -- manager's unix socket or windows pipe
@@ -400,9 +397,7 @@ function M:launch(opts, cb)
         end
 
         -- Update manager to reflect connection
-        self.connections[id] = {
-            destination = destination
-        }
+        self.connections[id] = destination
 
         return cb(nil, self:client(id))
     end)
@@ -431,9 +426,9 @@ function M:connect(opts, cb)
         return
     end
 
-    local destination = opts.destination
+    local destination = Destination:parse(opts.destination)
     local cmd = builder
-        .connect(destination)
+        .connect(destination:as_string())
         :set_from_tbl({
             -- Explicitly set to use JSON for communication and point to
             -- manager's unix socket or windows pipe
@@ -478,9 +473,7 @@ function M:connect(opts, cb)
         end
 
         -- Update manager to reflect connection
-        self.connections[id] = {
-            destination = destination
-        }
+        self.connections[id] = destination
 
         return cb(nil, self:client(id))
     end)

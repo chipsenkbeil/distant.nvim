@@ -273,7 +273,7 @@ function M:send_async(opts, cb)
     log.fmt_trace('Transport:send_async(%s, _)', opts)
     if not self:is_running() then
         if self.config.autostart == true then
-            log.warn('Transport not running and autostart enabled, so attempting to start')
+            log.debug('Transport not running and autostart enabled, so attempting to start')
             self:start(function(code)
                 -- Ignore code 143, which is neovim terminating, as this will get
                 -- printed when neovim exits
