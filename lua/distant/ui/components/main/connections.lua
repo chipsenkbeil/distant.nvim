@@ -18,7 +18,27 @@ local function AvailableConnections(opts)
     local has_connections = not vim.tbl_isempty(opts.connections)
     local extra = {}
 
-    for id, destination in pairs(opts.connections) do
+    --- Sort by id so we can ensure that we render in the same
+    --- order every time, otherwise the table jumps around
+    ---
+    --- Lua's string comparison doesn't factor in the length
+    --- of the string, so we have to provide a custom comparator
+    ---
+    --- @type string[]
+    local ids = vim.deepcopy(vim.tbl_keys(opts.connections))
+    table.sort(ids, function(a, b)
+        if a:len() < b:len() then
+            return true
+        elseif a:len() > b:len() then
+            return false
+        else
+            return a < b
+        end
+    end)
+
+    for _, id in ipairs(ids) do
+        local destination = opts.connections[id]
+
         --- @type string|number|nil
         local port_str = destination.port
 

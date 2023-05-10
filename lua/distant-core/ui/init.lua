@@ -261,7 +261,7 @@ end
 --- ```
 ---
 --- @param rows distant.core.ui.Span[][]
---- @param extra? {[integer]: distant.core.ui.INode[]}
+--- @param extra? {[integer]: distant.core.ui.INode[]} # additional nodes to attach after a specific row
 --- @return distant.core.ui.INode
 function M.Table(rows, extra)
     local col_maxwidth = {}

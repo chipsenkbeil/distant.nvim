@@ -116,7 +116,7 @@ window.init({
             window.close()
         end,
     },
-    border = 'none',
+    border = 'single',
     winhighlight = {
         'NormalFloat:DistantNormal',
     },

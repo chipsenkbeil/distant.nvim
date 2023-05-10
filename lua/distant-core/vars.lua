@@ -36,6 +36,7 @@ function M.find_buf_with_path(path)
     path = remove_trailing_slash(path)
 
     -- Check if we have a buffer in the form of distant://path
+    --- @diagnostic disable-next-line:param-type-mismatch
     local bufnr = vim.fn.bufnr('^distant://' .. path .. '$', 0)
     if bufnr ~= -1 then
         return bufnr
