@@ -653,7 +653,7 @@ function M.new_view_only_win(name, filetype)
         dispatch = vim.schedule_wrap(function(effect, payload)
             local effect_handler = registered_effect_handlers[effect]
             if effect_handler then
-                log.fmt_trace('Calling handler for effect %s through direct dispatch', name)
+                log.fmt_trace('Calling handler for effect %s through direct dispatch', effect)
                 effect_handler({ payload = payload })
                 return true
             end
