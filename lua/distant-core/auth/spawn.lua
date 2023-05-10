@@ -58,9 +58,15 @@ return function(opts, cb)
         end,
         on_stdout_line = function(line)
             if line ~= nil and line ~= "" then
-                --- @type table
-                local msg = assert(vim.fn.json_decode(line), 'Invalid JSON from line')
+                --- @type boolean, table|nil
+                local success, msg = pcall(vim.fn.json_decode, line)
 
+                -- Skip invalid json
+                if not success then
+                    return
+                end
+
+                --- @cast msg table
                 if auth:is_auth_request(msg) then
                     --- @diagnostic disable-next-line:redefined-local
                     auth:handle_request(msg, function(msg)
