@@ -232,6 +232,11 @@ end
 
 --- @alias distant.core.ui.window.RowColTuple {[1]:number, [2]:number}
 
+--- @class distant.core.ui.window.State
+--- @field mutate fun(mutate_fn:fun(current_state:table))
+--- @field get fun():table
+--- @field __unsubscribe fun(val:boolean)
+
 --- This class represents a window to be rendered.
 ---
 --- The setup process requires invoking several functions in a specific order:
@@ -240,6 +245,8 @@ end
 --- 3. `window.init` - fully initialize the window.
 ---
 --- @class distant.core.ui.window.Window
+--- @field state distant.core.ui.window.State
+---
 --- @field private __has_initiated boolean
 --- @field private __namespace number
 --- @field private __filetype filetype
@@ -255,27 +262,36 @@ end
 --- @field private __win? number
 --- @field private __output? distant.core.ui.window.RenderOutput
 --- @field private __renderer? fun(state:table):distant.core.ui.INode
---- @field private __mutate_state? fun(mutate_fn:fun(current_state:table))
---- @field private __get_state? fun():table
---- @field private __unsubscribe? fun(val:boolean)
 local M = {}
 M.__index = M
 
 --- Creates a new window.
---- @param name string #Human readable identifier.
---- @param filetype string
+--- @param opts {name:string, filetype:string, initial_state:table, view:fun(state: table):distant.core.ui.INode}
 --- @return distant.core.ui.window.Window
-function M:new(name, filetype)
+function M:new(opts)
     local instance = {}
     setmetatable(instance, M)
 
+    assert(type(opts.name) == 'string', 'opts.name must be a string')
+    assert(type(opts.filetype) == 'string', 'opts.filetype must be a string')
+    assert(type(opts.initial_state) == 'table', 'opts.initial_state must be a table')
+
+    --------------------------------------------------------------------------
+    -- SET PRIVATE VARIABLES
+    --------------------------------------------------------------------------
+
     instance.__has_initiated = false
-    instance.__namespace = vim.api.nvim_create_namespace(('%s_%s'):format(name, utils.next_id()))
-    instance.__filetype = filetype
+    instance.__namespace = vim.api.nvim_create_namespace(('%s_%s'):format(opts.name, utils.next_id()))
+    instance.__filetype = opts.filetype
     instance.__registered_keymaps = {}
     instance.__registered_keybindings = {}
     instance.__registered_effect_handlers = {}
     instance.__window_opts = {}
+    instance.__renderer = opts.view
+
+    --------------------------------------------------------------------------
+    -- CONFIGURE DIAGNOSTICS
+    --------------------------------------------------------------------------
 
     vim.diagnostic.config({
         virtual_text = {
@@ -286,6 +302,32 @@ function M:new(name, filetype)
         signs = false,
         virtual_lines = false,
     }, self.__namespace)
+
+    --------------------------------------------------------------------------
+    -- INITIALIZE STATE
+    --------------------------------------------------------------------------
+
+    local mutate_state, get_state, unsubscribe = state.create_state_container(
+        opts.initial_state,
+        --- @param new_state table
+        debounced(function(new_state)
+            assert(self.__renderer ~= nil, 'renderer is invalid during drawing of state change')
+            self:__draw(self.__renderer(new_state))
+        end)
+    )
+
+    -- we don't need to subscribe to state changes until the window is actually opened
+    unsubscribe(true)
+
+    instance.__state = {
+        mutate = mutate_state,
+        get = get_state,
+        __unsubscribe = unsubscribe,
+    }
+
+    --------------------------------------------------------------------------
+    -- RETURN NEW WINDOW
+    --------------------------------------------------------------------------
 
     return instance
 end
@@ -304,32 +346,10 @@ function M:effects(effects)
     self.__window_opts.effects = effects
 end
 
---- @generic T: table
---- @param initial_state T
---- @return fun(mutate_fn: fun(current_state: T)), fun(): T
-function M:state(initial_state)
-    local mutate_state, get_state, unsubscribe = state.create_state_container(
-        initial_state,
-        --- @param new_state table
-        debounced(function(new_state)
-            assert(self.__renderer ~= nil, 'renderer is invalid during drawing of state change')
-            self:__draw(self.__renderer(new_state))
-        end)
-    )
-    self.__mutate_state = mutate_state
-    self.__get_state = get_state
-    self.__unsubscribe = unsubscribe
-
-    -- we don't need to subscribe to state changes until the window is actually opened
-    unsubscribe(true)
-
-    return self.__mutate_state, self.__get_state
-end
-
 --- @param opts distant.core.ui.window.WindowOpts
 function M:init(opts)
     assert(self.__renderer ~= nil, 'No view function has been registered. Call .view() before .init().')
-    assert(self.__unsubscribe ~= nil, 'No state has been registered. Call .state() before .init().')
+    assert(self.state.__unsubscribe ~= nil, 'No state has been registered. Call .state() before .init().')
     self.__window_opts = opts
     self.__has_initiated = true
 end
@@ -343,22 +363,20 @@ function M:open()
             return
         end
 
-        assert(self.__unsubscribe ~= nil, 'unsubscribe is invalid during opening of window')
-        self.__unsubscribe(false)
+        assert(self.state.__unsubscribe ~= nil, 'unsubscribe is invalid during opening of window')
+        self.state.__unsubscribe(false)
 
         self:__open()
 
         assert(self.__renderer ~= nil, 'renderer is invalid during opening of window')
-        assert(self.__get_state ~= nil, 'get_state is invalid during opening of window')
-        self:__draw(self.__renderer(self.__get_state()))
+        self:__draw(self.__renderer(self.state.get()))
     end)
 end
 
 function M:close()
     vim.schedule(function()
         assert(self.__has_initiated, 'Display has not been initiated, cannot close.')
-        assert(self.__unsubscribe ~= nil, 'unsubscribe is invalid during closing of window')
-        self.__unsubscribe(true)
+        self.state.__unsubscribe(true)
         log.fmt_trace('Closing window win_id=%s, bufnr=%s', self.__win, self.__buf)
         self:__delete_win_buf()
 
@@ -476,8 +494,7 @@ function M:__draw(view)
 
     if not win_valid or not buf_valid then
         -- the window has been closed or the buffer is somehow no longer valid
-        assert(self.__unsubscribe ~= nil, 'unsubscribe is invalid during drawing of window')
-        self.__unsubscribe(true)
+        self.state.__unsubscribe(true)
         log.trace('Buffer or window is no longer valid', self.__win, self.__buf)
         return
     end
@@ -629,8 +646,7 @@ function M:__open()
         callback = function()
             if vim.api.nvim_win_is_valid(self.__win) then
                 assert(self.__renderer ~= nil, 'renderer is invalid during resize')
-                assert(self.__get_state ~= nil, 'get_state is invalid during resize')
-                self:__draw(self.__renderer(self.__get_state()))
+                self:__draw(self.__renderer(self.state.get()))
                 vim.api.nvim_win_set_config(self.__win, create_popup_window_opts(self.__window_opts, true))
             end
         end,

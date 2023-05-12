@@ -1,6 +1,7 @@
 --- @class distant.core.ui.State
 local M = {}
 
+--- Creates a new container for managing state.
 --- @generic T: table
 --- @param initial_state T
 --- @param subscriber fun(state:T)

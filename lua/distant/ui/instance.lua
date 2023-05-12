@@ -50,7 +50,11 @@ local INITIAL_STATE = {
     },
 }
 
-local window = Window:new('distant.nvim', 'distant')
+local window = Window:new({
+    name = 'distant.nvim',
+    filetype = 'distant',
+    initial_state = INITIAL_STATE,
+})
 
 window:view(
 ---@param state distant.ui.State
@@ -70,16 +74,14 @@ window:view(
     end
 )
 
---- @type fun(mutate_fn:fun(current_state:distant.ui.State)), fun():distant.ui.State
-local mutate_state, get_state = window:state(INITIAL_STATE)
-
 local help_animation
 do
     local help_command = ':help'
     local help_command_len = #help_command
     help_animation = Ui.animation({
         function(tick)
-            mutate_state(function(state)
+            ---@param state distant.ui.State
+            window.state.mutate(function(state)
                 state.header.title_prefix = help_command:sub(help_command_len - tick, help_command_len)
             end)
         end,
@@ -90,7 +92,8 @@ end
 
 local ship_animation = Ui.animation({
     function(tick)
-        mutate_state(function(state)
+        ---@param state distant.ui.State
+        window.state.mutate(function(state)
             state.view.ship_indentation = tick
             if tick > -5 then
                 state.view.ship_exclamation = 'https://github.com/sponsors/chipsenkbeil'
@@ -106,7 +109,8 @@ local ship_animation = Ui.animation({
 })
 
 local function toggle_help()
-    mutate_state(function(state)
+    ---@param state distant.ui.State
+    window.state.mutate(function(state)
         state.view.is_showing_help = not state.view.is_showing_help
         if state.view.is_showing_help then
             help_animation()
@@ -116,7 +120,8 @@ local function toggle_help()
 end
 
 local function toggle_expand_current_settings()
-    mutate_state(function(state)
+    ---@param state distant.ui.State
+    window.state.mutate(function(state)
         state.view.is_current_settings_expanded = not state.view.is_current_settings_expanded
     end)
 end
@@ -138,11 +143,13 @@ local function reload_tab(event)
             local plugin = require('distant.state')
             plugin:connections({}, function(err, connections)
                 assert(not err, err)
-                mutate_state(function(state)
+                ---@param state distant.ui.State
+                window.state.mutate(function(state)
                     state.info.connections.available = connections
                 end)
             end)
-            mutate_state(function(state)
+            ---@param state distant.ui.State
+            window.state.mutate(function(state)
                 local id
                 if plugin.client then
                     id = plugin.client:network().connection
@@ -153,7 +160,9 @@ local function reload_tab(event)
             fn.cached_system_info({ reload = payload.force }, function(err, system_info)
                 assert(not err, tostring(err))
                 assert(system_info)
-                mutate_state(function(state)
+
+                ---@param state distant.ui.State
+                window.state.mutate(function(state)
                     state.info.system_info = system_info
                 end)
             end)
@@ -177,7 +186,8 @@ end
 --- @param event {payload:string}
 local function set_view(event)
     local view = event.payload
-    mutate_state(function(state)
+    ---@param state distant.ui.State
+    window.state.mutate(function(state)
         state.view.current = view
         state.view.has_changed = true
     end)

@@ -17,8 +17,11 @@ local INITIAL_STATE = {
     metadata = nil,
 }
 
-local window = Window:new('Metadata', 'distant')
-local mutate_state, get_state = window:state(INITIAL_STATE)
+local window = Window:new({
+    name = 'Metadata',
+    filetype = 'distant',
+    initial_state = INITIAL_STATE,
+})
 
 --- @param state distant.editor.show.metadata.State
 window:view(function(state)
@@ -108,7 +111,8 @@ end)
 window:init({
     effects = {
         ['CLOSE_WINDOW'] = function()
-            mutate_state(function(state)
+            --- @param state distant.editor.show.metadata.State
+            window.state.mutate(function(state)
                 state.path = nil
                 state.metadata = nil
             end)
@@ -140,7 +144,7 @@ return function(opts)
     window:open()
 
     --- @param state distant.editor.show.metadata.State
-    mutate_state(function(state)
+    window.state.mutate(function(state)
         state.path = opts.path
     end)
 
@@ -154,7 +158,7 @@ return function(opts)
     assert(metadata)
 
     --- @param state distant.editor.show.metadata.State
-    mutate_state(function(state)
+    window.state.mutate(function(state)
         state.path = opts.path
         state.metadata = metadata
     end)
