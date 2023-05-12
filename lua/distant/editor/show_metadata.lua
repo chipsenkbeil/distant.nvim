@@ -1,9 +1,9 @@
-local fn = require('distant.fn')
-local log = require('distant-core').log
+local fn            = require('distant.fn')
+local log           = require('distant-core').log
 
-local p = require('distant.ui.palette')
-local ui = require('distant-core.ui')
-local Window = require('distant-core.ui').Window
+local p             = require('distant.ui.palette')
+local ui            = require('distant-core.ui')
+local Window        = require('distant-core.ui').Window
 
 -------------------------------------------------------------------------------
 -- WINDOW DEFINITION
