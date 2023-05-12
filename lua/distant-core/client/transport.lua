@@ -102,7 +102,7 @@ function M:start(cb)
         end,
         on_stdout_line = function(line)
             if line ~= nil and line ~= "" then
-                --- @type boolean,distant.api.Msg|distant.auth.Request|nil
+                --- @type boolean,distant.api.Msg|distant.core.auth.Request|nil
                 local success, msg = pcall(vim.fn.json_decode, line)
 
                 -- Quit if the decoding failed or we didn't get a msg
@@ -112,7 +112,7 @@ function M:start(cb)
                 end
 
                 if auth:is_auth_request(msg) then
-                    --- @cast msg distant.auth.Request
+                    --- @cast msg distant.core.auth.Request
                     self:__handle_auth_request(msg)
                 else
                     if type(msg) ~= 'table' then
@@ -344,7 +344,7 @@ end
 
 --- Authentication event handler, processing authentication requests.
 --- @private
---- @param msg distant.auth.Request
+--- @param msg distant.core.auth.Request
 function M:__handle_auth_request(msg)
     local auth = self.auth_handler
 

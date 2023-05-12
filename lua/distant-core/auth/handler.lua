@@ -28,22 +28,22 @@ function M:is_auth_request(msg)
     }, msg.type)
 end
 
---- @alias distant.auth.Request
+--- @alias distant.core.auth.Request
 --- | {type:'auth_initialization', methods:string[]}
 --- | {type:'auth_start_method', method:string}
---- | {type:'auth_challenge', questions:distant.auth.Question[], extra?:distant.auth.Extra}}
+--- | {type:'auth_challenge', questions:distant.core.auth.Question[], extra?:distant.core.auth.Extra}}
 --- | {type:'auth_info', text:string}
---- | {type:'auth_verification', kind:distant.auth.VerificationKind, text:string}
+--- | {type:'auth_verification', kind:distant.core.auth.VerificationKind, text:string}
 --- | {type:'auth_error', kind:string, text:string}
 --- | {type:'auth_finished'}
 
---- @alias distant.auth.Question {text:string, extra?:distant.auth.Extra}
---- @alias distant.auth.Extra table<string, string>
---- @alias distant.auth.VerificationKind 'host'|'unknown'
---- @alias distant.auth.ErrorKind 'fatal'|'error'
+--- @alias distant.core.auth.Question {text:string, extra?:distant.core.auth.Extra}
+--- @alias distant.core.auth.Extra table<string, string>
+--- @alias distant.core.auth.VerificationKind 'host'|'unknown'
+--- @alias distant.core.auth.ErrorKind 'fatal'|'error'
 
 --- Processes some message as an authentication request.
---- @param msg distant.auth.Request #incoming request message
+--- @param msg distant.core.auth.Request #incoming request message
 --- @param reply fun(msg:table) #used to send a response message back
 --- @return boolean #true if okay, otherwise false to indicate error/unknown
 function M:handle_request(msg, reply)
@@ -61,7 +61,7 @@ function M:handle_request(msg, reply)
         self:on_start_method(msg.method)
         return true
     elseif type == 'auth_challenge' then
-        --- @cast msg {type:'auth_challenge', questions:distant.auth.Question[], extra?:distant.auth.Extra}}
+        --- @cast msg {type:'auth_challenge', questions:distant.core.auth.Question[], extra?:distant.core.auth.Extra}}
         reply({
             type = 'auth_challenge_response',
             answers = self:on_challenge(msg)
@@ -72,14 +72,14 @@ function M:handle_request(msg, reply)
         self:on_info(msg.text)
         return true
     elseif type == 'auth_verification' then
-        --- @cast msg {type:'auth_verification', kind:distant.auth.VerificationKind, text:string}
+        --- @cast msg {type:'auth_verification', kind:distant.core.auth.VerificationKind, text:string}
         reply({
             type = 'auth_verification_response',
             valid = self:on_verification(msg)
         })
         return true
     elseif type == 'auth_error' then
-        --- @cast msg {type:'auth_error', kind:distant.auth.ErrorKind, text:string}
+        --- @cast msg {type:'auth_error', kind:distant.core.auth.ErrorKind, text:string}
         self:on_error({ kind = msg.kind, text = msg.text })
         return false
     elseif type == 'auth_finished' then
@@ -107,7 +107,7 @@ function M:on_start_method(method)
 end
 
 --- Invoked when a request to answer some questions is received during authentication.
---- @param msg {questions:distant.auth.Question[], extra?:distant.auth.Extra}
+--- @param msg {questions:distant.core.auth.Question[], extra?:distant.core.auth.Extra}
 --- @return string[]
 function M:on_challenge(msg)
     if msg.extra then
@@ -131,7 +131,7 @@ function M:on_challenge(msg)
 end
 
 --- Invoked when a request to verify some information is received during authentication.
---- @param msg {kind:distant.auth.VerificationKind, text:string}
+--- @param msg {kind:distant.core.auth.VerificationKind, text:string}
 --- @return boolean
 function M:on_verification(msg)
     local answer = vim.fn.input(string.format('%s\nEnter [y/N]> ', msg.text))
@@ -150,7 +150,7 @@ end
 --- Invoked when an error is encountered during authentication.
 --- Fatal errors indicate the end of authentication.
 ---
---- @param err {kind:distant.auth.ErrorKind, text:string}
+--- @param err {kind:distant.core.auth.ErrorKind, text:string}
 function M:on_error(err)
     log.fmt_error('Authentication error: %s', err.text)
 
