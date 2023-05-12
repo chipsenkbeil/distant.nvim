@@ -10,13 +10,13 @@ end
 
 function M.close()
     local api = require('distant.ui.instance')
-    api.close()
+    api.window:close()
 end
 
 function M.open()
     local api = require('distant.ui.instance')
 
-    api.window.open()
+    api.window:open()
 
     -- Atempt to load our connections and system
     -- information the first time we open the window

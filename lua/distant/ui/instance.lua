@@ -1,14 +1,14 @@
-local events  = require('distant.events')
-local fn      = require('distant.fn')
+local events = require('distant.events')
+local fn     = require('distant.fn')
 
-local Ui      = require('distant-core.ui')
-local display = require('distant-core.ui.display')
+local Ui     = require('distant-core.ui')
+local Window = require('distant-core.ui.window')
 
-local Footer  = require('distant.ui.components.footer')
-local Header  = require('distant.ui.components.header')
-local Help    = require('distant.ui.components.help')
-local Main    = require('distant.ui.components.main')
-local Tabs    = require('distant.ui.components.tabs')
+local Footer = require('distant.ui.components.footer')
+local Header = require('distant.ui.components.header')
+local Help   = require('distant.ui.components.help')
+local Main   = require('distant.ui.components.main')
+local Tabs   = require('distant.ui.components.tabs')
 
 --- @param state distant.ui.State
 --- @return distant.core.ui.Node
@@ -50,9 +50,9 @@ local INITIAL_STATE = {
     },
 }
 
-local window = display.new_view_only_win('distant.nvim', 'distant')
+local window = Window:new('distant.nvim', 'distant')
 
-window.view(
+window:view(
 ---@param state distant.ui.State
     function(state)
         return Ui.Node {
@@ -71,7 +71,7 @@ window.view(
 )
 
 --- @type fun(mutate_fn:fun(current_state:distant.ui.State)), fun():distant.ui.State
-local mutate_state, get_state = window.state(INITIAL_STATE)
+local mutate_state, get_state = window:state(INITIAL_STATE)
 
 local help_animation
 do
@@ -181,16 +181,16 @@ local function set_view(event)
         state.view.current = view
         state.view.has_changed = true
     end)
-    if window.is_open() then
-        local cursor_line = window.get_cursor()[1]
-        if cursor_line > (window.get_win_config().height * 0.75) then
-            window.set_sticky_cursor('tabs')
+    if window:is_open() then
+        local cursor_line = window:get_cursor()[1]
+        if cursor_line > (window:get_win_config().height * 0.75) then
+            window:set_sticky_cursor('tabs')
         end
     end
 end
 
 local effects = {
-    ['CLOSE_WINDOW'] = window.close,
+    ['CLOSE_WINDOW'] = function() window:close() end,
     ['SET_VIEW'] = set_view,
     ['TOGGLE_HELP'] = toggle_help,
     ['TOGGLE_EXPAND_CURRENT_SETTINGS'] = toggle_expand_current_settings,
@@ -198,7 +198,7 @@ local effects = {
     ['SWITCH_ACTIVE_CONNECTION'] = switch_active_connection,
 }
 
-window.init({
+window:init({
     effects = effects,
     border = 'none',
     winhighlight = {
@@ -228,11 +228,11 @@ return {
         set_view({ payload = view })
     end,
     set_sticky_cursor = function(tag)
-        window.set_sticky_cursor(tag)
+        window:set_sticky_cursor(tag)
     end,
     --- @param name string
     --- @param payload? table
     dispatch = function(name, payload)
-        window.dispatch(name, payload)
+        window:dispatch(name, payload)
     end,
 }

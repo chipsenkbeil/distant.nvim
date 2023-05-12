@@ -3,7 +3,7 @@ local log = require('distant-core').log
 
 local p = require('distant.ui.palette')
 local Ui = require('distant-core.ui')
-local display = require('distant-core.ui.display')
+local Window = require('distant-core.ui.window')
 
 -------------------------------------------------------------------------------
 -- WINDOW DEFINITION
@@ -17,11 +17,11 @@ local INITIAL_STATE = {
     metadata = nil,
 }
 
-local window = display.new_view_only_win('Metadata', 'distant')
-local mutate_state, get_state = window.state(INITIAL_STATE)
+local window = Window:new('Metadata', 'distant')
+local mutate_state, get_state = window:state(INITIAL_STATE)
 
 --- @param state distant.editor.show.metadata.State
-window.view(function(state)
+window:view(function(state)
     local path, metadata = state.path, state.metadata
 
     local table_view =
@@ -105,14 +105,14 @@ window.view(function(state)
     }
 end)
 
-window.init({
+window:init({
     effects = {
         ['CLOSE_WINDOW'] = function()
             mutate_state(function(state)
                 state.path = nil
                 state.metadata = nil
             end)
-            window.close()
+            window:close()
         end,
     },
     border = 'single',
@@ -137,7 +137,7 @@ return function(opts)
     end
     log.fmt_trace('editor.show.metadata(%s)', opts)
 
-    window.open()
+    window:open()
 
     --- @param state distant.editor.show.metadata.State
     mutate_state(function(state)
@@ -147,7 +147,7 @@ return function(opts)
     local err, metadata = fn.metadata(opts)
 
     if err then
-        window.close()
+        window:close()
     end
 
     assert(not err, tostring(err))
