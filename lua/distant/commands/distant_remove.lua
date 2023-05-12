@@ -15,7 +15,7 @@ local function command(cmd)
         opts.force = true
     end
 
-    --- @cast opts -table, +distant.api.RemoveOpts
+    --- @cast opts -table, +distant.core.api.RemoveOpts
     local err, _ = fn.remove(opts)
     assert(not err, tostring(err))
 end

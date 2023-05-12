@@ -13,8 +13,7 @@ local display = require('distant-core.ui.display')
 local INITIAL_STATE = {
     --- @type string|nil
     path = nil,
-
-    --- @type distant.api.MetadataPayload|nil
+    --- @type distant.core.api.MetadataPayload|nil
     metadata = nil,
 }
 
@@ -129,7 +128,7 @@ window.init({
 -------------------------------------------------------------------------------
 
 --- Opens a new window to show metadata for some path.
---- @param opts distant.api.MetadataOpts
+--- @param opts distant.core.api.MetadataOpts
 return function(opts)
     opts = opts or {}
     local path = opts.path

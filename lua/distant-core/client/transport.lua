@@ -8,9 +8,9 @@ local DEFAULT_TIMEOUT  = 15000
 local DEFAULT_INTERVAL = 100
 
 --- Represents a JSON-formatted distant api transport.
---- @class distant.api.Transport
+--- @class distant.core.api.Transport
 --- @field private auth_handler distant.core.auth.Handler
---- @field config {autostart:boolean, binary:string, network:distant.client.Network, timeout:number, interval:number}
+--- @field config {autostart:boolean, binary:string, network:distant.core.client.Network, timeout:number, interval:number}
 --- @field private __state distant.api.transport.State
 local M                = {}
 M.__index              = M
@@ -33,7 +33,7 @@ M.__index              = M
 
 --- @class distant.api.transport.NewOpts
 --- @field binary string
---- @field network? distant.client.Network
+--- @field network? distant.core.client.Network
 --- @field auth_handler? distant.core.auth.Handler
 --- @field autostart? boolean
 --- @field timeout? number
@@ -41,7 +41,7 @@ M.__index              = M
 
 --- Creates a new instance of our api that wraps a job.
 --- @param opts distant.api.transport.NewOpts
---- @return distant.api.Transport
+--- @return distant.core.api.Transport
 function M:new(opts)
     opts = opts or {}
 
@@ -172,8 +172,8 @@ end
 --- `more` is used, this callback may be invoked more than once.
 ---
 --- @param opts distant.api.transport.SendOpts
---- @param cb? fun(err?:distant.api.Error, payload?:distant.api.msg.Payload)
---- @return distant.api.Error|nil, distant.api.msg.Payload|nil
+--- @param cb? fun(err?:distant.core.api.Error, payload?:distant.api.msg.Payload)
+--- @return distant.core.api.Error|nil, distant.api.msg.Payload|nil
 function M:send(opts, cb)
     local verify = function(payload)
         local success, value = pcall(opts.verify, payload)
@@ -321,7 +321,7 @@ end
 --- a result (default timeout = 1000, interval = 200). Returns an error if timeout exceeded.
 --
 --- @param opts {payload:distant.api.msg.Payload, more?:distant.api.transport.More, timeout?:number, interval?:number}
---- @return distant.api.Error|nil, distant.api.msg.Payload|nil
+--- @return distant.core.api.Error|nil, distant.api.msg.Payload|nil
 function M:send_sync(opts)
     log.fmt_trace('Transport:send_sync(%s)', opts)
     local tx, rx = utils.oneshot_channel(

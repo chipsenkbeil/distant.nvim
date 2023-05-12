@@ -30,12 +30,10 @@ local INITIAL_STATE = {
         connections = {
             --- @type string|nil
             selected = nil,
-
             --- @type table<string, distant.core.Destination>
             available = {},
         },
-
-        ---@type distant.api.SystemInfoPayload|nil
+        ---@type distant.core.api.SystemInfoPayload|nil
         system_info = nil,
     },
     view = {

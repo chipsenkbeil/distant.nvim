@@ -14,7 +14,7 @@ local function command(cmd)
 
     local opts = input.opts
 
-    --- @cast opts -table, +distant.api.CopyOpts
+    --- @cast opts -table, +distant.core.api.CopyOpts
     local err, _ = fn.copy(opts)
     assert(not err, tostring(err))
 end

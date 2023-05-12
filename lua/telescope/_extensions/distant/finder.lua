@@ -8,10 +8,10 @@ local DISPLAY_LINE_LEN = 40
 --- @field minimum_len number #minimum length of input before sending a query
 
 --- @class telescope.distant.Finder
---- @field query distant.api.search.Query
+--- @field query distant.core.api.search.Query
 --- @field settings telescope.distant.finder.Settings
 --- @field results telescope.distant.finder.Entry[]
---- @field private __search? distant.api.Searcher #active search (internal)
+--- @field private __search? distant.core.api.Searcher #active search (internal)
 local M = {}
 M.__index = M
 
@@ -30,7 +30,7 @@ end
 --- @field lnum? number #jumps to this line (if set)
 --- @field col? number #jumps to this column (if set)
 
---- @param match distant.api.search.Match
+--- @param match distant.core.api.search.Match
 --- @return telescope.distant.finder.Entry|nil
 local function make_entry(match)
     local path_with_scheme = match.path
@@ -83,7 +83,7 @@ local function make_entry(match)
 end
 
 --- @class telescope.distant.finder.NewOpts
---- @field query distant.api.search.Query #query to execute whose results will be captured
+--- @field query distant.core.api.search.Query #query to execute whose results will be captured
 --- @field settings telescope.distant.finder.Settings|nil
 
 --- Creates a new finder.

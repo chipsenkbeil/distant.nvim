@@ -23,7 +23,7 @@ local MAX_LINE_LEN       = 100
 
 --- Add matches to qflist
 --- @param id number #id of quickfix list
---- @param matches distant.api.search.Match[] #match(s) to add
+--- @param matches distant.core.api.search.Match[] #match(s) to add
 local function add_matches_to_qflist(id, matches)
     -- Quit if nothing to add
     if #matches == 0 then
@@ -125,16 +125,16 @@ local function add_matches_to_qflist(id, matches)
 end
 
 --- @class distant.editor.SearchOpts
---- @field query distant.api.search.Query|string #if a string, will treat as regex to target file contents
+--- @field query distant.core.api.search.Query|string #if a string, will treat as regex to target file contents
 --- @field on_start? fun(id:number) #if provided, called with the search id when started
---- @field on_results? fun(matches:distant.api.search.Match[]) #if provided, will be provided matches as they appear
+--- @field on_results? fun(matches:distant.core.api.search.Match[]) #if provided, will be provided matches as they appear
 --- @field timeout? number #Maximum time to wait for a response
 --- @field interval? number #Time in milliseconds to wait between checks for a response
 
 --- Performs a search using the provided query, displaying results in a new quickfix list.
 ---
 --- @param opts distant.editor.SearchOpts
---- @param cb? fun(err?:distant.api.Error, matches?:distant.api.search.Match[]) #if provided, will be invoked with matches once finished
+--- @param cb? fun(err?:distant.core.api.Error, matches?:distant.core.api.search.Match[]) #if provided, will be invoked with matches once finished
 return function(opts, cb)
     opts = opts or {}
     log.trace('editor.search(%s)', opts)
@@ -170,7 +170,7 @@ return function(opts, cb)
     local match_cnt = 0
 
     -- For each set of matches, we add them to our quickfix list
-    --- @param matches distant.api.search.Match[]
+    --- @param matches distant.core.api.search.Match[]
     local function on_results(matches)
         if qflist_id ~= nil and #matches > 0 then
             add_matches_to_qflist(qflist_id, matches)
@@ -206,8 +206,8 @@ return function(opts, cb)
         end
     end
 
-    --- @param err? distant.api.Error
-    --- @param matches? distant.api.search.Match[]
+    --- @param err? distant.core.api.Error
+    --- @param matches? distant.core.api.search.Match[]
     local function on_done(err, matches)
         -- Process any final matches
         if matches then
@@ -247,14 +247,14 @@ return function(opts, cb)
         state.active_search.searcher:cancel(function(err, _)
             assert(not err, tostring(err))
 
-            --- @type distant.api.Error|nil, distant.api.Searcher|nil
+            --- @type distant.core.api.Error|nil, distant.core.api.Searcher|nil
             local err, searcher = fn.search(search_opts, on_done)
             assert(not err, tostring(err))
 
             state.active_search.searcher = searcher
         end)
     else
-        --- @type distant.api.Error|nil, distant.api.Searcher|nil
+        --- @type distant.core.api.Error|nil, distant.core.api.Searcher|nil
         local err, searcher = fn.search(search_opts, on_done)
         assert(not err, tostring(err))
         state.active_search.searcher = searcher

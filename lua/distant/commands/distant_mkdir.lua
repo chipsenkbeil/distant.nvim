@@ -12,7 +12,7 @@ local function command(cmd)
 
     local opts = input.opts
 
-    --- @cast opts -table, +distant.api.CreateDirOpts
+    --- @cast opts -table, +distant.core.api.CreateDirOpts
     local err, _ = fn.create_dir(opts)
     assert(not err, tostring(err))
 end

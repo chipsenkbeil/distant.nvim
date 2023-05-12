@@ -6,23 +6,23 @@ local vars    = require('distant-core.vars')
 
 --- Represents a distant client
 --- @class distant.core.Client
---- @field api distant.client.Api
---- @field private config {binary:string, network:distant.client.Network}
+--- @field api distant.core.Api
+--- @field private config {binary:string, network:distant.core.client.Network}
 --- @field private __state distant.client.State
 local M       = {}
 M.__index     = M
 
---- @class distant.client.Network
+--- @class distant.core.client.Network
 --- @field connection? string #id of the connection tied to the client
 --- @field unix_socket? string #path to the unix socket of the manager
 --- @field windows_pipe? string #name of the windows pipe of the manager
 
 --- @class distant.client.State
---- @field cache {system_info?:distant.api.SystemInfoPayload}
+--- @field cache {system_info?:distant.core.api.SystemInfoPayload}
 --- @field lsp {clients:table<string, number>} Mapping of label -> client id
 
 --- Creates a new instance of a distant client
---- @param opts {binary:string, network:distant.client.Network}
+--- @param opts {binary:string, network:distant.core.client.Network}
 --- @return distant.core.Client
 function M:new(opts)
     opts = opts or {}
@@ -52,7 +52,7 @@ function M:new(opts)
 end
 
 --- Returns a copy of this client's network settings.
---- @return distant.client.Network
+--- @return distant.core.client.Network
 function M:network()
     return vim.deepcopy(self.config.network)
 end
@@ -63,8 +63,8 @@ end
 ---
 --- @alias distant.client.CachedSystemInfoOpts {reload?:boolean, timeout?:number, interval?:number}
 --- @param opts distant.client.CachedSystemInfoOpts
---- @param cb? fun(err?:distant.api.Error, payload?:distant.api.SystemInfoPayload)
---- @return distant.api.Error|nil, distant.api.SystemInfoPayload|nil
+--- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.SystemInfoPayload)
+--- @return distant.core.api.Error|nil, distant.core.api.SystemInfoPayload|nil
 function M:cached_system_info(opts, cb)
     vim.validate({
         opts = { opts, 'table' },

@@ -11,7 +11,7 @@ local utils       = require('distant-core').utils
 --- @class distant.State
 --- @field client? distant.core.Client #active client
 --- @field manager? distant.core.Manager #active manager
---- @field active_search {qfid?:number, searcher?:distant.api.Searcher} #active search via editor
+--- @field active_search {qfid?:number, searcher?:distant.core.api.Searcher} #active search via editor
 --- @field settings distant.core.Settings #user settings
 local M           = {}
 M.__index         = M
