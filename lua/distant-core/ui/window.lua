@@ -701,8 +701,9 @@ function M:__open()
 
     vim.cmd [[ syntax clear ]]
 
-    self.__window_mgmt_augroup = vim.api.nvim_create_augroup('DistantWindowMgmt', {})
-    self.__autoclose_augroup = vim.api.nvim_create_augroup('DistantWindow', {})
+    -- Create augroups that are unique to this window (avoid clashing/deleting another augroup)
+    self.__window_mgmt_augroup = vim.api.nvim_create_augroup('DistantWindowMgmt_' .. tostring(utils.next_id()), {})
+    self.__autoclose_augroup = vim.api.nvim_create_augroup('DistantWindow_' .. tostring(utils.next_id()), {})
 
     vim.api.nvim_create_autocmd({ 'VimResized' }, {
         group = self.__window_mgmt_augroup,
