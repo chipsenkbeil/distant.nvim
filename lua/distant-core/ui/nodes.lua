@@ -1,4 +1,3 @@
---- @class distant.core.ui.Nodes
 local M = {}
 
 --- @alias distant.core.ui.NodeType

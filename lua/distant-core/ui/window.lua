@@ -236,7 +236,7 @@ end
 --- @alias distant.core.ui.window.RowColTuple {[1]:number, [2]:number}
 --- @alias distant.core.ui.window.Effects table<string, distant.core.ui.window.EffectFn>
 --- @alias distant.core.ui.window.EffectFn fun(event:distant.core.ui.window.EffectEvent)
---- @alias distant.core.ui.window.EffectEvent {state:distant.core.ui.window.State, window:distant.core.ui.window.Window, payload:any}
+--- @alias distant.core.ui.window.EffectEvent {state:distant.core.ui.window.State, window:distant.core.ui.Window, payload:any}
 
 --- @class distant.core.ui.window.State
 --- @field mutate fun(mutate_fn:fun(current_state:table))
@@ -250,7 +250,7 @@ end
 --- 2. `window.state` - initialize window's state to be able to retrieve and mutate it.
 --- 3. `window.init` - fully initialize the window.
 ---
---- @class distant.core.ui.window.Window
+--- @class distant.core.ui.Window
 --- @field state distant.core.ui.window.State
 ---
 --- @field private __namespace number
@@ -281,7 +281,7 @@ M.__index = M
 
 --- Creates a new window.
 --- @param opts distant.core.ui.window.NewOpts
---- @return distant.core.ui.window.Window
+--- @return distant.core.ui.Window
 function M:new(opts)
     local instance = {}
     setmetatable(instance, M)

@@ -67,7 +67,7 @@ local function render(state)
 end
 
 local __help_animation
---- @param window distant.core.ui.window.Window
+--- @param window distant.core.ui.Window
 local function help_animation(window)
     if not __help_animation then
         local help_command = ':help'
@@ -88,7 +88,7 @@ local function help_animation(window)
 end
 
 local __ship_animation
---- @param window distant.core.ui.window.Window
+--- @param window distant.core.ui.Window
 local function ship_animation(window)
     if not __ship_animation then
         __ship_animation = ui.animation({
