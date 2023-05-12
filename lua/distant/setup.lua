@@ -12,5 +12,5 @@ return function(opts)
     settings.merge(opts)
 
     -- Notify listeners that our setup has finished
-    events.emit_setup_finished()
+    events:emit('setup:finished')
 end

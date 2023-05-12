@@ -23,7 +23,7 @@ local function call_handler(event, handler, ...)
     local ok, err = pcall(handler, ...)
     if not ok then
         vim.schedule(function()
-            log.fmt_warn('distant.core.Emitter handler failed for event %s with error %s', event, err)
+            log.fmt_warn('distant.core.EventEmitter handler failed for event %s with error %s', event, err)
             vim.api.nvim_err_writeln(err)
         end)
     end

@@ -206,7 +206,7 @@ window.init({
     },
 })
 
-events.on_connection_changed(function()
+events:on('connection:changed', function()
     reload_tab({
         payload = {
             tab = 'Connections',

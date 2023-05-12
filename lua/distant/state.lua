@@ -52,7 +52,7 @@ function M:load_settings(destination)
 
     -- Emit that the settings have changed and provide a copy
     -- of the settings (copy to avoid them being changed)
-    events.emit_settings_changed(vim.deepcopy(self.settings))
+    events:emit('settings:changed', vim.deepcopy(self.settings))
 
     return self.settings
 end
@@ -153,7 +153,7 @@ function M:load_manager(opts, cb)
                         log.fmt_error('Manager failed: %s', err)
                     else
                         -- Emit that the manager was successfully started
-                        events.emit_manager_started(self.manager)
+                        events:emit('manager:started', self.manager)
                     end
                 end)
 
@@ -164,7 +164,7 @@ function M:load_manager(opts, cb)
 
             -- Emit that the manager was successfully loaded, which only happens
             -- once as we don't count subsequent calls to this method
-            events.emit_manager_loaded(self.manager)
+            events:emit('manager:loaded', self.manager)
 
             return cb(nil, self.manager)
         end)
@@ -236,7 +236,7 @@ function M:launch(opts, cb)
                 self.client = client
 
                 -- Emit that the connection (client) was successfully changed
-                events.emit_connection_changed(self.client)
+                events:emit('connection:changed', self.client)
             end
 
             return cb(err, client)
@@ -293,7 +293,7 @@ function M:connect(opts, cb)
                 self.client = client
 
                 -- Emit that the connection (client) was successfully changed
-                events.emit_connection_changed(self.client)
+                events:emit('connection:changed', self.client)
             end
 
             return cb(err, client)
@@ -388,7 +388,7 @@ function M:select(opts, cb)
         self:load_settings(destination:as_string())
 
         -- Report the change
-        events.emit_connection_changed(self.client)
+        events:emit('connection:changed', self.client)
 
         cb(nil, self.client)
     end)
