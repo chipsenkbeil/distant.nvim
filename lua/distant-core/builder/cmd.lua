@@ -1,4 +1,4 @@
---- @class distant.builder.CmdBuilder
+--- @class distant.core.builder.CmdBuilder
 --- @field private __cmd string
 --- @field private __internal table<string, boolean|string>
 --- @field private __tail? string
@@ -12,7 +12,7 @@ M.__index = M
 ---
 --- @param cmd string|string[]
 --- @param opts? {allowed?:string[]}
---- @return distant.builder.CmdBuilder
+--- @return distant.core.builder.CmdBuilder
 function M:new(cmd, opts)
     opts = opts or {}
 
@@ -39,7 +39,7 @@ end
 
 --- Sets multiple arguments using the given table.
 --- @param tbl table<string, boolean|string>
---- @return distant.builder.CmdBuilder #reference to self
+--- @return distant.core.builder.CmdBuilder #reference to self
 function M:set_from_tbl(tbl)
     for key, value in pairs(tbl) do
         if value then
@@ -54,7 +54,7 @@ end
 --- @param key string #the key to add
 --- @param value? boolean|string #optional value for argument
 --- @param verbatim? boolean #if true, does not transform key casing and uses as is
---- @return distant.builder.CmdBuilder #reference to self
+--- @return distant.core.builder.CmdBuilder #reference to self
 function M:set(key, value, verbatim)
     if not key then
         return self
@@ -82,7 +82,7 @@ end
 
 --- Sets the tail of the command, which equates to `{cmd} -- {tail}`.
 --- @param value string|nil #the tail, if nil then clears the tail
---- @return distant.builder.CmdBuilder #reference to self
+--- @return distant.core.builder.CmdBuilder #reference to self
 function M:set_tail(value)
     self.__tail = value
     return self
@@ -98,7 +98,7 @@ end
 --- Removes an argument.
 --- @param key string #the key to add
 --- @param verbatim? boolean #if true, does not transform key casing and uses as is
---- @return distant.builder.CmdBuilder #reference to self
+--- @return distant.core.builder.CmdBuilder #reference to self
 function M:clear(key, verbatim)
     if not key then
         return self
@@ -115,7 +115,7 @@ function M:clear(key, verbatim)
 end
 
 --- Clears the tail of the command.
---- @return distant.builder.CmdBuilder #reference to self
+--- @return distant.core.builder.CmdBuilder #reference to self
 function M:clear_tail()
     self.__tail = nil
     return self

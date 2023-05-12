@@ -1,12 +1,12 @@
 local CmdBuilder = require('distant-core.builder.cmd')
 
---- @class distant.builder.ApiCmdBuilder
---- @field cmd distant.builder.CmdBuilder
+--- @class distant.core.builder.ApiCmdBuilder
+--- @field cmd distant.core.builder.CmdBuilder
 local M = {}
 M.__index = M
 
 --- Creates new `api` cmd
---- @return distant.builder.ApiCmdBuilder
+--- @return distant.core.builder.ApiCmdBuilder
 function M:new()
     local instance = {}
     setmetatable(instance, M)
@@ -29,7 +29,7 @@ end
 
 --- Sets multiple arguments using the given table.
 --- @param tbl table<string, boolean|string>
---- @return distant.builder.ApiCmdBuilder
+--- @return distant.core.builder.ApiCmdBuilder
 function M:set_from_tbl(tbl)
     self.cmd:set_from_tbl(tbl)
     return self
@@ -37,7 +37,7 @@ end
 
 --- Sets `--config <path>`
 --- @param path string
---- @return distant.builder.ApiCmdBuilder
+--- @return distant.core.builder.ApiCmdBuilder
 function M:set_config(path)
     vim.validate({ path = { path, 'string' } })
     self.cmd:set('config', path)
@@ -46,7 +46,7 @@ end
 
 --- Sets `--cache <path>`
 --- @param path string
---- @return distant.builder.ApiCmdBuilder
+--- @return distant.core.builder.ApiCmdBuilder
 function M:set_cache(path)
     vim.validate({ path = { path, 'string' } })
     self.cmd:set('cache', path)
@@ -55,7 +55,7 @@ end
 
 --- Sets `--connection <id>`
 --- @param id string
---- @return distant.builder.ApiCmdBuilder
+--- @return distant.core.builder.ApiCmdBuilder
 function M:set_connection(id)
     vim.validate({ id = { id, 'string' } })
     self.cmd:set('connection', id)
@@ -64,7 +64,7 @@ end
 
 --- Sets `--log-file <value>`
 --- @param value string
---- @return distant.builder.ApiCmdBuilder
+--- @return distant.core.builder.ApiCmdBuilder
 function M:set_log_file(value)
     vim.validate({ value = { value, 'string' } })
     self.cmd:set('log-file', value)
@@ -73,7 +73,7 @@ end
 
 --- Sets `--log-level <value>`
 --- @param value distant.core.log.Level
---- @return distant.builder.ApiCmdBuilder
+--- @return distant.core.builder.ApiCmdBuilder
 function M:set_log_level(value)
     vim.validate({ value = { value, 'string' } })
     self.cmd:set('log-level', value)
@@ -82,7 +82,7 @@ end
 
 --- Sets `--timeout <value>`
 --- @param value number #maximum timeout in seconds for network requests (0 is infinite)
---- @return distant.builder.ApiCmdBuilder
+--- @return distant.core.builder.ApiCmdBuilder
 function M:set_timeout(value)
     vim.validate({ value = { value, 'number' } })
     self.cmd:set('timeout', tostring(value))
@@ -91,7 +91,7 @@ end
 
 --- Sets `--unix-socket <path>`
 --- @param path string
---- @return distant.builder.ApiCmdBuilder
+--- @return distant.core.builder.ApiCmdBuilder
 function M:set_unix_socket(path)
     vim.validate({ path = { path, 'string' } })
     self.cmd:set('unix-socket', path)
@@ -100,7 +100,7 @@ end
 
 --- Sets `--windows-pipe <name>`
 --- @param name string
---- @return distant.builder.ApiCmdBuilder
+--- @return distant.core.builder.ApiCmdBuilder
 function M:set_windows_pipe(name)
     vim.validate({ name = { name, 'string' } })
     self.cmd:set('windows-pipe', name)

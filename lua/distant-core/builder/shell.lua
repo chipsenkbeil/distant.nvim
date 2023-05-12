@@ -1,13 +1,13 @@
 local CmdBuilder = require('distant-core.builder.cmd')
 
---- @class distant.builder.ShellCmdBuilder
---- @field cmd distant.builder.CmdBuilder
+--- @class distant.core.builder.ShellCmdBuilder
+--- @field cmd distant.core.builder.CmdBuilder
 local M = {}
 M.__index = M
 
 --- Creates a new `shell` cmd
 --- @param cmd? string|string[] #command to execute on the remote machine in place of `$SHELL`
---- @return distant.builder.ShellCmdBuilder
+--- @return distant.core.builder.ShellCmdBuilder
 function M:new(cmd)
     local instance = {}
     setmetatable(instance, M)
@@ -38,7 +38,7 @@ end
 
 --- Sets multiple arguments using the given table.
 --- @param tbl table<string, boolean|string>
---- @return distant.builder.ShellCmdBuilder
+--- @return distant.core.builder.ShellCmdBuilder
 function M:set_from_tbl(tbl)
     self.cmd:set_from_tbl(tbl)
     return self
@@ -46,7 +46,7 @@ end
 
 --- Sets `--config <path>`
 --- @param path string
---- @return distant.builder.ShellCmdBuilder
+--- @return distant.core.builder.ShellCmdBuilder
 function M:set_config(path)
     vim.validate({ path = { path, 'string' } })
     self.cmd:set('config', path)
@@ -55,7 +55,7 @@ end
 
 --- Sets `--cache <path>`
 --- @param path string
---- @return distant.builder.ShellCmdBuilder
+--- @return distant.core.builder.ShellCmdBuilder
 function M:set_cache(path)
     vim.validate({ path = { path, 'string' } })
     self.cmd:set('cache', path)
@@ -64,7 +64,7 @@ end
 
 --- Sets `--connection <id>`
 --- @param id string
---- @return distant.builder.ShellCmdBuilder
+--- @return distant.core.builder.ShellCmdBuilder
 function M:set_connection(id)
     vim.validate({ id = { id, 'string' } })
     self.cmd:set('connection', id)
@@ -73,7 +73,7 @@ end
 
 --- Sets `--current-dir <dir>`
 --- @param dir string
---- @return distant.builder.ShellCmdBuilder
+--- @return distant.core.builder.ShellCmdBuilder
 function M:set_current_dir(dir)
     vim.validate({ dir = { dir, 'string' } })
     self.cmd:set('current-dir', dir)
@@ -82,7 +82,7 @@ end
 
 --- Sets `--environment <id>`
 --- @param environment table<string, string>
---- @return distant.builder.ShellCmdBuilder
+--- @return distant.core.builder.ShellCmdBuilder
 function M:set_environment(environment)
     vim.validate({ environment = { environment, 'table' } })
     local s = ''
@@ -96,7 +96,7 @@ end
 
 --- Sets `--log-file <value>`
 --- @param value string
---- @return distant.builder.ShellCmdBuilder
+--- @return distant.core.builder.ShellCmdBuilder
 function M:set_log_file(value)
     vim.validate({ value = { value, 'string' } })
     self.cmd:set('log-file', value)
@@ -105,7 +105,7 @@ end
 
 --- Sets `--log-level <value>`
 --- @param value distant.core.log.Level
---- @return distant.builder.ShellCmdBuilder
+--- @return distant.core.builder.ShellCmdBuilder
 function M:set_log_level(value)
     vim.validate({ value = { value, 'string' } })
     self.cmd:set('log-level', value)
@@ -114,7 +114,7 @@ end
 
 --- Sets `--unix-socket <path>`
 --- @param path string
---- @return distant.builder.ShellCmdBuilder
+--- @return distant.core.builder.ShellCmdBuilder
 function M:set_unix_socket(path)
     vim.validate({ path = { path, 'string' } })
     self.cmd:set('unix-socket', path)
@@ -123,7 +123,7 @@ end
 
 --- Sets `--windows-pipe <name>`
 --- @param name string
---- @return distant.builder.ShellCmdBuilder
+--- @return distant.core.builder.ShellCmdBuilder
 function M:set_windows_pipe(name)
     vim.validate({ name = { name, 'string' } })
     self.cmd:set('windows-pipe', name)
