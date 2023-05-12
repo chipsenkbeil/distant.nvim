@@ -1,4 +1,4 @@
-local Ui = require 'distant-core.ui'
+local ui = require 'distant-core.ui'
 local p = require 'distant.ui.palette'
 
 --- Creates a series of spans that represent a tab visually.
@@ -41,8 +41,8 @@ return function(state)
             create_tab_span(text, i, state.view.current == text, state.view.is_showing_help)
         )
     end
-    return Ui.CascadingStyleNode({ 'INDENT' }, {
-        Ui.HlTextNode({ tabs }),
-        Ui.StickyCursor({ id = 'tabs' }),
+    return ui.CascadingStyleNode({ 'INDENT' }, {
+        ui.HlTextNode({ tabs }),
+        ui.StickyCursor({ id = 'tabs' }),
     })
 end

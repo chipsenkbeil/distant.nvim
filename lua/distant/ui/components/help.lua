@@ -1,4 +1,4 @@
-local Ui = require('distant-core.ui')
+local ui = require('distant-core.ui')
 local log = require('distant-core.log')
 local p = require('distant.ui.palette')
 local plugin_state = require('distant.state')
@@ -35,9 +35,9 @@ local function Ship(state)
             end
         end
     end
-    return Ui.Node {
-        Ui.HlTextNode(ship),
-        Ui.HlTextNode(water),
+    return ui.Node {
+        ui.HlTextNode(ship),
+        ui.HlTextNode(water),
     }
 end
 
@@ -52,12 +52,12 @@ local function GenericHelp(state)
 
     local is_current_settings_expanded = state.view.is_current_settings_expanded
 
-    return Ui.Node {
-        Ui.HlTextNode {
+    return ui.Node {
+        ui.HlTextNode {
             { p.muted 'Distant log: ', p.none(log.outfile) },
         },
-        Ui.EmptyLine(),
-        Ui.Table {
+        ui.EmptyLine(),
+        ui.Table {
             {
                 p.Bold 'Keyboard shortcuts',
             },
@@ -65,15 +65,15 @@ local function GenericHelp(state)
                 return { p.muted(keymap_tuple[1]), p.highlight(keymap_tuple[2]) }
             end, keymap_tuples)),
         },
-        Ui.EmptyLine(),
-        Ui.HlTextNode {
+        ui.EmptyLine(),
+        ui.HlTextNode {
             {
                 p.Bold(('%s Current settings'):format(is_current_settings_expanded and '↓' or '→')),
                 p.highlight ' :help distant-settings',
             },
         },
-        Ui.Keybind('<CR>', 'TOGGLE_EXPAND_CURRENT_SETTINGS', nil),
-        Ui.When(is_current_settings_expanded, function()
+        ui.Keybind('<CR>', 'TOGGLE_EXPAND_CURRENT_SETTINGS', nil),
+        ui.When(is_current_settings_expanded, function()
             --- @type string[]
             --- @diagnostic disable-next-line:missing-parameter
             local settings_split_by_newline = vim.split(vim.inspect(plugin_state.settings), '\n')
@@ -84,7 +84,7 @@ local function GenericHelp(state)
                 return { p.muted(line) }
             end, settings_split_by_newline)
 
-            return Ui.HlTextNode(current_settings)
+            return ui.HlTextNode(current_settings)
         end),
     }
 end
@@ -92,14 +92,14 @@ end
 ---@param state distant.ui.State
 return function(state)
     ---@type distant.core.ui.INode
-    local heading = Ui.Node {}
+    local heading = ui.Node {}
 
-    return Ui.CascadingStyleNode({ 'INDENT' }, {
-        Ui.HlTextNode(state.view.has_changed and p.none '' or p.Comment '(change view by pressing its number)'),
+    return ui.CascadingStyleNode({ 'INDENT' }, {
+        ui.HlTextNode(state.view.has_changed and p.none '' or p.Comment '(change view by pressing its number)'),
         heading,
         GenericHelp(state),
-        Ui.EmptyLine(),
+        ui.EmptyLine(),
         Ship(state),
-        Ui.EmptyLine(),
+        ui.EmptyLine(),
     })
 end

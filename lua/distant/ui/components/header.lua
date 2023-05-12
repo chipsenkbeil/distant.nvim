@@ -1,4 +1,4 @@
-local Ui = require('distant-core.ui')
+local ui = require('distant-core.ui')
 local p = require('distant.ui.palette')
 local version = require('distant.version')
 
@@ -16,9 +16,9 @@ end
 
 ---@param state distant.ui.State
 return function(state)
-    return Ui.CascadingStyleNode({ 'CENTERED' }, {
-        Ui.HlTextNode {
-            Ui.When(state.view.is_showing_help, {
+    return ui.CascadingStyleNode({ 'CENTERED' }, {
+        ui.HlTextNode {
+            ui.When(state.view.is_showing_help, {
                 p.none '             ',
                 p.header_secondary(' ' .. state.header.title_prefix .. ' distant.nvim '),
                 version_node(),
@@ -28,7 +28,7 @@ return function(state)
                 p.header ' distant.nvim ',
                 version_node(),
             }),
-            Ui.When(
+            ui.When(
                 state.view.is_showing_help,
                 { p.none '        press ', p.highlight_secondary 'g?', p.none ' for connections' },
                 { p.none 'press ', p.highlight 'g?', p.none ' for help' }

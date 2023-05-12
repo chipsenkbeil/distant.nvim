@@ -1,4 +1,4 @@
-local Ui = require('distant-core.ui')
+local ui = require('distant-core.ui')
 local p = require('distant.ui.palette')
 
 --- @return distant.core.ui.INode
@@ -65,16 +65,16 @@ local function ManagerConnection()
         }
     end
 
-    return Ui.Node {
-        Ui.HlTextNode(p.heading 'Manager Connection'),
-        Ui.EmptyLine(),
-        Ui.Table {
+    return ui.Node {
+        ui.HlTextNode(p.heading 'Manager Connection'),
+        ui.EmptyLine(),
+        ui.Table {
             ListeningLine(),
             PrivateLine(),
             WindowsPipeLine(),
             UnixSocketLine(),
         },
-        Ui.EmptyLine(),
+        ui.EmptyLine(),
     }
 end
 
@@ -139,24 +139,24 @@ local function AvailableConnections(opts)
         })
 
         extra[#rows] = {}
-        extra[#rows][1] = Ui.Keybind(
+        extra[#rows][1] = ui.Keybind(
             '<CR>',
             'SWITCH_ACTIVE_CONNECTION',
             { id = id, destination = destination }
         )
     end
 
-    return Ui.Node {
-        Ui.HlTextNode(p.heading 'Available Connections'),
-        Ui.EmptyLine(),
-        Ui.When(has_connections, Ui.Table(rows, extra)),
-        Ui.When(not has_connections, Ui.CascadingStyleNode(
+    return ui.Node {
+        ui.HlTextNode(p.heading 'Available Connections'),
+        ui.EmptyLine(),
+        ui.When(has_connections, ui.Table(rows, extra)),
+        ui.When(not has_connections, ui.CascadingStyleNode(
             { 'INDENT' },
             {
-                Ui.Text { 'N/A' },
+                ui.Text { 'N/A' },
             }
         )),
-        Ui.EmptyLine(),
+        ui.EmptyLine(),
     }
 end
 
@@ -164,8 +164,8 @@ end
 --- @param state distant.ui.State
 --- @return distant.core.ui.INode
 return function(state)
-    return Ui.Node {
-        Ui.EmptyLine(),
+    return ui.Node {
+        ui.EmptyLine(),
         ManagerConnection(),
         AvailableConnections({
             connections = state.info.connections.available,

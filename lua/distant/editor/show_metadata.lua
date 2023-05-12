@@ -2,8 +2,8 @@ local fn = require('distant.fn')
 local log = require('distant-core').log
 
 local p = require('distant.ui.palette')
-local Ui = require('distant-core.ui')
-local Window = require('distant-core.ui.window')
+local ui = require('distant-core.ui')
+local Window = require('distant-core.ui').Window
 
 -------------------------------------------------------------------------------
 -- WINDOW DEFINITION
@@ -17,18 +17,12 @@ local INITIAL_STATE = {
     metadata = nil,
 }
 
-local window = Window:new({
-    name = 'Metadata',
-    filetype = 'distant',
-    initial_state = INITIAL_STATE,
-})
-
 --- @param state distant.editor.show.metadata.State
-window:view(function(state)
+local function render(state)
     local path, metadata = state.path, state.metadata
 
     local table_view =
-        Ui.When(path ~= nil and metadata ~= nil, function()
+        ui.When(path ~= nil and metadata ~= nil, function()
             assert(path)
             assert(metadata)
 
@@ -89,42 +83,48 @@ window:view(function(state)
                 end
             end
 
-            return Ui.Table(vim.tbl_map(row_to_span, rows))
+            return ui.Table(vim.tbl_map(row_to_span, rows))
         end)
 
     local loading_view =
-        Ui.When(metadata == nil, function()
-            return Ui.Text({ 'Loading metadata...' })
+        ui.When(metadata == nil, function()
+            return ui.Text({ 'Loading metadata...' })
         end)
 
-    return Ui.Node {
-        Ui.Keybind('q', 'CLOSE_WINDOW', nil, true),
-        Ui.Keybind('<Esc>', 'CLOSE_WINDOW', nil, true),
-        Ui.CascadingStyleNode({ 'INDENT' }, {
-            Ui.EmptyLine(),
+    return ui.Node {
+        ui.Keybind('q', 'CLOSE_WINDOW', nil, true),
+        ui.Keybind('<Esc>', 'CLOSE_WINDOW', nil, true),
+        ui.CascadingStyleNode({ 'INDENT' }, {
+            ui.EmptyLine(),
             loading_view,
             table_view,
         }),
     }
-end)
+end
 
-window:init({
+local window = Window:new({
+    name = 'Metadata',
+    filetype = 'distant',
+    view = render,
+    initial_state = INITIAL_STATE,
     effects = {
-        ['CLOSE_WINDOW'] = function()
+        ['CLOSE_WINDOW'] = function(event)
+            local window = event.window
+
             --- @param state distant.editor.show.metadata.State
-            window.state.mutate(function(state)
+            window:mutate_state(function(state)
                 state.path = nil
                 state.metadata = nil
             end)
             window:close()
         end,
     },
-    border = 'single',
-    winhighlight = {
-        'NormalFloat:DistantNormal',
+    winopts = {
+        border = 'single',
+        winhighlight = { 'NormalFloat:DistantNormal' },
+        width = 0.4,
+        height = 0.3,
     },
-    width = 0.4,
-    height = 0.3,
 })
 
 -------------------------------------------------------------------------------
@@ -144,7 +144,7 @@ return function(opts)
     window:open()
 
     --- @param state distant.editor.show.metadata.State
-    window.state.mutate(function(state)
+    window:mutate_state(function(state)
         state.path = opts.path
     end)
 
@@ -158,7 +158,7 @@ return function(opts)
     assert(metadata)
 
     --- @param state distant.editor.show.metadata.State
-    window.state.mutate(function(state)
+    window:mutate_state(function(state)
         state.path = opts.path
         state.metadata = metadata
     end)

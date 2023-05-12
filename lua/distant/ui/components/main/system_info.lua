@@ -1,4 +1,4 @@
-local Ui = require('distant-core.ui')
+local ui = require('distant-core.ui')
 local p = require('distant.ui.palette')
 
 --- @param state distant.ui.State
@@ -35,20 +35,20 @@ return function(state)
             end
         end
 
-        content = Ui.Table(vim.tbl_map(row_to_span, rows))
+        content = ui.Table(vim.tbl_map(row_to_span, rows))
     end
 
     -- If content not available, report as such
     if not content then
-        content = Ui.Text {
+        content = ui.Text {
             'System information is not available yet.',
             'Please establish a connection with a server first.',
         }
     end
 
-    return Ui.Node {
-        Ui.EmptyLine(),
+    return ui.Node {
+        ui.EmptyLine(),
         content,
-        Ui.EmptyLine(),
+        ui.EmptyLine(),
     }
 end

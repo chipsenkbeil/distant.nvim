@@ -1,5 +1,5 @@
 local log = require('distant-core.log')
-local state = require('distant-core.ui.state')
+local init_state = require('distant-core.ui.init_state')
 local utils = require('distant-core.utils')
 
 --- @alias distant.core.ui.window.Width number
@@ -189,7 +189,6 @@ end
 --- | '"shadow"'    # a drop shadow effect by blending with the background
 
 --- @class distant.core.ui.window.WindowOpts
---- @field effects? distant.core.ui.window.Effects
 --- @field winhighlight? string[]
 --- @field border? distant.core.ui.window.Border|string[]
 --- @field width? distant.core.ui.window.Width
@@ -231,6 +230,9 @@ local function create_popup_window_opts(opts, sizes_only)
 end
 
 --- @alias distant.core.ui.window.RowColTuple {[1]:number, [2]:number}
+--- @alias distant.core.ui.window.Effects table<string, distant.core.ui.window.EffectFn>
+--- @alias distant.core.ui.window.EffectFn fun(event:distant.core.ui.window.EffectEvent)
+--- @alias distant.core.ui.window.EffectEvent {state:distant.core.ui.window.State, window:distant.core.ui.window.Window, payload:any}
 
 --- @class distant.core.ui.window.State
 --- @field mutate fun(mutate_fn:fun(current_state:table))
@@ -247,13 +249,14 @@ end
 --- @class distant.core.ui.window.Window
 --- @field state distant.core.ui.window.State
 ---
---- @field private __has_initiated boolean
 --- @field private __namespace number
 --- @field private __filetype filetype
 --- @field private __registered_keymaps table<string, boolean>
 --- @field private __registered_keybindings table<number, table<string, distant.core.ui.window.RenderKeybind>>
 --- @field private __registered_effect_handlers distant.core.ui.window.Effects
---- @field private __window_opts distant.core.ui.window.WindowOpts
+--- @field private __renderer fun(state:table):distant.core.ui.INode
+--- @field private __effects distant.core.ui.window.Effects
+--- @field private __winopts distant.core.ui.window.WindowOpts
 ---
 --- @field private __window_mgmt_augroup? number
 --- @field private __autoclose_augroup? number
@@ -261,12 +264,19 @@ end
 --- @field private __buf? number
 --- @field private __win? number
 --- @field private __output? distant.core.ui.window.RenderOutput
---- @field private __renderer? fun(state:table):distant.core.ui.INode
 local M = {}
 M.__index = M
 
+--- @class distant.core.ui.window.NewOpts
+--- @field name string
+--- @field filetype string
+--- @field view fun(state:table):distant.core.ui.INode
+--- @field effects? distant.core.ui.window.Effects # initial effects to assign to the window
+--- @field initial_state? table # optional initial value of state, defaulting to {}
+--- @field winopts? distant.core.ui.window.WindowOpts # optional window-specific options
+
 --- Creates a new window.
---- @param opts {name:string, filetype:string, initial_state:table, view:fun(state: table):distant.core.ui.INode}
+--- @param opts distant.core.ui.window.NewOpts
 --- @return distant.core.ui.window.Window
 function M:new(opts)
     local instance = {}
@@ -280,14 +290,14 @@ function M:new(opts)
     -- SET PRIVATE VARIABLES
     --------------------------------------------------------------------------
 
-    instance.__has_initiated = false
     instance.__namespace = vim.api.nvim_create_namespace(('%s_%s'):format(opts.name, utils.next_id()))
-    instance.__filetype = opts.filetype
+    instance.__filetype = assert(opts.filetype, 'Missing filetype for window')
+    instance.__renderer = assert(opts.view, 'Missing view definition for window')
     instance.__registered_keymaps = {}
     instance.__registered_keybindings = {}
     instance.__registered_effect_handlers = {}
-    instance.__window_opts = {}
-    instance.__renderer = opts.view
+    instance.__effects = vim.deepcopy(opts.effects or {})
+    instance.__winopts = vim.deepcopy(opts.winopts or {})
 
     --------------------------------------------------------------------------
     -- CONFIGURE DIAGNOSTICS
@@ -307,19 +317,18 @@ function M:new(opts)
     -- INITIALIZE STATE
     --------------------------------------------------------------------------
 
-    local mutate_state, get_state, unsubscribe = state.create_state_container(
-        opts.initial_state,
+    local mutate_state, get_state, unsubscribe = init_state(
+        opts.initial_state or {},
         --- @param new_state table
         debounced(function(new_state)
-            assert(self.__renderer ~= nil, 'renderer is invalid during drawing of state change')
-            self:__draw(self.__renderer(new_state))
+            instance:__draw(instance.__renderer(new_state))
         end)
     )
 
     -- we don't need to subscribe to state changes until the window is actually opened
     unsubscribe(true)
 
-    instance.__state = {
+    instance.state = {
         mutate = mutate_state,
         get = get_state,
         __unsubscribe = unsubscribe,
@@ -332,52 +341,32 @@ function M:new(opts)
     return instance
 end
 
---- Define how the window will be rendered.
---- @param renderer fun(state: table):distant.core.ui.INode
-function M:view(renderer)
-    self.__renderer = renderer
-end
+-------------------------------------------------------------------------------
+-- PUBLIC API
+-------------------------------------------------------------------------------
 
---- Update the effects for the next time the window is opened.
---- @alias distant.core.ui.window.Effects table<string, distant.core.ui.window.EffectFn>
---- @alias distant.core.ui.window.EffectFn fun(event?:{payload:any})
---- @param effects distant.core.ui.window.Effects
-function M:effects(effects)
-    self.__window_opts.effects = effects
-end
-
---- @param opts distant.core.ui.window.WindowOpts
-function M:init(opts)
-    assert(self.__renderer ~= nil, 'No view function has been registered. Call .view() before .init().')
-    assert(self.state.__unsubscribe ~= nil, 'No state has been registered. Call .state() before .init().')
-    self.__window_opts = opts
-    self.__has_initiated = true
-end
-
+--- Opens the window if not open already.
 function M:open()
     vim.schedule(function()
         log.trace('Opening window')
-        assert(self.__has_initiated, 'Display has not been initiated, cannot open.')
+
         if self.__win and vim.api.nvim_win_is_valid(self.__win) then
             -- window is already open
             return
         end
 
-        assert(self.state.__unsubscribe ~= nil, 'unsubscribe is invalid during opening of window')
         self.state.__unsubscribe(false)
-
         self:__open()
-
-        assert(self.__renderer ~= nil, 'renderer is invalid during opening of window')
         self:__draw(self.__renderer(self.state.get()))
     end)
 end
 
+--- Closes the window if open.
 function M:close()
     vim.schedule(function()
-        assert(self.__has_initiated, 'Display has not been initiated, cannot close.')
-        self.state.__unsubscribe(true)
         log.fmt_trace('Closing window win_id=%s, bufnr=%s', self.__win, self.__buf)
+
+        self.state.__unsubscribe(true)
         self:__delete_win_buf()
 
         -- NOTE: These augroup ids should always be assigned as we do so during open()
@@ -390,23 +379,33 @@ function M:close()
     end)
 end
 
+--- Sets the cursor position within the open window.
+---
+--- If the window is not open, this will throw an error!
+---
 --- @param pos number[] # (row, col) tuple
 function M:set_cursor(pos)
     assert(self.__win ~= nil, 'Window has not been opened, cannot set cursor.')
     return vim.api.nvim_win_set_cursor(self.__win, pos)
 end
 
+--- Retrieves the cursor position within the open window.
+---
+--- If the window is not open, this will throw an error!
+---
 --- @return number[] # (row, col) tuple
 function M:get_cursor()
     assert(self.__win ~= nil, 'Window has not been opened, cannot get cursor.')
     return vim.api.nvim_win_get_cursor(self.__win)
 end
 
+--- Returns whether or not the window is currently open and valid.
 --- @return boolean
 function M:is_open()
     return self.__win ~= nil and vim.api.nvim_win_is_valid(self.__win)
 end
 
+--- Jumps cursor within the open window to the location marked by the `tag`.
 --- @param tag string
 function M:set_sticky_cursor(tag)
     if self.__output then
@@ -423,23 +422,81 @@ function M:set_sticky_cursor(tag)
     end
 end
 
+--- Retrieves the neovim configuration tied to the window.
+---
+--- If the window is not open, this will throw an error!
+---
 --- @return table<string, any>
-function M:get_win_config()
+function M:win_config()
     assert(self.__win ~= nil, 'Window has not been opened, cannot get config.')
     return vim.api.nvim_win_get_config(self.__win)
 end
 
---- @param effect string
---- @param payload? table
+--- Updates window-specific options tied to this window.
+--- @param opts distant.core.ui.window.WindowOpts
+function M:set_winopts(opts)
+    self.__winopts = opts
+end
+
+--- Returns window-specific options tied to this window.
+--- @return distant.core.ui.window.WindowOpts
+function M:winopts()
+    return vim.deepcopy(self.__winopts)
+end
+
+--- Triggers an effect directly (versus with keybindings).
+--- @param effect string # name of the effect
+--- @param payload? table # optional payload to send to the effect, available as the `payload` field
 function M:dispatch(effect, payload)
     vim.schedule(function()
         local effect_handler = self.__registered_effect_handlers[effect]
         if effect_handler then
             log.fmt_trace('Calling handler for effect %s through direct dispatch', effect)
-            effect_handler({ payload = payload })
+            effect_handler({
+                payload = payload,
+                state = self.state,
+                window = self,
+            })
         end
     end)
 end
+
+--- Registers an effect with the window.
+---
+--- Note that this will only apply to future opening of the window, not
+--- while it is presently open!
+---
+--- @param effect string
+--- @param handler distant.core.ui.window.EffectFn
+function M:register_effect(effect, handler)
+    self.__effects[effect] = handler
+end
+
+--- Unregisters an effect with the window.
+---
+--- Note that this will only apply to future opening of the window, not
+--- while it is presently open!
+---
+--- @param effect string
+function M:unregister_effect(effect)
+    self.__effects[effect] = nil
+end
+
+--- Mutates the state of the window. Convenience for `window.state.mutate(...)`.
+--- @param mutate_fn fun(current_state:table)
+function M:mutate_state(mutate_fn)
+    self.state.mutate(mutate_fn)
+end
+
+--- Returns the state of the window. Convenience for `window.state.get()`.
+--- @return table
+function M:get_state()
+    return self.state.get()
+end
+
+-------------------------------------------------------------------------------
+-- PRIVATE API
+-------------------------------------------------------------------------------
 
 --- @private
 function M:__delete_win_buf()
@@ -469,7 +526,11 @@ function M:__call_effect_handler(line, key)
             local effect_handler = self.__registered_effect_handlers[keybind.effect]
             if effect_handler then
                 log.fmt_trace('Calling handler for effect %s on line %d for key %s', keybind.effect, line, key)
-                effect_handler({ payload = keybind.payload })
+                effect_handler({
+                    payload = keybind.payload,
+                    state = self.state,
+                    window = self,
+                })
                 return true
             end
         end
@@ -593,9 +654,9 @@ end
 --- @private
 function M:__open()
     self.__buf = vim.api.nvim_create_buf(false, true)
-    self.__win = vim.api.nvim_open_win(self.__buf, true, create_popup_window_opts(self.__window_opts, false))
+    self.__win = vim.api.nvim_open_win(self.__buf, true, create_popup_window_opts(self.__winopts, false))
 
-    self.__registered_effect_handlers = self.__window_opts.effects or {}
+    self.__registered_effect_handlers = vim.deepcopy(self.__effects)
     self.__registered_keybinds = {}
     self.__registered_keymaps = {}
 
@@ -626,8 +687,8 @@ function M:__open()
         vim.api.nvim_win_set_option(self.__win, key, value)
     end
 
-    if self.__window_opts.winhighlight then
-        vim.api.nvim_win_set_option(self.__win, 'winhighlight', table.concat(self.__window_opts.winhighlight, ','))
+    if self.__winopts.winhighlight then
+        vim.api.nvim_win_set_option(self.__win, 'winhighlight', table.concat(self.__winopts.winhighlight, ','))
     end
 
     -- buffer options
@@ -645,9 +706,8 @@ function M:__open()
         buffer = self.__buf,
         callback = function()
             if vim.api.nvim_win_is_valid(self.__win) then
-                assert(self.__renderer ~= nil, 'renderer is invalid during resize')
                 self:__draw(self.__renderer(self.state.get()))
-                vim.api.nvim_win_set_config(self.__win, create_popup_window_opts(self.__window_opts, true))
+                vim.api.nvim_win_set_config(self.__win, create_popup_window_opts(self.__winopts, true))
             end
         end,
     })
