@@ -39,7 +39,7 @@ end
 --- for future requests. Specifying `reload` as true will result in a fresh
 --- request to the server for this information.
 ---
---- @param opts distant.client.CachedSystemInfoOpts
+--- @param opts distant.core.client.CachedSystemInfoOpts
 --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.SystemInfoPayload)
 --- @return distant.core.api.Error|nil, distant.core.api.SystemInfoPayload|nil
 function M.cached_system_info(opts, cb)

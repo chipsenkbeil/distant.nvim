@@ -3,7 +3,7 @@ local state = require('distant.state')
 --- Performs a client wrapping of the given cmd, lsp, or shell
 --- using the active client. Will fail if client is not initialized.
 ---
---- @param opts distant.client.WrapOpts
+--- @param opts distant.core.client.WrapOpts
 --- @return string|string[]
 return function(opts)
     local client = assert(

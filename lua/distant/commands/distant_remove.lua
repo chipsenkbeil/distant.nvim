@@ -8,15 +8,12 @@ local function command(cmd)
     utils.paths_to_number(input.opts, { 'timeout', 'interval' })
 
     local path = input.args[1]
-    input.opts.path = path
-
-    local opts = input.opts
-    if cmd.bang then
-        opts.force = true
-    end
-
-    --- @cast opts -table, +distant.core.api.RemoveOpts
-    local err, _ = fn.remove(opts)
+    local err, _ = fn.remove({
+        path = path,
+        force = cmd.bang == true,
+        timeout = tonumber(input.opts.timeout),
+        interval = tonumber(input.opts.interval),
+    })
     assert(not err, tostring(err))
 end
 
