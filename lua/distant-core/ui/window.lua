@@ -229,6 +229,10 @@ local function create_popup_window_opts(opts, sizes_only)
     return popup_layout
 end
 
+--------------------------------------------------------------------------
+-- WINDOW CLASS DEFINITION
+--------------------------------------------------------------------------
+
 --- @alias distant.core.ui.window.RowColTuple {[1]:number, [2]:number}
 --- @alias distant.core.ui.window.Effects table<string, distant.core.ui.window.EffectFn>
 --- @alias distant.core.ui.window.EffectFn fun(event:distant.core.ui.window.EffectEvent)
@@ -282,15 +286,14 @@ function M:new(opts)
     local instance = {}
     setmetatable(instance, M)
 
-    assert(type(opts.name) == 'string', 'opts.name must be a string')
-    assert(type(opts.filetype) == 'string', 'opts.filetype must be a string')
-    assert(type(opts.initial_state) == 'table', 'opts.initial_state must be a table')
-
     --------------------------------------------------------------------------
     -- SET PRIVATE VARIABLES
     --------------------------------------------------------------------------
 
-    instance.__namespace = vim.api.nvim_create_namespace(('%s_%s'):format(opts.name, utils.next_id()))
+    instance.__namespace = vim.api.nvim_create_namespace(('%s_%s'):format(
+        assert(opts.name, 'Missing name for window'),
+        utils.next_id()
+    ))
     instance.__filetype = assert(opts.filetype, 'Missing filetype for window')
     instance.__renderer = assert(opts.view, 'Missing view definition for window')
     instance.__registered_keymaps = {}
