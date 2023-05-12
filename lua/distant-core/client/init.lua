@@ -4,11 +4,11 @@ local log     = require('distant-core.log')
 local utils   = require('distant-core.utils')
 local vars    = require('distant-core.vars')
 
---- Represents a distant client
+--- Represents a distant.core.client
 --- @class distant.core.Client
 --- @field api distant.core.Api
 --- @field private config {binary:string, network:distant.core.client.Network}
---- @field private __state distant.client.State
+--- @field private __state distant.core.client.State
 local M       = {}
 M.__index     = M
 
@@ -17,11 +17,11 @@ M.__index     = M
 --- @field unix_socket? string #path to the unix socket of the manager
 --- @field windows_pipe? string #name of the windows pipe of the manager
 
---- @class distant.client.State
+--- @class distant.core.client.State
 --- @field cache {system_info?:distant.core.api.SystemInfoPayload}
 --- @field lsp {clients:table<string, number>} Mapping of label -> client id
 
---- Creates a new instance of a distant client
+--- Creates a new instance of a distant.core.client
 --- @param opts {binary:string, network:distant.core.client.Network}
 --- @return distant.core.Client
 function M:new(opts)
@@ -61,8 +61,8 @@ end
 --- for future requests. Specifying `reload` as true will result in a fresh
 --- request to the server for this information.
 ---
---- @alias distant.client.CachedSystemInfoOpts {reload?:boolean, timeout?:number, interval?:number}
---- @param opts distant.client.CachedSystemInfoOpts
+--- @alias distant.core.client.CachedSystemInfoOpts {reload?:boolean, timeout?:number, interval?:number}
+--- @param opts distant.core.client.CachedSystemInfoOpts
 --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.SystemInfoPayload)
 --- @return distant.core.api.Error|nil, distant.core.api.SystemInfoPayload|nil
 function M:cached_system_info(opts, cb)
@@ -231,7 +231,7 @@ function M:spawn_shell(opts)
     return job_id
 end
 
---- @class distant.client.WrapOpts
+--- @class distant.core.client.WrapOpts
 --- @field cmd? string|string[]
 --- @field lsp? string|string[]
 --- @field shell? string|string[]|true
@@ -242,7 +242,7 @@ end
 --- a string if the input is a string, or a list if the input
 --- is a list.
 ---
---- @param opts distant.client.WrapOpts
+--- @param opts distant.core.client.WrapOpts
 --- @return string|string[]
 function M:wrap(opts)
     opts = opts or {}
