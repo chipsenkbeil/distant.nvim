@@ -1,7 +1,8 @@
-local Error = require('distant-core.client.api.error')
-local Process = require('distant-core.client.api.process')
-local Searcher = require('distant-core.client.api.searcher')
-local Transport = require('distant-core.client.transport')
+local Error = require('distant-core.api.error')
+local Process = require('distant-core.api.process')
+local Searcher = require('distant-core.api.searcher')
+local Transport = require('distant-core.api.transport')
+
 local log = require('distant-core.log')
 
 --- Represents an API that uses a transport to communicate payloads.

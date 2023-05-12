@@ -1,4 +1,4 @@
-local Error = require('distant-core.client.api.error')
+local Error = require('distant-core.api.error')
 local log   = require('distant-core.log')
 local utils = require('distant-core.utils')
 
