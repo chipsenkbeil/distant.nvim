@@ -13,7 +13,12 @@ local function ManagerConnection()
             value = p.warning 'no'
         end
 
-        return { p.Bold '', p.Bold 'Listening', value }
+        return {
+            p.none '',
+            p.Bold 'Listening',
+            p.none '',
+            value,
+        }
     end
 
     local function PrivateLine()
@@ -24,32 +29,39 @@ local function ManagerConnection()
             value = p.warning 'no'
         end
 
-        return { p.Bold '', p.Bold 'Private', value }
+        return {
+            p.none '',
+            p.Bold 'Private',
+            p.none '',
+            value,
+        }
     end
 
     local function WindowsPipeLine()
-        local text = ''
+        local text
         if plugin.manager and plugin.manager:network().windows_pipe then
-            text = plugin.manager:network().windows_pipe or ''
+            text = plugin.manager:network().windows_pipe
         end
 
         return {
-            p.Bold '',
+            p.none '',
             p.Bold 'Windows Pipe',
-            p.highlight(text),
+            p.none '',
+            text and p.highlight(text) or p.Comment '<default>',
         }
     end
 
     local function UnixSocketLine()
-        local text = ''
+        local text
         if plugin.manager and plugin.manager:network().unix_socket then
-            text = plugin.manager:network().unix_socket or ''
+            text = plugin.manager:network().unix_socket
         end
 
         return {
-            p.Bold '',
+            p.none '',
             p.Bold 'Unix Socket',
-            p.highlight(text),
+            p.none '',
+            text and p.highlight(text) or p.Comment '<default>',
         }
     end
 
@@ -73,7 +85,7 @@ local function AvailableConnections(opts)
 
     -- Header row
     table.insert(rows, {
-        p.Bold '',
+        p.none '',
         p.Bold 'ID',
         p.Bold 'Scheme',
         p.Bold 'Host',

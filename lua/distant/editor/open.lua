@@ -69,6 +69,10 @@ local function check_path(path, opts)
 
     -- Check if the error we got is a missing file. If we get
     -- any other kind of error, we want to throw the error
+    --
+    -- TODO: With ssh, the error kind is "other" instead of "not_found"
+    --       so we may have to do a batch request with exists
+    --       to properly validate
     local missing = (err and err.kind == 'not_found') or false
     assert(not err or missing, tostring(err))
 
