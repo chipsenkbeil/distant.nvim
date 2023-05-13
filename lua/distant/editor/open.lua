@@ -397,16 +397,11 @@ local function configure_buf(opts)
 
     if opts.is_file then
         -- Set our filetype to whatever the contents actually are (or file extension is)
-        -- TODO: This makes me feel uncomfortable as I do not yet understand why detecting
-        --       the filetype as the real type does not trigger neovim's LSP. At the
-        --       moment, it does not happen but we still get syntax highlighting, which
-        --       is perfect. In the future, we may need to switch this to something similar
-        --       to what telescope.nvim does with plenary.nvim's syntax functions.
-        --
-        -- TODO: Does this work if the above window is not the current one? Would prefer
-        --       an explicit function as opposed to the command we're using as don't
-        --       have control
-        vim.cmd([[ filetype detect ]])
+        local success, filetype = pcall(vim.filetype.match, { buf = bufnr })
+        if success and filetype then
+            log.fmt_debug('Setting buffer %s filetype to %s', bufnr, filetype)
+            vim.bo[bufnr].filetype = filetype
+        end
 
         -- Launch any associated LSP clients
         -- TODO: Use client id associated with buffer, not default client
