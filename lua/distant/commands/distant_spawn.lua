@@ -1,5 +1,5 @@
-local fn    = require('distant.fn')
-local utils = require('distant.commands.utils')
+local plugin = require('distant')
+local utils  = require('distant.commands.utils')
 
 --- DistantSpawn cmd [arg1 arg2 ...]
 --- @param cmd NvimCommand
@@ -15,7 +15,8 @@ local function command(cmd)
         args = cmd_args,
     }
 
-    local err, res = fn.spawn(opts)
+    -- TODO: Use explicit client id from buffer!
+    local err, res = plugin.api.spawn(opts)
     assert(not err, tostring(err))
 
     --- @cast res -distant.core.api.Process

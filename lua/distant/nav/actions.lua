@@ -1,6 +1,6 @@
 local editor = require('distant.editor')
-local fn     = require('distant.fn')
 local log    = require('distant-core').log
+local plugin = require('distant')
 local utils  = require('distant-core').utils
 local vars   = require('distant-core').vars
 
@@ -10,7 +10,8 @@ local M      = {}
 --- Returns the separator used by the remote system
 --- @return string
 local function remote_sep()
-    local err, system_info = fn.cached_system_info({})
+    -- TODO: Use explicit client id from buffer!
+    local err, system_info = plugin.api.cached_system_info({})
     assert(not err, tostring(err))
     assert(system_info, 'Missing system info')
     return assert(system_info.main_separator, 'missing remote sep')
@@ -111,7 +112,8 @@ M.mkdir = function(opts)
         end
 
         local path = utils.join_path(remote_sep(), { base_path, name })
-        local err = fn.create_dir({ path = path, all = true })
+        -- TODO: Use explicit client id from buffer!
+        local err = plugin.api.create_dir({ path = path, all = true })
 
         if not err then
             editor.open({ path = base_path, reload = true })
@@ -141,7 +143,8 @@ M.rename = function(opts)
                 return
             end
 
-            local err = fn.rename({ src = old_path, dst = new_path })
+            -- TODO: Use explicit client id from buffer!
+            local err = plugin.api.rename({ src = old_path, dst = new_path })
 
             if not err then
                 editor.open({ path = base_path, reload = true })
@@ -174,7 +177,8 @@ M.remove = function(opts)
                 end
             end
 
-            local err = fn.remove(vim.tbl_extend('keep', { path = path }, opts))
+            -- TODO: Use explicit client id from buffer!
+            local err = plugin.api.remove(vim.tbl_extend('keep', { path = path }, opts))
 
             if not err then
                 editor.open({ path = base_path, reload = true })

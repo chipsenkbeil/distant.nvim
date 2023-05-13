@@ -1,12 +1,12 @@
 local plugin = require('distant')
 local Driver = require('spec.e2e.driver')
 
-describe('distant.fn', function()
+describe('distant.api', function()
     --- @type spec.e2e.Driver, spec.e2e.RemoteDir
     local driver, root
 
     before_each(function()
-        driver = Driver:setup({ label = 'distant.fn.metadata' })
+        driver = Driver:setup({ label = 'distant.api.metadata' })
         root = driver:new_dir_fixture()
     end)
 
@@ -19,7 +19,7 @@ describe('distant.fn', function()
             local file = root:file()
             assert(file:touch(), 'Failed to create file: ' .. file:path())
 
-            local err, res = plugin.fn.metadata({ path = file:path() })
+            local err, res = plugin.api.metadata({ path = file:path() })
             assert(not err, tostring(err))
             assert(res)
 
@@ -31,7 +31,7 @@ describe('distant.fn', function()
             local dir = root:dir()
             assert(dir:make(), 'Failed to create directory: ' .. dir:path())
 
-            local err, res = plugin.fn.metadata({ path = dir:path() })
+            local err, res = plugin.api.metadata({ path = dir:path() })
             assert(not err, tostring(err))
             assert(res)
 
@@ -46,7 +46,7 @@ describe('distant.fn', function()
             local symlink = root:symlink()
             assert(symlink:make(file:path()), 'Failed to create symlink: ' .. symlink:path())
 
-            local err, res = plugin.fn.metadata({ path = symlink:path() })
+            local err, res = plugin.api.metadata({ path = symlink:path() })
             assert(not err, tostring(err))
             assert(res)
 
@@ -60,7 +60,7 @@ describe('distant.fn', function()
             local symlink = root:symlink()
             assert(symlink:make(file:path()), 'Failed to create symlink: ' .. symlink:path())
 
-            local err, res = plugin.fn.metadata({ path = symlink:path(), resolve_file_type = true })
+            local err, res = plugin.api.metadata({ path = symlink:path(), resolve_file_type = true })
             assert(not err, tostring(err))
             assert(res)
 
@@ -74,7 +74,7 @@ describe('distant.fn', function()
             local symlink = root:symlink()
             assert(symlink:make(file:path()), 'Failed to create symlink: ' .. symlink:path())
 
-            local err, res = plugin.fn.metadata({ path = symlink:path(), canonicalize = true })
+            local err, res = plugin.api.metadata({ path = symlink:path(), canonicalize = true })
             assert(not err, tostring(err))
             assert(res)
 
@@ -84,7 +84,7 @@ describe('distant.fn', function()
 
         it('should fail if the path does not exist', function()
             local file = root:file()
-            local err, res = plugin.fn.metadata({ path = file:path() })
+            local err, res = plugin.api.metadata({ path = file:path() })
             assert.is.truthy(err)
             assert.is_nil(res)
         end)

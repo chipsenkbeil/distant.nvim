@@ -1,5 +1,5 @@
-local fn    = require('distant.fn')
-local utils = require('distant.commands.utils')
+local plugin = require('distant')
+local utils  = require('distant.commands.utils')
 
 --- DistantCopy src dst [opt1=... opt2=...]
 --- @param cmd NvimCommand
@@ -14,8 +14,9 @@ local function command(cmd)
 
     local opts = input.opts
 
+    -- TODO: Use explicit client id from buffer!
     --- @cast opts -table, +distant.core.api.CopyOpts
-    local err, _ = fn.copy(opts)
+    local err, _ = plugin.api.copy(opts)
     assert(not err, tostring(err))
 end
 

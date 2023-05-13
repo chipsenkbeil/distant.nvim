@@ -1,12 +1,12 @@
 local plugin = require('distant')
 local Driver = require('spec.e2e.driver')
 
-describe('distant.fn', function()
+describe('distant.api', function()
     --- @type spec.e2e.Driver, spec.e2e.RemoteDir
     local driver, root
 
     before_each(function()
-        driver = Driver:setup({ label = 'distant.fn.read_dir' })
+        driver = Driver:setup({ label = 'distant.api.read_dir' })
 
         -- TODO: This is really expensive, but plenary doesn't offer setup/teardown
         --       functions that we could use to limit this to the the entire
@@ -34,7 +34,7 @@ describe('distant.fn', function()
 
     describe('read_dir', function()
         it('should list immediate directory contents', function()
-            local err, res = plugin.fn.read_dir({ path = root:path() })
+            local err, res = plugin.api.read_dir({ path = root:path() })
             assert(not err, tostring(err))
             assert(res)
             assert.are.same({
@@ -45,7 +45,7 @@ describe('distant.fn', function()
         end)
 
         it('should support infinite depth if specified', function()
-            local err, res = plugin.fn.read_dir({ path = root:path(), depth = 0 })
+            local err, res = plugin.api.read_dir({ path = root:path(), depth = 0 })
             assert(not err, tostring(err))
             assert(res)
             assert.are.same({
@@ -59,7 +59,7 @@ describe('distant.fn', function()
         end)
 
         it('should support explicit depth beyond immediate if specified', function()
-            local err, res = plugin.fn.read_dir({ path = root:path(), depth = 2 })
+            local err, res = plugin.api.read_dir({ path = root:path(), depth = 2 })
             assert(not err, tostring(err))
             assert(res)
             assert.are.same({
@@ -72,7 +72,7 @@ describe('distant.fn', function()
         end)
 
         it('should support absolute paths if specified', function()
-            local err, res = plugin.fn.read_dir({ path = root:path(), absolute = true })
+            local err, res = plugin.api.read_dir({ path = root:path(), absolute = true })
             assert(not err, tostring(err))
             assert(res)
             assert.are.same({
@@ -83,7 +83,7 @@ describe('distant.fn', function()
         end)
 
         it('should support canonicalized paths if specified', function()
-            local err, res = plugin.fn.read_dir({ path = root:path(), canonicalize = true })
+            local err, res = plugin.api.read_dir({ path = root:path(), canonicalize = true })
             assert(not err, tostring(err))
             assert(res)
 
@@ -120,7 +120,7 @@ describe('distant.fn', function()
         end)
 
         it('should include root path if specified', function()
-            local err, res = plugin.fn.read_dir({ path = root:path(), include_root = true })
+            local err, res = plugin.api.read_dir({ path = root:path(), include_root = true })
             assert(not err, tostring(err))
             assert(res)
             assert.are.same({
@@ -133,7 +133,7 @@ describe('distant.fn', function()
 
         it('should fail if the path does not exist', function()
             local dir = root:dir()
-            local err, res = plugin.fn.read_dir({ path = dir:path() })
+            local err, res = plugin.api.read_dir({ path = dir:path() })
             assert.is.truthy(err)
             assert.is_nil(res)
         end)
@@ -144,7 +144,7 @@ describe('distant.fn', function()
                 local file = root:file()
                 assert(file:touch(), 'Failed to create file: ' .. file:path())
 
-                local err, res = plugin.fn.read_dir({ path = file:path() })
+                local err, res = plugin.api.read_dir({ path = file:path() })
                 assert(not err, tostring(err))
                 assert(res)
                 assert.are.same({}, res.entries)
@@ -154,7 +154,7 @@ describe('distant.fn', function()
                 local file = root:file()
                 assert(file:touch(), 'Failed to create file: ' .. file:path())
 
-                local err, res = plugin.fn.read_dir({ path = file:path() })
+                local err, res = plugin.api.read_dir({ path = file:path() })
                 assert.is.truthy(err)
                 assert.is_nil(res)
             end)

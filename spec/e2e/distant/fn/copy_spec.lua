@@ -1,12 +1,12 @@
 local plugin = require('distant')
 local Driver = require('spec.e2e.driver')
 
-describe('distant.fn', function()
+describe('distant.api', function()
     --- @type spec.e2e.Driver, spec.e2e.RemoteDir
     local driver, root
 
     before_each(function()
-        driver = Driver:setup({ label = 'distant.fn.copy' })
+        driver = Driver:setup({ label = 'distant.api.copy' })
         root = driver:new_dir_fixture()
     end)
 
@@ -21,7 +21,7 @@ describe('distant.fn', function()
 
             local dst = root:file()
 
-            local err = plugin.fn.copy({ src = src:path(), dst = dst:path() })
+            local err = plugin.api.copy({ src = src:path(), dst = dst:path() })
             assert(not err, tostring(err))
 
             src.assert.same({ 'some text' })
@@ -37,7 +37,7 @@ describe('distant.fn', function()
 
             local dst = root:dir()
 
-            local err = plugin.fn.copy({ src = src:path(), dst = dst:path() })
+            local err = plugin.api.copy({ src = src:path(), dst = dst:path() })
             assert(not err, tostring(err))
 
             assert.is.truthy(src:exists())
@@ -51,7 +51,7 @@ describe('distant.fn', function()
             local src = root:file()
             local dst = root:file()
 
-            local err = plugin.fn.copy({ src = src:path(), dst = dst:path() })
+            local err = plugin.api.copy({ src = src:path(), dst = dst:path() })
             assert.is.truthy(err)
 
             assert.is.falsy(src:exists())
@@ -64,7 +64,7 @@ describe('distant.fn', function()
 
             local dst = root:file('dir/file')
 
-            local err = plugin.fn.copy({ src = src:path(), dst = dst:path() })
+            local err = plugin.api.copy({ src = src:path(), dst = dst:path() })
             assert.is.truthy(err)
 
             assert.is.truthy(src:exists())

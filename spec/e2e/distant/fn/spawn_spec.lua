@@ -1,12 +1,12 @@
 local plugin = require('distant')
 local Driver = require('spec.e2e.driver')
 
-describe('distant.fn', function()
+describe('distant.api', function()
     --- @type spec.e2e.Driver
     local driver
 
     before_each(function()
-        driver = Driver:setup({ label = 'distant.fn.spawn' })
+        driver = Driver:setup({ label = 'distant.api.spawn' })
     end)
 
     after_each(function()
@@ -25,7 +25,7 @@ describe('distant.fn', function()
         end
 
         it('should execute remote program and return results synchronously if no callback provided', function()
-            local err, res = plugin.fn.spawn({ cmd = 'echo some output' })
+            local err, res = plugin.api.spawn({ cmd = 'echo some output' })
             assert(not err, tostring(err))
 
             --- @cast res distant.core.api.process.SpawnResults
@@ -43,7 +43,7 @@ describe('distant.fn', function()
             --- @type distant.core.api.process.SpawnResults|nil
             local results
 
-            local err, process = plugin.fn.spawn({ cmd = 'echo some output' }, function(err, res)
+            local err, process = plugin.api.spawn({ cmd = 'echo some output' }, function(err, res)
                 assert(not err, tostring(err))
                 results = res
             end)
@@ -77,7 +77,7 @@ describe('distant.fn', function()
         --       is able to correctly capture stderr, so this will need to be investigated
         if driver:mode() == 'distant' then
             it('should support capturing stderr', function()
-                local err, res = plugin.fn.spawn({ cmd = 'sh -c "echo some output 1>&2"' })
+                local err, res = plugin.api.spawn({ cmd = 'sh -c "echo some output 1>&2"' })
                 assert(not err, tostring(err))
 
                 --- @cast res distant.core.api.process.SpawnResults
@@ -92,7 +92,7 @@ describe('distant.fn', function()
             end)
 
             it('should support capturing exit code', function()
-                local err, res = plugin.fn.spawn({ cmd = 'sh -c "exit 99"' })
+                local err, res = plugin.api.spawn({ cmd = 'sh -c "exit 99"' })
                 assert(not err, tostring(err))
 
                 --- @cast res distant.core.api.process.SpawnResults

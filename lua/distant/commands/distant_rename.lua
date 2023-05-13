@@ -1,5 +1,5 @@
-local fn    = require('distant.fn')
-local utils = require('distant.commands.utils')
+local plugin = require('distant')
+local utils  = require('distant.commands.utils')
 
 --- DistantRename src dst [opt1=... opt2=...]
 --- @param cmd NvimCommand
@@ -14,8 +14,9 @@ local function command(cmd)
 
     local opts = input.opts
 
+    -- TODO: Use explicit client id from buffer!
     --- @cast opts -table, +distant.core.api.RenameOpts
-    local err, _ = fn.rename(opts)
+    local err, _ = plugin.api.rename(opts)
     assert(not err, tostring(err))
 end
 

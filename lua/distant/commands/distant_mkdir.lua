@@ -1,5 +1,5 @@
-local fn    = require('distant.fn')
-local utils = require('distant.commands.utils')
+local plugin = require('distant')
+local utils  = require('distant.commands.utils')
 
 --- DistantMkdir path [opt1=... opt2=...]
 --- @param cmd NvimCommand
@@ -12,8 +12,9 @@ local function command(cmd)
 
     local opts = input.opts
 
+    -- TODO: Use explicit client id from buffer!
     --- @cast opts -table, +distant.core.api.CreateDirOpts
-    local err, _ = fn.create_dir(opts)
+    local err, _ = plugin.api.create_dir(opts)
     assert(not err, tostring(err))
 end
 

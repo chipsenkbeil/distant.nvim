@@ -1,12 +1,12 @@
 local plugin = require('distant')
 local Driver = require('spec.e2e.driver')
 
-describe('distant.fn', function()
+describe('distant.api', function()
     --- @type spec.e2e.Driver, spec.e2e.RemoteDir
     local driver, root
 
     before_each(function()
-        driver = Driver:setup({ label = 'distant.fn.search' })
+        driver = Driver:setup({ label = 'distant.api.search' })
 
         -- TODO: This is really expensive, but plenary doesn't offer setup/teardown
         --       functions that we could use to limit this to the the entire
@@ -35,7 +35,7 @@ describe('distant.fn', function()
     describe('search', function()
         it('should return all matches when run synchronously', function()
             --- @type distant.core.api.Error|nil, distant.core.api.search.Match[]|nil
-            local err, matches = plugin.fn.search({
+            local err, matches = plugin.api.search({
                 query = {
                     paths = { root:path() },
                     target = 'path',
@@ -128,7 +128,7 @@ describe('distant.fn', function()
             --       our search, but the on_results callback will be invoked. This means
             --       that an empty set of matches will be provided at the end!
             --- @type distant.core.api.Error|nil, distant.core.api.search.Match[]|nil
-            local err, done_matches = plugin.fn.search({
+            local err, done_matches = plugin.api.search({
                 query = {
                     paths = { root:path() },
                     target = 'path',
@@ -185,7 +185,7 @@ describe('distant.fn', function()
             local cb_triggered = false
 
             --- @type distant.core.api.Error|nil, distant.core.api.Searcher|nil
-            local err, searcher = plugin.fn.search({
+            local err, searcher = plugin.api.search({
                 query = {
                     paths = { root:path() },
                     target = 'path',
@@ -255,7 +255,7 @@ describe('distant.fn', function()
             local matches = {}
 
             --- @type distant.core.api.Error|nil, distant.core.api.Searcher|nil
-            local err, searcher = plugin.fn.search({
+            local err, searcher = plugin.api.search({
                 query = {
                     paths = { root:path() },
                     target = 'path',

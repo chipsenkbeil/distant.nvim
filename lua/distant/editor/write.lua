@@ -1,6 +1,6 @@
-local fn   = require('distant.fn')
-local log  = require('distant-core').log
-local vars = require('distant-core').vars
+local plugin = require('distant')
+local log    = require('distant-core').log
+local vars   = require('distant-core').vars
 
 --- @class distant.editor.WriteOpts
 --- @field buf number #The handle of the buffer to write
@@ -33,6 +33,7 @@ return function(opts)
     end
 
     -- Load the contents of the buffer
+    -- TODO: Use explicit client id from buffer!
     -- TODO: This only works if the buffer is not hidden, but is
     --       this a problem for the write cmd since the buffer
     --       shouldn't be hidden?
@@ -40,7 +41,7 @@ return function(opts)
     local lines = vim.fn.getbufline(buf, 1, '$')
 
     -- Write the buffer contents
-    local err, _ = fn.write_file_text(vim.tbl_extend('keep', {
+    local err, _ = plugin.api.write_file_text(vim.tbl_extend('keep', {
         path = path,
         text = table.concat(lines, '\n')
     }, opts))

@@ -1,12 +1,12 @@
 local plugin = require('distant')
 local Driver = require('spec.e2e.driver')
 
-describe('distant.fn', function()
+describe('distant.api', function()
     --- @type spec.e2e.Driver, spec.e2e.RemoteDir
     local driver, root
 
     before_each(function()
-        driver = Driver:setup({ label = 'distant.fn.create_dir' })
+        driver = Driver:setup({ label = 'distant.api.create_dir' })
         root = driver:new_dir_fixture()
     end)
 
@@ -17,21 +17,21 @@ describe('distant.fn', function()
     describe('create_dir', function()
         it('should create a new directory', function()
             local dir = root:dir('dir')
-            local err = plugin.fn.create_dir({ path = dir:path() })
+            local err = plugin.api.create_dir({ path = dir:path() })
             assert(not err, tostring(err))
             assert.is.truthy(dir:exists())
         end)
 
         it('should fail if creating multiple missing directory components if all not specified', function()
             local dir = root:dir('dir/dir2')
-            local err = plugin.fn.create_dir({ path = dir:path() })
+            local err = plugin.api.create_dir({ path = dir:path() })
             assert.is.truthy(err)
             assert.is.falsy(dir:exists())
         end)
 
         it('should support creating multiple missing directory components if all specified', function()
             local dir = root:dir('dir/dir2')
-            local err = plugin.fn.create_dir({ path = dir:path(), all = true })
+            local err = plugin.api.create_dir({ path = dir:path(), all = true })
             assert(not err, tostring(err))
             assert.is.truthy(dir:exists())
         end)

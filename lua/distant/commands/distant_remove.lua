@@ -1,5 +1,5 @@
-local fn    = require('distant.fn')
-local utils = require('distant.commands.utils')
+local plugin = require('distant')
+local utils  = require('distant.commands.utils')
 
 --- DistantRemove path [opt1=... opt2=...]
 --- @param cmd NvimCommand
@@ -8,7 +8,9 @@ local function command(cmd)
     utils.paths_to_number(input.opts, { 'timeout', 'interval' })
 
     local path = input.args[1]
-    local err, _ = fn.remove({
+
+    -- TODO: Use explicit client id from buffer!
+    local err, _ = plugin.api.remove({
         path = path,
         force = cmd.bang == true,
         timeout = tonumber(input.opts.timeout),

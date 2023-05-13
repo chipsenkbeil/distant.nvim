@@ -167,8 +167,8 @@ local function reload_tab(event)
                 end
                 state.info.connections.selected = id
             end)
-        elseif tab == 'System Info' and plugin.fn.is_ready() then
-            plugin.fn.cached_system_info({ reload = payload.force }, function(err, system_info)
+        elseif tab == 'System Info' and plugin.api.is_ready() then
+            plugin.api.cached_system_info({ reload = payload.force }, function(err, system_info)
                 assert(not err, tostring(err))
                 assert(system_info)
 
@@ -191,7 +191,7 @@ local function switch_active_connection(event)
     -- before attempting to assign the client
     plugin:connections({}, function(err, _)
         assert(not err, err)
-        plugin:set_active_client(id)
+        plugin:set_active_client_id(id)
     end)
 end
 

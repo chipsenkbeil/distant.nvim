@@ -1,7 +1,6 @@
-local fn            = require('distant.fn')
 local log           = require('distant-core').log
-
 local p             = require('distant.ui.palette')
+local plugin        = require('distant')
 local ui            = require('distant-core.ui')
 local Window        = require('distant-core.ui').Window
 
@@ -148,7 +147,8 @@ return function(opts)
         state.path = opts.path
     end)
 
-    local err, metadata = fn.metadata(opts)
+    -- TODO: Use explicit client id from buffer!
+    local err, metadata = plugin.api.metadata(opts)
 
     if err then
         window:close()

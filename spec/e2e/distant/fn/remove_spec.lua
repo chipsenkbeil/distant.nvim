@@ -1,12 +1,12 @@
 local plugin = require('distant')
 local Driver = require('spec.e2e.driver')
 
-describe('distant.fn', function()
+describe('distant.api', function()
     --- @type spec.e2e.Driver, spec.e2e.RemoteDir
     local driver, root
 
     before_each(function()
-        driver = Driver:setup({ label = 'distant.fn.remove' })
+        driver = Driver:setup({ label = 'distant.api.remove' })
         root = driver:new_dir_fixture()
     end)
 
@@ -19,7 +19,7 @@ describe('distant.fn', function()
             local file = root:file()
             assert(file:touch(), 'Failed to create file: ' .. file:path())
 
-            local err = plugin.fn.remove({ path = file:path() })
+            local err = plugin.api.remove({ path = file:path() })
             assert(not err, tostring(err))
             assert.is.falsy(file:exists())
         end)
@@ -28,7 +28,7 @@ describe('distant.fn', function()
             local dir = root:dir()
             assert(dir:make(), 'Failed to create directory: ' .. dir:path())
 
-            local err = plugin.fn.remove({ path = dir:path() })
+            local err = plugin.api.remove({ path = dir:path() })
             assert(not err, tostring(err))
             assert.is.falsy(dir:exists())
         end)
@@ -38,7 +38,7 @@ describe('distant.fn', function()
             assert(dir:make(), 'Failed to create directory: ' .. dir:path())
             assert(dir:file():touch(), 'Failed to create inner file')
 
-            local err = plugin.fn.remove({ path = dir:path(), force = true })
+            local err = plugin.api.remove({ path = dir:path(), force = true })
             assert(not err, tostring(err))
             assert.is.falsy(dir:exists())
         end)
@@ -49,7 +49,7 @@ describe('distant.fn', function()
             local file = dir:file()
             assert(file:touch(), 'Failed to create file: ' .. file:path())
 
-            local err = plugin.fn.remove({ path = dir:path() })
+            local err = plugin.api.remove({ path = dir:path() })
             assert.is.truthy(err)
             assert.is.truthy(dir:exists())
             assert.is.truthy(file:exists())

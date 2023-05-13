@@ -45,7 +45,7 @@ describe('distant.editor.open', function()
         })
 
         -- Get the absolute path to the file we are editing
-        local err, metadata = plugin.fn.metadata({ path = test_path, canonicalize = true })
+        local err, metadata = plugin.api.metadata({ path = test_path, canonicalize = true })
         assert(not err, tostring(err))
         assert(metadata)
 
@@ -75,7 +75,7 @@ describe('distant.editor.open', function()
         })
 
         -- Get the absolute path to the file we are editing
-        local err, metadata = plugin.fn.metadata({ path = test_path, canonicalize = true })
+        local err, metadata = plugin.api.metadata({ path = test_path, canonicalize = true })
         assert(not err, tostring(err))
         assert(metadata)
 
@@ -142,7 +142,7 @@ describe('distant.editor.open', function()
         })
 
         -- Get the absolute path to the file we are editing
-        local err, metadata = plugin.fn.metadata({ path = test_path, canonicalize = true })
+        local err, metadata = plugin.api.metadata({ path = test_path, canonicalize = true })
         assert(not err, tostring(err))
         assert(metadata)
 
@@ -184,7 +184,7 @@ describe('distant.editor.open', function()
         })
 
         -- Get the absolute path to the file we are editing
-        local err, metadata = plugin.fn.metadata({ path = test_path, canonicalize = true })
+        local err, metadata = plugin.api.metadata({ path = test_path, canonicalize = true })
         assert(not err, tostring(err))
         assert(metadata)
 

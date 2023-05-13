@@ -1,5 +1,5 @@
 local log = require('distant-core.log')
-local fn = require('distant.fn')
+local plugin = require('distant')
 
 local DEFAULT_LIMIT = 10000
 local DISPLAY_LINE_LEN = 40
@@ -175,8 +175,9 @@ function M:__find(prompt, process_result, process_complete)
             self.__search = nil
         end
 
+        -- TODO: Use explicit client id from buffer!
         --- @diagnostic disable-next-line:redefined-local
-        fn.search(opts, function(err, search)
+        plugin.api.search(opts, function(err, search)
             assert(not err, err)
             self.__search = search
         end)

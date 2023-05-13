@@ -1,5 +1,4 @@
-local fn                 = require('distant.fn')
-
+local plugin             = require('distant')
 local log                = require('distant-core').log
 local vars               = require('distant-core').vars
 
@@ -251,15 +250,17 @@ function M.search(opts, cb)
         M.__active_search.searcher:cancel(function(err, _)
             assert(not err, tostring(err))
 
+            -- TODO: Use explicit client id from buffer!
             --- @type distant.core.api.Error|nil, distant.core.api.Searcher|nil
-            local err, searcher = fn.search(search_opts, on_done)
+            local err, searcher = plugin.api.search(search_opts, on_done)
             assert(not err, tostring(err))
 
             M.__active_search.searcher = searcher
         end)
     else
+        -- TODO: Use explicit client id from buffer!
         --- @type distant.core.api.Error|nil, distant.core.api.Searcher|nil
-        local err, searcher = fn.search(search_opts, on_done)
+        local err, searcher = plugin.api.search(search_opts, on_done)
         assert(not err, tostring(err))
         M.__active_search.searcher = searcher
     end

@@ -1,4 +1,3 @@
-local fn     = require('distant.fn')
 local plugin = require('distant')
 
 local data   = require('distant-core').data
@@ -61,7 +60,8 @@ local function check_path(path, opts)
     log.fmt_trace('check_path(%s, %s)', path, opts)
 
     -- We need to figure out if we are working with a file or directory
-    local err, metadata = fn.metadata(vim.tbl_extend('keep', {
+    -- TODO: Use explicit client id from buffer!
+    local err, metadata = plugin.api.metadata(vim.tbl_extend('keep', {
         path = path,
         canonicalize = true,
         resolve_file_type = true,
@@ -222,7 +222,9 @@ end
 local function load_buf_from_file(path, bufnr, opts)
     opts = opts or {}
     log.fmt_trace('load_buf_from_file(%s, %s, %s)', path, bufnr, opts)
-    local err, text = fn.read_file_text(vim.tbl_extend('keep', { path = path }, opts))
+
+    -- TODO: Use explicit client id from buffer!
+    local err, text = plugin.api.read_file_text(vim.tbl_extend('keep', { path = path }, opts))
     assert(not err, tostring(err))
 
     local lines
@@ -243,7 +245,8 @@ local function load_buf_from_dir(path, bufnr, opts)
     opts = opts or {}
     log.fmt_trace('load_buf_from_dir(%s, %s, %s)', path, bufnr, opts)
 
-    local err, res = fn.read_dir(vim.tbl_extend('keep', { path = path }, opts))
+    -- TODO: Use explicit client id from buffer!
+    local err, res = plugin.api.read_dir(vim.tbl_extend('keep', { path = path }, opts))
     assert(not err, tostring(err))
     assert(res, 'Impossible: read_dir result nil')
 
@@ -351,8 +354,14 @@ local function configure_buf(opts)
         vim.api.nvim_buf_set_option(bufnr, 'buftype', 'nofile')
         vim.api.nvim_buf_set_option(bufnr, 'modifiable', false)
 
-        -- TODO: Use client id associated with buffer, not default client
-        apply_mappings(bufnr, plugin:server_settings_for_client().dir.mappings)
+        -- TODO: Use explicit client id from buffer!
+        local destination = plugin:client_destination()
+        local settings = plugin:server_settings_for_client() or {}
+        local mappings = assert(
+            settings and settings.dir and settings.dir.mappings,
+            'Missing dir mappings for server' .. tostring(destination and destination.host)
+        )
+        apply_mappings(bufnr, mappings)
 
         -- Otherwise, in all other cases we treat this as a remote file
     else
@@ -360,8 +369,14 @@ local function configure_buf(opts)
         -- control where it is going
         vim.api.nvim_buf_set_option(bufnr, 'buftype', 'acwrite')
 
-        -- TODO: Use client id associated with buffer, not default client
-        apply_mappings(bufnr, plugin:server_settings_for_client().file.mappings)
+        -- TODO: Use explicit client id from buffer!
+        local destination = plugin:client_destination()
+        local settings = plugin:server_settings_for_client() or {}
+        local mappings = assert(
+            settings and settings.file and settings.file.mappings,
+            'Missing file mappings for server ' .. tostring(destination and destination.host)
+        )
+        apply_mappings(bufnr, mappings)
     end
 
     -- Add stateful information to the buffer, helping keep track of it

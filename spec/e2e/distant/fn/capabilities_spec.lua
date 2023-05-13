@@ -1,12 +1,12 @@
 local plugin = require('distant')
 local Driver = require('spec.e2e.driver')
 
-describe('distant.fn', function()
+describe('distant.api', function()
     --- @type spec.e2e.Driver
     local driver
 
     before_each(function()
-        driver = Driver:setup({ label = 'distant.fn.capabilities' })
+        driver = Driver:setup({ label = 'distant.api.capabilities' })
     end)
 
     after_each(function()
@@ -15,7 +15,7 @@ describe('distant.fn', function()
 
     describe('capabilities', function()
         it('should report back capabilities of the server', function()
-            local err, res = plugin.fn.capabilities({})
+            local err, res = plugin.api.capabilities({})
             assert(not err, tostring(err))
             assert(res)
 

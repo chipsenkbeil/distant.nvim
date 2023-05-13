@@ -17,7 +17,7 @@ local DEFAULT        = require('distant.default')
 local MIN_VERSION    = Version:parse('0.20.0-alpha.5')
 
 --- Represents the version of the plugin (not CLI).
-local PLUGIN_VERSION = Version:parse('0.2.0-alpha.1')
+local PLUGIN_VERSION = Version:parse('0.2.0')
 
 --- @class distant.plugin.Version
 --- @field cli {min:distant.core.Version}
@@ -51,7 +51,7 @@ local VERSION        = {
 --- API, this plugin entrypoint is for you!
 ---
 --- @class distant.Plugin
---- @field fn distant.plugin.Fn # plugin API for working remotely
+--- @field api distant.plugin.Api # plugin API for working remotely
 --- @field settings distant.plugin.Settings # plugin user-defined settings
 --- @field version distant.plugin.Version # plugin version information
 ---
@@ -72,7 +72,7 @@ function M:new(opts)
     local instance = opts.instance or {}
     setmetatable(instance, M)
 
-    instance.fn = require('distant.fn')
+    instance.api = require('distant.api')
     instance.settings = vim.deepcopy(DEFAULT.settings)
     instance.version = vim.deepcopy(VERSION)
 
@@ -287,7 +287,7 @@ function M:launch(opts, cb)
             options             = opts.options,
         }, function(err, client)
             if client then
-                self:set_active_client(client)
+                self:set_active_client_id(client)
             end
 
             return cb(err, client)
@@ -343,7 +343,7 @@ function M:connect(opts, cb)
             options     = opts.options,
         }, function(err, client)
             if client then
-                self:set_active_client(client)
+                self:set_active_client_id(client)
             end
 
             return cb(err, client)
@@ -416,7 +416,7 @@ end
 --- If `id` is not provided, the active client will be used instead.
 ---
 --- @param id? string|distant.core.Client
---- @return distant.plugin.settings.ServerSettings|nil
+--- @return distant.plugin.settings.ServerSettings
 function M:server_settings_for_client(id)
     log.fmt_trace('distant:server_settings_for_client(%s)', id)
     self:__assert_initialized()
@@ -429,12 +429,33 @@ function M:server_settings_for_client(id)
     --- @cast id string?
     id = id or self.__client_id
 
+    local host
     if id then
         local destination = self.__manager:connection_destination(id)
         if destination then
-            return self.settings.servers[destination.host]
+            host = destination.host
         end
     end
+
+    return self:server_settings_for_host(host or '*')
+end
+
+--- Retrieves server settings for a particular host, merging them with the
+--- default settings specified by '*'.
+---
+--- If the host is not found, the default settings will be used in entirety.
+---
+--- @param host string
+--- @return distant.plugin.settings.ServerSettings
+function M:server_settings_for_host(host)
+    log.fmt_trace('distant:server_settings_for_host(%s)', assert(host))
+    self:__assert_initialized()
+
+    return vim.tbl_deep_extend(
+        'keep',
+        self.settings.servers[host] or {},
+        self.settings.servers['*'] or {}
+    )
 end
 
 -------------------------------------------------------------------------------
@@ -657,6 +678,30 @@ function M:client(id)
     end
 end
 
+--- Returns the destination of the client with the specified `id`, or the
+--- active client's destination if no id is specified.
+---
+--- Note: This does NOT refresh the list of clients being managed by the
+--- manager process. This is merely a means to construct a Lua wrapper around
+--- a client using a connection id.
+---
+--- @param id? string # optional client id, if not provided uses the active id
+--- @return distant.core.Destination|nil # client destination if exists, otherwise nil
+function M:client_destination(id)
+    self:__assert_initialized()
+
+    local connection = id or self.__client_id
+    if connection then
+        return self.__manager:connection_destination(connection)
+    end
+end
+
+--- Returns the id of the active client.
+--- @return string|nil
+function M:active_client_id()
+    return self.__client_id
+end
+
 --- Sets the active client to be specified `id`.
 ---
 --- Note: This does NOT refresh the list of clients being managed by the
@@ -664,7 +709,7 @@ end
 --- a client using a connection id.
 ---
 --- @param id string|distant.core.Client
-function M:set_active_client(id)
+function M:set_active_client_id(id)
     self:__assert_initialized()
 
     -- If given a client, retrieve its connection as the id
@@ -681,7 +726,9 @@ function M:set_active_client(id)
     )
 end
 
---- Returns a reference to the manager tied to this plugin.
+--- Returns a reference to the manager tied to this plugin. Will be nil
+--- until the manager is initialized.
+---
 --- @return distant.core.Manager|nil
 function M:manager()
     self:__assert_initialized()
