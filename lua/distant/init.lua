@@ -10,6 +10,9 @@ local Version        = require('distant-core').Version
 -- CONSTANTS
 -------------------------------------------------------------------------------
 
+--- Contains defaults used by the plugin.
+local DEFAULT        = require('distant.default')
+
 --- Represents the minimum version of the CLI supported by this plugin.
 local MIN_VERSION    = Version:parse('0.20.0-alpha.5')
 
@@ -70,7 +73,7 @@ function M:new(opts)
     setmetatable(instance, M)
 
     instance.fn = require('distant.fn')
-    instance.settings = vim.deepcopy(require('distant.default_settings'))
+    instance.settings = vim.deepcopy(DEFAULT.settings)
     instance.version = vim.deepcopy(VERSION)
 
     return instance

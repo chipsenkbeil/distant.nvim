@@ -120,4 +120,6 @@ local DEFAULT_SETTINGS = {
     },
 }
 
-return DEFAULT_SETTINGS
+return {
+    settings = DEFAULT_SETTINGS
+}
