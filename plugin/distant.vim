@@ -8,11 +8,5 @@ if exists('g:loaded_distant')
 endif
 let g:loaded_distant = 1
 
-" Ensure our autocmds are initialized
-lua require('distant.autocmd').initialize()
-
-" Ensure our commands are initialized
-lua require('distant.commands').initialize()
-
-" Ensure our user interface is initialized
-lua require('distant.ui').initialize()
+" Ensure our plugin is initialized and ready to go
+" lua require('distant'):initialize()

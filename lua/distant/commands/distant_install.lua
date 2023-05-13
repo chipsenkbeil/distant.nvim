@@ -1,7 +1,5 @@
-local Cli         = require('distant-core.cli')
-local min_version = require('distant.version').minimum
-local state       = require('distant.state')
-local utils       = require('distant.commands.utils')
+local plugin = require('distant')
+local utils  = require('distant.commands.utils')
 
 --- DistantInstall [reinstall]
 --- @param cmd NvimCommand
@@ -9,8 +7,8 @@ local function command(cmd)
     local input = utils.parse_args(cmd.args)
     local reinstall = cmd.bang or input.args[1] == 'reinstall'
 
-    Cli:new({ bin = state:path_to_cli() }):install({
-        min_version = min_version,
+    plugin:cli():install({
+        min_version = plugin.version.cli.min,
         reinstall = reinstall,
     }, function(err, path)
         assert(not err, tostring(err))

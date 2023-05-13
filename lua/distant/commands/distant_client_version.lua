@@ -1,11 +1,14 @@
 local Cli = require('distant-core.cli')
-local state = require('distant.state')
+local plugin = require('distant')
 
 --- DistantClientVersion
 --- @param cmd NvimCommand
 --- @diagnostic disable-next-line:unused-local
 local function command(cmd)
-    local version = assert(Cli:new({ bin = state:path_to_cli() }):version(), 'Unable to retrieve version')
+    local version = assert(
+        Cli:new({ bin = plugin:path_to_cli() }):version(),
+        'Unable to retrieve version'
+    )
     print(version)
 end
 

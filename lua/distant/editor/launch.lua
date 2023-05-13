@@ -1,5 +1,5 @@
-local log   = require('distant-core').log
-local state = require('distant.state')
+local log    = require('distant-core').log
+local plugin = require('distant')
 
 --- @class distant.editor.LaunchOpts
 --- @field destination string|distant.core.Destination
@@ -38,12 +38,8 @@ return function(opts, cb)
         destination = destination:as_string()
     end
 
-    --- @cast destination string
-    state:load_settings(destination)
-    opts = vim.tbl_deep_extend('keep', opts, state.settings or {})
-
     -- Create a new client to be used as our active client
-    return state:launch({
+    return plugin:launch({
         destination = destination,
         -- User-defined settings
         auth = opts.auth,

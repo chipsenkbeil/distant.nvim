@@ -1,7 +1,7 @@
 local ui = require('distant-core.ui')
 local log = require('distant-core.log')
 local p = require('distant.ui.palette')
-local plugin_state = require('distant.state')
+local plugin = require('distant')
 
 ---@param state distant.ui.State
 local function Ship(state)
@@ -76,7 +76,7 @@ local function GenericHelp(state)
         ui.When(is_current_settings_expanded, function()
             --- @type string[]
             --- @diagnostic disable-next-line:missing-parameter
-            local settings_split_by_newline = vim.split(vim.inspect(plugin_state.settings), '\n')
+            local settings_split_by_newline = vim.split(vim.inspect(plugin.settings), '\n')
 
             --- Map each line into a single, muted span
             --- @type distant.core.ui.Span[][]

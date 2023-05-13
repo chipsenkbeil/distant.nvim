@@ -1,10 +1,10 @@
-local fn    = require('distant.fn')
-local state = require('distant.state')
+local fn     = require('distant.fn')
+local plugin = require('distant')
 
-local data  = require('distant-core').data
-local log   = require('distant-core').log
-local utils = require('distant-core').utils
-local vars  = require('distant-core').vars
+local data   = require('distant-core').data
+local log    = require('distant-core').log
+local utils  = require('distant-core').utils
+local vars   = require('distant-core').vars
 
 --- Applies neovim buffer-local mappings
 ---
@@ -351,7 +351,8 @@ local function configure_buf(opts)
         vim.api.nvim_buf_set_option(bufnr, 'buftype', 'nofile')
         vim.api.nvim_buf_set_option(bufnr, 'modifiable', false)
 
-        apply_mappings(bufnr, state.settings.dir.mappings)
+        -- TODO: Use client id associated with buffer, not default client
+        apply_mappings(bufnr, plugin:server_settings_for_client().dir.mappings)
 
         -- Otherwise, in all other cases we treat this as a remote file
     else
@@ -359,7 +360,8 @@ local function configure_buf(opts)
         -- control where it is going
         vim.api.nvim_buf_set_option(bufnr, 'buftype', 'acwrite')
 
-        apply_mappings(bufnr, state.settings.file.mappings)
+        -- TODO: Use client id associated with buffer, not default client
+        apply_mappings(bufnr, plugin:server_settings_for_client().file.mappings)
     end
 
     -- Add stateful information to the buffer, helping keep track of it
@@ -392,8 +394,12 @@ local function configure_buf(opts)
         vim.cmd([[ filetype detect ]])
 
         -- Launch any associated LSP clients
-        assert(state.client, 'No connection has been established!')
-        state.client:connect_lsp_clients({ bufnr = bufnr, settings = state.settings.lsp })
+        -- TODO: Use client id associated with buffer, not default client
+        local client = assert(plugin:client(), 'No connection has been established!')
+        client:connect_lsp_clients({
+            bufnr = bufnr,
+            settings = plugin:server_settings_for_client().lsp,
+        })
     end
 end
 

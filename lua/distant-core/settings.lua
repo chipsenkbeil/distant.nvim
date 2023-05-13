@@ -1,116 +1,45 @@
 local Destination = require('distant-core.destination')
 local log = require('distant-core.log')
-local utils = require('distant-core.utils')
-
--- Represents the label used to signify default/global settings
-local DEFAULT_LABEL = '*'
-
---- @class distant.core.Settings
-local DEFAULT_SETTINGS = {
-    --- Settings to apply to the local distant binary used as a client
-    --- @class distant.core.settings.ClientSettings
-    client = {
-        --- Binary to use locally with the client
-        --- @type 'distant'|'distant.exe'
-        bin = nil,
-
-        --- @type string|nil
-        log_file = nil,
-
-        --- @type distant.core.log.Level|nil
-        log_level = nil,
-    },
-
-    --- @class distant.core.settings.ManagerSettings
-    manager = {
-        --- @type string|nil
-        log_file = nil,
-
-        --- @type distant.core.log.Level|nil
-        log_level = nil,
-    },
-
-    --- @class distant.core.settings.Network
-    network = {
-        --- If true, will create a private network for all operations
-        --- associated with a singular neovim instance
-        --- @type boolean
-        private = false,
-
-        --- If provided, will overwrite the pipe name used for network
-        --- communication on Windows machines
-        --- @type string|nil
-        windows_pipe = nil,
-
-        --- If provided, will overwrite the unix socket path used for network
-        --- communication on Unix machines
-        --- @type string|nil
-        unix_socket = nil,
-    },
-
-    --- Maximimum time to wait (in milliseconds) for requests to finish
-    --- @type integer
-    max_timeout = 15 * 1000,
-
-    --- Time to wait (in milliseconds) inbetween checks to see
-    --- if a request timed out
-    --- @type integer
-    timeout_interval = 250,
-
-    --- Settings that apply when editing a remote file
-    --- @class distant.core.settings.FileSettings
-    file = {
-        --- Mappings to apply to remote files
-        --- @type table<string, fun()>
-        mappings = {},
-    },
-
-    --- Settings that apply to the navigation interface
-    --- @class distant.core.settings.DirSettings
-    dir = {
-        --- Mappings to apply to the navigation interface
-        --- @type table<string, fun()>
-        mappings = {},
-    },
-
-    --- @alias distant.core.settings.lsp.RootDirFn fun(path:string):string|nil
-    --- @class distant.core.settings.lsp.ServerSettings
-    --- @field cmd string|string[]
-    --- @field root_dir string|string[]|distant.core.settings.lsp.RootDirFn
-    --- @field filetypes? string[]
-    --- @field on_exit? fun(code:number, signal?:number, client_id:string)
-
-    --- Settings to use to start LSP instances. Mapping of a label
-    --- to the settings for that specific LSP server
-    --- @alias distant.core.settings.LspSettings table<string, distant.core.settings.lsp.ServerSettings>
-    --- @type distant.core.settings.LspSettings
-    lsp = {},
-}
 
 --- @class distant.core.SettingsManager
+--- @field default {label:string, settings:table}
+--- @field private __inner table<string, table>
 local M = {}
 M.__index = M
 
---- Contains the setting definitions for all remote machines, each
---- associated by a label with '*' representing a blanket set of
---- settings to apply first before adding in server-specific settings
----
---- @type table<string, distant.core.Settings>
-local inner = { [DEFAULT_LABEL] = vim.tbl_deep_extend('force', {}, DEFAULT_SETTINGS) }
+--- @param opts {default?:{label?:string, settings?:table}}
+--- @return distant.core.SettingsManager
+function M:new(opts)
+    local instance = {}
+    setmetatable(instance, M)
+    instance.default = {
+        label = opts.default and opts.default.label or '*',
+        settings = opts.default and opts.default.settings or {},
+    }
+
+    --- Contains the setting definitions for all remote machines, each
+    --- associated by a label with '*' representing a blanket set of
+    --- settings to apply first before adding in server-specific settings
+    instance.__inner = {
+        [instance.default.label] = vim.deepcopy(instance.default.settings)
+    }
+
+    return instance
+end
 
 --- Merges current settings with provided, overwritting anything with provided
---- @param other table<string, distant.core.Settings> The other settings to include
-M.merge = function(other)
-    inner = vim.tbl_deep_extend('force', inner, other)
+--- @param other table<string, table> The other settings to include
+function M:merge(other)
+    self.__inner = vim.tbl_deep_extend('force', self.__inner, other)
 end
 
 --- Returns a collection of labels contained by the settings
 --- @param exclude_default? boolean If true, will not include default label in results
 --- @return string[]
-M.labels = function(exclude_default)
+function M:labels(exclude_default)
     local labels = {}
-    for label, _ in pairs(inner) do
-        if not exclude_default or label ~= DEFAULT_LABEL then
+    for label, _ in pairs(self.__inner) do
+        if not exclude_default or label ~= self.default.label then
             table.insert(labels, label)
         end
     end
@@ -122,8 +51,8 @@ end
 ---
 --- @param destination string #Full destination to server, which can be in a form like SCHEME://USER:PASSWORD@HOST:PORT
 --- @param no_default? boolean #If true, will not apply default settings first
---- @return distant.core.Settings
-M.for_destination = function(destination, no_default)
+--- @return table
+function M:for_destination(destination, no_default)
     log.fmt_trace('settings.for_destination(%s, %s)', destination, vim.inspect(no_default))
 
     -- Parse our destination into the host only
@@ -136,7 +65,7 @@ M.for_destination = function(destination, no_default)
         log.fmt_debug('Using settings label: %s', label)
     end
 
-    return M.for_label(label, no_default)
+    return self:for_label(label, no_default)
 end
 
 --- Retrieve settings for a specific remote machine defined by a label, also
@@ -144,12 +73,12 @@ end
 ---
 --- @param label string #The label associated with the remote server's settings
 --- @param no_default? boolean #If true, will not apply default settings first
---- @return distant.core.Settings #The settings associated with the remote machine (or empty table)
-M.for_label = function(label, no_default)
+--- @return table #The settings associated with the remote machine (or empty table)
+function M:for_label(label, no_default)
     log.fmt_trace('settings.for_label(%s, %s)', label, vim.inspect(no_default))
 
-    local specific = inner[label] or {}
-    local default = M.default()
+    local specific = self.__inner[label] or {}
+    local default = self:default()
 
     local settings_for_label = specific
     if not no_default then
@@ -157,22 +86,6 @@ M.for_label = function(label, no_default)
     end
 
     return settings_for_label
-end
-
---- Retrieves settings that apply to any remote machine
---- @return distant.core.Settings #The settings to apply to any remote machine (or empty table)
-M.default = function()
-    local tbl = inner[DEFAULT_LABEL] or {}
-
-    -- Lazily determine the default binary if not configured
-    if not tbl.client.bin then
-        local os_name = utils.detect_os_arch()
-        tbl.client.bin = os_name == 'windows' and
-            'distant.exe' or
-            'distant'
-    end
-
-    return tbl
 end
 
 return M

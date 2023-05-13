@@ -3,11 +3,11 @@ local p = require('distant.ui.palette')
 
 --- @return distant.core.ui.INode
 local function ManagerConnection()
-    local plugin = require('distant.state')
+    local plugin = require('distant')
 
     local function ListeningLine()
         local value
-        if plugin.manager and plugin.manager:is_listening({}) then
+        if plugin:manager():is_listening({}) then
             value = p.highlight 'yes'
         else
             value = p.warning 'no'
@@ -39,8 +39,8 @@ local function ManagerConnection()
 
     local function WindowsPipeLine()
         local text
-        if plugin.manager and plugin.manager:network().windows_pipe then
-            text = plugin.manager:network().windows_pipe
+        if plugin:manager():network().windows_pipe then
+            text = plugin:manager():network().windows_pipe
         end
 
         return {
@@ -53,8 +53,8 @@ local function ManagerConnection()
 
     local function UnixSocketLine()
         local text
-        if plugin.manager and plugin.manager:network().unix_socket then
-            text = plugin.manager:network().unix_socket
+        if plugin:manager():network().unix_socket then
+            text = plugin:manager():network().unix_socket
         end
 
         return {

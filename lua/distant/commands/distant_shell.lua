@@ -1,4 +1,4 @@
-local state = require('distant.state')
+local plugin = require('distant')
 local utils = require('distant.commands.utils')
 
 --- DistantShell [cmd arg1 arg2 ...]
@@ -16,7 +16,7 @@ local function command(cmd)
         table.insert(cmd, 1, cmd_prog)
     end
 
-    local client = assert(state.client, 'No client established')
+    local client = assert(plugin:client(), 'No client established')
     client:spawn_shell({ bufnr = 0, cmd = cmd })
 end
 

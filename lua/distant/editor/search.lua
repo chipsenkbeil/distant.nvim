@@ -1,5 +1,4 @@
 local fn                 = require('distant.fn')
-local state              = require('distant.state')
 
 local log                = require('distant-core').log
 local vars               = require('distant-core').vars
@@ -124,6 +123,11 @@ local function add_matches_to_qflist(id, matches)
     vim.fn.setqflist({}, 'a', { id = id, items = items })
 end
 
+--- Used by the editor to both perform a search and cancel it.
+--- @class distant.editor.Search
+--- @field private __active_search {qfid?:number, searcher?:distant.core.api.Searcher}
+local M = { __active_search = {} }
+
 --- @class distant.editor.SearchOpts
 --- @field query distant.core.api.search.Query|string #if a string, will treat as regex to target file contents
 --- @field on_start? fun(id:number) #if provided, called with the search id when started
@@ -135,7 +139,7 @@ end
 ---
 --- @param opts distant.editor.SearchOpts
 --- @param cb? fun(err?:distant.core.api.Error, matches?:distant.core.api.search.Match[]) #if provided, will be invoked with matches once finished
-return function(opts, cb)
+function M.search(opts, cb)
     opts = opts or {}
     log.trace('editor.search(%s)', opts)
     vim.validate({ opts = { opts, 'table' } })
@@ -195,7 +199,7 @@ return function(opts, cb)
         qflist_id = vim.fn.getqflist({ id = 0 }).id
 
         -- Update state with our active search
-        state.active_search.qfid = qflist_id
+        M.__active_search.qfid = qflist_id
 
         vim.notify('Started search ' .. tostring(id))
 
@@ -226,8 +230,8 @@ return function(opts, cb)
         vim.notify('Search finished with ' .. tostring(match_cnt) .. ' matches')
 
         -- Reset the active search to be nothing
-        state.active_search.qfid = nil
-        state.active_search.searcher = nil
+        M.__active_search.qfid = nil
+        M.__active_search.searcher = nil
 
         if type(user_on_done) == 'function' then
             return user_on_done(err, matches)
@@ -243,20 +247,39 @@ return function(opts, cb)
     }
 
     -- Stop any existing search being done by the editor
-    if state.active_search ~= nil and state.active_search.searcher ~= nil and not state.active_search.searcher:is_done() then
-        state.active_search.searcher:cancel(function(err, _)
+    if M.__active_search ~= nil and M.__active_search.searcher ~= nil and not M.__active_search.searcher:is_done() then
+        M.__active_search.searcher:cancel(function(err, _)
             assert(not err, tostring(err))
 
             --- @type distant.core.api.Error|nil, distant.core.api.Searcher|nil
             local err, searcher = fn.search(search_opts, on_done)
             assert(not err, tostring(err))
 
-            state.active_search.searcher = searcher
+            M.__active_search.searcher = searcher
         end)
     else
         --- @type distant.core.api.Error|nil, distant.core.api.Searcher|nil
         local err, searcher = fn.search(search_opts, on_done)
         assert(not err, tostring(err))
-        state.active_search.searcher = searcher
+        M.__active_search.searcher = searcher
     end
 end
+
+--- Cancels the active search if there is one.
+function M.cancel()
+    log.fmt_trace('distant.editor.search.cancel()')
+
+    local searcher = M.__active_search.searcher
+    if searcher then
+        M.__active_search.searcher = nil
+        if searcher:status() == 'active' then
+            local id = assert(searcher:id())
+            searcher:cancel(function(err)
+                assert(not err, tostring(err))
+                vim.notify('Cancelled search ' .. id)
+            end)
+        end
+    end
+end
+
+return M

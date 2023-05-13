@@ -153,7 +153,7 @@ local function reload_tab(event)
     for _, tab in ipairs(tabs) do
         if tab == 'Connections' then
             -- Update our available connections
-            local plugin = require('distant.state')
+            local plugin = require('distant')
             plugin:connections({}, function(err, connections)
                 assert(not err, err)
                 ---@param state distant.ui.State
@@ -164,8 +164,9 @@ local function reload_tab(event)
             ---@param state distant.ui.State
             window:mutate_state(function(state)
                 local id
-                if plugin.client then
-                    id = plugin.client:network().connection
+                local client = plugin:client()
+                if client then
+                    id = client:connection()
                 end
                 state.info.connections.selected = id
             end)
@@ -186,7 +187,7 @@ end
 --- @param event distant.core.ui.window.EffectEvent
 local function switch_active_connection(event)
     -- Update our active client connection
-    local plugin = require('distant.state')
+    local plugin = require('distant')
 
     --- @type {id:string, destination:distant.core.Destination}
     local payload = event.payload
@@ -194,8 +195,9 @@ local function switch_active_connection(event)
 
     -- Load our manager and refresh the connections
     -- before attempting to assign the client
-    plugin:select({ connection = id }, function(err, _)
+    plugin:connections({}, function(err, _)
         assert(not err, err)
+        plugin:set_active_client(id)
     end)
 end
 
