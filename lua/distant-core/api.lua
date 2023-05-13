@@ -1,3 +1,4 @@
+local Batch = require('distant-core.api.batch')
 local Error = require('distant-core.api.error')
 local Process = require('distant-core.api.process')
 local Searcher = require('distant-core.api.searcher')
@@ -38,7 +39,52 @@ function M:stop()
     self.transport:stop()
 end
 
+--- Sends a series of API requests together as a single batch.
+---
+--- * `batch_fn` - invoked to build up batch request and return results.
+---   The function is provided an API wrapper that queues up each request
+---   rather than submitting directly.
+---
+--- ```
+---
+--  -- Run synchronously
+--- local results = api.batch(function(api)
+---     return {
+---         api.exists({ path = '/path/to/file1.txt }),
+---         api.exists({ path = '/path/to/file2.txt }),
+---         api.metadata({ path = '/path/to/file3.txt }),
+---         api.system_info({}),
+---     }
+--- end)
+---
+--- -- { payload = true }
+--- print(vim.inspect(results[1]))
+---
+--- -- { payload = false }
+--- print(vim.inspect(results[2]))
+---
+--- -- { err = distant.api.Error { .. } }
+--- print(vim.inspect(results[2]))
+---
+--- -- { payload = { family = 'unix', .. } }
+--- print(vim.inspect(results[2]))
+--- ```
+---
+--- @generic T: table
+--- @param batch_fn fun(batch:distant.core.api.Batch):distant.core.api.batch.PartialRequest[]
+--- @param cb? fun(results:{err?:distant.core.api.Error, payload?:table}[])
+--- @return {err?:distant.core.api.Error, payload?:table}[]|nil
+function M:batch(batch_fn, cb)
+    local batch = Batch:new(self)
+    local partial_requests = batch_fn(batch)
+
+    if cb then
+    else
+    end
+end
+
 --- @alias distant.core.api.OkPayload {type:'ok'}
+--- @param payload distant.core.api.OkPayload
 local function verify_ok(payload)
     return type(payload) == 'table' and payload.type == 'ok'
 end
@@ -479,7 +525,7 @@ function M:system_info(opts, cb)
                 and type(payload.main_separator) == 'string'
                 and type(payload.username) == 'string'
                 and type(payload.shell) == 'string'
-                )
+            )
         end,
         timeout = opts.timeout,
         interval = opts.interval,
