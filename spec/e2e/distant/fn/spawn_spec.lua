@@ -1,4 +1,4 @@
-local fn = require('distant.fn')
+local plugin = require('distant')
 local Driver = require('spec.e2e.driver')
 
 describe('distant.fn', function()
@@ -14,7 +14,7 @@ describe('distant.fn', function()
     end)
 
     describe('spawn', function()
-        --- @param res distant.api.process.SpawnResults
+        --- @param res distant.core.api.process.SpawnResults
         local function to_tbl(res)
             return {
                 success = res.success,
@@ -25,10 +25,10 @@ describe('distant.fn', function()
         end
 
         it('should execute remote program and return results synchronously if no callback provided', function()
-            local err, res = fn.spawn({ cmd = 'echo some output' })
+            local err, res = plugin.fn.spawn({ cmd = 'echo some output' })
             assert(not err, tostring(err))
 
-            --- @cast res distant.api.process.SpawnResults
+            --- @cast res distant.core.api.process.SpawnResults
             assert(res)
 
             assert.are.same({
@@ -40,16 +40,16 @@ describe('distant.fn', function()
         end)
 
         it('should execute remote program and return process if callback provided', function()
-            --- @type distant.api.process.SpawnResults|nil
+            --- @type distant.core.api.process.SpawnResults|nil
             local results
 
-            local err, process = fn.spawn({ cmd = 'echo some output' }, function(err, res)
+            local err, process = plugin.fn.spawn({ cmd = 'echo some output' }, function(err, res)
                 assert(not err, tostring(err))
                 results = res
             end)
             assert(not err, tostring(err))
 
-            --- @cast process distant.api.Process
+            --- @cast process distant.core.api.Process
             assert(process)
 
             local ok = vim.wait(1000, function() return process:is_done() end, 100)
@@ -77,10 +77,10 @@ describe('distant.fn', function()
         --       is able to correctly capture stderr, so this will need to be investigated
         if driver:mode() == 'distant' then
             it('should support capturing stderr', function()
-                local err, res = fn.spawn({ cmd = 'sh -c "echo some output 1>&2"' })
+                local err, res = plugin.fn.spawn({ cmd = 'sh -c "echo some output 1>&2"' })
                 assert(not err, tostring(err))
 
-                --- @cast res distant.api.process.SpawnResults
+                --- @cast res distant.core.api.process.SpawnResults
                 assert(res)
 
                 assert.are.same({
@@ -92,10 +92,10 @@ describe('distant.fn', function()
             end)
 
             it('should support capturing exit code', function()
-                local err, res = fn.spawn({ cmd = 'sh -c "exit 99"' })
+                local err, res = plugin.fn.spawn({ cmd = 'sh -c "exit 99"' })
                 assert(not err, tostring(err))
 
-                --- @cast res distant.api.process.SpawnResults
+                --- @cast res distant.core.api.process.SpawnResults
                 assert(res)
 
                 assert.are.same({

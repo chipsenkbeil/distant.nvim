@@ -1,8 +1,7 @@
 local config = require('spec.e2e.config')
 local editor = require('distant.editor')
-local state = require('distant.state')
+local plugin = require('distant')
 local auth = require('distant-core').auth
-local settings = require('distant-core').settings
 
 local Buffer = require('spec.e2e.driver.buffer')
 local LocalFile = require('spec.e2e.driver.local_file')
@@ -218,7 +217,8 @@ local function initialize_manager(opts)
         })
     end
 
-    local err, local_manager = state:load_manager({
+    local err, local_manager = plugin:load_manager({
+        reload = true,
         bin = opts.bin,
         network = opts.network,
         timeout = opts.timeout,
@@ -240,14 +240,10 @@ end
 ---   Will need to invoke `Driver:initialize` in order to set up client & manager.
 --- * `settings` - if provided, will merge with global settings.
 ---
---- @param opts {label:string, debug?:boolean, lazy?:boolean, settings?:table<string, distant.core.Settings>}
+--- @param opts {label:string, debug?:boolean, lazy?:boolean, settings?:distant.plugin.Settings}
 --- @return spec.e2e.Driver
 function M:setup(opts)
     opts = opts or {}
-
-    if type(opts.settings) == 'table' then
-        settings.merge(opts.settings)
-    end
 
     -- Create a new instance and assign the session to it
     local instance = {}
@@ -272,9 +268,8 @@ end
 function M:initialize(opts)
     opts = opts or {}
 
-    if type(opts.settings) == 'table' then
-        settings.merge(opts.settings)
-    end
+    -- Setup our plugin with provided settings
+    plugin:setup(opts.settings or {})
 
     -- NOTE: Need to initialize early as driver is conflicting with itself
     --       due to random not being random enough between driver tests
@@ -305,7 +300,7 @@ end
 --- Returns the path to the CLI used by this driver.
 --- @return string
 function M:path_to_cli()
-    return state:path_to_cli()
+    return plugin:path_to_cli()
 end
 
 -------------------------------------------------------------------------------

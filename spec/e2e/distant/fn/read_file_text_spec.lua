@@ -1,4 +1,4 @@
-local fn = require('distant.fn')
+local plugin = require('distant')
 local Driver = require('spec.e2e.driver')
 
 describe('distant.fn', function()
@@ -19,7 +19,7 @@ describe('distant.fn', function()
             local file = root:file()
             assert(file:write('some text'), 'Failed to write to ' .. file:path())
 
-            local err, res = fn.read_file_text({ path = file:path() })
+            local err, res = plugin.fn.read_file_text({ path = file:path() })
             assert(not err, tostring(err))
             assert(res)
             assert.are.equal(res, 'some text')
@@ -27,7 +27,7 @@ describe('distant.fn', function()
 
         it('should fail if file does not exist', function()
             local file = root:file()
-            local err, res = fn.read_file_text({ path = file:path() })
+            local err, res = plugin.fn.read_file_text({ path = file:path() })
             assert.is.truthy(err)
             assert.is_nil(res)
         end)

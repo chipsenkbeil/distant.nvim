@@ -1,4 +1,4 @@
-local fn = require('distant.fn')
+local plugin = require('distant')
 local Driver = require('spec.e2e.driver')
 
 describe('distant.fn', function()
@@ -15,7 +15,7 @@ describe('distant.fn', function()
 
     describe('system_info', function()
         it('should report back information about remote machine', function()
-            local err, res = fn.system_info({})
+            local err, res = plugin.fn.system_info({})
             assert(not err, tostring(err))
 
             -- TODO: Can we verify this any further? We'd need
@@ -25,7 +25,7 @@ describe('distant.fn', function()
 
         it('should support being performed asynchronously', function()
             local info
-            fn.system_info({}, function(err, res)
+            plugin.fn.system_info({}, function(err, res)
                 assert(not err, tostring(err))
                 info = res
             end)

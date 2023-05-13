@@ -28,7 +28,7 @@ local log      = require('distant-core').log
 
 --- @type DistantCommand[]
 local COMMANDS = {
-    require('distant.commands.distant'),
+    require('distant.commands.distant_cmd'),
     require('distant.commands.distant_cancel_search'),
     require('distant.commands.distant_client_version'),
     require('distant.commands.distant_connect'),

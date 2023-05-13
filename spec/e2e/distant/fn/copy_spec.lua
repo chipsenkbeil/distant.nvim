@@ -1,4 +1,4 @@
-local fn = require('distant.fn')
+local plugin = require('distant')
 local Driver = require('spec.e2e.driver')
 
 describe('distant.fn', function()
@@ -21,7 +21,7 @@ describe('distant.fn', function()
 
             local dst = root:file()
 
-            local err = fn.copy({ src = src:path(), dst = dst:path() })
+            local err = plugin.fn.copy({ src = src:path(), dst = dst:path() })
             assert(not err, tostring(err))
 
             src.assert.same({ 'some text' })
@@ -37,7 +37,7 @@ describe('distant.fn', function()
 
             local dst = root:dir()
 
-            local err = fn.copy({ src = src:path(), dst = dst:path() })
+            local err = plugin.fn.copy({ src = src:path(), dst = dst:path() })
             assert(not err, tostring(err))
 
             assert.is.truthy(src:exists())
@@ -51,7 +51,7 @@ describe('distant.fn', function()
             local src = root:file()
             local dst = root:file()
 
-            local err = fn.copy({ src = src:path(), dst = dst:path() })
+            local err = plugin.fn.copy({ src = src:path(), dst = dst:path() })
             assert.is.truthy(err)
 
             assert.is.falsy(src:exists())
@@ -64,7 +64,7 @@ describe('distant.fn', function()
 
             local dst = root:file('dir/file')
 
-            local err = fn.copy({ src = src:path(), dst = dst:path() })
+            local err = plugin.fn.copy({ src = src:path(), dst = dst:path() })
             assert.is.truthy(err)
 
             assert.is.truthy(src:exists())

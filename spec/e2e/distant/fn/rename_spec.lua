@@ -1,4 +1,4 @@
-local fn = require('distant.fn')
+local plugin = require('distant')
 local Driver = require('spec.e2e.driver')
 
 describe('distant.fn', function()
@@ -21,7 +21,7 @@ describe('distant.fn', function()
 
             local dst = root:file()
 
-            local err = fn.rename({ src = src:path(), dst = dst:path() })
+            local err = plugin.fn.rename({ src = src:path(), dst = dst:path() })
             assert(not err, tostring(err))
 
             assert.is.falsy(src:exists())
@@ -37,7 +37,7 @@ describe('distant.fn', function()
 
             local dst = root:dir()
 
-            local err = fn.rename({ src = src:path(), dst = dst:path() })
+            local err = plugin.fn.rename({ src = src:path(), dst = dst:path() })
             assert(not err, tostring(err))
 
             assert.is.falsy(src:exists())
@@ -53,7 +53,7 @@ describe('distant.fn', function()
 
             local dst = root:dir('dir/dir2')
 
-            local err = fn.rename({ src = src:path(), dst = dst:path() })
+            local err = plugin.fn.rename({ src = src:path(), dst = dst:path() })
             assert.is.truthy(err)
 
             assert.is.truthy(src:exists())
@@ -64,7 +64,7 @@ describe('distant.fn', function()
             local src = root:file()
             local dst = root:file()
 
-            local err = fn.rename({ src = src:path(), dst = dst:path() })
+            local err = plugin.fn.rename({ src = src:path(), dst = dst:path() })
             assert.is.truthy(err)
 
             assert.is.falsy(src:exists())

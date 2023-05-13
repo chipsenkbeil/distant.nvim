@@ -17,4 +17,4 @@ vim.opt.rtp:prepend(plenary_path)
 vim.opt.rtp:prepend(cwd)
 
 vim.cmd('runtime! plugin/plenary.vim')
-vim.cmd('runtime! plugin/distant.vim')
+-- vim.cmd('runtime! plugin/distant.vim')

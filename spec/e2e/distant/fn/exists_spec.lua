@@ -1,4 +1,4 @@
-local fn = require('distant.fn')
+local plugin = require('distant')
 local Driver = require('spec.e2e.driver')
 
 describe('distant.fn', function()
@@ -19,13 +19,13 @@ describe('distant.fn', function()
 
     describe('exists', function()
         it('should return true when path exists', function()
-            local err, res = fn.exists({ path = file:path() })
+            local err, res = plugin.fn.exists({ path = file:path() })
             assert(not err, tostring(err))
             assert(res == true, 'Invalid return from exists: ' .. vim.inspect(res))
         end)
 
         it('should return false when path does not exist', function()
-            local err, res = fn.exists({ path = file:path() .. '123' })
+            local err, res = plugin.fn.exists({ path = file:path() .. '123' })
             assert(not err, tostring(err))
             assert(res == false, 'Invalid return from exists: ' .. vim.inspect(res))
         end)

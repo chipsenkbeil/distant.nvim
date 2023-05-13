@@ -1,6 +1,6 @@
 local Driver      = require('spec.e2e.driver')
 local Destination = require('distant-core').Destination
-local fn          = require('distant').fn
+local plugin      = require('distant')
 local Server      = require('distant-core').Server
 
 describe('distant.commands.DistantConnect', function()
@@ -45,12 +45,12 @@ describe('distant.commands.DistantConnect', function()
         -- Wait for client to be ready
         local time = 1000 * 5
         assert(
-            vim.wait(time, function() return fn.is_ready() end),
+            vim.wait(time, function() return plugin.fn.is_ready() end),
             string.format('No connection established after %.2fs', time / 1000.0)
         )
 
         -- Verify it works
-        local err, info = fn.cached_system_info({})
+        local err, info = plugin.fn.cached_system_info({})
         assert(not err, tostring(err))
         assert(info)
 

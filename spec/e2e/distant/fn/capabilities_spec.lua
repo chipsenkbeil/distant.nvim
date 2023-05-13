@@ -1,4 +1,4 @@
-local fn = require('distant.fn')
+local plugin = require('distant')
 local Driver = require('spec.e2e.driver')
 
 describe('distant.fn', function()
@@ -15,7 +15,7 @@ describe('distant.fn', function()
 
     describe('capabilities', function()
         it('should report back capabilities of the server', function()
-            local err, res = fn.capabilities({})
+            local err, res = plugin.fn.capabilities({})
             assert(not err, tostring(err))
             assert(res)
 

@@ -111,6 +111,7 @@ end
 -------------------------------------------------------------------------------
 
 --- @class distant.plugin.LoadManagerOpts
+--- @field reload? boolean
 --- @field bin? string
 --- @field network? {private?:boolean, unix_socket?:string, windows_pipe?:string}
 --- @field log_file? string
@@ -149,17 +150,13 @@ function M:load_manager(opts, cb)
         cb, rx = utils.oneshot_channel(timeout, interval)
     end
 
-    if not self.__manager then
+    if not self.__manager or opts.reload then
         Cli:new({ bin = bin }):install({ min_version = self.version.cli.min }, function(err, path)
             if err then
                 return cb(err)
             end
 
             -- Whether or not to create a private network
-            -- TODO: This does not work right now! The settings are loaded AFTER
-            --       the manager begins to listen as a connection has to happen to load
-            --       the settings. We need to revamp how settings work so we have
-            --       network settings separate from server settings!
             local private = opts.network and opts.network.private or self.settings.network.private
 
             --- @type distant.core.manager.Network
@@ -459,6 +456,12 @@ M.settings = {
         unix_socket = nil,
     },
 
+    --- Collection of settings for servers defined by their hostname.
+    ---
+    --- A key of "\*" is special in that it is considered the default for
+    --- all servers and will be applied first with any host-specific
+    --- settings overwriting the default.
+    ---
     --- @type table<string, distant.plugin.settings.ServerSettings>
     servers = {
         --- Default server settings
@@ -482,10 +485,10 @@ M.settings = {
 
             --- Settings that apply when launching a server on a remote machine
             --- @class distant.plugin.settings.server.LaunchSettings
+            --- @field bin? string # path to distant binary on remote machine
+            --- @field args? string[] # additional CLI arguments for binary upon launch
             launch = {
-                distant = {
-                    args = { '--shutdown', 'lonely=60' },
-                },
+                args = { '--shutdown', 'lonely=60' },
             },
 
             --- @alias distant.plugin.settings.server.lsp.RootDirFn fun(path:string):string|nil
@@ -581,14 +584,13 @@ function M:setup(settings)
 
     -- Check if using the old distant.setup versus distant:setup
     if getmetatable(self) ~= M then
-        local msg = table.concat({
+        log.error(table.concat({
             'It seems like you may be using the old setup process!',
             'You now need to invoke setup using a colon instead of a dot.',
             '',
             'Change require(\'distant\').setup to require(\'distant\'):setup',
-        }, '\n')
-        log.warn(msg)
-        error(msg)
+        }, '\n'))
+        return
     end
 
     -- Detect if old setup is being used by checking for a '*' field

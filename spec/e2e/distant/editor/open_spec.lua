@@ -1,5 +1,5 @@
 local editor = require('distant.editor')
-local fn = require('distant.fn')
+local plugin = require('distant')
 local Driver = require('spec.e2e.driver')
 
 describe('distant.editor.open', function()
@@ -45,7 +45,7 @@ describe('distant.editor.open', function()
         })
 
         -- Get the absolute path to the file we are editing
-        local err, metadata = fn.metadata({ path = test_path, canonicalize = true })
+        local err, metadata = plugin.fn.metadata({ path = test_path, canonicalize = true })
         assert(not err, tostring(err))
         assert(metadata)
 
@@ -75,7 +75,7 @@ describe('distant.editor.open', function()
         })
 
         -- Get the absolute path to the file we are editing
-        local err, metadata = fn.metadata({ path = test_path, canonicalize = true })
+        local err, metadata = plugin.fn.metadata({ path = test_path, canonicalize = true })
         assert(not err, tostring(err))
         assert(metadata)
 
@@ -142,7 +142,7 @@ describe('distant.editor.open', function()
         })
 
         -- Get the absolute path to the file we are editing
-        local err, metadata = fn.metadata({ path = test_path, canonicalize = true })
+        local err, metadata = plugin.fn.metadata({ path = test_path, canonicalize = true })
         assert(not err, tostring(err))
         assert(metadata)
 
@@ -184,7 +184,7 @@ describe('distant.editor.open', function()
         })
 
         -- Get the absolute path to the file we are editing
-        local err, metadata = fn.metadata({ path = test_path, canonicalize = true })
+        local err, metadata = plugin.fn.metadata({ path = test_path, canonicalize = true })
         assert(not err, tostring(err))
         assert(metadata)
 
