@@ -38,9 +38,9 @@ local PLUGIN_VERSION = Version:parse('0.2.0-alpha.1')
 --- @field settings distant.plugin.Settings # plugin user-defined settings
 --- @field version distant.plugin.Version # plugin version information
 ---
---- @field private __initialized boolean # true if initialized
+--- @field private __initialized boolean|'in-progress' # true if initialized
 --- @field private __client_id? string # id of the active client
---- @field private __manager distant.core.Manager # active manager
+--- @field private __manager? distant.core.Manager # active manager
 local M              = {}
 M.__index            = M
 
@@ -111,7 +111,7 @@ end
 -------------------------------------------------------------------------------
 
 --- @class distant.plugin.LoadManagerOpts
---- @field reload? boolean
+--- @field reload? boolean # if true, will reload the manager even if already defined
 --- @field bin? string
 --- @field network? {private?:boolean, unix_socket?:string, windows_pipe?:string}
 --- @field log_file? string
@@ -133,12 +133,6 @@ end
 function M:load_manager(opts, cb)
     self:__assert_initialized()
 
-    -- If we are not given a custom bin path, the settings bin path
-    -- hasn't changed (from distant/distant.exe), and the current
-    -- bin path isn't executable, then check if the install path
-    -- exists and is executable and use it
-    local bin = opts.bin or self:path_to_cli()
-
     -- Update our opts with default setting values if not overwritten
     local timeout = opts.timeout or self.settings.timeout.max
     local interval = opts.interval or self.settings.timeout.interval
@@ -151,29 +145,13 @@ function M:load_manager(opts, cb)
     end
 
     if not self.__manager or opts.reload then
-        Cli:new({ bin = bin }):install({ min_version = self.version.cli.min }, function(err, path)
+        self:cli(opts):install({ min_version = self.version.cli.min }, function(err, path)
             if err then
                 return cb(err)
             end
 
-            -- Whether or not to create a private network
-            local private = opts.network and opts.network.private or self.settings.network.private
-
-            --- @type distant.core.manager.Network
-            local network = opts.network or {}
-            if private then
-                --- Create a private network if `private` is true, which means a network limited
-                --- to this specific neovim instance. Any pre-existing defined windows pipe
-                --- and unix socket will persist and not be overwritten
-                network = vim.tbl_extend('keep', network, {
-                    windows_pipe = 'nvim-' .. utils.next_id(),
-                    unix_socket = utils.cache_path('nvim-' .. utils.next_id() .. '.sock'),
-                })
-            end
-
-            local manager_opts = { binary = path, network = network }
-            log.fmt_debug('Defining manager configuration as %s', manager_opts)
-            self.__manager = Manager:new(manager_opts)
+            -- Define our manager now
+            self.__manager = self:__setup_manager({ binary = path })
 
             local is_listening = self.__manager:is_listening({
                 timeout = timeout,
@@ -430,6 +408,10 @@ M.settings = {
     --- Manager-specific settings that are applied when this plugin controls the manager.
     --- @class distant.plugin.settings.ManagerSettings
     manager = {
+        --- If true, will avoid starting the manager until first needed.
+        --- @type boolean
+        lazy = false,
+
         --- @type string|nil
         log_file = nil,
 
@@ -561,10 +543,17 @@ end
 --- Asserts that the plugin is initialized, throwing an error if uninitialized.
 --- @private
 function M:__assert_initialized()
-    assert(self:is_initialized(), table.concat({
-        'Distant plugin has not yet been initialized!',
-        'Please call distant:setup() prior to using the plugin!',
-    }), ' ')
+    if self.__initialized == 'in-progress' then
+        error(table.concat({
+            'Distant plugin is currently initializing!',
+            'Please wait until it is finished.'
+        }, ' '))
+    elseif not self:is_initialized() then
+        assert(self:is_initialized(), table.concat({
+            'Distant plugin has not yet been initialized!',
+            'Please call distant:setup() prior to using the plugin!',
+        }), ' ')
+    end
 end
 
 --- Applies provided settings to overall settings available.
@@ -629,11 +618,21 @@ end
 --- @param settings distant.plugin.Settings # user-defined settings
 function M:__setup(settings)
     log.trace('distant:__setup()')
-    if self:is_initialized() then
+    if self.__initialized == true or self.__initialized == 'in-progress' then
         return
     end
 
+    local function finished()
+        -- Mark as initialized to prevent performing this again
+        log.debug('distant:setup:done')
+        self.__initialized = true
+
+        -- Notify listeners that our setup has finished
+        self:emit('setup:finished')
+    end
+
     log.debug('distant:setup:start')
+    self.__initialized = 'in-progress'
 
     --------------------------------------------------------------------------
     -- INITIALIZE CORE EDITOR FEATURES
@@ -682,46 +681,52 @@ function M:__setup(settings)
     log.debug('distant:setup:fn')
     self.fn = require('distant.fn')
 
-    -- Without installing the CLI or actually running the manager,
-    -- we specify it based on our user-defined settings
-    log.debug('distant:setup:manager')
-    do
-        -- Whether or not to create a private network
-        local private = self.settings.network.private
+    -- If we are not lazy, attempt to load the manager immediately
+    if not self.settings.manager.lazy then
+        log.debug('distant:setup:manager')
 
-        --- @type distant.core.manager.Network
-        local network = {
-            windows_pipe = self.settings.network.windows_pipe,
-            unix_socket = self.settings.network.unix_socket,
-        }
-        if private then
-            --- Create a private network if `private` is true, which means a network limited
-            --- to this specific neovim instance. Any pre-existing defined windows pipe
-            --- and unix socket will persist and not be overwritten
-            network = vim.tbl_extend('keep', network, {
-                windows_pipe = 'nvim-' .. utils.next_id(),
-                unix_socket = utils.cache_path('nvim-' .. utils.next_id() .. '.sock'),
-            })
-        end
+        -- We spawn this async knowing that it should be quick
+        -- and we don't want to block if the CLI needs to be
+        -- installed as we'd get a timeout error in most situations
+        self:load_manager({}, function(err, _)
+            assert(not err, err)
+            finished()
+        end)
+    else
+        log.debug('distant:setup:manager:lazy')
+        finished()
+    end
+end
 
-        local manager_opts = {
-            binary = self:path_to_cli(),
-            network = network,
-        }
-        log.fmt_debug('distant:setup:manager:opts %s', manager_opts)
-        self.__manager = Manager:new(manager_opts)
+--- Creates a new manager based on user-defined settings.
+--- @param opts? {binary?:string}
+--- @return distant.core.Manager
+function M:__setup_manager(opts)
+    opts = opts or {}
+
+    -- Whether or not to create a private network
+    local private = self.settings.network.private
+
+    --- @type distant.core.manager.Network
+    local network = {
+        windows_pipe = self.settings.network.windows_pipe,
+        unix_socket = self.settings.network.unix_socket,
+    }
+    if private then
+        --- Create a private network if `private` is true, which means a network limited
+        --- to this specific neovim instance. Any pre-existing defined windows pipe
+        --- and unix socket will persist and not be overwritten
+        network = vim.tbl_extend('keep', network, {
+            windows_pipe = 'nvim-' .. utils.next_id(),
+            unix_socket = utils.cache_path('nvim-' .. utils.next_id() .. '.sock'),
+        })
     end
 
-    --------------------------------------------------------------------------
-    -- COMPLETE INITIALIZATION
-    --------------------------------------------------------------------------
-
-    -- Mark as initialized to prevent performing this again
-    log.debug('distant:setup:done')
-    self.__initialized = true
-
-    -- Notify listeners that our setup has finished
-    self:emit('setup:finished')
+    local manager_opts = {
+        binary = opts.binary or self:path_to_cli(),
+        network = network,
+    }
+    return Manager:new(manager_opts)
 end
 
 -------------------------------------------------------------------------------
