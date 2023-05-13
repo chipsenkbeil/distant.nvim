@@ -679,7 +679,7 @@ function M:set_active_client(id)
 end
 
 --- Returns a reference to the manager tied to this plugin.
---- @return distant.core.Manager
+--- @return distant.core.Manager|nil
 function M:manager()
     self:__assert_initialized()
     return self.__manager
