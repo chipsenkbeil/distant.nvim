@@ -1,6 +1,5 @@
 local plugin = require('distant')
 local log    = require('distant-core').log
-local vars   = require('distant-core').vars
 
 --- @class distant.editor.WriteOpts
 --- @field buf number #The handle of the buffer to write
@@ -25,7 +24,7 @@ return function(opts)
     end
 
     -- Load the remote path from the buffer being saved
-    local path = vars.buf(buf).remote_path:get()
+    local path = plugin.buf(buf).path()
 
     -- Not a remote file, so don't do anything
     if path == nil then

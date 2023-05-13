@@ -1,7 +1,7 @@
 local editor = require('distant.editor')
+local plugin = require('distant')
 local log    = require('distant-core').log
 local utils  = require('distant-core').utils
-local vars   = require('distant-core').vars
 
 --- @class neovim.AutocmdOpts
 --- @field id number #autocommand id
@@ -24,7 +24,7 @@ local function _initialize()
         callback = function(opts)
             local bufnr = opts.buf
 
-            if bufnr > 0 and vars.buf(bufnr).remote_path:is_unset() then
+            if bufnr > 0 and not plugin.buf(bufnr).has_data() then
                 log.fmt_debug('buf %s is not initialized, so triggering BufReadCmd', bufnr)
                 vim.api.nvim_exec_autocmds('BufReadCmd', {
                     group = 'distant',

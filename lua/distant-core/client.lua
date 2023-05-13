@@ -2,7 +2,6 @@ local Api     = require('distant-core.api')
 local builder = require('distant-core.builder')
 local log     = require('distant-core.log')
 local utils   = require('distant-core.utils')
-local vars    = require('distant-core.vars')
 
 --- Represents a distant.core.client
 --- @class distant.core.Client
@@ -107,12 +106,17 @@ function M:cached_system_info(opts, cb)
 end
 
 --- Connects relevant LSP clients to the provided buffer, optionally starting clients if needed.
---- @param opts {bufnr:number, settings:distant.plugin.settings.server.LspSettings}
+---
+--- * `bufnr` - buffer handle to attach LSP clients
+--- * `path` - path on remote machine of buffer, used to determine which settings to apply
+--- * `settings` - collection of LSP settings to apply
+---
+--- @param opts {bufnr:number, path:string, settings:distant.plugin.settings.server.LspSettings}
 --- @return number[] client_ids All ids of the LSP clients (if any) established with the buffer
 function M:connect_lsp_clients(opts)
     log.fmt_trace('client.connect_lsp_clients(%s)', opts)
     local client_ids = {}
-    local path = vars.buf(opts.bufnr).remote_path:get()
+    local path = opts.path
     log.fmt_trace('Seeking LSP clients that cover path = %s', path)
 
     -- Only perform a connection if we have connected and have a remote path.

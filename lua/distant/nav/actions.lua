@@ -2,7 +2,6 @@ local editor = require('distant.editor')
 local log    = require('distant-core').log
 local plugin = require('distant')
 local utils  = require('distant-core').utils
-local vars   = require('distant-core').vars
 
 --- @class distant.nav.Actions
 local M      = {}
@@ -27,7 +26,7 @@ end
 --- Returns the full path under cursor by joining it with the base path
 --- @return string|nil
 local function full_path_under_cursor()
-    local base_path = vars.buf().remote_path:get()
+    local base_path = plugin.buf.path()
     if base_path ~= nil then
         return utils.join_path(remote_sep(), { base_path, path_under_cursor() })
     end
@@ -58,7 +57,7 @@ end
 M.up = function(opts)
     opts = opts or {}
 
-    local base_path = vars.buf().remote_path:get()
+    local base_path = plugin.buf.path()
     local reload = true
     if opts.reload ~= nil then
         reload = opts.reload
@@ -82,7 +81,7 @@ end
 M.newfile = function(opts)
     opts = opts or {}
 
-    local base_path = vars.buf().remote_path:get()
+    local base_path = plugin.buf.path()
     if base_path ~= nil then
         local name = opts.path or vim.fn.input('Name: ')
         if name == '' then
@@ -104,7 +103,7 @@ end
 M.mkdir = function(opts)
     opts = opts or {}
 
-    local base_path = vars.buf().remote_path:get()
+    local base_path = plugin.buf.path()
     if base_path ~= nil then
         local name = opts.path or vim.fn.input('Directory name: ')
         if name == '' then
@@ -133,7 +132,7 @@ end
 M.rename = function(opts)
     opts = opts or {}
 
-    local base_path = vars.buf().remote_path:get()
+    local base_path = plugin.buf.path()
     if base_path ~= nil then
         local old_path = full_path_under_cursor()
         if old_path ~= nil then
@@ -166,7 +165,7 @@ end
 M.remove = function(opts)
     opts = opts or {}
 
-    local base_path = vars.buf().remote_path:get()
+    local base_path = plugin.buf.path()
     if base_path ~= nil then
         local path = full_path_under_cursor()
         if path ~= nil then
