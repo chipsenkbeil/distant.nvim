@@ -131,7 +131,11 @@ M.new = function(config, standalone)
         end
         local nameupper = level_config.name:upper()
 
-        local msg = message_maker(...)
+        local success, msg = pcall(message_maker, ...)
+        if not success then
+            vim.api.nvim_err_writeln('message_maker(' .. vim.inspect({ ... }) .. ')')
+            error(msg)
+        end
         local info = debug.getinfo(config.info_level or 2, 'Sl')
         local lineinfo = info.short_src .. ':' .. info.currentline
 

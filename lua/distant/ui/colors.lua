@@ -81,15 +81,19 @@ local hl_groups = {
 local is_initialized = false
 
 return {
-    initialize = function()
+    -- NOTE: Need to schedule wrap this, otherwise depending on when this is invoked it can not work!
+    initialize = vim.schedule_wrap(function()
         if is_initialized then
             return
         end
+        local log = require('distant-core').log
+        log.debug('distant:initialize:ui:colors')
 
         for name, hl in pairs(hl_groups) do
+            log.fmt_trace('distant:initialize:ui:color = %s, %s', name, hl)
             vim.api.nvim_set_hl(0, name, hl)
         end
 
         is_initialized = true
-    end
+    end)
 }

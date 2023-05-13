@@ -1,5 +1,4 @@
-local events = require('distant.events')
-local fn     = require('distant.fn')
+local plugin = require('distant')
 
 local ui     = require('distant-core.ui')
 local Window = require('distant-core.ui').Window
@@ -138,7 +137,6 @@ end
 
 --- @param event distant.core.ui.window.EffectEvent
 local function reload_tab(event)
-    print('reload_tab', vim.inspect(event))
     --- @type {tab:string|string[], force:boolean}
     local payload = event.payload
     local window = event.window
@@ -153,7 +151,6 @@ local function reload_tab(event)
     for _, tab in ipairs(tabs) do
         if tab == 'Connections' then
             -- Update our available connections
-            local plugin = require('distant')
             plugin:connections({}, function(err, connections)
                 assert(not err, err)
                 ---@param state distant.ui.State
@@ -170,8 +167,8 @@ local function reload_tab(event)
                 end
                 state.info.connections.selected = id
             end)
-        elseif tab == 'System Info' and fn.is_ready() then
-            fn.cached_system_info({ reload = payload.force }, function(err, system_info)
+        elseif tab == 'System Info' and plugin.fn.is_ready() then
+            plugin.fn.cached_system_info({ reload = payload.force }, function(err, system_info)
                 assert(not err, tostring(err))
                 assert(system_info)
 
@@ -186,9 +183,6 @@ end
 
 --- @param event distant.core.ui.window.EffectEvent
 local function switch_active_connection(event)
-    -- Update our active client connection
-    local plugin = require('distant')
-
     --- @type {id:string, destination:distant.core.Destination}
     local payload = event.payload
     local id = payload.id
@@ -244,7 +238,7 @@ local window = Window:new({
     },
 })
 
-events:on('connection:changed', function()
+plugin:on('connection:changed', function()
     window:dispatch('RELOAD_TAB', {
         tab = { 'Connections', 'System Info' },
         force = true,

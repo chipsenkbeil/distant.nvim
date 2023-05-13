@@ -1,11 +1,11 @@
 local ui = require('distant-core.ui')
 local p = require('distant.ui.palette')
-local version = require('distant.version')
+local plugin = require('distant')
 
 --- @return distant.core.ui.HlTextNode
 local function version_node()
-    local is_prerelease = version.plugin:is_prerelease()
-    local text = ' (' .. version.plugin:as_string() .. ')'
+    local is_prerelease = plugin.version.plugin:is_prerelease()
+    local text = ' (' .. plugin.version.plugin:as_string() .. ')'
 
     if is_prerelease then
         return p.warning(text)

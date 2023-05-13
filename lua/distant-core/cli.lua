@@ -54,10 +54,12 @@ end
 --- the installed path.
 ---
 --- * `min_version` is required and represents the minimum supported version.
+--- * `allow_unstable_upgrade` indicates whether or not unstable versions upgrade
+---   paths are allowed like `0.1.0` to `0.1.1`.
 --- * `reinstall` indicates that the pre-existing `bin` will be ignored.
 --- * `allow_unstable_upgrade` indicates that we will allow `0.x.x`
 ---
---- @param opts {min_version:distant.core.Version, reinstall?:boolean, timeout?:number, interval?:number}
+--- @param opts {min_version:distant.core.Version, allow_unstable_upgrade?:boolean, reinstall?:boolean, timeout?:number, interval?:number}
 --- @param cb fun(err?:string, path?:string) #Path is the path to the installed binary
 function M:install(opts, cb)
     vim.validate({
@@ -75,7 +77,7 @@ function M:install(opts, cb)
         end
         local ok = version:can_upgrade_from(
             opts.min_version,
-            { allow_unstable_upgrade = true }
+            { allow_unstable_upgrade = opts.allow_unstable_upgrade }
         )
         if ok then
             return 'ok'

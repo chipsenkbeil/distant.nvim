@@ -16,6 +16,20 @@ local MIN_VERSION    = Version:parse('0.20.0-alpha.5')
 --- Represents the version of the plugin (not CLI).
 local PLUGIN_VERSION = Version:parse('0.2.0-alpha.1')
 
+--- @class distant.plugin.Version
+--- @field cli {min:distant.core.Version}
+--- @field plugin distant.core.Version
+local VERSION        = {
+    --- Version information related to the CLI used by this plugin
+    cli = {
+        --- Minimum version of the CLI the plugin supports
+        min = MIN_VERSION,
+    },
+
+    --- Version of the plugin itself
+    plugin = PLUGIN_VERSION,
+}
+
 -------------------------------------------------------------------------------
 -- DISTANT PLUGIN DEFINITION
 -------------------------------------------------------------------------------
@@ -44,11 +58,29 @@ local PLUGIN_VERSION = Version:parse('0.2.0-alpha.1')
 local M              = {}
 M.__index            = M
 
+--- Creates a new instance of this plugin.
+---
+--- If provided an `instance`, will update it to be a plugin.
+---
+--- @param opts? {instance?:table}
+--- @return distant.Plugin
+function M:new(opts)
+    opts = opts or {}
+    local instance = opts.instance or {}
+    setmetatable(instance, M)
+
+    instance.fn = require('distant.fn')
+    instance.settings = vim.deepcopy(require('distant.default_settings'))
+    instance.version = vim.deepcopy(VERSION)
+
+    return instance
+end
+
 -------------------------------------------------------------------------------
 -- EVENT API
 -------------------------------------------------------------------------------
 
-local EVENT_EMITTER  = EventEmitter:new()
+local EVENT_EMITTER = EventEmitter:new()
 
 --- @alias distant.events.Event
 --- | '"connection:changed"' # when the plugin switches the active connection
@@ -131,8 +163,6 @@ end
 --- @param cb? fun(err?:string, manager?:distant.core.Manager)
 --- @return string|nil err, distant.core.Manager|nil manager
 function M:load_manager(opts, cb)
-    self:__assert_initialized()
-
     -- Update our opts with default setting values if not overwritten
     local timeout = opts.timeout or self.settings.timeout.max
     local interval = opts.interval or self.settings.timeout.interval
@@ -145,7 +175,10 @@ function M:load_manager(opts, cb)
     end
 
     if not self.__manager or opts.reload then
-        self:cli(opts):install({ min_version = self.version.cli.min }, function(err, path)
+        self:cli(opts):install({
+            min_version = self.version.cli.min,
+            allow_unstable_upgrade = self.settings.client.allow_unstable,
+        }, function(err, path)
             if err then
                 return cb(err)
             end
@@ -251,11 +284,7 @@ function M:launch(opts, cb)
             options             = opts.options,
         }, function(err, client)
             if client then
-                -- Update our active client to this one and store it in our tracker
-                self.__client_id = client:connection()
-
-                -- Emit that the connection (client) was successfully changed
-                self:emit('connection:changed', client)
+                self:set_active_client(client)
             end
 
             return cb(err, client)
@@ -311,11 +340,7 @@ function M:connect(opts, cb)
             options     = opts.options,
         }, function(err, client)
             if client then
-                -- Update our active client to this one and store it in our tracker
-                self.__client_id = client:connection()
-
-                -- Emit that the connection (client) was successfully changed
-                self:emit('connection:changed', client)
+                self:set_active_client(client)
             end
 
             return cb(err, client)
@@ -381,124 +406,6 @@ end
 -------------------------------------------------------------------------------
 -- SETTINGS API
 -------------------------------------------------------------------------------
-
---- Settings tied to the distant plugin.
---- @class distant.plugin.Settings
-M.settings = {
-    --- Client-specific settings that are applied when this plugin controls the client.
-    --- @class distant.plugin.settings.ClientSettings
-    client = {
-        --- Binary to use locally with the client.
-        ---
-        --- Defaults to "distant" on Unix platforms and "distant.exe" on Windows.
-        ---
-        --- @type string
-        bin = (function()
-            local os_name = utils.detect_os_arch()
-            return os_name == 'windows' and 'distant.exe' or 'distant'
-        end)(),
-
-        --- @type string|nil
-        log_file = nil,
-
-        --- @type distant.core.log.Level|nil
-        log_level = nil,
-    },
-
-    --- Manager-specific settings that are applied when this plugin controls the manager.
-    --- @class distant.plugin.settings.ManagerSettings
-    manager = {
-        --- If true, will avoid starting the manager until first needed.
-        --- @type boolean
-        lazy = false,
-
-        --- @type string|nil
-        log_file = nil,
-
-        --- @type distant.core.log.Level|nil
-        log_level = nil,
-    },
-
-    --- Network configuration to use between the manager and clients.
-    --- @class distant.plugin.settings.Network
-    network = {
-        --- If true, will create a private network for all operations
-        --- associated with a singular neovim instance
-        --- @type boolean
-        private = false,
-
-        --- If provided, will overwrite the pipe name used for network
-        --- communication on Windows machines
-        --- @type string|nil
-        windows_pipe = nil,
-
-        --- If provided, will overwrite the unix socket path used for network
-        --- communication on Unix machines
-        --- @type string|nil
-        unix_socket = nil,
-    },
-
-    --- Collection of settings for servers defined by their hostname.
-    ---
-    --- A key of "\*" is special in that it is considered the default for
-    --- all servers and will be applied first with any host-specific
-    --- settings overwriting the default.
-    ---
-    --- @type table<string, distant.plugin.settings.ServerSettings>
-    servers = {
-        --- Default server settings
-        --- @class distant.plugin.settings.ServerSettings
-        ['*'] = {
-            --- Settings that apply to the navigation interface
-            --- @class distant.plugin.settings.server.DirSettings
-            dir = {
-                --- Mappings to apply to the navigation interface
-                --- @type table<string, fun()>
-                mappings = {},
-            },
-
-            --- Settings that apply when editing a remote file
-            --- @class distant.plugin.settings.server.FileSettings
-            file = {
-                --- Mappings to apply to remote files
-                --- @type table<string, fun()>
-                mappings = {},
-            },
-
-            --- Settings that apply when launching a server on a remote machine
-            --- @class distant.plugin.settings.server.LaunchSettings
-            --- @field bin? string # path to distant binary on remote machine
-            --- @field args? string[] # additional CLI arguments for binary upon launch
-            launch = {
-                args = { '--shutdown', 'lonely=60' },
-            },
-
-            --- @alias distant.plugin.settings.server.lsp.RootDirFn fun(path:string):string|nil
-            --- @class distant.plugin.settings.server.lsp.ServerSettings
-            --- @field cmd string|string[]
-            --- @field root_dir string|string[]|distant.plugin.settings.server.lsp.RootDirFn
-            --- @field filetypes? string[]
-            --- @field on_exit? fun(code:number, signal?:number, client_id:string)
-
-            --- Settings to use to start LSP instances. Mapping of a label
-            --- to the settings for that specific LSP server
-            --- @alias distant.plugin.settings.server.LspSettings table<string, distant.plugin.settings.server.lsp.ServerSettings>
-            --- @type distant.plugin.settings.server.LspSettings
-            lsp = {},
-        },
-    },
-
-    --- @class distant.plugin.settings.Timeout
-    timeout = {
-        --- Maximimum time to wait (in milliseconds) for requests to finish
-        --- @type integer
-        max = 15 * 1000,
-
-        --- Time to wait (in milliseconds) inbetween checks to see if a request timed out
-        --- @type integer
-        interval = 256,
-    },
-}
 
 --- Retrieves server settings for a specific client by looking up the server
 --- settings based on the host pointed to by the client.
@@ -674,12 +581,8 @@ function M:__setup(settings)
     self.settings = vim.tbl_deep_extend('force', self.settings, settings)
 
     --------------------------------------------------------------------------
-    -- UPDATE PLUGIN WITH LAZY POPULATION
+    -- MANAGER INITIALIZATION
     --------------------------------------------------------------------------
-
-    -- We do this to avoid a cyclical dependency during requiring
-    log.debug('distant:setup:fn')
-    self.fn = require('distant.fn')
 
     -- If we are not lazy, attempt to load the manager immediately
     if not self.settings.manager.lazy then
@@ -723,7 +626,7 @@ function M:__setup_manager(opts)
     end
 
     local manager_opts = {
-        binary = opts.binary or self:path_to_cli(),
+        binary = opts.binary or self:cli_path(),
         network = network,
     }
     return Manager:new(manager_opts)
@@ -768,6 +671,11 @@ function M:set_active_client(id)
 
     --- @cast id string
     self.__client_id = id
+
+    self:emit(
+        'connection:changed',
+        assert(self:client(id), 'Invalid client id for active client')
+    )
 end
 
 --- Returns a reference to the manager tied to this plugin.
@@ -782,7 +690,7 @@ end
 --- @return distant.core.Cli
 function M:cli(opts)
     opts = opts or {}
-    local bin = opts.bin or self:path_to_cli()
+    local bin = opts.bin or self:cli_path()
     return Cli:new({ bin = bin })
 end
 
@@ -797,9 +705,9 @@ end
 ---
 --- @param opts? {no_install_fallback?:boolean, require_executable?:boolean}
 --- @return string
-function M:path_to_cli(opts)
-    log.fmt_trace('distant:path_to_cli(%s)', opts)
+function M:cli_path(opts)
     opts = opts or {}
+    log.fmt_trace('distant:cli_path(%s)', opts)
 
     local no_install_fallback = opts.no_install_fallback or false
 
@@ -823,20 +731,6 @@ end
 -------------------------------------------------------------------------------
 -- VERSION API
 -------------------------------------------------------------------------------
-
---- @class distant.plugin.Version
---- @field cli {min:distant.core.Version}
---- @field plugin distant.core.Version
-M.version = {
-    --- Version information related to the CLI used by this plugin
-    cli = {
-        --- Minimum version of the CLI the plugin supports
-        min = MIN_VERSION,
-    },
-
-    --- Version of the plugin itself
-    plugin = PLUGIN_VERSION,
-}
 
 -------------------------------------------------------------------------------
 -- WRAP API
@@ -877,4 +771,31 @@ function M:wrap(opts)
     })
 end
 
-return M
+-------------------------------------------------------------------------------
+-- PLUGIN CREATION
+-------------------------------------------------------------------------------
+
+--- This is a lazily-configured version of our plugin. To avoid a cyclical
+--- dependencies and slow startup, we avoid configuring our plugin until
+--- first access.
+---
+--- @type distant.Plugin
+local PLUGIN = {}
+
+--- The metatable we set for our plugin will lazy-load it when access is
+--- detected. When lazy-loading, we remove this metatable and inject our actual
+--- plugin instead.
+setmetatable(PLUGIN, {
+    --- Lazily convert object into our plugin upon access.
+    __index = function(tbl, key)
+        -- Clear the old metatable of our plugin to not be lazy
+        setmetatable(tbl, nil)
+
+        -- Update our plugin
+        M:new({ instance = tbl })
+
+        return tbl[key]
+    end
+})
+
+return PLUGIN

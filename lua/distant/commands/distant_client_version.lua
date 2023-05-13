@@ -6,7 +6,7 @@ local plugin = require('distant')
 --- @diagnostic disable-next-line:unused-local
 local function command(cmd)
     local version = assert(
-        Cli:new({ bin = plugin:path_to_cli() }):version(),
+        Cli:new({ bin = plugin:cli_path() }):version(),
         'Unable to retrieve version'
     )
     print(version)

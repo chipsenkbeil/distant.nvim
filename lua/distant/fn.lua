@@ -3,7 +3,7 @@ local plugin = require('distant')
 --- Retrieves the active client. Throws an error if client not initialized.
 --- @return distant.core.Client
 local function client()
-    return assert(plugin.client, 'Client must be initialized before invoking fn')
+    return assert(plugin:client(), 'Client must be initialized before invoking fn')
 end
 
 --- Retrieves the api of the active client. Throws an error if client not initialized.
@@ -18,7 +18,7 @@ local M = {}
 --- Returns whether or not `fn` is ready for use.
 --- @return boolean
 function M.is_ready()
-    return plugin.client ~= nil
+    return plugin:client() ~= nil
 end
 
 --- @param opts distant.core.api.AppendFileOpts
