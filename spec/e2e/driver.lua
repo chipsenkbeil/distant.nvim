@@ -1,7 +1,7 @@
+local AuthHandler = require('distant-core').AuthHandler
 local config = require('spec.e2e.config')
 local editor = require('distant.editor')
 local plugin = require('distant')
-local auth = require('distant-core').auth
 
 local Buffer = require('spec.e2e.driver.buffer')
 local LocalFile = require('spec.e2e.driver.local_file')
@@ -107,7 +107,7 @@ local function initialize_client(opts)
         options['ssh.backend'] = config.ssh_backend
     end
 
-    local dummy_auth = auth.handler()
+    local dummy_auth = AuthHandler:new()
 
     -- All password challenges return the same password
     --- @diagnostic disable-next-line:duplicate-set-field

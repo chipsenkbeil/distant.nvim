@@ -87,7 +87,9 @@ local function query_release_api(opts, cb)
             if exit_code ~= 0 then
                 cb('Exit ' .. tostring(exit_code) .. ': ' .. tostring(err), nil)
             else
-                local success, value = pcall(vim.fn.json_decode, json_str or '')
+                local success, value = pcall(vim.json.decode, json_str or '', {
+                    luanil = { array = true, object = true }
+                })
                 if success then
                     cb(nil, value)
                 else

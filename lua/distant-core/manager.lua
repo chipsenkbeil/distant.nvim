@@ -1,7 +1,7 @@
-local auth             = require('distant-core.auth')
 local builder          = require('distant-core.builder')
 local Client           = require('distant-core.client')
 local Destination      = require('distant-core.destination')
+local Job              = require('distant-core.job')
 local log              = require('distant-core.log')
 local utils            = require('distant-core.utils')
 
@@ -119,7 +119,7 @@ end
 --- @field options string
 
 --- Retrieves information about a connection maintained by this manager.
---- @param opts {connection:distant.core.manager.ConnectionId, timeout?:number, interval?:number}
+--- @param opts {connection:distant.core.manager.ConnectionId, auth?:distant.core.AuthHandler, timeout?:number, interval?:number}
 --- @param cb fun(err?:string, info?:distant.core.manager.Info)
 --- @return string|nil err, distant.core.manager.Info|nil info
 function M:info(opts, cb)
@@ -143,32 +143,43 @@ function M:info(opts, cb)
 
     assert(cb, 'Impossible: cb cannot be nil at this point')
 
-    local error_lines = {}
-    utils.job_start(cmd, {
-        on_success = function()
-            cb(nil)
-        end,
-        on_failure = function()
-            cb('Failed to make selection')
-        end,
-        on_stdout_line = function(line)
-            --- @type {id:distant.core.manager.ConnectionId, destination:string, options:string}
-            local msg = assert(vim.fn.json_decode(line), 'Invalid JSON from line')
+    Job:new({ buffer_stdout = true, buffer_stderr = true })
+        :authentication(opts.auth or true)
+        :start({ cmd = cmd }, function(err, status)
+            assert(not err, tostring(err))
 
-            --- @type distant.core.manager.Info
-            local info = {
-                id = msg.id,
-                destination = Destination:parse(msg.destination),
-                options = msg.options,
-            }
-            return cb(nil, info)
-        end,
-        on_stderr_line = function(line)
-            if line ~= nil then
-                table.insert(error_lines, line)
+            if status.success then
+                local stdout = table.concat(status.stdout, '\n')
+
+                --- @type {id:distant.core.manager.ConnectionId, destination:string, options:string}
+                local msg = assert(
+                    vim.json.decode(stdout, { luanil = { array = true, object = true } }),
+                    ('Invalid JSON from stdout: %s'):format(stdout)
+                )
+
+                if not type(msg) == 'table' or type(msg.id) ~= 'number' or type(msg.destination) ~= 'string' or type(msg.options) ~= 'string' then
+                    cb('Invalid response: ' .. vim.inspect(msg), nil)
+                    return
+                end
+
+                --- @type distant.core.manager.Info
+                local info = {
+                    id = msg.id,
+                    destination = Destination:parse(msg.destination),
+                    options = msg.options,
+                }
+
+                vim.schedule(function() cb(nil, info) end)
+
+                return
             end
-        end,
-    })
+
+            for _, line in ipairs(status.stderr) do
+                vim.api.nvim_err_writeln(line)
+            end
+
+            cb(('Exited unexpectedly: exit code %s'):format(status.exit_code))
+        end)
 
     if rx then
         --- @type boolean, string|nil, distant.core.manager.Info|nil
@@ -178,7 +189,7 @@ function M:info(opts, cb)
 end
 
 --- Kills a connection maintained by this manager, removing it from the manager's tracker.
---- @param opts {connection:distant.core.manager.ConnectionId, timeout?:number, interval?:number}
+--- @param opts {connection:distant.core.manager.ConnectionId, auth?:distant.core.AuthHandler, timeout?:number, interval?:number}
 --- @param cb fun(err?:string, ok?:{type:'ok'})
 --- @return string|nil err, {type:'ok'}|nil ok
 function M:kill(opts, cb)
@@ -202,30 +213,36 @@ function M:kill(opts, cb)
 
     assert(cb, 'Impossible: cb cannot be nil at this point')
 
-    local error_lines = {}
-    utils.job_start(cmd, {
-        on_success = function()
-            cb(nil)
-        end,
-        on_failure = function()
-            cb('Failed to make selection')
-        end,
-        on_stdout_line = function(line)
-            --- @type {type:'ok'}
-            local msg = assert(vim.fn.json_decode(line), 'Invalid JSON from line')
+    Job:new({ buffer_stdout = true, buffer_stderr = true })
+        :authentication(opts.auth or true)
+        :start({ cmd = cmd }, function(err, status)
+            assert(not err, tostring(err))
 
-            if not type(msg) == 'table' or msg.type == 'ok' then
-                return cb('Invalid response: ' .. vim.inspect(msg), nil)
+            if status.success then
+                local stdout = table.concat(status.stdout, '\n')
+
+                --- @type {type:'ok'}
+                local msg = assert(
+                    vim.json.decode(stdout, { luanil = { array = true, object = true } }),
+                    ('Invalid JSON from stdout: %s'):format(stdout)
+                )
+
+                if not type(msg) == 'table' or msg.type ~= 'ok' then
+                    cb('Invalid response: ' .. vim.inspect(msg), nil)
+                    return
+                end
+
+                vim.schedule(function() cb(nil, msg) end)
+
+                return
             end
 
-            return cb(nil, msg)
-        end,
-        on_stderr_line = function(line)
-            if line ~= nil then
-                table.insert(error_lines, line)
+            for _, line in ipairs(status.stderr) do
+                vim.api.nvim_err_writeln(line)
             end
-        end,
-    })
+
+            cb(('Exited unexpectedly: exit code %s'):format(status.exit_code))
+        end)
 
     if rx then
         --- @type boolean, string|nil, distant.core.manager.Info|nil
@@ -235,6 +252,7 @@ function M:kill(opts, cb)
 end
 
 --- @class distant.core.manager.SelectOpts
+--- @field auth? distant.core.AuthHandler #authentication handler to use
 --- @field connection? distant.core.manager.ConnectionId
 --- @field on_choices? fun(opts:{choices:string[], current:number}):number|nil #If provided,
 --- @field timeout? number
@@ -270,47 +288,53 @@ function M:select(opts, cb)
 
     assert(cb, 'Impossible: cb cannot be nil at this point')
 
-    --- @type distant.core.utils.JobHandle
-    local handle
-    local error_lines = {}
-    handle = utils.job_start(cmd, {
-        on_success = function()
-            cb(nil)
-        end,
-        on_failure = function()
-            cb('Failed to make selection')
-        end,
-        on_stdout_line = function(line)
-            --- @type {type:'select', choices:string[], current:number}
-            local msg = assert(vim.fn.json_decode(line), 'Invalid JSON from line')
+    --- @type distant.core.Job
+    Job:new({ buffer_stderr = true })
+        :authentication(opts.auth or true)
+        :on_stdout_line(function(job, line)
+            local success, msg = pcall(vim.json.decode, line, { luanil = { array = true, object = true } })
 
+            -- Skip invalid lines
+            if not success or type(msg) ~= 'table' then
+                return
+            end
+
+            -- Handle the select request
             if msg.type == 'select' then
-                return cb(nil, {
-                    --- @param choice string
+                --- @cast msg {type:'select', choices:string[], current:number}
+                cb(nil, {
                     choices = vim.tbl_map(function(choice)
                         return Destination:parse(choice)
                     end, msg.choices),
                     current = msg.current,
                     select = function(choice, new_cb)
                         -- Update our cb triggered when process exits to now be the selector's callback
-                        if new_cb then
+                        if type(new_cb) == 'function' then
                             cb = new_cb
                         end
 
                         --- @type {type: 'selected', choice:number|nil }
                         --- @diagnostic disable-next-line:redefined-local
                         local msg = { type = 'selected', choice = choice }
-                        handle:write(utils.compress(vim.fn.json_encode(msg)) .. '\n')
+                        job:write(vim.json.encode(msg) .. '\n')
                     end,
                 })
             end
-        end,
-        on_stderr_line = function(line)
-            if line ~= nil then
-                table.insert(error_lines, line)
+        end)
+        :start({ cmd = cmd }, function(err, status)
+            assert(not err, tostring(err))
+
+            -- If terminated with a signal, this is something odd with neovim
+            if status.success or status.signal == Job.signal.SIGTERM then
+                return cb(nil)
             end
-        end,
-    })
+
+            for _, line in ipairs(status.stderr) do
+                vim.api.nvim_err_writeln(line)
+            end
+
+            return cb(('Exited unexpectedly: exit code %s'):format(status.exit_code))
+        end)
 
     if rx then
         --- @type boolean, string|nil, distant.core.manager.ConnectionSelector|nil
@@ -344,14 +368,10 @@ function M:is_listening(opts, cb)
 
     assert(cb, 'Impossible: cb cannot be nil at this point')
 
-    utils.job_start(cmd, {
-        on_success = function()
-            cb(true)
-        end,
-        on_failure = function()
-            cb(false)
-        end
-    })
+    Job:new():start({ cmd = cmd }, function(err, status)
+        assert(not err, tostring(err))
+        cb(status.success)
+    end)
 
     if rx then
         --- @type boolean, string|boolean
@@ -393,7 +413,7 @@ end
 --- defined by the network configuration
 --- @param opts distant.core.manager.ListenOpts
 --- @param cb fun(err?:string) #invoked when the manager exits
---- @return distant.core.utils.JobHandle #handle of listening manager job
+--- @return distant.core.Job #handle of listening manager job
 function M:listen(opts, cb)
     opts = opts or {}
 
@@ -420,36 +440,26 @@ function M:listen(opts, cb)
         :as_list()
     table.insert(cmd, 1, self.config.binary)
 
-    local handle, error_lines
-    error_lines = {}
-    handle = utils.job_start(cmd, {
-        on_success = function()
-            if cb then
+    local job = Job:new({ buffer_stderr = true })
+
+    job:start({ cmd = cmd }, function(err, status)
+        assert(not err, tostring(err))
+
+        if type(cb) == 'function' then
+            -- If terminated with a signal, this is something odd with neovim
+            if status.success or status.signal == Job.signal.SIGTERM then
                 return cb(nil)
             end
-        end,
-        on_failure = function(code)
-            local error_msg = '???'
-            if not vim.tbl_isempty(error_lines) then
-                error_msg = table.concat(error_lines, '\n')
+
+            for _, line in ipairs(status.stderr) do
+                vim.api.nvim_err_writeln(line)
             end
 
-            error_msg = 'Failed (' .. tostring(code) .. '): ' .. error_msg
+            return cb(('Exited unexpectedly: exit code %s'):format(status.exit_code))
+        end
+    end)
 
-            -- NOTE: Don't trigger if code is 143 as that is neovim terminating the manager on exit
-            if cb and code ~= 143 then
-                return cb(error_msg)
-            end
-        end,
-        on_stdout_line = function()
-        end,
-        on_stderr_line = function(line)
-            if line ~= nil and cb then
-                table.insert(error_lines, line)
-            end
-        end,
-    })
-    return handle
+    return job
 end
 
 --- @param opts string|table<string, any> #options to build into a string list
@@ -473,7 +483,7 @@ end
 --- @class distant.core.manager.LaunchOpts
 --- @field destination string #uri representing the remote server
 ---
---- @field auth? distant.core.auth.Handler #authentication handler to use
+--- @field auth? distant.core.AuthHandler #authentication handler to use
 --- @field cache? string #alternative cache path to use
 --- @field config? string #alternative config path to use
 --- @field distant? string #alternative path to distant binary (on remote machine) to use
@@ -562,30 +572,40 @@ function M:launch(opts, cb)
         :as_list()
     table.insert(cmd, 1, self.config.binary)
 
-    log.fmt_debug('Launch cmd: %s', cmd)
-    auth.spawn({
-        cmd = cmd,
-        auth = opts.auth,
-        skip = function(msg)
-            return msg.type ~= 'launched'
-        end,
-    }, function(err, result)
-        if err then
-            return cb(err)
-        end
+    log.fmt_trace('Launch cmd: %s', cmd)
+    Job:new({ buffer_stdout = true, buffer_stderr = true })
+        :authentication(opts.auth or true)
+        :start({ cmd = cmd }, function(err, status)
+            assert(not err, tostring(err))
 
-        --- @type distant.core.manager.ConnectionId|nil
-        local id = tonumber(vim.tbl_get(result or {}, 'msg', 'id'))
-        if id == nil then
-            cb('Invalid result failed to yield connection id: ' .. vim.inspect(result))
-            return
-        end
+            if status.success then
+                local stdout = table.concat(status.stdout, '\n')
 
-        -- Update manager to reflect connection
-        self.connections[id] = destination
+                --- @type table<string, string>
+                local msg = assert(
+                    vim.json.decode(stdout, { luanil = { array = true, object = true } }),
+                    ('Invalid JSON from stdout: %s'):format(stdout)
+                )
 
-        return cb(nil, self:client(id))
-    end)
+                --- @type distant.core.manager.ConnectionId|nil
+                local id = tonumber(type(msg) == 'table' and msg.id)
+                if id == nil then
+                    cb('Invalid response: ' .. vim.inspect(msg), nil)
+                    return
+                end
+
+                -- Update manager to reflect connection
+                self.connections[id] = destination
+
+                return cb(nil, self:client(id))
+            end
+
+            for _, line in ipairs(status.stderr) do
+                vim.api.nvim_err_writeln(line)
+            end
+
+            cb(('Exited unexpectedly: exit code %s'):format(status.exit_code))
+        end)
 
     if rx then
         --- @type boolean, string|nil, distant.core.Client|nil
@@ -597,7 +617,7 @@ end
 --- @class distant.core.manager.ConnectOpts
 --- @field destination string #uri used to identify server's location
 ---
---- @field auth? distant.core.auth.Handler #authentication handler to use
+--- @field auth? distant.core.AuthHandler #authentication handler to use
 --- @field cache? string #alternative cache path to use
 --- @field config? string #alternative config path to use
 --- @field log_file? string #alternative log file path to use
@@ -647,30 +667,41 @@ function M:connect(opts, cb)
         :as_list()
     table.insert(cmd, 1, self.config.binary)
 
-    log.fmt_debug('Connect cmd: %s', cmd)
-    auth.spawn({
-        cmd = cmd,
-        auth = opts.auth,
-        skip = function(msg)
-            return msg.type ~= 'connected'
-        end,
-    }, function(err, result)
-        if err then
-            return cb(err)
-        end
+    log.fmt_trace('Connect cmd: %s', cmd)
+    Job:new({ buffer_stdout = true, buffer_stderr = true })
+        :authentication(opts.auth or true)
+        :start({ cmd = cmd }, function(err, status)
+            assert(not err, tostring(err))
 
-        --- @type distant.core.manager.ConnectionId|nil
-        local id = tonumber(vim.tbl_get(result or {}, 'msg', 'id'))
-        if id == nil then
-            cb('Invalid result failed to yield connection id: ' .. vim.inspect(result))
-            return
-        end
+            if status.success then
+                local stdout = table.concat(status.stdout, '\n')
 
-        -- Update manager to reflect connection
-        self.connections[id] = destination
+                --- @type {id:distant.core.manager.ConnectionId}
+                local msg = assert(
+                    vim.json.decode(stdout, { luanil = { array = true, object = true } }),
+                    ('Invalid JSON from stdout: %s'):format(stdout)
+                )
 
-        return cb(nil, self:client(id))
-    end)
+                --- @type distant.core.manager.ConnectionId|nil
+                local id = tonumber(type(msg) == 'table' and msg.id)
+                if id == nil then
+                    cb('Invalid response: ' .. vim.inspect(msg), nil)
+                    return
+                end
+
+                -- Update manager to reflect connection
+                self.connections[id] = destination
+
+                cb(nil, self:client(id))
+                return
+            end
+
+            for _, line in ipairs(status.stderr) do
+                vim.api.nvim_err_writeln(line)
+            end
+
+            cb(('Exited unexpectedly: exit code %s'):format(status.exit_code))
+        end)
 
     if rx then
         --- @type boolean, string|nil, distant.core.Client|nil
@@ -680,7 +711,7 @@ function M:connect(opts, cb)
 end
 
 --- @class distant.core.manager.ListOpts
---- @field auth? distant.core.auth.Handler # authentication handler to use
+--- @field auth? distant.core.AuthHandler # authentication handler to use
 --- @field cache? string # alternative cache path to use
 --- @field config? string # alternative config path to use
 --- @field log_file? string # alternative log file path to use
@@ -727,40 +758,47 @@ function M:list(opts, cb)
         :as_list()
     table.insert(cmd, 1, self.config.binary)
 
-    log.fmt_debug('Manager list cmd: %s', cmd)
-    auth.spawn({
-        cmd = cmd,
-        auth = opts.auth,
-    }, function(err, result)
-        if err then
-            return cb(err)
-        end
+    log.fmt_trace('Manager list cmd: %s', cmd)
+    Job:new({ buffer_stdout = true, buffer_stderr = true })
+        :authentication(opts.auth or true)
+        :start({ cmd = cmd }, function(err, status)
+            assert(not err, tostring(err))
 
-        if result == nil then
-            return cb('Invalid result failed to yield connections')
-        end
+            if status.success then
+                local stdout = table.concat(status.stdout, '\n')
 
-        --- @type distant.core.manager.ConnectionMap
-        local connections = {}
+                --- @type table<string, string>
+                local msg = assert(
+                    vim.json.decode(stdout, { luanil = { array = true, object = true } }),
+                    ('Invalid JSON from stdout: %s'):format(stdout)
+                )
 
-        for id, destination_str in pairs(result.msg) do
-            if type(id) == 'string' and type(destination_str) == 'string' then
-                local connection = assert_connection_opts(id, { convert = true })
-                --- @cast connection distant.core.manager.ConnectionId
-                local destination = Destination:try_parse(destination_str)
-                if destination then
-                    connections[connection] = destination
+                --- @type distant.core.manager.ConnectionMap
+                local connections = {}
+
+                for id, dest in pairs(msg) do
+                    local connection = assert_connection_opts(id, { convert = true })
+                    local destination = Destination:try_parse(dest)
+                    if connection and destination then
+                        connections[connection] = destination
+                    end
                 end
+
+                -- Update our stateful tracking of connections (default is to refresh)
+                if opts.refresh == nil or opts.refresh == true then
+                    self.connections = connections
+                end
+
+                cb(nil, connections)
+                return
             end
-        end
 
-        -- Update our stateful tracking of connections (default is to refresh)
-        if opts.refresh == nil or opts.refresh == true then
-            self.connections = connections
-        end
+            for _, line in ipairs(status.stderr) do
+                vim.api.nvim_err_writeln(line)
+            end
 
-        return cb(nil, connections)
-    end)
+            cb(('Exited unexpectedly: exit code %s'):format(status.exit_code))
+        end)
 
     if rx then
         --- @type boolean, string|nil, distant.core.manager.ConnectionMap|nil

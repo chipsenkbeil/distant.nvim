@@ -28,7 +28,6 @@ local VERSION        = {
         --- Minimum version of the CLI the plugin supports
         min = MIN_VERSION,
     },
-
     --- Version of the plugin itself
     plugin = PLUGIN_VERSION,
 }
@@ -394,7 +393,6 @@ function M:connections(opts, cb)
 
         manager:list({
             refresh   = true,
-
             -- User-defined settings
             cache     = opts.cache,
             config    = opts.config,
@@ -422,7 +420,7 @@ end
 --- @param id? distant.core.manager.ConnectionId|distant.core.Client
 --- @return distant.plugin.settings.ServerSettings
 function M:server_settings_for_client(id)
-    log.fmt_trace('distant:server_settings_for_client(%s)', id)
+    log.fmt_trace('distant:server_settings_for_client(%s)', vim.inspect(id))
     self:__assert_initialized()
 
     -- If given a client, retrieve its connection as the id
@@ -742,6 +740,14 @@ end
 function M:manager()
     self:__assert_initialized()
     return self.__manager
+end
+
+--- Returns a reference to the manager tied to this plugin.
+--- Will fail if manager is not initialized.
+---
+--- @return distant.core.Manager
+function M:assert_manager()
+    return assert(self:manager(), 'Manager is not initialized')
 end
 
 --- Returns a CLI pointing to the appropriate binary.

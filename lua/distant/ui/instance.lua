@@ -202,12 +202,16 @@ local function kill_connection(event)
     local payload = event.payload
     local id = payload.id
 
-    local manager = plugin:manager()
-    if manager then
-        manager:kill({ connection = id }, function(err, _)
-            assert(not err, tostring(err))
-        end)
-    end
+    vim.ui.input({ prompt = 'Are you sure you want to kill this connection? [y/N]' }, function(input)
+        input = string.lower(vim.trim(input or ''))
+
+        if input == 'y' or input == 'yes' then
+            plugin:assert_manager():kill({ connection = id }, function(err, ok)
+                assert(not err, tostring(err))
+                print(vim.inspect(ok))
+            end)
+        end
+    end)
 end
 
 --- @param event distant.core.ui.window.EffectEvent

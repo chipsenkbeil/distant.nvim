@@ -41,7 +41,7 @@ local function ManagerConnection()
     local function WindowsPipeLine()
         local text
         if manager and manager:network().windows_pipe then
-            text = plugin:manager():network().windows_pipe
+            text = manager:network().windows_pipe
         end
 
         return {
@@ -55,7 +55,7 @@ local function ManagerConnection()
     local function UnixSocketLine()
         local text
         if manager and manager:network().unix_socket then
-            text = plugin:manager():network().unix_socket
+            text = manager:network().unix_socket
         end
 
         return {
@@ -129,18 +129,23 @@ local function AvailableConnections(opts)
 
         extra[#rows] = {}
         extra[#rows] = {
+            -- Return/Enter to switch
             ui.Keybind(
                 '<CR>',
                 'SWITCH_ACTIVE_CONNECTION',
                 { id = id, destination = destination }
             ),
+
+            -- Shift-i to expand information
             ui.Keybind(
-                'i',
+                '<S-i>',
                 'TOGGLE_EXPAND_CONNECTION',
                 { id = id, destination = destination }
             ),
+
+            -- Shift-k to kill
             ui.Keybind(
-                'd',
+                '<S-k>',
                 'KILL_CONNECTION',
                 { id = id, destination = destination }
             ),

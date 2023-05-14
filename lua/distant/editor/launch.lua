@@ -4,7 +4,7 @@ local plugin = require('distant')
 --- @class distant.editor.LaunchOpts
 --- @field destination string|distant.core.Destination
 ---
---- @field auth? distant.core.auth.Handler
+--- @field auth? distant.core.AuthHandler
 --- @field distant? distant.editor.launch.DistantOpts
 --- @field interval? number
 --- @field log_level? 'off'|'error'|'warn'|'info'|'debug'|'trace'

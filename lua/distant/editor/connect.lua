@@ -8,7 +8,7 @@ local plugin = require('distant')
 --- @class distant.editor.ConnectOpts
 --- @field destination distant.editor.connect.Destination
 ---
---- @field auth? distant.core.auth.Handler
+--- @field auth? distant.core.AuthHandler
 --- @field interval? number
 --- @field log_level? 'off'|'error'|'warn'|'info'|'debug'|'trace'
 --- @field log_file? string

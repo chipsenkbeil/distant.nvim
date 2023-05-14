@@ -1,6 +1,7 @@
-local AuthHandler      = require('distant-core.auth.handler')
+local AuthHandler      = require('distant-core.auth')
 local builder          = require('distant-core.builder')
 local Error            = require('distant-core.api.error')
+local Job              = require('distant-core.job')
 local log              = require('distant-core.log')
 local utils            = require('distant-core.utils')
 
@@ -12,7 +13,7 @@ local DEFAULT_INTERVAL = 100
 --- @field id number #unique id used for debugging purposes
 --- @field config {autostart:boolean, binary:string, network:distant.core.client.Network, timeout:number, interval:number}
 ---
---- @field private auth_handler distant.core.auth.Handler
+--- @field private auth_handler distant.core.AuthHandler
 --- @field private __state distant.core.api.transport.State
 local M                = {}
 M.__index              = M
@@ -20,7 +21,7 @@ M.__index              = M
 --- @class distant.core.api.transport.State
 --- @field authenticated boolean True if authenticated and ready to send messages
 --- @field queue string[] Queue of outgoing json messages
---- @field handle? distant.core.utils.JobHandle
+--- @field handle? distant.core.Job
 --- @field callbacks table<string, {callback:distant.core.api.transport.Callback, more:distant.core.api.transport.More}>
 
 --- @alias distant.core.api.transport.Callback fun(payload:distant.core.api.msg.Payload)
@@ -36,7 +37,7 @@ M.__index              = M
 --- @class distant.core.api.transport.NewOpts
 --- @field binary string
 --- @field network? distant.core.client.Network
---- @field auth_handler? distant.core.auth.Handler
+--- @field auth_handler? distant.core.AuthHandler
 --- @field autostart? boolean
 --- @field timeout? number
 --- @field interval? number
@@ -72,7 +73,7 @@ end
 --- Whether or not the api is running
 --- @return boolean
 function M:is_running()
-    return self.__state.handle ~= nil and self.__state.handle:running()
+    return self.__state.handle ~= nil and self.__state.handle:is_running()
 end
 
 --- Starts the api if it is not already running. Will do nothing if running.
@@ -88,78 +89,87 @@ function M:start(cb)
     local cmd = builder.api():set_from_tbl(self.config.network):as_list()
     table.insert(cmd, 1, self.config.binary)
 
-    local handle
-    handle = utils.job_start(cmd, {
-        on_success = function()
-            self:stop()
-            if type(cb) == 'function' then
-                cb(0)
-            end
-        end,
-        on_failure = function(code)
-            self:stop()
-            if type(cb) == 'function' then
-                cb(code)
-            end
-        end,
-        on_stdout_line = function(line)
-            if line ~= nil and line ~= "" then
-                --- @type boolean,distant.core.api.Msg|distant.core.auth.Request|nil
-                local success, msg = pcall(vim.fn.json_decode, line)
+    --- @param line string
+    local function on_stdout_line(_, line)
+        if line ~= nil and line ~= "" then
+            --- @type boolean,distant.core.api.Msg|distant.core.auth.Request|nil
+            local success, msg = pcall(vim.json.decode, line, {
+                luanil = { array = true, object = true }
+            })
 
-                -- Quit if the decoding failed or we didn't get a msg
-                if not success or not msg then
-                    log.fmt_error('[Transport %s] Failed to decode to json: "%s"', self.id, line)
+            -- Quit if the decoding failed or we didn't get a msg
+            if not success or not msg then
+                log.fmt_error('[Transport %s] Failed to decode to json: "%s"', self.id, line)
+                return
+            end
+
+            if auth:is_auth_request(msg) then
+                --- @cast msg distant.core.auth.Request
+                self:__handle_auth_request(msg)
+            else
+                if type(msg) ~= 'table' then
+                    log.fmt_error('[Transport %s] type(msg) == \'%s\' (needed table): %s', self.id, type(msg), msg)
+                    return
+                elseif type(msg.id) ~= 'string' then
+                    log.fmt_error(
+                        '[Transport %s] type(msg.id) == \'%s\' (needed string): %s',
+                        self.id, type(msg.id), msg
+                    )
+                    return
+                elseif msg.origin_id ~= nil and type(msg.origin_id) ~= 'string' then
+                    log.fmt_error(
+                        '[Transport %s] type(msg.origin_id) == \'%s\' (needed string): %s',
+                        self.id, type(msg.origin_id), msg
+                    )
+                    return
+                elseif type(msg.payload) ~= 'table' then
+                    log.fmt_error(
+                        '[Transport %s] type(msg.payload) == \'%s\' (needed table): %s',
+                        self.id, type(msg.payload), msg
+                    )
                     return
                 end
 
-                if auth:is_auth_request(msg) then
-                    --- @cast msg distant.core.auth.Request
-                    self:__handle_auth_request(msg)
-                else
-                    if type(msg) ~= 'table' then
-                        log.fmt_error('[Transport %s] type(msg) == \'%s\' (needed table): %s', self.id, type(msg), msg)
-                        return
-                    elseif type(msg.id) ~= 'string' then
-                        log.fmt_error(
-                            '[Transport %s] type(msg.id) == \'%s\' (needed string): %s',
-                            self.id, type(msg.id), msg
-                        )
-                        return
-                    elseif msg.origin_id ~= nil and type(msg.origin_id) ~= 'string' then
-                        log.fmt_error(
-                            '[Transport %s] type(msg.origin_id) == \'%s\' (needed string): %s',
-                            self.id, type(msg.origin_id), msg
-                        )
-                        return
-                    elseif type(msg.payload) ~= 'table' then
-                        log.fmt_error(
-                            '[Transport %s] type(msg.payload) == \'%s\' (needed table): %s',
-                            self.id, type(msg.payload), msg
-                        )
-                        return
-                    end
-
-                    --- @cast msg distant.core.api.Msg
-                    self:__handle_response(msg)
-                end
-            end
-        end,
-        on_stderr_line = function(line)
-            if line ~= nil and line ~= "" then
-                log.error('[Transport ' .. tostring(self.id) .. '] ' .. line)
+                --- @cast msg distant.core.api.Msg
+                self:__handle_response(msg)
             end
         end
-    })
+    end
+
+    --- @param line string
+    local function on_stderr_line(_, line)
+        if line ~= nil and line ~= "" then
+            log.error('[Transport ' .. tostring(self.id) .. '] ' .. line)
+        end
+    end
+
+    local handle = Job:new()
+        :on_stdout_line(on_stdout_line)
+        :on_stderr_line(on_stderr_line)
+
+    handle:start({ cmd = cmd }, function(err, status)
+        assert(not err, tostring(err))
+
+        self:stop()
+
+        if type(cb) == 'function' then
+            vim.schedule(function()
+                cb(status.exit_code)
+            end)
+        end
+    end)
+
     self.__state.handle = handle
 end
 
 --- Stops an instance of distant if running by killing the process
 --- and resetting state
 function M:stop()
-    if self.__state.handle ~= nil and self.__state.handle:running() then
-        self.__state.handle.stop()
+    local job = self.__state.handle
+    if job ~= nil and job:is_running() then
+        job:stop()
     end
+
     self.__state.authenticated = false
     self.__state.queue = {}
     self.__state.handle = nil
@@ -316,12 +326,16 @@ function M:send_async(opts, cb)
         more = opts.more or function() return false end,
     }
 
-    local json = utils.compress(vim.fn.json_encode(full_msg)) .. '\n'
+    local json = vim.json.encode(full_msg) .. '\n'
 
     -- If authenticated, we go ahead and send our message, otherwise we queue it
     -- to be sent as soon as we become authenticated
-    if self.__state.authenticated then
-        self.__state.handle.write(json)
+    local handle = self.__state.handle
+    if self.__state.authenticated and handle then
+        assert(
+            handle:write(json) > 0,
+            ('[Transport %s] Failed to send message'):format(self.id)
+        )
     else
         table.insert(self.__state.queue, json)
     end
@@ -368,7 +382,10 @@ function M:__handle_auth_request(msg)
     auth:handle_request(msg, function(msg)
         local handle = self.__state.handle
         if handle then
-            handle.write(utils.compress(vim.fn.json_encode(msg)) .. '\n')
+            assert(
+                handle:write(vim.json.encode(msg) .. '\n') > 0,
+                ('[Transport %s] Failed to send authentication response'):format(self.id)
+            )
         else
             log.fmt_warn('[Transport %s] Job handle dropped, so unable to write %s', self.id, msg)
         end
@@ -381,7 +398,10 @@ function M:__handle_auth_request(msg)
     -- all of our queued messages
     if auth.finished then
         for _, json in ipairs(self.__state.queue) do
-            self.__state.handle.write(json)
+            assert(
+                self.__state.handle:write(json) > 0,
+                ('[Transport %s] Failed to forward queued message'):format(self.id)
+            )
         end
         self.__state.queue = {}
     end

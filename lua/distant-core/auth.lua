@@ -1,12 +1,12 @@
 local log = require('distant-core.log')
 
---- @class distant.core.auth.Handler
+--- @class distant.core.AuthHandler
 --- @field finished boolean #true if handler has finished performing authentication
 local M = {}
 M.__index = M
 
 --- Creates a new instance of the authentication handler.
---- @return distant.core.auth.Handler
+--- @return distant.core.AuthHandler
 function M:new()
     local instance = {}
     setmetatable(instance, M)
@@ -14,9 +14,23 @@ function M:new()
 end
 
 --- Returns true if the provided message with a type is an authentication request.
---- @param msg {type:string}
+---
+--- Can also be given a raw line of text as the message and it will be parsed.
+---
+--- @param msg string|{type:string}
 --- @return boolean
 function M:is_auth_request(msg)
+    if type(msg) == 'string' then
+        --- @type boolean, any
+        local success, json = pcall(vim.json.decode, msg, { luanil = { array = true, object = true } })
+        if not success or type(json) ~= 'table' then
+            return false
+        end
+
+        --- @cast json table
+        msg = json
+    end
+
     return msg and type(msg.type) == 'string' and vim.tbl_contains({
         'auth_initialization',
         'auth_start_method',

@@ -1,7 +1,6 @@
 local Api     = require('distant-core.api')
 local builder = require('distant-core.builder')
 local log     = require('distant-core.log')
-local utils   = require('distant-core.utils')
 
 --- Represents a distant.core.client
 --- @class distant.core.Client
@@ -125,6 +124,18 @@ function M:connect_lsp_clients(opts)
     local path = opts.path
     log.fmt_trace('Seeking LSP clients that cover path = %s', path)
 
+    --- @generic T
+    --- @param array T[]
+    --- @param f fun(x:T):boolean
+    --- @return T|nil
+    local function find(array, f)
+        for _, v in ipairs(array) do
+            if f(v) then
+                return v
+            end
+        end
+    end
+
     -- Only perform a connection if we have connected and have a remote path.
     --
     -- If that's the case, we want to ensure that we only start an LSP client
@@ -150,7 +161,7 @@ function M:connect_lsp_clients(opts)
             if type(config_root_dir) == 'string' and path_starts_with(config_root_dir) then
                 root_dir = config_root_dir
             elseif type(config_root_dir) == 'table' then
-                root_dir = utils.find(config_root_dir, path_starts_with)
+                root_dir = find(config_root_dir, path_starts_with)
             elseif type(config_root_dir) == 'function' then
                 root_dir = config_root_dir(path)
             end

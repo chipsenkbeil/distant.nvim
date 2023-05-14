@@ -182,11 +182,13 @@ M.new = function(config, standalone)
 
     for i, x in ipairs(config.modes) do
         -- log.info('these', 'are', 'separated')
+        --- @diagnostic disable-next-line:assign-type-mismatch
         obj[x.name] = function(...)
             return log_at_level(i, x, make_string, ...)
         end
 
         -- log.fmt_info('These are %s strings', 'formatted')
+        --- @diagnostic disable-next-line:assign-type-mismatch
         obj[('fmt_%s'):format(x.name)] = function(...)
             return log_at_level(i, x, function(...)
                 local passed = { ... }
@@ -200,6 +202,7 @@ M.new = function(config, standalone)
         end
 
         -- log.lazy_info(expensive_to_calculate)
+        --- @diagnostic disable-next-line:assign-type-mismatch
         obj[('lazy_%s'):format(x.name)] = function()
             return log_at_level(i, x, function(f)
                 return f()
@@ -207,6 +210,7 @@ M.new = function(config, standalone)
         end
 
         -- log.file_info('do not print')
+        --- @diagnostic disable-next-line:assign-type-mismatch
         obj[('file_%s'):format(x.name)] = function(vals, override)
             local original_console = config.use_console
             config.use_console = false
