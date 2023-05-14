@@ -220,21 +220,22 @@ local RESPONSE_HANDLERS = {
 
 --- Sends a series of API requests together as a single batch.
 ---
---- * `batch_fn` - invoked to build up batch request and return results.
----   The function is provided an API wrapper that queues up each request
----   rather than submitting directly.
+--- * `opts` - list of requests to send as well as specific options that can be passed.
+--- * `opts.timeout` - maximum time to wait for a synchronous response.
+--- * `opts.interval` -
 ---
---- ```
+--- # Synchronous Example
 ---
---  -- Run synchronously
---- local results = api.batch(function(api)
----     return {
----         api.exists({ path = '/path/to/file1.txt }),
----         api.exists({ path = '/path/to/file2.txt }),
----         api.metadata({ path = '/path/to/file3.txt }),
----         api.system_info({}),
----     }
---- end)
+--- ```lua
+--- local err, results = api.batch({
+---     { type = 'exists', path = '/path/to/file1.txt },
+---     { type = 'exists', path = '/path/to/file2.txt },
+---     { type = 'metadata', path = '/path/to/file3.txt },
+---     { type = 'system_info' },
+--- })
+---
+--- -- Verify we did not get an error
+--- assert(not err, tostring(err))
 ---
 --- -- { payload = true }
 --- print(vim.inspect(results[1]))
@@ -247,6 +248,31 @@ local RESPONSE_HANDLERS = {
 ---
 --- -- { payload = { family = 'unix', .. } }
 --- print(vim.inspect(results[4]))
+--- ```
+---
+--- # Asynchronous Example
+---
+--- ```lua
+--- api.batch({
+---     { type = 'exists', path = '/path/to/file1.txt },
+---     { type = 'exists', path = '/path/to/file2.txt },
+---     { type = 'metadata', path = '/path/to/file3.txt },
+---     { type = 'system_info' },
+--- }, function(err, results)
+---     assert(not err, tostring(err))
+---
+---     -- { payload = true }
+---     print(vim.inspect(results[1]))
+---
+---     -- { payload = value = false }
+---     print(vim.inspect(results[2]))
+---
+---     -- { err = distant.api.Error { .. } }
+---     print(vim.inspect(results[3]))
+---
+---     -- { payload = { family = 'unix', .. } }
+---     print(vim.inspect(results[4]))
+--- end)
 --- ```
 ---
 --- @generic T: table
