@@ -16,8 +16,9 @@ local function command(cmd)
         table.insert(cmd, 1, cmd_prog)
     end
 
+    -- Spawn a shell in a new buffer, taking over the current window
     local client = assert(plugin:client(), 'No client established')
-    client:spawn_shell({ bufnr = 0, cmd = cmd })
+    client:spawn_shell({ bufnr = -1, cmd = cmd })
 end
 
 --- @type DistantCommand

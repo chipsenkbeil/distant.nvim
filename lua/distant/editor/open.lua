@@ -41,12 +41,17 @@ return function(opts)
     end
 
     --------------------------------------------------------------------------
-    -- CLEAN UP OPTIONS
+    -- CLEAN UP OPTIONS & VALIDATE
     --------------------------------------------------------------------------
 
     if type(opts) == 'string' then
         opts = { path = opts }
     end
+
+    assert(
+        type(opts.path) == 'string' and vim.trim(opts.path):len() > 0,
+        'Path cannot be empty'
+    )
 
     --------------------------------------------------------------------------
     -- PARSE NAME & DERIVE LOCAL PATH & CONNECTION
@@ -91,7 +96,7 @@ return function(opts)
         -- If our selected connection differs from that of the buffer's connection, we fail!
         if new_connection ~= nil then
             assert(
-                connection == components.connection,
+                new_connection == connection,
                 ('Found buffer %s of connection %s, but using connection %s'):format(
                     bufnr, new_connection, connection
                 )
@@ -129,7 +134,7 @@ return function(opts)
             -- If our selected connection differs from that of the buffer's connection, we fail!
             if new_connection ~= nil then
                 assert(
-                    connection == components.connection,
+                    new_connection == connection,
                     ('Found buffer %s of connection %s, but using connection %s'):format(
                         bufnr, new_connection, connection
                     )
