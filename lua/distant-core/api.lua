@@ -1,10 +1,13 @@
-local Batch = require('distant-core.api.batch')
 local Error = require('distant-core.api.error')
 local Process = require('distant-core.api.process')
 local Searcher = require('distant-core.api.searcher')
 local Transport = require('distant-core.api.transport')
 
 local log = require('distant-core.log')
+
+-------------------------------------------------------------------------------
+-- CLASS DEFINITION & CREATION
+-------------------------------------------------------------------------------
 
 --- Represents an API that uses a transport to communicate payloads.
 --- @class distant.core.Api
@@ -29,6 +32,10 @@ function M:new(opts)
     return instance
 end
 
+-------------------------------------------------------------------------------
+-- GENERAL API
+-------------------------------------------------------------------------------
+
 function M:start()
     self.transport:start(function(exit_code)
         log.fmt_debug('API process exited: %s', exit_code)
@@ -38,6 +45,178 @@ end
 function M:stop()
     self.transport:stop()
 end
+
+-------------------------------------------------------------------------------
+-- REQUEST DEFINITIONS
+-------------------------------------------------------------------------------
+
+--- @enum distant.core.api.RequestType
+local REQUEST_TYPE = {
+    CAPABILITIES     = 'capabilities',
+    CANCEL_SEARCH    = 'cancel_search',
+    COPY             = 'copy',
+    DIR_CREATE       = 'dir_create',
+    DIR_READ         = 'dir_read',
+    EXISTS           = 'exists',
+    FILE_APPEND      = 'file_append',
+    FILE_APPEND_TEXT = 'file_append_text',
+    FILE_READ        = 'file_read',
+    FILE_READ_TEXT   = 'file_read_text',
+    FILE_WRITE       = 'file_write',
+    FILE_WRITE_TEXT  = 'file_write_text',
+    METADATA         = 'metadata',
+    PROC_KILL        = 'proc_kill',
+    PROC_RESIZE_PTY  = 'proc_resize_pty',
+    PROC_SPAWN       = 'proc_spawn',
+    PROC_STDIN       = 'proc_stdin',
+    REMOVE           = 'remove',
+    RENAME           = 'rename',
+    SEARCH           = 'search',
+    SYSTEM_INFO      = 'system_info',
+    UNWATCH          = 'unwatch',
+    WATCH            = 'watch',
+}
+
+-------------------------------------------------------------------------------
+-- REQUEST HANDLERS
+-------------------------------------------------------------------------------
+
+--- @generic T
+--- @param x T
+--- @return T
+local function identity(x)
+    return x
+end
+
+--- @alias distant.core.api.OkPayload {type:'ok'}
+--- @param payload distant.core.api.OkPayload
+local function verify_ok(payload)
+    return type(payload) == 'table' and payload.type == 'ok'
+end
+
+--- @param payload table
+--- @return string[]
+local function map_capabilities(payload)
+    return payload.supported
+end
+
+--- @param payload table
+--- @return boolean
+local function verify_capabilities(payload)
+    return (
+        payload.type == 'capabilities'
+        and type(payload.supported) == 'table'
+        and vim.tbl_islist(payload.supported)
+        )
+end
+
+--- @param payload table
+local function map_dir_read(payload)
+    return {
+        entries = payload.entries,
+        errors = vim.tbl_map(function(e) return Error:new(e) end, payload.errors),
+    }
+end
+
+--- @param payload table
+--- @return boolean
+local function verify_dir_read(payload)
+    return payload.type == 'dir_entries' and vim.tbl_islist(payload.entries) and vim.tbl_islist(payload.errors)
+end
+
+--- @param payload table
+--- @return boolean
+local function map_exists(payload)
+    return payload.value
+end
+
+--- @param payload table
+--- @return boolean
+local function verify_exists(payload)
+    return payload.type == 'exists'
+end
+
+--- @param payload table
+--- @return integer[]
+local function map_file_read(payload)
+    return payload.data
+end
+
+--- @param payload table
+--- @return boolean
+local function verify_file_read(payload)
+    return payload.type == 'blob' and vim.tbl_islist(payload.data)
+end
+
+--- @param payload table
+--- @return string
+local function map_file_read_text(payload)
+    return payload.data
+end
+
+--- @param payload table
+--- @return boolean
+local function verify_file_read_text(payload)
+    return payload.type == 'text' and type(payload.data) == 'string'
+end
+
+--- @param payload table
+--- @return boolean
+local function verify_metadata(payload)
+    return (
+        payload.type == 'metadata'
+        and type(payload.file_type) == 'string'
+        and type(payload.len) == 'number'
+        and type(payload.readonly) == 'boolean')
+end
+
+--- @param payload table
+--- @return boolean
+local function verify_system_info(payload)
+    return (
+        payload.type == 'system_info'
+        and type(payload.family) == 'string'
+        and type(payload.os) == 'string'
+        and type(payload.arch) == 'string'
+        and type(payload.current_dir) == 'string'
+        and type(payload.main_separator) == 'string'
+        and type(payload.username) == 'string'
+        and type(payload.shell) == 'string'
+        )
+end
+
+--- Mapping of request types to handlers to verify and map responses.
+--- @alias distant.core.api.RequestHandlers { map:(fun(payload:table):any), verify:(fun(payload:table):boolean) }
+--- @type { [distant.core.api.RequestType]: distant.core.api.RequestHandlers }
+local RESPONSE_HANDLERS = {
+    [REQUEST_TYPE.CAPABILITIES]     = { map = map_capabilities, verify = verify_capabilities },
+    [REQUEST_TYPE.CANCEL_SEARCH]    = { map = identity, verify = verify_ok },
+    [REQUEST_TYPE.COPY]             = { map = identity, verify = verify_ok },
+    [REQUEST_TYPE.DIR_CREATE]       = { map = identity, verify = verify_ok },
+    [REQUEST_TYPE.DIR_READ]         = { map = map_dir_read, verify = verify_dir_read },
+    [REQUEST_TYPE.EXISTS]           = { map = map_exists, verify = verify_exists },
+    [REQUEST_TYPE.FILE_APPEND]      = { map = identity, verify = verify_ok },
+    [REQUEST_TYPE.FILE_APPEND_TEXT] = { map = identity, verify = verify_ok },
+    [REQUEST_TYPE.FILE_READ]        = { map = map_file_read, verify = verify_file_read },
+    [REQUEST_TYPE.FILE_READ_TEXT]   = { map = map_file_read_text, verify = verify_file_read_text },
+    [REQUEST_TYPE.FILE_WRITE]       = { map = identity, verify = verify_ok },
+    [REQUEST_TYPE.FILE_WRITE_TEXT]  = { map = identity, verify = verify_ok },
+    [REQUEST_TYPE.METADATA]         = { map = identity, verify = verify_metadata },
+    [REQUEST_TYPE.PROC_KILL]        = { map = identity, verify = verify_ok },
+    [REQUEST_TYPE.PROC_RESIZE_PTY]  = { map = identity, verify = verify_ok },
+    [REQUEST_TYPE.PROC_SPAWN]       = { map = identity, verify = verify_ok },
+    [REQUEST_TYPE.PROC_STDIN]       = { map = identity, verify = verify_ok },
+    [REQUEST_TYPE.REMOVE]           = { map = identity, verify = verify_ok },
+    [REQUEST_TYPE.RENAME]           = { map = identity, verify = verify_ok },
+    [REQUEST_TYPE.SEARCH]           = { map = identity, verify = verify_ok },
+    [REQUEST_TYPE.SYSTEM_INFO]      = { map = identity, verify = verify_system_info },
+    [REQUEST_TYPE.UNWATCH]          = { map = identity, verify = verify_ok },
+    [REQUEST_TYPE.WATCH]            = { map = identity, verify = verify_ok },
+}
+
+-------------------------------------------------------------------------------
+-- BATCH API
+-------------------------------------------------------------------------------
 
 --- Sends a series of API requests together as a single batch.
 ---
@@ -60,52 +239,104 @@ end
 --- -- { payload = true }
 --- print(vim.inspect(results[1]))
 ---
---- -- { payload = false }
+--- -- { payload = value = false }
 --- print(vim.inspect(results[2]))
 ---
 --- -- { err = distant.api.Error { .. } }
---- print(vim.inspect(results[2]))
+--- print(vim.inspect(results[3]))
 ---
 --- -- { payload = { family = 'unix', .. } }
---- print(vim.inspect(results[2]))
+--- print(vim.inspect(results[4]))
 --- ```
 ---
 --- @generic T: table
---- @param batch_fn fun(batch:distant.core.api.Batch):distant.core.api.batch.PartialRequest[]
---- @param cb? fun(results:{err?:distant.core.api.Error, payload?:table}[])
---- @return {err?:distant.core.api.Error, payload?:table}[]|nil
-function M:batch(batch_fn, cb)
-    local batch = Batch:new(self)
-    local partial_requests = batch_fn(batch)
+--- @param opts {[number]: table, timeout?:number, interval?:number}
+--- @param cb? fun(err?:distant.core.api.Error, payload?:{err?:distant.core.api.Error, payload?:table}[])
+--- @return distant.core.api.Error|nil err, {err?:distant.core.api.Error, payload?:table}[]|nil payload
+function M:batch(opts, cb)
+    vim.validate({
+        opts = { opts, 'table' },
+        cb = { cb, 'function', true },
+    })
 
-    if cb then
-    else
+    local timeout = opts.timeout
+    opts.timeout = nil
+
+    local interval = opts.interval
+    opts.interval = nil
+
+    -- Validate the payload by checking it contains types
+    assert(vim.tbl_islist(opts), 'Batch not provided a list of payloads')
+    --- @type distant.core.api.RequestHandlers[]
+    local handlers = {}
+    for idx, payload in ipairs(opts) do
+        assert(type(payload.type) == 'string', ('[%s] Invalid type field'):format(idx))
+        local h = assert(
+            RESPONSE_HANDLERS[payload.type],
+            ('[%s] Missing handlers for %s'):format(idx, payload.type)
+        )
+        table.insert(handlers, h)
     end
+
+    return self.transport:send({
+        payload = opts,
+        verify = function(payload)
+            return type(payload) == 'table' and vim.tbl_islist(payload)
+        end,
+        map = function(payload)
+            -- Map errors versus regular responses
+            for idx, data in ipairs(payload) do
+                local h = handlers[idx]
+                if data.type == 'error' then
+                    payload[idx] = { err = Error:new(data) }
+                elseif h then
+                    if h.verify(data) then
+                        payload[idx] = { payload = h.map(data) }
+                    else
+                        payload[idx] = {
+                            err = Error:new({
+                                kind = Error.kinds.invalid_data,
+                                description = 'Invalid response payload: ' .. vim.inspect(data),
+                            })
+                        }
+                    end
+                else
+                    payload[idx] = { payload = data }
+                end
+            end
+
+            return payload
+        end,
+        timeout = timeout,
+        interval = interval,
+    }, cb)
 end
 
---- @alias distant.core.api.OkPayload {type:'ok'}
---- @param payload distant.core.api.OkPayload
-local function verify_ok(payload)
-    return type(payload) == 'table' and payload.type == 'ok'
-end
+-------------------------------------------------------------------------------
+-- REQUEST API
+-------------------------------------------------------------------------------
 
 --- @alias distant.core.api.AppendFileOpts {path:string, data:integer[], timeout?:number, interval?:number}
 --- @param opts distant.core.api.AppendFileOpts
 --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.OkPayload)
---- @return distant.core.api.Error|nil,distant.core.api.OkPayload|nil
+--- @return distant.core.api.Error|nil err, distant.core.api.OkPayload|nil payload
 function M:append_file(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
         cb = { cb, 'function', true },
     })
 
+    local ty = REQUEST_TYPE.FILE_APPEND
+    local handlers = assert(RESPONSE_HANDLERS[ty], 'Missing handlers for ' .. ty)
+
     return self.transport:send({
         payload = {
-            type = 'file_append',
+            type = ty,
             path = opts.path,
             data = opts.data,
         },
-        verify = verify_ok,
+        map = handlers.map,
+        verify = handlers.verify,
         timeout = opts.timeout,
         interval = opts.interval,
     }, cb)
@@ -114,46 +345,48 @@ end
 --- @alias distant.core.api.AppendFileTextOpts {path:string, text:string, timeout?:number, interval?:number}
 --- @param opts distant.core.api.AppendFileTextOpts
 --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.OkPayload)
---- @return distant.core.api.Error|nil,distant.core.api.OkPayload|nil
+--- @return distant.core.api.Error|nil err, distant.core.api.OkPayload|nil payload
 function M:append_file_text(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
         cb = { cb, 'function', true },
     })
 
+    local ty = REQUEST_TYPE.FILE_APPEND_TEXT
+    local handlers = assert(RESPONSE_HANDLERS[ty], 'Missing handlers for ' .. ty)
+
     return self.transport:send({
         payload = {
-            type = 'file_append_text',
+            type = ty,
             path = opts.path,
             text = opts.text,
         },
-        verify = verify_ok,
+        map = handlers.map,
+        verify = handlers.verify,
         timeout = opts.timeout,
         interval = opts.interval,
     }, cb)
 end
 
 --- @alias distant.core.api.CapabilitiesOpts {timeout?:number, interval?:number}
---- @alias distant.core.api.CapabilitiesPayload {type:'capabilities', supported:string[]}
 --- @param opts distant.core.api.CapabilitiesOpts
---- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.CapabilitiesPayload)
---- @return distant.core.api.Error|nil,distant.core.api.CapabilitiesPayload|nil
+--- @param cb? fun(err?:distant.core.api.Error, payload?:string[])
+--- @return distant.core.api.Error|nil err, string[]|nil capabilities
 function M:capabilities(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
         cb = { cb, 'function', true },
     })
 
+    local ty = REQUEST_TYPE.CAPABILITIES
+    local handlers = assert(RESPONSE_HANDLERS[ty], 'Missing handlers for ' .. ty)
+
     return self.transport:send({
         payload = {
-            type = 'capabilities',
+            type = ty,
         },
-        verify = function(payload)
-            return (
-                payload.type == 'capabilities'
-                and type(payload.supported) == 'table'
-                and vim.tbl_islist(payload.supported))
-        end,
+        map = handlers.map,
+        verify = handlers.verify,
         timeout = opts.timeout,
         interval = opts.interval,
     }, cb)
@@ -162,20 +395,24 @@ end
 --- @alias distant.core.api.CopyOpts {src:string, dst:string, timeout?:number, interval?:number}
 --- @param opts distant.core.api.CopyOpts
 --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.OkPayload)
---- @return distant.core.api.Error|nil,distant.core.api.OkPayload|nil
+--- @return distant.core.api.Error|nil err, distant.core.api.OkPayload|nil payload
 function M:copy(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
         cb = { cb, 'function', true },
     })
 
+    local ty = REQUEST_TYPE.COPY
+    local handlers = assert(RESPONSE_HANDLERS[ty], 'Missing handlers for ' .. ty)
+
     return self.transport:send({
         payload = {
-            type = 'copy',
+            type = ty,
             src = opts.src,
             dst = opts.dst,
         },
-        verify = verify_ok,
+        map = handlers.map,
+        verify = handlers.verify,
         timeout = opts.timeout,
         interval = opts.interval,
     }, cb)
@@ -184,20 +421,24 @@ end
 --- @alias distant.core.api.CreateDirOpts {path:string, all?:boolean, timeout?:number, interval?:number}
 --- @param opts distant.core.api.CreateDirOpts
 --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.OkPayload)
---- @return distant.core.api.Error|nil,distant.core.api.OkPayload|nil
+--- @return distant.core.api.Error|nil err, distant.core.api.OkPayload|nil payload
 function M:create_dir(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
         cb = { cb, 'function', true },
     })
 
+    local ty = REQUEST_TYPE.DIR_CREATE
+    local handlers = assert(RESPONSE_HANDLERS[ty], 'Missing handlers for ' .. ty)
+
     return self.transport:send({
         payload = {
-            type = 'dir_create',
+            type = ty,
             path = opts.path,
             all = opts.all,
         },
-        verify = verify_ok,
+        map = handlers.map,
+        verify = handlers.verify,
         timeout = opts.timeout,
         interval = opts.interval,
     }, cb)
@@ -206,22 +447,23 @@ end
 --- @alias distant.core.api.ExistsOpts {path:string, timeout?:number, interval?:number}
 --- @param opts distant.core.api.ExistsOpts
 --- @param cb? fun(err?:distant.core.api.Error, payload?:boolean)
---- @return distant.core.api.Error|nil,boolean|nil
+--- @return distant.core.api.Error|nil err, boolean|nil exists
 function M:exists(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
         cb = { cb, 'function', true },
     })
 
+    local ty = REQUEST_TYPE.EXISTS
+    local handlers = assert(RESPONSE_HANDLERS[ty], 'Missing handlers for ' .. ty)
+
     local err, value = self.transport:send({
         payload = {
-            type = 'exists',
+            type = ty,
             path = opts.path,
         },
-        verify = function(payload)
-            return payload.type == 'exists'
-        end,
-        map = function(payload) return payload.value end,
+        map = handlers.map,
+        verify = handlers.verify,
         timeout = opts.timeout,
         interval = opts.interval,
     }, cb)
@@ -251,27 +493,25 @@ end
 
 --- @param opts distant.core.api.MetadataOpts
 --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.MetadataPayload)
---- @return distant.core.api.Error|nil,distant.core.api.MetadataPayload|nil
+--- @return distant.core.api.Error|nil err, distant.core.api.MetadataPayload|nil metadata
 function M:metadata(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
         cb = { cb, 'function', true },
     })
 
+    local ty = REQUEST_TYPE.METADATA
+    local handlers = assert(RESPONSE_HANDLERS[ty], 'Missing handlers for ' .. ty)
+
     return self.transport:send({
         payload = {
-            type = 'metadata',
+            type = ty,
             path = opts.path,
             canonicalize = opts.canonicalize,
             resolve_file_type = opts.resolve_file_type,
         },
-        verify = function(payload)
-            return (
-                payload.type == 'metadata'
-                and type(payload.file_type) == 'string'
-                and type(payload.len) == 'number'
-                and type(payload.readonly) == 'boolean')
-        end,
+        map = handlers.map,
+        verify = handlers.verify,
         timeout = opts.timeout,
         interval = opts.interval,
     }, cb)
@@ -298,31 +538,27 @@ end
 
 --- @param opts distant.core.api.ReadDirOpts
 --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.ReadDirPayload)
---- @return distant.core.api.Error|nil,distant.core.api.ReadDirPayload|nil
+--- @return distant.core.api.Error|nil err, distant.core.api.ReadDirPayload|nil payload
 function M:read_dir(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
         cb = { cb, 'function', true },
     })
 
+    local ty = REQUEST_TYPE.DIR_READ
+    local handlers = assert(RESPONSE_HANDLERS[ty], 'Missing handlers for ' .. ty)
+
     return self.transport:send({
         payload = {
-            type = 'dir_read',
+            type = ty,
             path = opts.path,
             depth = opts.depth,
             absolute = opts.absolute,
             canonicalize = opts.canonicalize,
             include_root = opts.include_root,
         },
-        verify = function(payload)
-            return payload.type == 'dir_entries' and vim.tbl_islist(payload.entries) and vim.tbl_islist(payload.errors)
-        end,
-        map = function(payload)
-            return {
-                entries = payload.entries,
-                errors = vim.tbl_map(function(e) return Error:new(e) end, payload.errors),
-            }
-        end,
+        map = handlers.map,
+        verify = handlers.verify,
         timeout = opts.timeout,
         interval = opts.interval,
     }, cb)
@@ -331,22 +567,23 @@ end
 --- @alias distant.core.api.ReadFileOpts {path:string, timeout?:number, interval?:number}
 --- @param opts distant.core.api.ReadFileOpts
 --- @param cb? fun(err?:distant.core.api.Error, payload?:number[])
---- @return distant.core.api.Error|nil,number[]|nil
+--- @return distant.core.api.Error|nil err, number[]|nil bytes
 function M:read_file(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
         cb = { cb, 'function', true },
     })
 
+    local ty = REQUEST_TYPE.FILE_READ
+    local handlers = assert(RESPONSE_HANDLERS[ty], 'Missing handlers for ' .. ty)
+
     return self.transport:send({
         payload = {
-            type = 'file_read',
+            type = ty,
             path = opts.path,
         },
-        verify = function(payload)
-            return payload.type == 'blob' and vim.tbl_islist(payload.data)
-        end,
-        map = function(payload) return payload.data end,
+        map = handlers.map,
+        verify = handlers.verify,
         timeout = opts.timeout,
         interval = opts.interval,
     }, cb)
@@ -355,22 +592,23 @@ end
 --- @alias distant.core.api.ReadFileTextOpts {path:string, timeout?:number, interval?:number}
 --- @param opts distant.core.api.ReadFileTextOpts
 --- @param cb? fun(err?:distant.core.api.Error, payload?:string)
---- @return distant.core.api.Error|nil,string|nil
+--- @return distant.core.api.Error|nil err, string|nil text
 function M:read_file_text(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
         cb = { cb, 'function', true },
     })
 
+    local ty = REQUEST_TYPE.FILE_READ_TEXT
+    local handlers = assert(RESPONSE_HANDLERS[ty], 'Missing handlers for ' .. ty)
+
     local err, value = self.transport:send({
         payload = {
-            type = 'file_read_text',
+            type = ty,
             path = opts.path,
         },
-        verify = function(payload)
-            return payload.type == 'text' and type(payload.data) == 'string'
-        end,
-        map = function(payload) return payload.data end,
+        map = handlers.map,
+        verify = handlers.verify,
         timeout = opts.timeout,
         interval = opts.interval,
     }, cb)
@@ -382,20 +620,24 @@ end
 --- @alias distant.core.api.RemoveOpts {path:string, force?:boolean, timeout?:number, interval?:number}
 --- @param opts distant.core.api.RemoveOpts
 --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.OkPayload)
---- @return distant.core.api.Error|nil,distant.core.api.OkPayload|nil
+--- @return distant.core.api.Error|nil err, distant.core.api.OkPayload|nil payload
 function M:remove(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
         cb = { cb, 'function', true },
     })
 
+    local ty = REQUEST_TYPE.REMOVE
+    local handlers = assert(RESPONSE_HANDLERS[ty], 'Missing handlers for ' .. ty)
+
     return self.transport:send({
         payload = {
-            type = 'remove',
+            type = ty,
             path = opts.path,
             force = opts.force,
         },
-        verify = verify_ok,
+        map = handlers.map,
+        verify = handlers.verify,
         timeout = opts.timeout,
         interval = opts.interval,
     }, cb)
@@ -404,20 +646,24 @@ end
 --- @alias distant.core.api.RenameOpts {src:string, dst:string, timeout?:number, interval?:number}
 --- @param opts distant.core.api.RenameOpts
 --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.OkPayload)
---- @return distant.core.api.Error|nil,distant.core.api.OkPayload|nil
+--- @return distant.core.api.Error|nil err, distant.core.api.OkPayload|nil payload
 function M:rename(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
         cb = { cb, 'function', true },
     })
 
+    local ty = REQUEST_TYPE.RENAME
+    local handlers = assert(RESPONSE_HANDLERS[ty], 'Missing handlers for ' .. ty)
+
     return self.transport:send({
         payload = {
-            type = 'remove',
+            type = ty,
             src = opts.src,
             dst = opts.dst,
         },
-        verify = verify_ok,
+        map = handlers.map,
+        verify = handlers.verify,
         timeout = opts.timeout,
         interval = opts.interval,
     }, cb)
@@ -432,7 +678,7 @@ end
 
 --- @param opts distant.core.api.SearchOpts
 --- @param cb? fun(err?:distant.core.api.Error, matches?:distant.core.api.search.Match[])
---- @return distant.core.api.Error|nil, distant.core.api.Searcher|distant.core.api.search.Match[]|nil
+--- @return distant.core.api.Error|nil err, distant.core.api.Searcher|distant.core.api.search.Match[]|nil searcher_or_matches
 function M:search(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -468,7 +714,7 @@ end
 
 --- @param opts distant.core.api.process.SpawnOpts
 --- @param cb? fun(err?:distant.core.api.Error, results?:distant.core.api.process.SpawnResults)
---- @return distant.core.api.Error|nil, distant.core.api.Process|distant.core.api.process.SpawnResults|nil
+--- @return distant.core.api.Error|nil err, distant.core.api.Process|distant.core.api.process.SpawnResults|nil process_or_results
 function M:spawn(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
@@ -504,29 +750,22 @@ end
 --- @alias distant.core.api.SystemInfoOpts {timeout?:number, interval?:number}
 --- @param opts distant.core.api.SystemInfoOpts
 --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.SystemInfoPayload)
---- @return distant.core.api.Error|nil,distant.core.api.SystemInfoPayload|nil
+--- @return distant.core.api.Error|nil err, distant.core.api.SystemInfoPayload|nil system_info
 function M:system_info(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
         cb = { cb, 'function', true },
     })
 
+    local ty = REQUEST_TYPE.SYSTEM_INFO
+    local handlers = assert(RESPONSE_HANDLERS[ty], 'Missing handlers for ' .. ty)
+
     return self.transport:send({
         payload = {
-            type = 'system_info',
+            type = ty,
         },
-        verify = function(payload)
-            return (
-                payload.type == 'system_info'
-                and type(payload.family) == 'string'
-                and type(payload.os) == 'string'
-                and type(payload.arch) == 'string'
-                and type(payload.current_dir) == 'string'
-                and type(payload.main_separator) == 'string'
-                and type(payload.username) == 'string'
-                and type(payload.shell) == 'string'
-            )
-        end,
+        map = handlers.map,
+        verify = handlers.verify,
         timeout = opts.timeout,
         interval = opts.interval,
     }, cb)
@@ -535,20 +774,24 @@ end
 --- @alias distant.core.api.WriteFileOpts {path:string, data:integer[], timeout?:number, interval?:number}
 --- @param opts distant.core.api.WriteFileOpts
 --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.OkPayload)
---- @return distant.core.api.Error|nil,distant.core.api.OkPayload|nil
+--- @return distant.core.api.Error|nil err, distant.core.api.OkPayload|nil payload
 function M:write_file(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
         cb = { cb, 'function', true },
     })
 
+    local ty = REQUEST_TYPE.FILE_WRITE
+    local handlers = assert(RESPONSE_HANDLERS[ty], 'Missing handlers for ' .. ty)
+
     return self.transport:send({
         payload = {
-            type = 'file_write',
+            type = ty,
             path = opts.path,
             data = opts.data,
         },
-        verify = verify_ok,
+        map = handlers.map,
+        verify = handlers.verify,
         timeout = opts.timeout,
         interval = opts.interval,
     }, cb)
@@ -557,20 +800,24 @@ end
 --- @alias distant.core.api.WriteFileTextOpts {path:string, text:string, timeout?:number, interval?:number}
 --- @param opts distant.core.api.WriteFileTextOpts
 --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.OkPayload)
---- @return distant.core.api.Error|nil,distant.core.api.OkPayload|nil
+--- @return distant.core.api.Error|nil err, distant.core.api.OkPayload|nil payload
 function M:write_file_text(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
         cb = { cb, 'function', true },
     })
 
+    local ty = REQUEST_TYPE.FILE_WRITE_TEXT
+    local handlers = assert(RESPONSE_HANDLERS[ty], 'Missing handlers for ' .. ty)
+
     return self.transport:send({
         payload = {
-            type = 'file_write_text',
+            type = ty,
             path = opts.path,
             text = opts.text,
         },
-        verify = verify_ok,
+        map = handlers.map,
+        verify = handlers.verify,
         timeout = opts.timeout,
         interval = opts.interval,
     }, cb)
@@ -627,15 +874,19 @@ function M:watch(opts, cb)
         cb = { cb, 'function' },
     })
 
+    local ty = REQUEST_TYPE.WATCH
+    local handlers = assert(RESPONSE_HANDLERS[ty], 'Missing handlers for ' .. ty)
+
     return self.transport:send({
         payload = {
-            type = 'watch',
+            type = ty,
             path = opts.path,
             recursive = opts.recursive,
             only = opts.only,
             except = opts.except,
         },
-        verify = verify_ok,
+        map = handlers.map,
+        verify = handlers.verify,
         more = function(payload)
             -- TODO: We need some way to cleanup the callback when
             --       the path has been unwatched!
@@ -658,19 +909,23 @@ end
 --- @alias distant.core.api.UnwatchOpts {path:string, timeout?:number, interval?:number}
 --- @param opts distant.core.api.UnwatchOpts
 --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.OkPayload)
---- @return distant.core.api.Error|nil,distant.core.api.OkPayload|nil
+--- @return distant.core.api.Error|nil err, distant.core.api.OkPayload|nil payload
 function M:unwatch(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
         cb = { cb, 'function', true },
     })
 
+    local ty = REQUEST_TYPE.UNWATCH
+    local handlers = assert(RESPONSE_HANDLERS[ty], 'Missing handlers for ' .. ty)
+
     return self.transport:send({
         payload = {
-            type = 'unwatch',
+            type = ty,
             path = opts.path,
         },
-        verify = verify_ok,
+        map = handlers.map,
+        verify = handlers.verify,
         timeout = opts.timeout,
         interval = opts.interval,
     }, cb)

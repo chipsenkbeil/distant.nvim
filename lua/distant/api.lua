@@ -52,14 +52,14 @@ local function make_api(client_id)
 
     --- @param opts distant.core.api.AppendFileOpts
     --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.OkPayload)
-    --- @return distant.core.api.Error|nil,distant.core.api.OkPayload|nil
+    --- @return distant.core.api.Error|nil err, distant.core.api.OkPayload|nil payload
     function M.append_file(opts, cb)
         return api():append_file(opts, cb)
     end
 
     --- @param opts distant.core.api.AppendFileTextOpts
     --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.OkPayload)
-    --- @return distant.core.api.Error|nil,distant.core.api.OkPayload|nil
+    --- @return distant.core.api.Error|nil err, distant.core.api.OkPayload|nil payload
     function M.append_file_text(opts, cb)
         return api():append_file_text(opts, cb)
     end
@@ -70,112 +70,112 @@ local function make_api(client_id)
     ---
     --- @param opts distant.core.client.CachedSystemInfoOpts
     --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.SystemInfoPayload)
-    --- @return distant.core.api.Error|nil, distant.core.api.SystemInfoPayload|nil
+    --- @return distant.core.api.Error|nil err, distant.core.api.SystemInfoPayload|nil payload
     function M.cached_system_info(opts, cb)
         return client():cached_system_info(opts, cb)
     end
 
     --- @param opts distant.core.api.CapabilitiesOpts
-    --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.CapabilitiesPayload)
-    --- @return distant.core.api.Error|nil,distant.core.api.CapabilitiesPayload|nil
+    --- @param cb? fun(err?:distant.core.api.Error, payload?:string[])
+    --- @return distant.core.api.Error|nil err, string[]|nil capabilities
     function M.capabilities(opts, cb)
         return api():capabilities(opts, cb)
     end
 
     --- @param opts distant.core.api.CopyOpts
     --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.OkPayload)
-    --- @return distant.core.api.Error|nil,distant.core.api.OkPayload|nil
+    --- @return distant.core.api.Error|nil err, distant.core.api.OkPayload|nil payload
     function M.copy(opts, cb)
         return api():copy(opts, cb)
     end
 
     --- @param opts distant.core.api.CreateDirOpts
     --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.OkPayload)
-    --- @return distant.core.api.Error|nil,distant.core.api.OkPayload|nil
+    --- @return distant.core.api.Error|nil err, distant.core.api.OkPayload|nil payload
     function M.create_dir(opts, cb)
         return api():create_dir(opts, cb)
     end
 
     --- @param opts distant.core.api.ExistsOpts
     --- @param cb? fun(err?:distant.core.api.Error, payload?:boolean)
-    --- @return distant.core.api.Error|nil,boolean|nil
+    --- @return distant.core.api.Error|nil err, boolean|nil exists
     function M.exists(opts, cb)
         return api():exists(opts, cb)
     end
 
     --- @param opts distant.core.api.MetadataOpts
     --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.MetadataPayload)
-    --- @return distant.core.api.Error|nil,distant.core.api.MetadataPayload|nil
+    --- @return distant.core.api.Error|nil err, distant.core.api.MetadataPayload|nil metadata
     function M.metadata(opts, cb)
         return api():metadata(opts, cb)
     end
 
     --- @param opts distant.core.api.ReadDirOpts
     --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.ReadDirPayload)
-    --- @return distant.core.api.Error|nil,distant.core.api.ReadDirPayload|nil
+    --- @return distant.core.api.Error|nil err, distant.core.api.ReadDirPayload|nil payload
     function M.read_dir(opts, cb)
         return api():read_dir(opts, cb)
     end
 
     --- @param opts distant.core.api.ReadFileOpts
     --- @param cb? fun(err?:distant.core.api.Error, payload?:number[])
-    --- @return distant.core.api.Error|nil,number[]|nil
+    --- @return distant.core.api.Error|nil err, number[]|nil bytes
     function M.read_file(opts, cb)
         return api():read_file(opts, cb)
     end
 
     --- @param opts distant.core.api.ReadFileTextOpts
     --- @param cb? fun(err?:distant.core.api.Error, payload?:string)
-    --- @return distant.core.api.Error|nil,string|nil
+    --- @return distant.core.api.Error|nil err, string|nil text
     function M.read_file_text(opts, cb)
         return api():read_file_text(opts, cb)
     end
 
     --- @param opts distant.core.api.RemoveOpts
     --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.OkPayload)
-    --- @return distant.core.api.Error|nil,distant.core.api.OkPayload|nil
+    --- @return distant.core.api.Error|nil err, distant.core.api.OkPayload|nil payload
     function M.remove(opts, cb)
         return api():remove(opts, cb)
     end
 
     --- @param opts distant.core.api.RenameOpts
     --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.OkPayload)
-    --- @return distant.core.api.Error|nil,distant.core.api.OkPayload|nil
+    --- @return distant.core.api.Error|nil err, distant.core.api.OkPayload|nil payload
     function M.rename(opts, cb)
         return api():rename(opts, cb)
     end
 
     --- @param opts distant.core.api.SearchOpts
     --- @param cb? fun(err?:distant.core.api.Error, matches?:distant.core.api.search.Match[])
-    --- @return distant.core.api.Error|nil, distant.core.api.Searcher|distant.core.api.search.Match[]|nil
+    --- @return distant.core.api.Error|nil err, distant.core.api.Searcher|distant.core.api.search.Match[]|nil searcher_or_matches
     function M.search(opts, cb)
         return api():search(opts, cb)
     end
 
     --- @param opts distant.core.api.process.SpawnOpts
     --- @param cb? fun(err?:distant.core.api.Error, results?:distant.core.api.process.SpawnResults)
-    --- @return distant.core.api.Error|nil, distant.core.api.Process|distant.core.api.process.SpawnResults|nil
+    --- @return distant.core.api.Error|nil err, distant.core.api.Process|distant.core.api.process.SpawnResults|nil process_or_results
     function M.spawn(opts, cb)
         return api():spawn(opts, cb)
     end
 
     --- @param opts distant.core.api.SystemInfoOpts
     --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.SystemInfoPayload)
-    --- @return distant.core.api.Error|nil,distant.core.api.SystemInfoPayload|nil
+    --- @return distant.core.api.Error|nil err, distant.core.api.SystemInfoPayload|nil system_info
     function M.system_info(opts, cb)
         return api():system_info(opts, cb)
     end
 
     --- @param opts distant.core.api.WriteFileOpts
     --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.OkPayload)
-    --- @return distant.core.api.Error|nil,distant.core.api.OkPayload|nil
+    --- @return distant.core.api.Error|nil err, distant.core.api.OkPayload|nil payload
     function M.write_file(opts, cb)
         return api():write_file(opts, cb)
     end
 
     --- @param opts distant.core.api.WriteFileTextOpts
     --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.OkPayload)
-    --- @return distant.core.api.Error|nil,distant.core.api.OkPayload|nil
+    --- @return distant.core.api.Error|nil err, distant.core.api.OkPayload|nil payload
     function M.write_file_text(opts, cb)
         return api():write_file_text(opts, cb)
     end
@@ -188,7 +188,7 @@ local function make_api(client_id)
 
     --- @param opts distant.core.api.UnwatchOpts
     --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.OkPayload)
-    --- @return distant.core.api.Error|nil,distant.core.api.OkPayload|nil
+    --- @return distant.core.api.Error|nil err, distant.core.api.OkPayload|nil payload
     function M.unwatch(opts, cb)
         return api():unwatch(opts, cb)
     end
