@@ -43,12 +43,22 @@ end
 
 ---@param state distant.ui.State
 local function GenericHelp(state)
-    local keymap_tuples = {
-        { 'Toggle help',  'g?' },
-        { 'Refresh tab',  'r' },
-        { 'Close window', 'q' },
-        { 'Close window', '<Esc>' },
-    }
+    --- @type {[1]: string, [2]: string}[]
+    local keymap_tuples = {}
+
+    -- Add our globals that we want to show at the top
+    table.insert(keymap_tuples, { 'Toggle help', 'g?' })
+    table.insert(keymap_tuples, { 'Refresh tab', 'r' })
+
+    -- Add our view-specific keybindings
+    if state.view.current == 'Connections' then
+        table.insert(keymap_tuples, { 'Toggle server info', '<S-i>' })
+        table.insert(keymap_tuples, { 'Kill server connection', '<S-k>' })
+    end
+
+    -- Add our globals that we want to show at the bottom
+    table.insert(keymap_tuples, { 'Close window', 'q' })
+    table.insert(keymap_tuples, { 'Close window', '<Esc>' })
 
     local is_current_settings_expanded = state.view.is_current_settings_expanded
 
