@@ -28,6 +28,12 @@ local DEFAULT_SETTINGS = {
     --- Manager-specific settings that are applied when this plugin controls the manager.
     --- @class distant.plugin.settings.ManagerSettings
     manager = {
+        --- If true, when neovim starts a manager, it will be run as a daemon, which
+        --- will detach it from the neovim process. This means that the manager will
+        --- persist after neovim itself exits.
+        --- @type boolean
+        daemon = false,
+
         --- If true, will avoid starting the manager until first needed.
         --- @type boolean
         lazy = false,
@@ -37,6 +43,11 @@ local DEFAULT_SETTINGS = {
 
         --- @type distant.core.log.Level|nil
         log_level = nil,
+
+        --- If true, when neovim starts a manager, it will listen on a user-local
+        --- domain socket or windows pipe rather than the globally-accessible variant.
+        --- @type boolean
+        user = false,
     },
 
     --- Network configuration to use between the manager and clients.

@@ -384,6 +384,7 @@ end
 --- @class distant.core.manager.ListenOpts
 --- @field access? 'owner'|'group'|'anyone' #access level for the unix socket or windows pipe
 --- @field config? string #alternative config path to use
+--- @field daemon? boolean #if true, will detach the manager from this neovim instance
 --- @field log_file? string #alternative log file path to use
 --- @field log_level? distant.core.log.Level #alternative log level to use
 --- @field user? boolean #if true, specifies that the manager should listen with user-level permissions (only applies if no explicit socket or pipe name provided)
@@ -396,6 +397,11 @@ end
 function M:listen(opts, cb)
     opts = opts or {}
 
+    -- If true, will result in the spawned process exiting after forking
+    -- the manager process
+    --- @type boolean
+    local daemon = opts.daemon == true or false
+
     local cmd = builder
         .manager
         .listen()
@@ -406,6 +412,7 @@ function M:listen(opts, cb)
             -- Optional user settings
             access       = opts.access,
             config       = opts.config,
+            daemon       = daemon,
             log_file     = opts.log_file,
             log_level    = opts.log_level,
             user         = opts.user,

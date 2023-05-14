@@ -135,13 +135,13 @@ local function AvailableConnections(opts)
                 { id = id, destination = destination }
             ),
             ui.Keybind(
-                '<C-i>',
-                'EXPAND_ACTIVE_CONNECTION',
+                'i',
+                'TOGGLE_EXPAND_CONNECTION',
                 { id = id, destination = destination }
             ),
             ui.Keybind(
-                '<C-k>',
-                'KILL_ACTIVE_CONNECTION',
+                'd',
+                'KILL_CONNECTION',
                 { id = id, destination = destination }
             ),
         }

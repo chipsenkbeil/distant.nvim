@@ -200,8 +200,10 @@ function M:load_manager(opts, cb)
 
                 --- @diagnostic disable-next-line:redefined-local
                 self.__manager:listen({
+                    daemon = self.settings.manager.daemon,
                     log_file = log_file,
                     log_level = log_level,
+                    user = self.settings.manager.user,
                 }, function(err)
                     if err then
                         log.fmt_error('Manager failed: %s', err)

@@ -182,6 +182,35 @@ local function reload_tab(event)
 end
 
 --- @param event distant.core.ui.window.EffectEvent
+local function toggle_expand_connection(event)
+    --- @type {id:distant.core.manager.ConnectionId, destination:distant.core.Destination}
+    local payload = event.payload
+    local id = payload.id
+
+    -- Load our manager and refresh the connections
+    -- before attempting to expand one
+    plugin:connections({}, function(err, _)
+        assert(not err, err)
+
+        -- TODO: Expand it
+    end)
+end
+
+--- @param event distant.core.ui.window.EffectEvent
+local function kill_connection(event)
+    --- @type {id:distant.core.manager.ConnectionId, destination:distant.core.Destination}
+    local payload = event.payload
+    local id = payload.id
+
+    local manager = plugin:manager()
+    if manager then
+        manager:kill({ connection = id }, function(err, _)
+            assert(not err, tostring(err))
+        end)
+    end
+end
+
+--- @param event distant.core.ui.window.EffectEvent
 local function switch_active_connection(event)
     --- @type {id:distant.core.manager.ConnectionId, destination:distant.core.Destination}
     local payload = event.payload
@@ -228,6 +257,8 @@ local window = Window:new({
         ['TOGGLE_EXPAND_CURRENT_SETTINGS'] = toggle_expand_current_settings,
         ['RELOAD_TAB'] = reload_tab,
         ['SWITCH_ACTIVE_CONNECTION'] = switch_active_connection,
+        ['TOGGLE_EXPAND_CONNECTION'] = toggle_expand_connection,
+        ['KILL_CONNECTION'] = kill_connection,
     },
     winopts = {
         border = 'none',
