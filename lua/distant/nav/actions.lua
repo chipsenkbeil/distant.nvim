@@ -133,8 +133,7 @@ M.mkdir = function(opts)
         end
 
         local path = utils.join_path(remote_sep(client_id), { base_path, name })
-        -- TODO: Use explicit client id from buffer!
-        local err = plugin.api.create_dir({ path = path, all = true })
+        local err = plugin.api(client_id).create_dir({ path = path, all = true })
 
         if not err then
             editor.open({
@@ -169,8 +168,7 @@ M.rename = function(opts)
                 return
             end
 
-            -- TODO: Use explicit client id from buffer!
-            local err = plugin.api.rename({ src = old_path, dst = new_path })
+            local err = plugin.api(client_id).rename({ src = old_path, dst = new_path })
 
             if not err then
                 editor.open({
@@ -208,8 +206,7 @@ M.remove = function(opts)
                 end
             end
 
-            -- TODO: Use explicit client id from buffer!
-            local err = plugin.api.remove(vim.tbl_extend('keep', { path = path }, opts))
+            local err = plugin.api(client_id).remove(vim.tbl_extend('keep', { path = path }, opts))
 
             if not err then
                 editor.open({

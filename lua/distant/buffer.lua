@@ -240,6 +240,76 @@ local function make_buffer(buf)
     end
 
     --------------------------------------------------------------------------
+    -- NAME API
+    --------------------------------------------------------------------------
+
+    --- Constructs a full name based on components.
+    ---
+    --- Format: [{SCHEME}://[{CONNECTION}@]]PATH
+    ---
+    --- * `scheme` - the scheme of the name such as "distant".
+    --- * `connection` - the connection id of the client tied to the buffer.
+    --- * `path` - the remainder of the name.
+    ---
+    --- @param components {scheme:string|nil, connection:string|nil, path:string}
+    --- @return string
+    function M.build_name(components)
+        local name = ''
+        if components.scheme then
+            name = name .. components.scheme .. '://'
+            if components.connection then
+                name = name .. components.connection .. '@'
+            end
+        end
+        return name .. components.path
+    end
+
+    --- Parses the buffer's name into individual components.
+    ---
+    --- Format: [{SCHEME}://[{CONNECTION}@]]PATH
+    ---
+    --- * `scheme` - the scheme of the name such as "distant".
+    --- * `connection` - the connection id of the client tied to the buffer.
+    --- * `path` - the remainder of the name.
+    ---
+    --- @param name? string # name to parse, using the selected buffer's full name if no name provided
+    --- @return {scheme?:string, connection?:string, path:string} components
+    function M.parse_name(name)
+        local scheme, connection, i, j
+
+        -- Grab our buffer's full name if no name is provided
+        if not name then
+            name = vim.api.nvim_buf_get_name(buf)
+        end
+
+        -- Look for the scheme first
+        i, j = string.find(name, '.+://')
+
+        -- If at start of string and long enough, we have a scheme,
+        -- so parse it out (before the ://) and advance the name
+        -- to be after the ://
+        if i == 1 and j ~= nil and j > 3 then
+            scheme = string.sub(name, i, j - 3)
+            name = string.sub(name, j + 1)
+        end
+
+        -- If we found a scheme, look for the connection next
+        if scheme then
+            i, j = string.find(name, '.+@')
+
+            -- If at start of string and long enough, we have a connection
+            if i == 1 and j ~= nil and j > 1 then
+                connection = string.sub(name, i, j - 1)
+                name = string.sub(name, j + 1)
+            end
+        end
+
+        -- Return our results, with everything remaining in the name
+        -- being treated as our path
+        return { scheme = scheme, connection = connection, path = name }
+    end
+
+    --------------------------------------------------------------------------
     -- SEARCH API
     --------------------------------------------------------------------------
 
@@ -263,18 +333,45 @@ local function make_buffer(buf)
         return s
     end
 
+    --- Builds a vim file pattern to use with `vim.fn.bufnr()`.
+    --- @param opts {scheme?:string, connection?:string, path:string}
+    --- @return string
+    local function file_pattern(opts)
+        return '^' .. M.build_name(opts) .. '$'
+    end
+
     --- Scans all path variables to see if there is a matching path.
+    ---
+    --- If provided the optional `connection`, will only return true
+    --- if the buffer also has a matching connection.
+    ---
     --- @param path string
+    --- @param opts? {connection?:string}
     --- @return boolean
-    function M.has_matching_path(path)
+    function M.has_matching_path(path, opts)
+        opts = opts or {}
+
         -- If not initialized or invalid path, we can exit early
         if not M.has_data() or type(path) ~= 'string' or path:len() == 0 then
             return false
         end
 
+        -- If given a connection that does not match our own, exit early
+        if opts.connection and opts.connection ~= M.client_id() then
+            return false
+        end
+
+        -- Parse [distant://[{CONNECTION}@]]path into its components
+        local components = M.parse_name(path)
+
+        -- If the connection from the path doesn't match our own, exit early
+        if components.connection and components.connection ~= M.client_id() then
+            return false
+        end
+
         -- Simplify the path we are searching for to be the local
-        -- portion without a trailing slash or distant:// scheme
-        path = remove_trailing_slash(utils.strip_prefix(path, 'distant://'))
+        -- portion without a trailing slash
+        path = remove_trailing_slash(components.path)
 
         -- CHECK PRIMARY PATH
 
@@ -310,19 +407,29 @@ local function make_buffer(buf)
     ---
     --- * `path` - if specified, will look for a buffer with matching path.
     ---   Will look for distant://path and path itself.
+    --- * `connection` - will enforce that the matching buffer has the same connection.
     ---
-    --- @param opts {path:string}
+    --- @param opts {path:string, connection?:string}
     --- @return distant.plugin.Buffer|nil
     function M.find(opts)
-        local path = opts.path
+        local components = M.parse_name(opts.path)
+        local path = components.path
+
         if type(path) == 'string' then
             -- Simplify the path we are searching for to be the local
-            -- portion without a trailing slash or distant:// scheme
-            path = remove_trailing_slash(utils.strip_prefix(path, 'distant://'))
+            -- portion without a trailing slash
+            path = remove_trailing_slash(path)
 
-            -- Check if we have a buffer in the form of distant://path
+            -- Check if we have a buffer in the form of distant://[{CONNECTION}@]path
+            -- where the "{CONNECTION}@" is optional, indicating the client
+            -- tied to the buffer
+            --
             --- @diagnostic disable-next-line:param-type-mismatch
-            local bufnr = vim.fn.bufnr('^distant://' .. path .. '$', 0)
+            local bufnr = vim.fn.bufnr(file_pattern({
+                scheme = components.scheme,
+                connection = opts.connection or components.connection,
+                path = path,
+            }), 0)
             if bufnr ~= -1 then
                 return make_buffer(bufnr)
             end
@@ -331,7 +438,7 @@ local function make_buffer(buf)
             -- as the primary or one of the alternate paths
             --- @diagnostic disable-next-line:redefined-local
             for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
-                if make_buffer(bufnr).has_matching_path(path) then
+                if make_buffer(bufnr).has_matching_path(path, { connection = opts.connection }) then
                     return make_buffer(bufnr)
                 end
             end
@@ -339,7 +446,7 @@ local function make_buffer(buf)
     end
 
     --- Like `buf.find`, but returns the buffer number instead of the buffer.
-    --- @param opts {path:string}
+    --- @param opts {path:string, connection?:string}
     --- @return number|nil
     function M.find_bufnr(opts)
         local buffer = M.find(opts)

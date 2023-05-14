@@ -1,13 +1,8 @@
 local plugin = require('distant')
 local log    = require('distant-core').log
 
---- @class distant.editor.WriteOpts
---- @field buf number #The handle of the buffer to write
---- @field timeout? number #Maximum time to wait for a response
---- @field interval? number #Time in milliseconds to wait between checks for a response
-
 --- Writes a buffer to disk on the remote machine
---- @param opts number|distant.editor.WriteOpts
+--- @param opts number|{buf:number, timeout?:number, interval?:number}
 --- @return boolean
 return function(opts)
     opts = opts or {}

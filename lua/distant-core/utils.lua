@@ -272,7 +272,7 @@ end
 --- in the form "file/path:line,col" -> "file/path", line, col
 ---
 --- @param s string
---- @return string, number|nil, number|nil
+--- @return string s, number|nil line, number|nil col
 M.strip_line_col = function(s)
     local _, _, new_s, line, col = string.find(s, '^(.+):(%d+),(%d+)$', 1, false)
     if new_s == nil then

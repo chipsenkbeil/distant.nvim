@@ -42,14 +42,18 @@ local function _initialize()
         callback = function(opts)
             local bufnr = opts.buf
             local fname = opts.match
-            local path = utils.strip_prefix(fname, 'distant://')
 
-            local line, col
-            path, line, col = utils.strip_line_col(path)
+            local components = plugin.buf.parse_name(fname)
+            local connection = components.connection
+            local path, line, col = utils.strip_line_col(components.path)
 
             -- Ensure our buffer is named without the line/column,
-            -- but with the appropriate prefix
-            vim.api.nvim_buf_set_name(bufnr, 'distant://' .. path)
+            -- but with the appropriate prefixes
+            vim.api.nvim_buf_set_name(bufnr, plugin.buf.build_name({
+                scheme = 'distant',
+                connection = connection,
+                path = path,
+            }))
 
             log.fmt_debug('Reading %s into buffer %s', path, bufnr)
             editor.open({
@@ -57,7 +61,7 @@ local function _initialize()
                 bufnr = bufnr,
                 line = line,
                 col = col,
-                client_id = plugin.buf(bufnr).client_id(),
+                client_id = connection or plugin.buf(bufnr).client_id(),
                 reload = true,
             })
         end,

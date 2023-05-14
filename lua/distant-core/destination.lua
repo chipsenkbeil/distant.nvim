@@ -8,7 +8,7 @@
 local M   = {}
 M.__index = M
 
---- Creates a new version.
+--- Creates a new destination.
 --- @param opts {host:string, port?:integer, scheme?:string, username?:string, password?:string}
 --- @return distant.core.Destination
 function M:new(opts)

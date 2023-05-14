@@ -1,7 +1,6 @@
 local plugin       = require('distant')
 
 local log          = require('distant-core').log
-local utils        = require('distant-core').utils
 
 local checker      = require('distant.editor.open.checker')
 local configurator = require('distant.editor.open.configurator')
@@ -31,10 +30,14 @@ return function(opts)
     opts = opts or {}
     log.fmt_trace('editor.open(%s)', opts)
 
-    --- @type string|nil
-    local client_id = opts.client_id
-    if client_id ~= nil then
-        log.fmt_debug('Using explicit client %s', client_id)
+    -- Identify which connection to use either by an explicit id or
+    -- using the active connection
+    local connection = opts.client_id
+    if connection ~= nil then
+        log.fmt_debug('Using explicit connection %s', connection)
+    else
+        connection = assert(plugin:active_client_id(), 'No active connection!')
+        log.fmt_debug('Using active connection %s', connection)
     end
 
     --------------------------------------------------------------------------
@@ -46,41 +49,53 @@ return function(opts)
     end
 
     --------------------------------------------------------------------------
-    -- SPLIT REMOTE AND LOCAL PATHS
+    -- PARSE NAME & DERIVE LOCAL PATH & CONNECTION
     --------------------------------------------------------------------------
+
+    -- Parse [distant://[{CONNECTION}@]]{PATH} into components
+    local components = plugin.buf.parse_name(opts.path)
+
+    -- Validate that our connection matches that of the name
+    if components.connection then
+        -- If our selected connection differs from that of the
+        -- buffer's name (if encoded in name), we fail!
+        assert(
+            connection == components.connection,
+            ('Buffer name specifies connection %s, but using connection %s'):format(
+                components.connection, connection
+            )
+        )
+    end
 
     -- Ensure that local_path is without prefix and path is with prefix
-    local local_path = utils.strip_prefix(opts.path, 'distant://')
+    local local_path = components.path
     log.fmt_debug('Local path: %s', local_path)
 
-    local path = 'distant://' .. local_path
-    log.fmt_debug('Distant path: %s', path)
-
     --------------------------------------------------------------------------
-    -- SEARCH FOR EXISTING PATH & USE ITS CLIENT
+    -- SEARCH FOR EXISTING PATH & USE ITS CONNECTION
     --------------------------------------------------------------------------
 
     -- Determine if we already have a buffer with the matching name
     log.fmt_debug('Searching for buffer: %s', local_path)
-    local buffer = plugin.buf.find({ path = local_path })
+    local buffer = plugin.buf.find({
+        path = local_path,
+        connection = connection,
+    })
     local bufnr = buffer and buffer:bufnr()
 
     if bufnr ~= nil then
         log.fmt_debug('Found existing buffer: %s', bufnr)
 
-        local new_client_id = plugin.buf(bufnr).client_id()
-        if new_client_id ~= nil then
-            -- This is an error where we are loading a buffer for
-            -- a different client than specified, so fail!
-            if client_id ~= nil and client_id ~= new_client_id then
-                error(('Found buffer %s of client %s, but told to use client %s'):format(
-                    bufnr, new_client_id, client_id
-                ))
-            end
+        local new_connection = plugin.buf(bufnr).client_id()
 
-            -- Update our client to point to the buffer's client
-            client_id = new_client_id
-            log.fmt_debug('Using existing buffer client: %s', client_id)
+        -- If our selected connection differs from that of the buffer's connection, we fail!
+        if new_connection ~= nil then
+            assert(
+                connection == components.connection,
+                ('Found buffer %s of connection %s, but using connection %s'):format(
+                    bufnr, new_connection, connection
+                )
+            )
         end
     else
         log.debug('No buffer found.')
@@ -94,7 +109,7 @@ return function(opts)
     -- if possible without the distant:// prefix
     log.fmt_debug('Evaluating path: %s', local_path)
     local path_info = checker.check_path({
-        client_id = client_id,
+        client_id = connection,
         path = local_path,
         timeout = opts.timeout,
         interval = opts.interval,
@@ -104,17 +119,33 @@ return function(opts)
     -- and the supplied path and evaluated path are different
     if buffer == nil and local_path ~= path_info.path then
         log.fmt_debug('Searching for buffer using evaluated path: %s', path_info.path)
-        buffer = plugin.buf.find({ path = path_info.path })
+        buffer = plugin.buf.find({ path = path_info.path, connection = connection })
         bufnr = buffer and buffer:bufnr()
         if bufnr ~= nil then
             log.fmt_debug('Found existing buffer: %s', bufnr)
+
+            local new_connection = plugin.buf(bufnr).client_id()
+
+            -- If our selected connection differs from that of the buffer's connection, we fail!
+            if new_connection ~= nil then
+                assert(
+                    connection == components.connection,
+                    ('Found buffer %s of connection %s, but using connection %s'):format(
+                        bufnr, new_connection, connection
+                    )
+                )
+            end
         else
             log.debug('No buffer found.')
         end
     end
 
-    -- Construct universal remote buffer name (distant:// + canonicalized path)
-    local buf_name = 'distant://' .. path_info.path
+    -- Construct universal remote buffer name using the canonicalized path
+    local buf_name = plugin.buf.build_name({
+        scheme = 'distant',
+        connection = connection,
+        path = path_info.path,
+    })
 
     --------------------------------------------------------------------------
     -- CLEAR OUT EXISTING BUFFER
@@ -168,7 +199,7 @@ return function(opts)
             is_dir = path_info.is_dir,
             is_file = path_info.is_file,
             missing = path_info.missing,
-            client_id = client_id,
+            client_id = connection,
             timeout = opts.timeout,
             interval = opts.interval,
         })
@@ -212,7 +243,7 @@ return function(opts)
         is_dir = path_info.is_dir,
         is_file = path_info.is_file,
         missing = path_info.missing,
-        client_id = client_id,
+        client_id = connection,
         winnr = opts.winnr,
     })
 
