@@ -7,7 +7,6 @@ local DEFAULT_SETTINGS = {
         --- If true, will allow unstable versions of the CLI to be installed.
         --- @type boolean
         allow_unstable = false,
-
         --- Binary to use locally with the client.
         ---
         --- Defaults to "distant" on Unix platforms and "distant.exe" on Windows.
@@ -17,14 +16,11 @@ local DEFAULT_SETTINGS = {
             local os_name = require('distant-core').utils.detect_os_arch()
             return os_name == 'windows' and 'distant.exe' or 'distant'
         end)(),
-
         --- @type string|nil
         log_file = nil,
-
         --- @type distant.core.log.Level|nil
         log_level = nil,
     },
-
     --- Manager-specific settings that are applied when this plugin controls the manager.
     --- @class distant.plugin.settings.ManagerSettings
     manager = {
@@ -33,23 +29,18 @@ local DEFAULT_SETTINGS = {
         --- persist after neovim itself exits.
         --- @type boolean
         daemon = false,
-
         --- If true, will avoid starting the manager until first needed.
         --- @type boolean
         lazy = false,
-
         --- @type string|nil
         log_file = nil,
-
         --- @type distant.core.log.Level|nil
         log_level = nil,
-
         --- If true, when neovim starts a manager, it will listen on a user-local
         --- domain socket or windows pipe rather than the globally-accessible variant.
         --- @type boolean
         user = false,
     },
-
     --- Network configuration to use between the manager and clients.
     --- @class distant.plugin.settings.Network
     network = {
@@ -57,18 +48,15 @@ local DEFAULT_SETTINGS = {
         --- associated with a singular neovim instance
         --- @type boolean
         private = false,
-
         --- If provided, will overwrite the pipe name used for network
         --- communication on Windows machines
         --- @type string|nil
         windows_pipe = nil,
-
         --- If provided, will overwrite the unix socket path used for network
         --- communication on Unix machines
         --- @type string|nil
         unix_socket = nil,
     },
-
     --- Collection of settings for servers defined by their hostname.
     ---
     --- A key of "\*" is special in that it is considered the default for
@@ -80,6 +68,18 @@ local DEFAULT_SETTINGS = {
         --- Default server settings
         --- @class distant.plugin.settings.ServerSettings
         ['*'] = {
+
+            --- Settings that apply when connecting to a server on a remote machine
+            --- @class distant.plugin.settings.server.ConnectSettings
+            connect = {
+                --- @class distant.plugin.settings.server.connect.DefaultSettings
+                --- @field scheme? string # scheme to use in place of letting distant infer an appropriate scheme (e.g. 'ssh')
+                --- @field port? integer # port to use when connecting
+                --- @field username? string # username when connecting to the server (defaults to user running neovim)
+                --- @field options? string # options to pass along to distant when connecting (e.g. ssh backend)
+                default = {},
+            },
+
             --- Settings that apply to the navigation interface
             --- @class distant.plugin.settings.server.DirSettings
             dir = {
@@ -98,10 +98,16 @@ local DEFAULT_SETTINGS = {
 
             --- Settings that apply when launching a server on a remote machine
             --- @class distant.plugin.settings.server.LaunchSettings
-            --- @field bin? string # path to distant binary on remote machine
-            --- @field args? string[] # additional CLI arguments for binary upon launch
             launch = {
-                args = { '--shutdown', 'lonely=60' },
+                --- @class distant.plugin.settings.server.launch.DefaultSettings
+                --- @field scheme? string # scheme to use in place of letting distant infer an appropriate scheme (e.g. 'ssh')
+                --- @field port? integer # port to use when launching (not same as what server listens on)
+                --- @field username? string # username when accessing machine to launch server (defaults to user running neovim)
+                ---
+                --- @field bin? string # path to distant binary on remote machine
+                --- @field args? string[] # additional CLI arguments for binary upon launch
+                --- @field options? string # options to pass along to distant when launching (e.g. ssh backend)
+                default = {},
             },
 
             --- @alias distant.plugin.settings.server.lsp.RootDirFn fun(path:string):string|nil
@@ -118,13 +124,11 @@ local DEFAULT_SETTINGS = {
             lsp = {},
         },
     },
-
     --- @class distant.plugin.settings.Timeout
     timeout = {
         --- Maximimum time to wait (in milliseconds) for requests to finish
         --- @type integer
         max = 15 * 1000,
-
         --- Time to wait (in milliseconds) inbetween checks to see if a request timed out
         --- @type integer
         interval = 256,

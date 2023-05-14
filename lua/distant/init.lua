@@ -1,4 +1,5 @@
 local Cli            = require('distant-core').Cli
+local Destination    = require('distant-core').Destination
 local EventEmitter   = require('distant-core').EventEmitter
 local installer      = require('distant-core').installer
 local log            = require('distant-core').log
@@ -256,10 +257,11 @@ end
 function M:launch(opts, cb)
     self:__assert_initialized()
 
+    -- Retrieve the destination and put it in a structured format
     local destination = opts.destination
     assert(destination, 'Destination is missing')
-    if type(destination) == 'table' then
-        destination = destination:as_string()
+    if type(destination) == 'string' then
+        destination = Destination:parse(destination)
     end
 
     self:load_manager({
@@ -273,21 +275,26 @@ function M:launch(opts, cb)
         end
 
         assert(manager, 'Impossible: manager is nil')
+        local settings = self:server_settings_for_host(destination.host)
+
+        -- Augment our destination with defaults
+        destination.scheme = destination.scheme or settings.launch.default.scheme
+        destination.port = destination.port or settings.launch.default.port
+        destination.username = destination.username or settings.launch.default.username
 
         --- @diagnostic disable-next-line:redefined-local
         manager:launch({
-            --- @cast destination string
-            destination         = destination,
+            destination         = destination:as_string(),
             -- User-defined settings
             cache               = opts.cache,
             config              = opts.config,
-            distant             = opts.distant,
+            distant             = opts.distant or settings.launch.default.bin,
             distant_bind_server = opts.distant_bind_server,
-            distant_args        = opts.distant_args,
+            distant_args        = opts.distant_args or settings.launch.default.args,
             log_file            = opts.log_file,
             log_level           = opts.log_level,
             network             = opts.network,
-            options             = opts.options,
+            options             = opts.options or settings.launch.default.options,
         }, function(err, client)
             if client then
                 self:set_active_client_id(client)
@@ -333,6 +340,12 @@ function M:connect(opts, cb)
         end
 
         assert(manager, 'Impossible: manager is nil')
+        local settings = self:server_settings_for_host(destination.host)
+
+        -- Augment our destination with defaults
+        destination.scheme = destination.scheme or settings.connect.default.scheme
+        destination.port = destination.port or settings.connect.default.port
+        destination.username = destination.username or settings.connect.default.username
 
         --- @diagnostic disable-next-line:redefined-local
         manager:connect({
@@ -343,7 +356,7 @@ function M:connect(opts, cb)
             config      = opts.config,
             log_file    = opts.log_file,
             log_level   = opts.log_level,
-            options     = opts.options,
+            options     = opts.options or settings.connect.default.options,
         }, function(err, client)
             if client then
                 self:set_active_client_id(client)
@@ -450,7 +463,7 @@ end
 --- @param host string
 --- @return distant.plugin.settings.ServerSettings
 function M:server_settings_for_host(host)
-    log.fmt_trace('distant:server_settings_for_host(%s)', assert(host))
+    log.fmt_trace('distant:server_settings_for_host(%s)', vim.inspect(host))
     self:__assert_initialized()
 
     return vim.tbl_deep_extend(

@@ -166,6 +166,67 @@ local function AvailableConnections(opts)
     }
 end
 
+--- @return distant.core.ui.INode
+local function ConnectionsFromSettings()
+    local plugin = require('distant')
+    local rows = {}
+    local extra = {}
+
+    -- Header row
+    table.insert(rows, {
+        p.none '',
+        p.Bold 'Host',
+        p.Bold 'Default',
+    })
+
+    --- List of servers from our settings, excluding default configuration
+    --- @type string[]
+    local servers = vim.tbl_filter(
+        function(name) return name ~= '*' end,
+        vim.tbl_keys(plugin.settings.servers)
+    )
+    table.sort(servers)
+
+    for _, host in ipairs(servers) do
+        local server = plugin:server_settings_for_host(host)
+
+        -- If we have defaults, show them as JSON
+        local default = not vim.tbl_isempty(server.launch.default)
+            and vim.json.encode(server.launch.default)
+            or ''
+
+        table.insert(rows, {
+            p.none '',
+            p.highlight(host),
+            p.highlight(default),
+        })
+
+        extra[#rows] = {}
+        extra[#rows] = {
+            -- Return/Enter to launch the server
+            ui.Keybind(
+                '<CR>',
+                'LAUNCH_SERVER',
+                { host = host, settings = server }
+            ),
+        }
+    end
+
+    local has_servers = not vim.tbl_isempty(rows)
+
+    return ui.Node {
+        ui.HlTextNode(p.heading 'Available Servers'),
+        ui.EmptyLine(),
+        ui.When(has_servers, ui.Table(rows, extra)),
+        ui.When(not has_servers, ui.CascadingStyleNode(
+            { 'INDENT' },
+            {
+                ui.Text { 'N/A' },
+            }
+        )),
+        ui.EmptyLine(),
+    }
+end
 
 --- @param state distant.ui.State
 --- @return distant.core.ui.INode
@@ -177,5 +238,6 @@ return function(state)
             connections = state.info.connections.available,
             selected = state.info.connections.selected,
         }),
+        ConnectionsFromSettings(),
     }
 end

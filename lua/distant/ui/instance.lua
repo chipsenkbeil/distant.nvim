@@ -1,13 +1,14 @@
-local plugin = require('distant')
+local plugin      = require('distant')
 
-local ui     = require('distant-core').ui
-local Window = require('distant-core').ui.Window
+local Destination = require('distant-core').Destination
+local ui          = require('distant-core').ui
+local Window      = require('distant-core').ui.Window
 
-local Footer = require('distant.ui.components.footer')
-local Header = require('distant.ui.components.header')
-local Help   = require('distant.ui.components.help')
-local Main   = require('distant.ui.components.main')
-local Tabs   = require('distant.ui.components.tabs')
+local Footer      = require('distant.ui.components.footer')
+local Header      = require('distant.ui.components.header')
+local Help        = require('distant.ui.components.help')
+local Main        = require('distant.ui.components.main')
+local Tabs        = require('distant.ui.components.tabs')
 
 --- @param state distant.ui.State
 --- @return distant.core.ui.Node
@@ -201,6 +202,7 @@ local function kill_connection(event)
     --- @type {id:distant.core.manager.ConnectionId, destination:distant.core.Destination}
     local payload = event.payload
     local id = payload.id
+    local window = event.window
 
     vim.ui.input({ prompt = 'Are you sure you want to kill this connection? [y/N]' }, function(input)
         input = string.lower(vim.trim(input or ''))
@@ -208,7 +210,12 @@ local function kill_connection(event)
         if input == 'y' or input == 'yes' then
             plugin:assert_manager():kill({ connection = id }, function(err, ok)
                 assert(not err, tostring(err))
-                print(vim.inspect(ok))
+
+                -- TODO: If we offer toasts, do so
+                window:dispatch('RELOAD_TAB', {
+                    tab = { 'Connections', 'System Info' },
+                    force = false,
+                })
             end)
         end
     end)
@@ -225,6 +232,28 @@ local function switch_active_connection(event)
     plugin:connections({}, function(err, _)
         assert(not err, err)
         plugin:set_active_client_id(id)
+    end)
+end
+
+--- @param event distant.core.ui.window.EffectEvent
+local function launch_server(event)
+    --- @type {host:string, settings:distant.plugin.settings.ServerSettings}
+    local payload = event.payload
+    local host = payload.host
+    local settings = payload.settings
+
+    vim.ui.input({
+        prompt = ('Are you sure you want to launch %s? [y/N]'):format(host),
+    }, function(input)
+        input = string.lower(vim.trim(input or ''))
+
+        if input == 'y' or input == 'yes' then
+            plugin:launch({ destination = Destination:new({ host = host }) }, function(err, _)
+                assert(not err, tostring(err))
+
+                -- TODO: Update connections to reflect! And if we offer toasts, do so
+            end)
+        end
     end)
 end
 
@@ -263,6 +292,7 @@ local window = Window:new({
         ['SWITCH_ACTIVE_CONNECTION'] = switch_active_connection,
         ['TOGGLE_EXPAND_CONNECTION'] = toggle_expand_connection,
         ['KILL_CONNECTION'] = kill_connection,
+        ['LAUNCH_SERVER'] = launch_server,
     },
     winopts = {
         border = 'none',

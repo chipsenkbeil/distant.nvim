@@ -267,9 +267,14 @@ function M:start(opts, cb)
     local function on_stdout(job, line)
         local handler = self.__auth_handler
 
-        -- If we are performing authentication and are not finished,
-        -- try to authenticate using the line as a JSON message
-        if handler and not handler.finished then
+        -- If we are performing authentication, try to authenticate using the line as a JSON message
+        --
+        -- TODO: We cannot stop parsing the line and testing because both the manager
+        --       and server can perform authentication steps. So the finished flag is
+        --       a falsehood and we would end up not handling the server authentication
+        --       once the manager authentication had finished! Is there a way to support
+        --       checking for server vs manager authentication being finished?
+        if handler then
             local msg = try_parse_json_table(line)
             if msg and handler:is_auth_request(msg) then
                 local ok = handler:handle_request(msg, function(msg)
