@@ -65,9 +65,9 @@ function M.configure(opts)
 
         -- Mark the buftype as nofile and not modifiable as you cannot
         -- modify it or write it; also explicitly set a custom filetype
-        vim.api.nvim_buf_set_option(bufnr, 'filetype', 'distant-dir')
-        vim.api.nvim_buf_set_option(bufnr, 'buftype', 'nofile')
-        vim.api.nvim_buf_set_option(bufnr, 'modifiable', false)
+        vim.bo[bufnr].filetype = 'distant-dir'
+        vim.bo[bufnr].buftype = 'nofile'
+        vim.bo[bufnr].modifiable = false
 
         local destination = plugin:client_destination(opts.client_id)
         local settings = plugin:server_settings_for_client() or {}
@@ -81,7 +81,7 @@ function M.configure(opts)
 
         -- Mark the buftype as acwrite as you can still write to it, but we
         -- control where it is going
-        vim.api.nvim_buf_set_option(bufnr, 'buftype', 'acwrite')
+        vim.bo[bufnr].buftype = 'acwrite'
 
         local destination = plugin:client_destination(opts.client_id)
         local settings = plugin:server_settings_for_client() or {}

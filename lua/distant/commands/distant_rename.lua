@@ -14,7 +14,7 @@ local function command(cmd)
 
     local opts = input.opts
 
-    -- TODO: Use explicit client id from buffer!
+    -- Rename file using the active client
     --- @cast opts -table, +distant.core.api.RenameOpts
     local err, _ = plugin.api.rename(opts)
     assert(not err, tostring(err))

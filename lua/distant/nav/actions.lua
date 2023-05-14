@@ -7,10 +7,10 @@ local utils  = require('distant-core').utils
 local M      = {}
 
 --- Returns the separator used by the remote system
+--- @param client_id? string
 --- @return string
-local function remote_sep()
-    -- TODO: Use explicit client id from buffer!
-    local err, system_info = plugin.api.cached_system_info({})
+local function remote_sep(client_id)
+    local err, system_info = plugin.api(client_id).cached_system_info({})
     assert(not err, tostring(err))
     assert(system_info, 'Missing system info')
     return assert(system_info.main_separator, 'missing remote sep')
@@ -24,11 +24,12 @@ local function path_under_cursor()
 end
 
 --- Returns the full path under cursor by joining it with the base path
+--- @param client_id? string
 --- @return string|nil
-local function full_path_under_cursor()
+local function full_path_under_cursor(client_id)
     local base_path = plugin.buf.path()
     if base_path ~= nil then
-        return utils.join_path(remote_sep(), { base_path, path_under_cursor() })
+        return utils.join_path(remote_sep(client_id), { base_path, path_under_cursor() })
     end
 end
 
@@ -37,13 +38,24 @@ end
 --- 1. In the case of a file, it is loaded into a buffer
 --- 2. In the case of a directory, the navigator enters it
 ---
---- @param opts? {bufnr?:number, winnr?:number, line?:number, col?:number, reload?:number, timeout?:number, interval?:number}
+--- @param opts? {bufnr?:number, winnr?:number, line?:number, col?:number, reload?:boolean, timeout?:number, interval?:number}
 M.edit = function(opts)
     opts = opts or {}
 
-    local path = full_path_under_cursor()
+    local client_id = plugin.buf.client_id()
+    local path = full_path_under_cursor(client_id)
     if path ~= nil then
-        editor.open(vim.tbl_deep_extend('keep', { path = path }, opts))
+        editor.open({
+            client_id = client_id,
+            path = path,
+            bufnr = opts.bufnr,
+            line = opts.line,
+            col = opts.col,
+            reload = opts.reload,
+            winnr = opts.winnr,
+            timeout = opts.timeout,
+            interval = opts.interval,
+        })
     end
 end
 
@@ -57,6 +69,7 @@ end
 M.up = function(opts)
     opts = opts or {}
 
+    local client_id = plugin.buf.client_id()
     local base_path = plugin.buf.path()
     local reload = true
     if opts.reload ~= nil then
@@ -66,7 +79,11 @@ M.up = function(opts)
     if base_path ~= nil then
         local parent = utils.parent_path(base_path)
         if parent ~= nil then
-            editor.open({ path = parent, reload = reload })
+            editor.open({
+                path = parent,
+                reload = reload,
+                client_id = client_id,
+            })
         end
     end
 end
@@ -81,6 +98,7 @@ end
 M.newfile = function(opts)
     opts = opts or {}
 
+    local client_id = plugin.buf.client_id()
     local base_path = plugin.buf.path()
     if base_path ~= nil then
         local name = opts.path or vim.fn.input('Name: ')
@@ -88,8 +106,11 @@ M.newfile = function(opts)
             return
         end
 
-        local path = utils.join_path(remote_sep(), { base_path, name })
-        editor.open(path)
+        local path = utils.join_path(remote_sep(client_id), { base_path, name })
+        editor.open({
+            path = path,
+            client_id = client_id,
+        })
     end
 end
 
@@ -103,6 +124,7 @@ end
 M.mkdir = function(opts)
     opts = opts or {}
 
+    local client_id = plugin.buf.client_id()
     local base_path = plugin.buf.path()
     if base_path ~= nil then
         local name = opts.path or vim.fn.input('Directory name: ')
@@ -110,12 +132,16 @@ M.mkdir = function(opts)
             return
         end
 
-        local path = utils.join_path(remote_sep(), { base_path, name })
+        local path = utils.join_path(remote_sep(client_id), { base_path, name })
         -- TODO: Use explicit client id from buffer!
         local err = plugin.api.create_dir({ path = path, all = true })
 
         if not err then
-            editor.open({ path = base_path, reload = true })
+            editor.open({
+                client_id = client_id,
+                path = base_path,
+                reload = true,
+            })
         else
             log.error(string.format('Failed to create %s: %s', path, err))
         end
@@ -132,9 +158,10 @@ end
 M.rename = function(opts)
     opts = opts or {}
 
+    local client_id = plugin.buf.client_id()
     local base_path = plugin.buf.path()
     if base_path ~= nil then
-        local old_path = full_path_under_cursor()
+        local old_path = full_path_under_cursor(client_id)
         if old_path ~= nil then
             --- @diagnostic disable-next-line:redundant-parameter
             local new_path = opts.path or vim.fn.input('New name: ', old_path)
@@ -146,7 +173,11 @@ M.rename = function(opts)
             local err = plugin.api.rename({ src = old_path, dst = new_path })
 
             if not err then
-                editor.open({ path = base_path, reload = true })
+                editor.open({
+                    client_id = client_id,
+                    path = base_path,
+                    reload = true,
+                })
             else
                 log.error(string.format('Failed to rename %s to %s: %s', old_path, new_path, err))
             end
@@ -165,9 +196,10 @@ end
 M.remove = function(opts)
     opts = opts or {}
 
+    local client_id = plugin.buf.client_id()
     local base_path = plugin.buf.path()
     if base_path ~= nil then
-        local path = full_path_under_cursor()
+        local path = full_path_under_cursor(client_id)
         if path ~= nil then
             -- Unless told not to show, we always prompt when deleting
             if not opts.no_prompt then
@@ -180,7 +212,11 @@ M.remove = function(opts)
             local err = plugin.api.remove(vim.tbl_extend('keep', { path = path }, opts))
 
             if not err then
-                editor.open({ path = base_path, reload = true })
+                editor.open({
+                    client_id = client_id,
+                    path = base_path,
+                    reload = true
+                })
             else
                 log.error(string.format('Failed to remove %s: %s', path, err))
             end

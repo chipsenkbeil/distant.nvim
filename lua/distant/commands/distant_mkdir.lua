@@ -12,7 +12,7 @@ local function command(cmd)
 
     local opts = input.opts
 
-    -- TODO: Use explicit client id from buffer!
+    -- Make directory using the active client
     --- @cast opts -table, +distant.core.api.CreateDirOpts
     local err, _ = plugin.api.create_dir(opts)
     assert(not err, tostring(err))

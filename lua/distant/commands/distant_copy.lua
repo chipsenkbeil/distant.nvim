@@ -14,7 +14,7 @@ local function command(cmd)
 
     local opts = input.opts
 
-    -- TODO: Use explicit client id from buffer!
+    -- Copy file using the active client
     --- @cast opts -table, +distant.core.api.CopyOpts
     local err, _ = plugin.api.copy(opts)
     assert(not err, tostring(err))

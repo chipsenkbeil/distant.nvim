@@ -15,6 +15,7 @@ local qflist       = require('distant.editor.open.qflist')
 --- @field line? number #If provided, will jump to the specified line (1-based index)
 --- @field col? number #If provided, will jump to the specified column (1-based index)
 --- @field reload? boolean #If true, will reload the buffer even if already open
+--- @field client_id? string #Id of the client to use to load the buffer
 --- @field timeout? number #Maximum time to wait for a response
 --- @field interval? number #Time in milliseconds to wait between checks for a response
 
@@ -29,6 +30,12 @@ local qflist       = require('distant.editor.open.qflist')
 return function(opts)
     opts = opts or {}
     log.fmt_trace('editor.open(%s)', opts)
+
+    --- @type string|nil
+    local client_id = opts.client_id
+    if client_id ~= nil then
+        log.fmt_debug('Using explicit client %s', client_id)
+    end
 
     --------------------------------------------------------------------------
     -- CLEAN UP OPTIONS
@@ -58,13 +65,21 @@ return function(opts)
     local buffer = plugin.buf.find({ path = local_path })
     local bufnr = buffer and buffer:bufnr()
 
-    --- @type string|nil
-    local client_id
     if bufnr ~= nil then
         log.fmt_debug('Found existing buffer: %s', bufnr)
 
-        client_id = plugin.buf(bufnr).client_id()
-        if client_id ~= nil then
+        local new_client_id = plugin.buf(bufnr).client_id()
+        if new_client_id ~= nil then
+            -- This is an error where we are loading a buffer for
+            -- a different client than specified, so fail!
+            if client_id ~= nil and client_id ~= new_client_id then
+                error(('Found buffer %s of client %s, but told to use client %s'):format(
+                    bufnr, new_client_id, client_id
+                ))
+            end
+
+            -- Update our client to point to the buffer's client
+            client_id = new_client_id
             log.fmt_debug('Using existing buffer client: %s', client_id)
         end
     else

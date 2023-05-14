@@ -32,15 +32,17 @@ return function(opts)
     end
 
     -- Load the contents of the buffer
-    -- TODO: Use explicit client id from buffer!
     -- TODO: This only works if the buffer is not hidden, but is
     --       this a problem for the write cmd since the buffer
     --       shouldn't be hidden?
     --- @diagnostic disable-next-line:param-type-mismatch
     local lines = vim.fn.getbufline(buf, 1, '$')
 
+    -- Make sure we're using the right client
+    local client_id = plugin.buf(buf).client_id()
+
     -- Write the buffer contents
-    local err, _ = plugin.api.write_file_text(vim.tbl_extend('keep', {
+    local err, _ = plugin.api(client_id).write_file_text(vim.tbl_extend('keep', {
         path = path,
         text = table.concat(lines, '\n')
     }, opts))

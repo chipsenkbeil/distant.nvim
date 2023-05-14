@@ -80,6 +80,16 @@ local function load_buf_from_dir(opts)
     log.fmt_trace('loader.load_buf_from_dir(%s)', opts)
     local path = opts.path
 
+    -- Get the remote system so we know what slash to add
+    -- to the end of the directory entries
+    local err, system_info = plugin.api(opts.client_id).cached_system_info({
+        timeout = opts.timeout,
+        interval = opts.interval
+    })
+    assert(not err, tostring(err))
+    assert(system_info)
+
+    -- Retrieve our directory entries
     local err, payload = plugin.api(opts.client_id).read_dir({
         path = path,
         timeout = opts.timeout,
@@ -91,7 +101,14 @@ local function load_buf_from_dir(opts)
     local lines = {}
     for _, entry in ipairs(payload.entries) do
         if entry.depth > 0 then
-            table.insert(lines, entry.path)
+            local entry_path = entry.path
+
+            -- If a directory, append our separator at the end
+            if entry.file_type == 'dir' then
+                entry_path = entry_path .. system_info.main_separator
+            end
+
+            table.insert(lines, entry_path)
         end
     end
 

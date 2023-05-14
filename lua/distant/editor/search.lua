@@ -249,7 +249,7 @@ function M.search(opts, cb)
         M.__active_search.searcher:cancel(function(err, _)
             assert(not err, tostring(err))
 
-            -- TODO: Use explicit client id from buffer!
+            -- Search using the active client
             --- @type distant.core.api.Error|nil, distant.core.api.Searcher|nil
             local err, searcher = plugin.api.search(search_opts, on_done)
             assert(not err, tostring(err))
@@ -257,7 +257,7 @@ function M.search(opts, cb)
             M.__active_search.searcher = searcher
         end)
     else
-        -- TODO: Use explicit client id from buffer!
+        -- Search using the active client
         --- @type distant.core.api.Error|nil, distant.core.api.Searcher|nil
         local err, searcher = plugin.api.search(search_opts, on_done)
         assert(not err, tostring(err))

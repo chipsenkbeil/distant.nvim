@@ -175,7 +175,7 @@ function M:__find(prompt, process_result, process_complete)
             self.__search = nil
         end
 
-        -- TODO: Use explicit client id from buffer!
+        -- Search using the active client
         --- @diagnostic disable-next-line:redefined-local
         plugin.api.search(opts, function(err, search)
             assert(not err, err)

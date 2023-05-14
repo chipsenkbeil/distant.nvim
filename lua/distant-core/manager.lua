@@ -10,6 +10,7 @@ local DEFAULT_INTERVAL = 100
 
 --- Represents a distant manager
 --- @class distant.core.Manager
+--- @field clients table<string, distant.core.Client> #mapping of id -> client
 --- @field private config distant.core.manager.Config
 --- @field private connections table<string, distant.core.Destination> #mapping of id -> destination
 local M                = {}
@@ -36,6 +37,7 @@ function M:new(opts)
         network = vim.deepcopy(opts.network) or {},
     }
     instance.connections = {}
+    instance.clients = {}
 
     return instance
 end
@@ -62,14 +64,22 @@ end
 --- @return distant.core.Client|nil #client wrapper around connection if it exists, or nil
 function M:client(connection)
     if self:has_connection(connection) then
-        return Client:new({
-            binary = self.config.binary,
-            network = vim.tbl_extend(
-                'keep',
-                { connection = connection },
-                self.config.network
-            ),
-        })
+        -- If no client has been made for this connection yet, create one.
+        --
+        -- We do this to avoid creating more than one API underneath, which
+        -- results in more than one transport spawning.
+        if not self.clients[connection] then
+            self.clients[connection] = Client:new({
+                binary = self.config.binary,
+                network = vim.tbl_extend(
+                    'keep',
+                    { connection = connection },
+                    self.config.network
+                ),
+            })
+        end
+
+        return self.clients[connection]
     end
 end
 

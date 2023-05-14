@@ -9,8 +9,10 @@ local DEFAULT_INTERVAL = 100
 
 --- Represents a JSON-formatted distant.core.api transport.
 --- @class distant.core.api.Transport
---- @field private auth_handler distant.core.auth.Handler
+--- @field id number #unique id used for debugging purposes
 --- @field config {autostart:boolean, binary:string, network:distant.core.client.Network, timeout:number, interval:number}
+---
+--- @field private auth_handler distant.core.auth.Handler
 --- @field private __state distant.core.api.transport.State
 local M                = {}
 M.__index              = M
@@ -47,6 +49,7 @@ function M:new(opts)
 
     local instance = {}
     setmetatable(instance, M)
+    instance.id = utils.next_id()
     instance.config = {
         autostart = opts.autostart or false,
         binary = assert(opts.binary, 'Transport missing binary'),
@@ -54,7 +57,6 @@ function M:new(opts)
         timeout = opts.timeout or DEFAULT_TIMEOUT,
         interval = opts.interval or DEFAULT_INTERVAL,
     }
-
     instance.auth_handler = opts.auth_handler or AuthHandler:new()
 
     instance.__state = {
@@ -107,7 +109,7 @@ function M:start(cb)
 
                 -- Quit if the decoding failed or we didn't get a msg
                 if not success or not msg then
-                    log.fmt_error('Failed to decode to json: "%s"', line)
+                    log.fmt_error('[Transport %s] Failed to decode to json: "%s"', self.id, line)
                     return
                 end
 
@@ -116,16 +118,25 @@ function M:start(cb)
                     self:__handle_auth_request(msg)
                 else
                     if type(msg) ~= 'table' then
-                        log.fmt_error('type(msg) == \'%s\' (needed table): %s', type(msg), msg)
+                        log.fmt_error('[Transport %s] type(msg) == \'%s\' (needed table): %s', self.id, type(msg), msg)
                         return
                     elseif type(msg.id) ~= 'string' then
-                        log.fmt_error('type(msg.id) == \'%s\' (needed string): %s', type(msg.id), msg)
+                        log.fmt_error(
+                            '[Transport %s] type(msg.id) == \'%s\' (needed string): %s',
+                            self.id, type(msg.id), msg
+                        )
                         return
                     elseif msg.origin_id ~= nil and type(msg.origin_id) ~= 'string' then
-                        log.fmt_error('type(msg.origin_id) == \'%s\' (needed string): %s', type(msg.origin_id), msg)
+                        log.fmt_error(
+                            '[Transport %s] type(msg.origin_id) == \'%s\' (needed string): %s',
+                            self.id, type(msg.origin_id), msg
+                        )
                         return
                     elseif type(msg.payload) ~= 'table' then
-                        log.fmt_error('type(msg.payload) == \'%s\' (needed table): %s', type(msg.payload), msg)
+                        log.fmt_error(
+                            '[Transport %s] type(msg.payload) == \'%s\' (needed table): %s',
+                            self.id, type(msg.payload), msg
+                        )
                         return
                     end
 
@@ -136,7 +147,7 @@ function M:start(cb)
         end,
         on_stderr_line = function(line)
             if line ~= nil and line ~= "" then
-                log.error(line)
+                log.error('[Transport ' .. tostring(self.id) .. '] ' .. line)
             end
         end
     })
@@ -270,23 +281,23 @@ end
 --- @param opts {payload:distant.core.api.msg.Payload, more?:distant.core.api.transport.More}
 --- @param cb distant.core.api.transport.Callback
 function M:send_async(opts, cb)
-    log.fmt_trace('Transport:send_async(%s, _)', opts)
+    log.fmt_trace('[Transport %s]:send_async(%s, _)', self.id, opts)
     if not self:is_running() then
         if self.config.autostart == true then
-            log.debug('Transport not running and autostart enabled, so attempting to start')
+            log.fmt_debug('[Transport %s] Not running and autostart enabled, so attempting to start', self.id)
             self:start(function(code)
                 -- Ignore code 143, which is neovim terminating, as this will get
                 -- printed when neovim exits
                 if code ~= 0 and code ~= 143 then
-                    log.fmt_debug('API process exited: %s', code)
+                    log.fmt_debug('[Transport %s] API process exited: %s', self.id, code)
                 end
             end)
         else
-            log.warn('Transport not running and autostart disabled, so reporting error')
+            log.fmt_warn('[Transport %s] Not running and autostart disabled, so reporting error', self.id)
             cb({
                 type = 'error',
                 kind = Error.kinds.not_connected,
-                description = 'Transport not started',
+                description = ('Transport %s not started'):format(self.id),
             })
             return
         end
@@ -323,7 +334,7 @@ end
 --- @param opts {payload:distant.core.api.msg.Payload, more?:distant.core.api.transport.More, timeout?:number, interval?:number}
 --- @return distant.core.api.Error|nil, distant.core.api.msg.Payload|nil
 function M:send_sync(opts)
-    log.fmt_trace('Transport:send_sync(%s)', opts)
+    log.fmt_trace('[Transport %s]:send_sync(%s)', self.id, opts)
     local tx, rx = utils.oneshot_channel(
         opts.timeout or self.config.timeout,
         opts.interval or self.config.interval
@@ -359,7 +370,7 @@ function M:__handle_auth_request(msg)
         if handle then
             handle.write(utils.compress(vim.fn.json_encode(msg)) .. '\n')
         else
-            log.fmt_warn('Job handle dropped, so unable to write %s', msg)
+            log.fmt_warn('[Transport %s] Job handle dropped, so unable to write %s', self.id, msg)
         end
     end)
 
@@ -380,7 +391,7 @@ end
 --- @private
 --- @param msg {id:string, origin_id:string, payload:distant.core.api.msg.Payload}
 function M:__handle_response(msg)
-    log.fmt_trace('Transport:__handler(%s)', msg)
+    log.fmt_trace('[Transport %s]:__handler(%s)', self.id, msg)
     local origin_id = msg.origin_id
     local payload = msg.payload
 
@@ -418,20 +429,20 @@ function M:__handle_response(msg)
     if origin_id ~= nil and origin_id ~= vim.NIL then
         local cb_state = self.__state.callbacks[origin_id]
         if cb_state ~= nil then
-            log.fmt_trace('Transport has found callback for %s', origin_id)
+            log.fmt_trace('[Transport %s] Has found callback for %s', self.id, origin_id)
             local cb = cb_state.callback
             local more = cb_state.more
 
             if not more(payload) then
-                log.fmt_trace('Transport will stop receiving msgs for %s', origin_id)
+                log.fmt_trace('[Transport %s] Will stop receiving msgs for %s', self.id, origin_id)
                 self.__state.callbacks[origin_id] = nil
             end
 
-            log.fmt_trace('Transport triggering callback for %s', origin_id)
+            log.fmt_trace('[Transport %s] Triggering callback for %s', self.id, origin_id)
             cb(payload)
             return
         else
-            log.fmt_warn('Discarding message with origin %s as no callback exists', origin_id)
+            log.fmt_warn('[Transport %s] Discarding message with origin %s as no callback exists', self.id, origin_id)
         end
     end
 end

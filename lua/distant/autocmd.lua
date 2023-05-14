@@ -55,9 +55,10 @@ local function _initialize()
             editor.open({
                 path = path,
                 bufnr = bufnr,
-                reload = true,
                 line = line,
                 col = col,
+                client_id = plugin.buf(bufnr).client_id(),
+                reload = true,
             })
         end,
     })

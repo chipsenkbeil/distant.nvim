@@ -9,7 +9,7 @@ local function command(cmd)
 
     local path = input.args[1]
 
-    -- TODO: Use explicit client id from buffer!
+    -- Remove file using the active client
     local err, _ = plugin.api.remove({
         path = path,
         force = cmd.bang == true,

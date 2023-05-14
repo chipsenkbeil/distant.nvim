@@ -147,7 +147,7 @@ return function(opts)
         state.path = opts.path
     end)
 
-    -- TODO: Use explicit client id from buffer!
+    -- Retrieve metadata using the active client
     local err, metadata = plugin.api.metadata(opts)
 
     if err then

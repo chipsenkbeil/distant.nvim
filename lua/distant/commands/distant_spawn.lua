@@ -15,7 +15,7 @@ local function command(cmd)
         args = cmd_args,
     }
 
-    -- TODO: Use explicit client id from buffer!
+    -- Spawn process using the active client
     local err, res = plugin.api.spawn(opts)
     assert(not err, tostring(err))
 
