@@ -57,7 +57,7 @@ local VERSION        = {
 --- @field version distant.plugin.Version # plugin version information
 ---
 --- @field private __initialized boolean|'in-progress' # true if initialized
---- @field private __client_id? string # id of the active client
+--- @field private __client_id? distant.core.manager.ConnectionId # id of the active client
 --- @field private __manager? distant.core.Manager # active manager
 local M              = {}
 M.__index            = M
@@ -365,8 +365,8 @@ end
 
 --- Retrieves a list of connections being actively managed.
 --- @param opts distant.plugin.ConnectionsOpts
---- @param cb? fun(err?:string, connections?:table<string, distant.core.Destination>)
---- @return string|nil err, table<string, distant.core.Destination>|nil connections
+--- @param cb? fun(err?:string, connections?:distant.core.manager.ConnectionMap)
+--- @return string|nil err, distant.core.manager.ConnectionMap|nil connections
 function M:connections(opts, cb)
     self:__assert_initialized()
 
@@ -402,7 +402,7 @@ function M:connections(opts, cb)
     end)
 
     if rx then
-        --- @type boolean, string|nil, table<string, distant.core.Destination>|nil
+        --- @type boolean, string|nil, distant.core.manager.ConnectionMap|nil
         local _, err, connections = pcall(rx)
         return err, connections
     end
@@ -417,7 +417,7 @@ end
 ---
 --- If `id` is not provided, the active client will be used instead.
 ---
---- @param id? string|distant.core.Client
+--- @param id? distant.core.manager.ConnectionId|distant.core.Client
 --- @return distant.plugin.settings.ServerSettings
 function M:server_settings_for_client(id)
     log.fmt_trace('distant:server_settings_for_client(%s)', id)
@@ -428,7 +428,7 @@ function M:server_settings_for_client(id)
         id = id:connection()
     end
 
-    --- @cast id string?
+    --- @cast id distant.core.manager.ConnectionId|nil
     id = id or self.__client_id
 
     local host
@@ -669,7 +669,7 @@ end
 --- manager process. This is merely a means to construct a Lua wrapper around
 --- a client using a connection id.
 ---
---- @param id? string # optional client id, if not provided uses the active id
+--- @param id? distant.core.manager.ConnectionId # optional client id, if not provided uses the active id
 --- @return distant.core.Client|nil # client if exists, otherwise nil
 function M:client(id)
     self:__assert_initialized()
@@ -687,7 +687,7 @@ end
 --- manager process. This is merely a means to construct a Lua wrapper around
 --- a client using a connection id.
 ---
---- @param id? string # optional client id, if not provided uses the active id
+--- @param id? distant.core.manager.ConnectionId # optional client id, if not provided uses the active id
 --- @return distant.core.Destination|nil # client destination if exists, otherwise nil
 function M:client_destination(id)
     self:__assert_initialized()
@@ -699,7 +699,7 @@ function M:client_destination(id)
 end
 
 --- Returns the id of the active client.
---- @return string|nil
+--- @return distant.core.manager.ConnectionId|nil
 function M:active_client_id()
     return self.__client_id
 end
@@ -710,7 +710,7 @@ end
 --- manager process. This is merely a means to construct a Lua wrapper around
 --- a client using a connection id.
 ---
---- @param id string|distant.core.Client
+--- @param id distant.core.manager.ConnectionId|distant.core.Client
 function M:set_active_client_id(id)
     self:__assert_initialized()
 
@@ -719,7 +719,12 @@ function M:set_active_client_id(id)
         id = id:connection()
     end
 
-    --- @cast id string
+    -- If given a string, convert it to a number
+    if type(id) == 'string' then
+        id = assert(tonumber(id), 'id must be a 32-bit unsigned integer')
+    end
+
+    --- @cast id distant.core.manager.ConnectionId
     self.__client_id = id
 
     self:emit(
@@ -789,7 +794,7 @@ end
 -------------------------------------------------------------------------------
 
 --- @class distant.plugin.WrapOpts
---- @field client_id? string # if provided, will wrap using the specified client
+--- @field client_id? distant.core.manager.ConnectionId # if provided, will wrap using the specified client
 --- @field cmd? string|string[] # wraps a regular command
 --- @field lsp? string|string[] # wraps an LSP server command
 --- @field shell? string|string[]|true # wraps a shell, taking an optional shell command

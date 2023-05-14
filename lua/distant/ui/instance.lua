@@ -1,7 +1,7 @@
 local plugin = require('distant')
 
-local ui     = require('distant-core.ui')
-local Window = require('distant-core.ui').Window
+local ui     = require('distant-core').ui
+local Window = require('distant-core').ui.Window
 
 local Footer = require('distant.ui.components.footer')
 local Header = require('distant.ui.components.header')
@@ -27,9 +27,9 @@ end
 local INITIAL_STATE = {
     info = {
         connections = {
-            --- @type string|nil
+            --- @type distant.core.manager.ConnectionId|nil
             selected = nil,
-            --- @type table<string, distant.core.Destination>
+            --- @type distant.core.manager.ConnectionMap
             available = {},
         },
         ---@type distant.core.api.SystemInfoPayload|nil
@@ -50,7 +50,7 @@ local INITIAL_STATE = {
 }
 
 ---@param state distant.ui.State
-local function render(state)
+local function view(state)
     return ui.Node {
         GlobalKeybinds(state),
         Header(state),
@@ -183,7 +183,7 @@ end
 
 --- @param event distant.core.ui.window.EffectEvent
 local function switch_active_connection(event)
-    --- @type {id:string, destination:distant.core.Destination}
+    --- @type {id:distant.core.manager.ConnectionId, destination:distant.core.Destination}
     local payload = event.payload
     local id = payload.id
 
@@ -214,11 +214,10 @@ local function set_view(event)
     end
 end
 
-
 local window = Window:new({
     name = 'distant.nvim',
     filetype = 'distant',
-    view = render,
+    view = view,
     initial_state = INITIAL_STATE,
     effects = {
         ['CLOSE_WINDOW'] = function(event)

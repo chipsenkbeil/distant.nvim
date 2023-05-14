@@ -13,7 +13,7 @@ local M      = {}
 --- @field is_dir boolean #true if buffer represents a directory
 --- @field is_file boolean #true if buffer represents a file
 --- @field missing boolean
---- @field client_id? string # id of the client to use
+--- @field client_id? distant.core.manager.ConnectionId # id of the client to use
 --- @field winnr? number #window number to use
 
 --- @param opts distant.editor.open.ConfigureOpts

@@ -123,11 +123,20 @@ local function load_buf_from_dir(opts)
     })
 end
 
+--- @class distant.editor.open.LoadOpts
+--- @field path string
+--- @field is_dir boolean
+--- @field is_file boolean
+--- @field missing boolean
+--- @field bufnr? number
+--- @field client_id? distant.core.manager.ConnectionId
+--- @field timeout? number
+--- @field interval? number
+
 --- Loads content into a buffer, or creates a new buffer to house the content.
 ---
 --- Returns the number of the buffer where content is placed. On failing to load
 ---
---- @alias distant.editor.open.LoadOpts {path:string, is_dir:boolean, is_file:boolean, missing:boolean, bufnr?:number, client_id?:string, timeout?:number, interval?:number}
 --- @param opts distant.editor.open.LoadOpts
 --- @return {bufnr:number, created:boolean}
 function M.load(opts)

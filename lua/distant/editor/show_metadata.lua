@@ -1,8 +1,8 @@
 local log           = require('distant-core').log
 local p             = require('distant.ui.palette')
 local plugin        = require('distant')
-local ui            = require('distant-core.ui')
-local Window        = require('distant-core.ui').Window
+local ui            = require('distant-core').ui
+local Window        = require('distant-core').ui.Window
 
 -------------------------------------------------------------------------------
 -- WINDOW DEFINITION
@@ -17,7 +17,7 @@ local INITIAL_STATE = {
 }
 
 --- @param state distant.editor.show.metadata.State
-local function render(state)
+local function view(state)
     local path, metadata = state.path, state.metadata
 
     local table_view =
@@ -104,7 +104,7 @@ end
 local window = Window:new({
     name = 'Metadata',
     filetype = 'distant',
-    view = render,
+    view = view,
     initial_state = INITIAL_STATE,
     effects = {
         ['CLOSE_WINDOW'] = function(event)

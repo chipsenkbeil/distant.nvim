@@ -14,7 +14,7 @@ local qflist       = require('distant.editor.open.qflist')
 --- @field line? number #If provided, will jump to the specified line (1-based index)
 --- @field col? number #If provided, will jump to the specified column (1-based index)
 --- @field reload? boolean #If true, will reload the buffer even if already open
---- @field client_id? string #Id of the client to use to load the buffer
+--- @field client_id? distant.core.manager.ConnectionId #Id of the client to use to load the buffer
 --- @field timeout? number #Maximum time to wait for a response
 --- @field interval? number #Time in milliseconds to wait between checks for a response
 

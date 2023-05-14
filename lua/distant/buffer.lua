@@ -1,11 +1,9 @@
-local utils = require('distant-core').utils
-
 --- Name of buffer variable where all data is stored.
 local VARNAME = 'distant'
 
 --- Information stored relative to the buffer.
 --- @class distant.plugin.buffer.Data
---- @field client_id string
+--- @field client_id distant.core.manager.ConnectionId
 --- @field path? string
 --- @field alt_paths? string[]
 --- @field type? distant.plugin.buffer.Type
@@ -116,7 +114,7 @@ local function make_buffer(buf)
     end
 
     --- Sets the local buffer data representing the id of the client tied to the remote machine.
-    --- @param id string
+    --- @param id distant.core.manager.ConnectionId
     --- @return boolean
     function M.set_client_id(id)
         local data = get_data() or {}
@@ -126,7 +124,7 @@ local function make_buffer(buf)
 
     --- Returns the id of the client tied to the remote machine associated with this buffer.
     --- Can be nil if not configured as a distant buffer.
-    --- @return string|nil
+    --- @return distant.core.manager.ConnectionId|nil
     function M.client_id()
         local data = get_data()
         if data then
@@ -243,6 +241,9 @@ local function make_buffer(buf)
     -- NAME API
     --------------------------------------------------------------------------
 
+    --- @alias distant.plugin.buffer.NameComponents
+    --- | {scheme:string|nil, connection:distant.core.manager.ConnectionId|nil, path:string}
+
     --- Constructs a full name based on components.
     ---
     --- Format: [{SCHEME}://[{CONNECTION}@]]PATH
@@ -251,14 +252,14 @@ local function make_buffer(buf)
     --- * `connection` - the connection id of the client tied to the buffer.
     --- * `path` - the remainder of the name.
     ---
-    --- @param components {scheme:string|nil, connection:string|nil, path:string}
+    --- @param components distant.plugin.buffer.NameComponents
     --- @return string
     function M.build_name(components)
         local name = ''
         if components.scheme then
             name = name .. components.scheme .. '://'
             if components.connection then
-                name = name .. components.connection .. '@'
+                name = name .. tostring(components.connection) .. '@'
             end
         end
         return name .. components.path
@@ -273,8 +274,9 @@ local function make_buffer(buf)
     --- * `path` - the remainder of the name.
     ---
     --- @param name? string # name to parse, using the selected buffer's full name if no name provided
-    --- @return {scheme?:string, connection?:string, path:string} components
+    --- @return distant.plugin.buffer.NameComponents components
     function M.parse_name(name)
+        --- @type string|nil, distant.core.manager.ConnectionId|nil, number|nil, number|nil
         local scheme, connection, i, j
 
         -- Grab our buffer's full name if no name is provided
@@ -299,7 +301,10 @@ local function make_buffer(buf)
 
             -- If at start of string and long enough, we have a connection
             if i == 1 and j ~= nil and j > 1 then
-                connection = string.sub(name, i, j - 1)
+                connection = assert(
+                    tonumber(string.sub(name, i, j - 1)),
+                    'invalid connection, must be a 32-bit unsigned integer'
+                )
                 name = string.sub(name, j + 1)
             end
         end
@@ -334,7 +339,7 @@ local function make_buffer(buf)
     end
 
     --- Builds a vim file pattern to use with `vim.fn.bufnr()`.
-    --- @param opts {scheme?:string, connection?:string, path:string}
+    --- @param opts distant.plugin.buffer.NameComponents
     --- @return string
     local function file_pattern(opts)
         return '^' .. M.build_name(opts) .. '$'
@@ -346,7 +351,7 @@ local function make_buffer(buf)
     --- if the buffer also has a matching connection.
     ---
     --- @param path string
-    --- @param opts? {connection?:string}
+    --- @param opts? {connection?:distant.core.manager.ConnectionId}
     --- @return boolean
     function M.has_matching_path(path, opts)
         opts = opts or {}
@@ -409,7 +414,7 @@ local function make_buffer(buf)
     ---   Will look for distant://path and path itself.
     --- * `connection` - will enforce that the matching buffer has the same connection.
     ---
-    --- @param opts {path:string, connection?:string}
+    --- @param opts {path:string, connection?:distant.core.manager.ConnectionId}
     --- @return distant.plugin.Buffer|nil
     function M.find(opts)
         local components = M.parse_name(opts.path)
@@ -446,7 +451,7 @@ local function make_buffer(buf)
     end
 
     --- Like `buf.find`, but returns the buffer number instead of the buffer.
-    --- @param opts {path:string, connection?:string}
+    --- @param opts {path:string, connection?:distant.core.manager.ConnectionId}
     --- @return number|nil
     function M.find_bufnr(opts)
         local buffer = M.find(opts)

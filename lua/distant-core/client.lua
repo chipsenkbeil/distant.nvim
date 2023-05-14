@@ -12,7 +12,7 @@ local M       = {}
 M.__index     = M
 
 --- @class distant.core.client.Network
---- @field connection? string #id of the connection tied to the client
+--- @field connection? distant.core.manager.ConnectionId #id of the connection tied to the client
 --- @field unix_socket? string #path to the unix socket of the manager
 --- @field windows_pipe? string #name of the windows pipe of the manager
 
@@ -57,7 +57,7 @@ function M:network()
 end
 
 --- Returns the id of the connection this client represents.
---- @return string
+--- @return distant.core.manager.ConnectionId
 function M:connection()
     return assert(self.config.network.connection)
 end
@@ -86,7 +86,10 @@ function M:cached_system_info(opts, cb)
     end
 
     if cb then
-        self.api:system_info(opts, function(err, payload)
+        self.api:system_info({
+            timeout = opts.timeout,
+            interval = opts.interval,
+        }, function(err, payload)
             if err then
                 cb(err, nil)
             else
@@ -95,7 +98,10 @@ function M:cached_system_info(opts, cb)
             end
         end)
     else
-        local err, payload = self.api:system_info(opts)
+        local err, payload = self.api:system_info({
+            timeout = opts.timeout,
+            interval = opts.interval,
+        })
         if err then
             return err, nil
         else

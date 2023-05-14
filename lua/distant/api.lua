@@ -3,7 +3,7 @@ local plugin = require('distant')
 --- Creates an instance of the API that works with the specified client id.
 --- If no client id is provided, this will use the active client held by the plugin.
 ---
---- @param client_id? string
+--- @param client_id? distant.core.manager.ConnectionId
 --- @return distant.plugin.Api
 local function make_api(client_id)
     --- Retrieves the active client. Throws an error if client not initialized.
@@ -32,11 +32,11 @@ local function make_api(client_id)
     local M = {}
     setmetatable(M, {
         --- @param _ distant.plugin.Api
-        --- @param client_id? string
+        --- @param client_id? distant.core.manager.ConnectionId
         --- @return distant.plugin.Api
         __call = function(_, client_id)
             assert(
-                client_id == nil or type(client_id) == 'string',
+                client_id == nil or type(client_id) == 'number',
                 ('api() given invalid value: %s'):format(vim.inspect(client_id))
             )
             return make_api(client_id)
@@ -50,7 +50,7 @@ local function make_api(client_id)
     end
 
     --- Returns the client id tied to this API, or nil if using the active client.
-    --- @return string|nil
+    --- @return distant.core.manager.ConnectionId|nil
     function M.client_id()
         return client_id
     end

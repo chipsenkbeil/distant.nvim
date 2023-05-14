@@ -8,13 +8,42 @@ local utils            = require('distant-core.utils')
 local DEFAULT_TIMEOUT  = 1000
 local DEFAULT_INTERVAL = 100
 
+--- @alias distant.core.manager.ConnectionId integer # 32-bit unsigned integer
+--- @alias distant.core.manager.ConnectionMap table<distant.core.manager.ConnectionId, distant.core.Destination>
+
+--- @param connection any
+--- @param opts? {allow_nil?:boolean, convert?:boolean}
+--- @return distant.core.manager.ConnectionId|nil
+local function assert_connection_opts(connection, opts)
+    opts = opts or {}
+    if connection ~= nil then
+        if opts.convert then
+            connection = tonumber(connection)
+        end
+
+        assert(type(connection) == 'number', 'connection must be a 32-bit unsigned integer')
+    else
+        assert(opts.allow_nil, 'connection cannot be nil')
+    end
+    return connection
+end
+
+--- @param connection any
+--- @return distant.core.manager.ConnectionId
+local function assert_connection(connection)
+    local x = assert_connection_opts(connection)
+
+    --- @cast x distant.core.manager.ConnectionId
+    return x
+end
+
 --- Represents a distant manager
 --- @class distant.core.Manager
 --- @field clients table<string, distant.core.Client> #mapping of id -> client
 --- @field private config distant.core.manager.Config
---- @field private connections table<string, distant.core.Destination> #mapping of id -> destination
-local M                = {}
-M.__index              = M
+--- @field private connections distant.core.manager.ConnectionMap #mapping of id -> destination
+local M   = {}
+M.__index = M
 
 --- @class distant.core.manager.Config
 --- @field binary string #path to distant binary to use
@@ -48,21 +77,22 @@ function M:network()
     return vim.deepcopy(self.config.network)
 end
 
---- @param connection string #id of the connection being managed
+--- @param connection distant.core.manager.ConnectionId
 --- @return boolean
 function M:has_connection(connection)
-    return self.connections[connection] ~= nil
+    return self.connections[assert_connection(connection)] ~= nil
 end
 
---- @param connection string #id of the connection being managed
+--- @param connection distant.core.manager.ConnectionId
 --- @return distant.core.Destination|nil #destination if connection exists
 function M:connection_destination(connection)
-    return self.connections[connection]
+    return self.connections[assert_connection(connection)]
 end
 
---- @param connection string #id of the connection being managed
+--- @param connection distant.core.manager.ConnectionId
 --- @return distant.core.Client|nil #client wrapper around connection if it exists, or nil
 function M:client(connection)
+    connection = assert_connection(connection)
     if self:has_connection(connection) then
         -- If no client has been made for this connection yet, create one.
         --
@@ -71,11 +101,11 @@ function M:client(connection)
         if not self.clients[connection] then
             self.clients[connection] = Client:new({
                 binary = self.config.binary,
-                network = vim.tbl_extend(
-                    'keep',
-                    { connection = connection },
-                    self.config.network
-                ),
+                network = {
+                    connection = connection,
+                    unix_socket = self.config.network.unix_socket,
+                    windows_pipe = self.config.network.windows_pipe,
+                },
             })
         end
 
@@ -83,21 +113,142 @@ function M:client(connection)
     end
 end
 
+--- @class distant.core.manager.Info
+--- @field id distant.core.manager.ConnectionId
+--- @field destination distant.core.Destination
+--- @field options string
+
+--- Retrieves information about a connection maintained by this manager.
+--- @param opts {connection:distant.core.manager.ConnectionId, timeout?:number, interval?:number}
+--- @param cb fun(err?:string, info?:distant.core.manager.Info)
+--- @return string|nil err, distant.core.manager.Info|nil info
+function M:info(opts, cb)
+    opts = opts or {}
+
+    local cmd = builder
+        .manager
+        .info(opts.connection)
+        :set_format('json')
+        :set_from_tbl(self.config.network)
+        :as_list()
+    table.insert(cmd, 1, self.config.binary)
+
+    local rx
+    if not cb then
+        cb, rx = utils.oneshot_channel(
+            opts.timeout or DEFAULT_TIMEOUT,
+            opts.interval or DEFAULT_INTERVAL
+        )
+    end
+
+    assert(cb, 'Impossible: cb cannot be nil at this point')
+
+    local error_lines = {}
+    utils.job_start(cmd, {
+        on_success = function()
+            cb(nil)
+        end,
+        on_failure = function()
+            cb('Failed to make selection')
+        end,
+        on_stdout_line = function(line)
+            --- @type {id:distant.core.manager.ConnectionId, destination:string, options:string}
+            local msg = assert(vim.fn.json_decode(line), 'Invalid JSON from line')
+
+            --- @type distant.core.manager.Info
+            local info = {
+                id = msg.id,
+                destination = Destination:parse(msg.destination),
+                options = msg.options,
+            }
+            return cb(nil, info)
+        end,
+        on_stderr_line = function(line)
+            if line ~= nil then
+                table.insert(error_lines, line)
+            end
+        end,
+    })
+
+    if rx then
+        --- @type boolean, string|nil, distant.core.manager.Info|nil
+        local _, err, info = pcall(rx)
+        return err, info
+    end
+end
+
+--- Kills a connection maintained by this manager, removing it from the manager's tracker.
+--- @param opts {connection:distant.core.manager.ConnectionId, timeout?:number, interval?:number}
+--- @param cb fun(err?:string, ok?:{type:'ok'})
+--- @return string|nil err, {type:'ok'}|nil ok
+function M:kill(opts, cb)
+    opts = opts or {}
+
+    local cmd = builder
+        .manager
+        .kill(opts.connection)
+        :set_format('json')
+        :set_from_tbl(self.config.network)
+        :as_list()
+    table.insert(cmd, 1, self.config.binary)
+
+    local rx
+    if not cb then
+        cb, rx = utils.oneshot_channel(
+            opts.timeout or DEFAULT_TIMEOUT,
+            opts.interval or DEFAULT_INTERVAL
+        )
+    end
+
+    assert(cb, 'Impossible: cb cannot be nil at this point')
+
+    local error_lines = {}
+    utils.job_start(cmd, {
+        on_success = function()
+            cb(nil)
+        end,
+        on_failure = function()
+            cb('Failed to make selection')
+        end,
+        on_stdout_line = function(line)
+            --- @type {type:'ok'}
+            local msg = assert(vim.fn.json_decode(line), 'Invalid JSON from line')
+
+            if not type(msg) == 'table' or msg.type == 'ok' then
+                return cb('Invalid response: ' .. vim.inspect(msg), nil)
+            end
+
+            return cb(nil, msg)
+        end,
+        on_stderr_line = function(line)
+            if line ~= nil then
+                table.insert(error_lines, line)
+            end
+        end,
+    })
+
+    if rx then
+        --- @type boolean, string|nil, distant.core.manager.Info|nil
+        local _, err, info = pcall(rx)
+        return err, info
+    end
+end
+
 --- @class distant.core.manager.SelectOpts
---- @field connection? string #If provided, will set manager's default connection to this connection
+--- @field connection? distant.core.manager.ConnectionId
 --- @field on_choices? fun(opts:{choices:string[], current:number}):number|nil #If provided,
 --- @field timeout? number
 --- @field interval? number
 
 --- @class distant.core.manager.ConnectionSelector
---- @field choices string[]
+--- @field choices distant.core.Destination[]
 --- @field current number
 --- @field select fun(choice?:number, cb?:fun(err?:string)) #Perform a selection, or cancel if choice = nil
 
 --- Changes the selected connection used as default by the manager
 --- @param opts distant.core.manager.SelectOpts
 --- @param cb fun(err?:string, selector?:distant.core.manager.ConnectionSelector) #Selector will be provided if no connection provided in opts
---- @return string|nil, distant.core.manager.ConnectionSelector|nil
+--- @return string|nil err, distant.core.manager.ConnectionSelector|nil selector
 function M:select(opts, cb)
     opts = opts or {}
 
@@ -130,10 +281,15 @@ function M:select(opts, cb)
             cb('Failed to make selection')
         end,
         on_stdout_line = function(line)
+            --- @type {type:'select', choices:string[], current:number}
             local msg = assert(vim.fn.json_decode(line), 'Invalid JSON from line')
+
             if msg.type == 'select' then
                 return cb(nil, {
-                    choices = msg.choices,
+                    --- @param choice string
+                    choices = vim.tbl_map(function(choice)
+                        return Destination:parse(choice)
+                    end, msg.choices),
                     current = msg.current,
                     select = function(choice, new_cb)
                         -- Update our cb triggered when process exits to now be the selector's callback
@@ -141,6 +297,7 @@ function M:select(opts, cb)
                             cb = new_cb
                         end
 
+                        --- @type {type: 'selected', choice:number|nil }
                         --- @diagnostic disable-next-line:redefined-local
                         local msg = { type = 'selected', choice = choice }
                         handle:write(utils.compress(vim.fn.json_encode(msg)) .. '\n')
@@ -318,11 +475,14 @@ end
 --- @field log_file? string #alternative log file path to use
 --- @field log_level? string #alternative log level to use
 --- @field options? string|table<string, any> #additional options tied to a specific destination handler
+---
+--- @field timeout? number
+--- @field interval? number
 
 --- Launches a server remotely and performs authentication using the given manager
 --- @param opts distant.core.manager.LaunchOpts
---- @param cb fun(err?:string, client?:distant.core.Client)
---- @return distant.core.utils.JobHandle|nil
+--- @param cb? fun(err?:string, client?:distant.core.Client)
+--- @return string|nil err, distant.core.Client|nil client
 function M:launch(opts, cb)
     opts = opts or {}
     log.fmt_debug('Launching with options: %s', opts)
@@ -331,6 +491,16 @@ function M:launch(opts, cb)
         log.fmt_error('Executable %s is not on path', self.config.binary)
         return
     end
+
+    local rx
+    if not cb then
+        cb, rx = utils.oneshot_channel(
+            opts.timeout or DEFAULT_TIMEOUT,
+            opts.interval or DEFAULT_INTERVAL
+        )
+    end
+
+    assert(cb, 'Impossible: cb cannot be nil at this point')
 
     --- @param text string|string[]|nil
     --- @return string|nil
@@ -386,7 +556,7 @@ function M:launch(opts, cb)
     table.insert(cmd, 1, self.config.binary)
 
     log.fmt_debug('Launch cmd: %s', cmd)
-    return auth.spawn({
+    auth.spawn({
         cmd = cmd,
         auth = opts.auth,
         skip = function(msg)
@@ -397,18 +567,10 @@ function M:launch(opts, cb)
             return cb(err)
         end
 
-        -- NOTE: Lua 5.1 cannot handle an unsigned 64-bit integer as it loses
-        --       some of the precision resulting in the wrong connection id
-        --       being captured during json_decode. Because of this, we have
-        --       to parse by hand the connection id from a string
-        --- @type string|nil
-        local id
-        if result ~= nil then
-            id = utils.parse_json_str_for_value(result.line, 'id')
-        end
-
+        --- @type distant.core.manager.ConnectionId|nil
+        local id = tonumber(vim.tbl_get(result or {}, 'msg', 'id'))
         if id == nil then
-            cb('Invalid result failed to yield connection id')
+            cb('Invalid result failed to yield connection id: ' .. vim.inspect(result))
             return
         end
 
@@ -417,6 +579,12 @@ function M:launch(opts, cb)
 
         return cb(nil, self:client(id))
     end)
+
+    if rx then
+        --- @type boolean, string|nil, distant.core.Client|nil
+        local _, err, client = pcall(rx)
+        return err, client
+    end
 end
 
 --- @class distant.core.manager.ConnectOpts
@@ -428,11 +596,14 @@ end
 --- @field log_file? string #alternative log file path to use
 --- @field log_level? string #alternative log level to use
 --- @field options? string|table<string, any> #additional options tied to a specific destination handler
+---
+--- @field timeout? number
+--- @field interval? number
 
 --- Connects to a remote server using the given manager
 --- @param opts distant.core.manager.ConnectOpts
 --- @param cb fun(err?:string, client?:distant.core.Client)
---- @return distant.core.utils.JobHandle|nil
+--- @return string|nil err, distant.core.Client|nil client
 function M:connect(opts, cb)
     opts = opts or {}
     log.fmt_debug('Connecting with options: %s', opts)
@@ -440,6 +611,14 @@ function M:connect(opts, cb)
     if vim.fn.executable(self.config.binary) ~= 1 then
         log.fmt_error('Executable %s is not on path', self.config.binary)
         return
+    end
+
+    local rx
+    if not cb then
+        cb, rx = utils.oneshot_channel(
+            opts.timeout or DEFAULT_TIMEOUT,
+            opts.interval or DEFAULT_INTERVAL
+        )
     end
 
     local destination = Destination:parse(opts.destination)
@@ -462,7 +641,7 @@ function M:connect(opts, cb)
     table.insert(cmd, 1, self.config.binary)
 
     log.fmt_debug('Connect cmd: %s', cmd)
-    return auth.spawn({
+    auth.spawn({
         cmd = cmd,
         auth = opts.auth,
         skip = function(msg)
@@ -473,18 +652,10 @@ function M:connect(opts, cb)
             return cb(err)
         end
 
-        -- NOTE: Lua 5.1 cannot handle an unsigned 64-bit integer as it loses
-        --       some of the precision resulting in the wrong connection id
-        --       being captured during json_decode. Because of this, we have
-        --       to parse by hand the connection id from a string
-        --- @type string|nil
-        local id
-        if result ~= nil then
-            id = utils.parse_json_str_for_value(result.line, 'id')
-        end
-
+        --- @type distant.core.manager.ConnectionId|nil
+        local id = tonumber(vim.tbl_get(result or {}, 'msg', 'id'))
         if id == nil then
-            cb('Invalid result failed to yield connection id')
+            cb('Invalid result failed to yield connection id: ' .. vim.inspect(result))
             return
         end
 
@@ -493,6 +664,12 @@ function M:connect(opts, cb)
 
         return cb(nil, self:client(id))
     end)
+
+    if rx then
+        --- @type boolean, string|nil, distant.core.Client|nil
+        local _, err, client = pcall(rx)
+        return err, client
+    end
 end
 
 --- @class distant.core.manager.ListOpts
@@ -502,19 +679,29 @@ end
 --- @field log_file? string # alternative log file path to use
 --- @field log_level? string # alternative log level to use
 --- @field refresh? boolean # (default true) if true, will use the updated list to update the internally-tracked clients
+--- @field timeout? number
+--- @field interval? number
 
 --- Retrieves a list of connections being managed. Will also update the
 --- internally-tracked state to reflect these connections.
 ---
 --- @param opts distant.core.manager.ListOpts
---- @param cb fun(err?:string, connections?:table<string, distant.core.Destination>)
---- @return distant.core.utils.JobHandle|nil
+--- @param cb fun(err?:string, connections?:distant.core.manager.ConnectionMap)
+--- @return string|nil err, distant.core.manager.ConnectionMap|nil connections
 function M:list(opts, cb)
     log.fmt_trace('Manager:list(%s, _)', opts)
 
     if vim.fn.executable(self.config.binary) ~= 1 then
         log.fmt_error('Executable %s is not on path', self.config.binary)
         return
+    end
+
+    local rx
+    if not cb then
+        cb, rx = utils.oneshot_channel(
+            opts.timeout or DEFAULT_TIMEOUT,
+            opts.interval or DEFAULT_INTERVAL
+        )
     end
 
     local cmd = builder
@@ -534,7 +721,7 @@ function M:list(opts, cb)
     table.insert(cmd, 1, self.config.binary)
 
     log.fmt_debug('Manager list cmd: %s', cmd)
-    return auth.spawn({
+    auth.spawn({
         cmd = cmd,
         auth = opts.auth,
     }, function(err, result)
@@ -546,14 +733,16 @@ function M:list(opts, cb)
             return cb('Invalid result failed to yield connections')
         end
 
-        --- @type table<string, distant.core.Destination>
+        --- @type distant.core.manager.ConnectionMap
         local connections = {}
 
         for id, destination_str in pairs(result.msg) do
             if type(id) == 'string' and type(destination_str) == 'string' then
+                local connection = assert_connection_opts(id, { convert = true })
+                --- @cast connection distant.core.manager.ConnectionId
                 local destination = Destination:try_parse(destination_str)
                 if destination then
-                    connections[id] = destination
+                    connections[connection] = destination
                 end
             end
         end
@@ -565,6 +754,12 @@ function M:list(opts, cb)
 
         return cb(nil, connections)
     end)
+
+    if rx then
+        --- @type boolean, string|nil, distant.core.manager.ConnectionMap|nil
+        local _, err, connections = pcall(rx)
+        return err, connections
+    end
 end
 
 return M

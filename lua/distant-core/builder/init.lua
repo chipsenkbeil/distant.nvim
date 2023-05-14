@@ -20,10 +20,9 @@ local DistantSpawnCmdBuilder = require('distant-core.builder.spawn')
 --- @class distant.core.builder.CmdBuilder
 --- @field manager distant.core.builder.ManagerCmdBuilder
 --- @field server distant.core.builder.ServerCmdBuilder
-local M = {
-    manager = require('distant-core.builder.manager'),
-    server = require('distant-core.builder.server'),
-}
+local M = {}
+M.manager = require('distant-core.builder.manager')
+M.server = require('distant-core.builder.server')
 M.__index = M
 
 --- @return distant.core.builder.ApiCmdBuilder

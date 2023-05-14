@@ -8,7 +8,7 @@ M.__index    = M
 ---
 --- Will also canonicalize the `path` provided and return it as part of the result.
 ---
---- @param opts {path:string, client_id?:string, timeout?:number, interval?:number}
+--- @param opts {path:string, client_id?:distant.core.manager.ConnectionId, timeout?:number, interval?:number}
 --- @return {path:string, is_dir:boolean, is_file:boolean, missing:boolean}
 function M.check_path(opts)
     log.fmt_trace('checker.check_path(%s)', opts)
