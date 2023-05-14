@@ -24,8 +24,8 @@ local function _initialize()
         callback = function(opts)
             local bufnr = opts.buf
 
-            if bufnr > 0 and not plugin.buf(bufnr).has_data() then
-                log.fmt_debug('buf %s is not initialized, so triggering BufReadCmd', bufnr)
+            if not plugin.buf(bufnr).has_data() then
+                log.fmt_debug('Buffer %s is not initialized, so triggering BufReadCmd', bufnr)
                 vim.api.nvim_exec_autocmds('BufReadCmd', {
                     group = 'distant',
                     pattern = opts.match,
@@ -51,7 +51,7 @@ local function _initialize()
             -- but with the appropriate prefix
             vim.api.nvim_buf_set_name(bufnr, 'distant://' .. path)
 
-            log.fmt_debug('Reading %s into buf %s', path, bufnr)
+            log.fmt_debug('Reading %s into buffer %s', path, bufnr)
             editor.open({
                 path = path,
                 bufnr = bufnr,
@@ -70,7 +70,7 @@ local function _initialize()
         callback = function(opts)
             local bufnr = opts.buf
             if type(bufnr) == 'number' and bufnr ~= -1 then
-                log.fmt_debug('Writing buf %s', bufnr)
+                log.fmt_debug('Writing buffer %s', bufnr)
                 editor.write({ buf = bufnr })
             end
         end,

@@ -31,9 +31,14 @@ local function make_api(client_id)
     --- @operator call(string|nil):distant.plugin.Api
     local M = {}
     setmetatable(M, {
+        --- @param _ distant.plugin.Api
         --- @param client_id? string
         --- @return distant.plugin.Api
-        __call = function(client_id)
+        __call = function(_, client_id)
+            assert(
+                client_id == nil or type(client_id) == 'string',
+                ('api() given invalid value: %s'):format(vim.inspect(client_id))
+            )
             return make_api(client_id)
         end
     })

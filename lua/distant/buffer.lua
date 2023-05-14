@@ -27,10 +27,14 @@ local function make_buffer(buf)
 
     setmetatable(M, {
         __index = M,
-
+        --- @param _ distant.plugin.Buffer
         --- @param buf? number
         --- @return distant.plugin.Buffer
-        __call = function(buf)
+        __call = function(_, buf)
+            assert(
+                buf == nil or type(buf) == 'number',
+                ('buf() given invalid value: %s'):format(vim.inspect(buf))
+            )
             return make_buffer(buf)
         end
     })
@@ -239,10 +243,23 @@ local function make_buffer(buf)
     -- SEARCH API
     --------------------------------------------------------------------------
 
+    --- Removes all trailing slashes / or \ from the end of the string.
+    ---
+    --- If this would result in the string being empty, the leftmost slash
+    --- will be re-added to prevent removing it.
+    ---
     --- @param path string
     --- @return string
     local function remove_trailing_slash(path)
         local s, _ = string.gsub(path, '[\\/]+$', '')
+
+        -- If this results in an empty string, the entire string was comprised
+        -- of slashes and we removed the root slash, so we want to restore the
+        -- leftmost slash
+        if path:len() > 0 and s:len() == 0 then
+            s = path:sub(1, 1)
+        end
+
         return s
     end
 

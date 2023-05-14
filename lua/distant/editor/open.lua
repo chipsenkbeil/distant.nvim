@@ -1,415 +1,12 @@
-local plugin = require('distant')
+local plugin       = require('distant')
 
-local data   = require('distant-core').data
-local log    = require('distant-core').log
-local utils  = require('distant-core').utils
+local log          = require('distant-core').log
+local utils        = require('distant-core').utils
 
---- Applies neovim buffer-local mappings
----
---- @param bufnr number
---- @param mappings table<string, fun()>
-local function apply_mappings(bufnr, mappings)
-    log.fmt_trace('apply_mappings(%s, %s)', bufnr, mappings)
-
-    -- Take the global mappings specified for navigation and apply them
-    -- TODO: Since these mappings are global, should we set them once
-    --       elsewhere and look them up by key instead?
-    local fn_ids = {}
-    for lhs, rhs in pairs(mappings) do
-        local id = 'buf_' .. bufnr .. '_key_' .. string.gsub(lhs, '.', string.byte)
-        data.set(id, rhs)
-        table.insert(fn_ids, id)
-        local key_mapping = '<Cmd>' .. data.get_as_key_mapping(id) .. '<CR>'
-        vim.api.nvim_buf_set_keymap(bufnr, 'n', lhs, key_mapping, {
-            noremap = true,
-            silent = true,
-            nowait = true,
-        })
-    end
-
-    -- When the buffer is detached, we want to clear the global functions
-    if not vim.tbl_isempty(fn_ids) then
-        vim.api.nvim_buf_attach(bufnr, false, {
-            on_detach = function()
-                for _, id in ipairs(fn_ids) do
-                    data.remove(id)
-                end
-            end,
-        })
-    end
-end
-
---- @class distant.editor.open.CheckPathOpts
---- @field timeout? number #Maximum time to wait for a response (optional)
---- @field interval? number #Time in milliseconds to wait between checks for a response (optional)
-
---- @class distant.editor.open.CheckPathResult
---- @field path string #canonicalized path where possible, otherwise input path
---- @field is_dir boolean #true if path represents a directory
---- @field is_file boolean #true if path represents a normal file
---- @field missing boolean #true if path does not exist remotely
-
---- Checks a path to see if it exists, returning a table with information
----
---- @param path string Path to directory to show
---- @param opts? distant.editor.open.CheckPathOpts
---- @return distant.editor.open.CheckPathResult
-local function check_path(path, opts)
-    opts = opts or {}
-    log.fmt_trace('check_path(%s, %s)', path, opts)
-
-    -- We need to figure out if we are working with a file or directory
-    -- TODO: Use explicit client id from buffer!
-    local err, metadata = plugin.api.metadata(vim.tbl_extend('keep', {
-        path = path,
-        canonicalize = true,
-        resolve_file_type = true,
-    }, opts))
-
-    -- Check if the error we got is a missing file. If we get
-    -- any other kind of error, we want to throw the error
-    --
-    -- TODO: With ssh, the error kind is "other" instead of "not_found"
-    --       so we may have to do a batch request with exists
-    --       to properly validate
-    local missing = (err and err.kind == 'not_found') or false
-    assert(not err or missing, tostring(err))
-
-    local is_dir = false
-    local is_file = false
-    local full_path = path
-
-    if not missing then
-        assert(metadata, 'Metadata missing')
-
-        is_dir = metadata.file_type == 'dir'
-        is_file = metadata.file_type == 'file'
-
-        -- Use canonicalized path if available
-        full_path = metadata.canonicalized_path or path
-    end
-
-    return {
-        path = full_path,
-        is_dir = is_dir,
-        is_file = is_file,
-        missing = missing,
-    }
-end
-
---- Schedules a repair of quickfix markers.
----
---- In the situation where a buf already existed but was not initialized,
---- this is from a list like a quickfix list that had created a buf for
---- a non-file (distant://...) with markers in place before content.
----
---- NOTE: Calling nvim_buf_set_lines invokes `qf_mark_adjust` through `mark_adjust`,
----       which causes the lnum of quickfix, location-list, and marks to get moved
----       incorrectly when we are first populating (going from 1 line to N lines);
----       so, we want to spawn a task that will correct line numbers when shifted
----
---- @param bufnr number #buffer whose markers to repair
-local function schedule_repair_markers(bufnr)
-    local list = vim.fn.getqflist({ id = 0, context = 0 })
-    local qfid = list.id
-
-    if list.context and list.context.distant then
-        vim.schedule(function()
-            list = vim.fn.getqflist({ id = qfid, idx = 0, items = 0 })
-
-            -- If we get lnum > end_lnum, this is from the marker from
-            -- the quickfix list getting pushed down from new lines
-            for _, item in ipairs(list.items) do
-                if item.bufnr == bufnr and item.lnum > item.end_lnum then
-                    item.lnum = item.end_lnum
-                end
-            end
-
-            -- Update list and restore the selected position
-            vim.fn.setqflist({}, 'r', { id = list.id, items = list.items })
-            vim.fn.setqflist({}, 'a', { id = list.id, idx = list.idx })
-        end)
-    end
-end
-
---- In the situation where we were loaded by a quickfix list, this moves
---- the cursor to the appropriate location based on the selection.
----
---- Position is only set if distant quickfix with matching buffer for selection
----
---- @param bufnr number
---- @return {line: number, col: number}|nil
-local function get_qflist_selection_cursor(bufnr)
-    local list = vim.fn.getqflist({ id = 0, context = 0 })
-    local qfid = list.id
-
-    if list.context and list.context.distant then
-        list = vim.fn.getqflist({ id = qfid, idx = 0, items = 0 })
-
-        -- Get line and column from entry only if it is for this buffer
-        if list.idx > 0 then
-            local item = list.items[list.idx]
-
-            if item and item.bufnr == bufnr then
-                local line = item.lnum or 1
-                local col = item.col or 0
-                local end_line = item.end_lnum or line
-                local end_col = item.end_col or col
-
-                if line > end_line then
-                    line = end_line
-                end
-
-                if col > end_col then
-                    col = end_col
-                end
-
-                return { line = line, col = col }
-            end
-        end
-    end
-end
-
---- @param bufnr number
---- @param lines string[]
-local function create_or_populate_buf(bufnr, lines)
-    log.fmt_trace('create_or_populate_buf(%s, %s)', bufnr, lines)
-    local buf_exists = bufnr ~= -1
-
-    -- Create a buffer to house the text if no buffer exists
-    if not buf_exists then
-        bufnr = vim.api.nvim_create_buf(true, false)
-        assert(bufnr ~= 0, 'Failed to create buffer for remote editing')
-    end
-
-    -- Place lines into buffer, marking the file as modifiable
-    -- temporarily so we can load lines, and then changing it back
-    -- to whatever state it was before
-    --
-    -- Since we modified the buffer by adding in the content,
-    -- we need to reset it here
-    local is_modifiable = vim.api.nvim_buf_get_option(bufnr, 'modifiable')
-    vim.api.nvim_buf_set_option(bufnr, 'modifiable', true)
-    local line_cnt = vim.api.nvim_buf_line_count(bufnr)
-    if line_cnt == 0 then
-        line_cnt = 1
-    end
-
-    -- In the situation where a buf already existed but was not initialized,
-    -- this is from a list like a quickfix list that had created a buf for
-    -- a non-file (distant://...) with markers in place before content
-    --
-    -- NOTE: Calling nvim_buf_set_lines invokes `qf_mark_adjust` through `mark_adjust`,
-    --       which causes the lnum of quickfix, location-list, and marks to get moved
-    --       incorrectly when we are first populating (going from 1 line to N lines);
-    --       so, we want to spawn a task that will correct line numbers when shifted
-    if buf_exists and not plugin.buf(bufnr).has_data() then
-        schedule_repair_markers(bufnr)
-    end
-
-    vim.api.nvim_buf_set_lines(bufnr, 0, line_cnt, false, lines)
-
-    vim.api.nvim_buf_set_option(bufnr, 'modifiable', is_modifiable)
-    vim.api.nvim_buf_set_option(bufnr, 'modified', false)
-
-    return bufnr
-end
-
---- @param path string
---- @param bufnr number
---- @param opts? distant.core.api.ReadFileTextOpts
-local function load_buf_from_file(path, bufnr, opts)
-    opts = opts or {}
-    log.fmt_trace('load_buf_from_file(%s, %s, %s)', path, bufnr, opts)
-
-    -- TODO: Use explicit client id from buffer!
-    local err, text = plugin.api.read_file_text(vim.tbl_extend('keep', { path = path }, opts))
-    assert(not err, tostring(err))
-
-    local lines
-    if text ~= nil then
-        lines = vim.split(text, '\n', { plain = true })
-    else
-        log.fmt_error('Failed to read file: %s', path)
-        return bufnr
-    end
-
-    return create_or_populate_buf(bufnr, lines)
-end
-
---- @param path string
---- @param bufnr number
---- @param opts? distant.core.api.ReadDirOpts
-local function load_buf_from_dir(path, bufnr, opts)
-    opts = opts or {}
-    log.fmt_trace('load_buf_from_dir(%s, %s, %s)', path, bufnr, opts)
-
-    -- TODO: Use explicit client id from buffer!
-    local err, res = plugin.api.read_dir(vim.tbl_extend('keep', { path = path }, opts))
-    assert(not err, tostring(err))
-    assert(res, 'Impossible: read_dir result nil')
-
-    local lines = assert(utils.filter_map(res.entries, function(entry)
-        if entry.depth > 0 then
-            return entry.path
-        end
-    end), 'Impossible: Lines is nil')
-
-    return create_or_populate_buf(bufnr, lines)
-end
-
---- @param p distant.editor.open.CheckPathResult
---- @param bufnr number
---- @param opts? distant.core.api.ReadDirOpts|distant.core.api.ReadFileTextOpts
-local function load_content(p, bufnr, opts)
-    opts = opts or {}
-    log.fmt_trace('load_content(%s, %s, %s)', p, bufnr, opts)
-    vim.validate({
-        p = { p, 'table' },
-        bufnr = { bufnr, 'number' },
-        opts = { opts, 'table', true },
-    })
-
-    -- If the path points to a directory, load the entries as lines
-    if p.is_dir then
-        return load_buf_from_dir(p.path, bufnr, opts)
-
-        -- If path points to a file, load its contents as lines
-    elseif p.is_file then
-        return load_buf_from_file(p.path, bufnr, opts)
-
-        -- Otherwise, we set ourselves up to create a new, empty file
-    else
-        return create_or_populate_buf(bufnr, {})
-    end
-end
-
---- @class distant.editor.open.ConfigureBufOpts
---- @field bufnr number #number associated with the buffer
---- @field name string #name of the buffer (e.g. distant://path/to/file.txt)
---- @field canonicalized_path string #primary path (e.g. path/to/file.txt)
---- @field raw_path string #raw input path, which could be an alt path
---- @field is_dir boolean #true if buffer represents a directory
---- @field is_file boolean #true if buffer represents a file
---- @field winnr? number #window number to use
-
---- @param opts distant.editor.open.ConfigureBufOpts
-local function configure_buf(opts)
-    log.fmt_trace('configure_buf(%s)', opts)
-    vim.validate({
-        bufnr = { opts.bufnr, 'number' },
-        name = { opts.name, 'string' },
-        canonicalized_path = { opts.canonicalized_path, 'string' },
-        raw_path = { opts.raw_path, 'string' },
-        is_dir = { opts.is_dir, 'boolean' },
-        is_file = { opts.is_file, 'boolean' },
-        winnr = { opts.winnr, 'number', true },
-    })
-
-    local bufnr = opts.bufnr
-    local winnr = opts.winnr or 0
-    local bufname = opts.name
-
-    --- NOTE: We have to capture the old buffer name and then check
-    ---       if setting a new name copies the old buffer name to be
-    ---       unlisted. If so, we delete it.
-    --- Issue: https://github.com/neovim/neovim/issues/20059
-    ---
-    --- @diagnostic disable-next-line:redefined-local
-    local function set_bufname(bufnr, bufname)
-        local old_bufname = vim.api.nvim_buf_get_name(bufnr)
-        if old_bufname == bufname then
-            return
-        end
-
-        -- Set the buffer name to include a schema, which will trigger our
-        -- autocmd for writing to the remote destination in the situation
-        -- where we are editing a file
-        vim.api.nvim_buf_set_name(bufnr, bufname)
-
-        -- Look for any buffer that is NOT this one that contains the same
-        -- name prior to us setting the new name
-        --
-        -- If we find a match, this is a bug in neovim (?) and we delete it
-        --
-        --- @diagnostic disable-next-line:redefined-local
-        for _, nr in ipairs(vim.api.nvim_list_bufs()) do
-            if bufnr ~= nr then
-                local name = vim.api.nvim_buf_get_name(nr)
-                if name == old_bufname then
-                    vim.api.nvim_buf_delete(nr, { force = true })
-                end
-            end
-        end
-    end
-
-    set_bufname(bufnr, bufname)
-
-    -- If a directory, we want to mark as such and prevent modifying
-    if opts.is_dir then
-        -- Mark the buftype as nofile and not modifiable as you cannot
-        -- modify it or write it; also explicitly set a custom filetype
-        vim.api.nvim_buf_set_option(bufnr, 'filetype', 'distant-dir')
-        vim.api.nvim_buf_set_option(bufnr, 'buftype', 'nofile')
-        vim.api.nvim_buf_set_option(bufnr, 'modifiable', false)
-
-        -- TODO: Use explicit client id from buffer!
-        local destination = plugin:client_destination()
-        local settings = plugin:server_settings_for_client() or {}
-        local mappings = assert(
-            settings and settings.dir and settings.dir.mappings,
-            'Missing dir mappings for server' .. tostring(destination and destination.host)
-        )
-        apply_mappings(bufnr, mappings)
-
-        -- Otherwise, in all other cases we treat this as a remote file
-    else
-        -- Mark the buftype as acwrite as you can still write to it, but we
-        -- control where it is going
-        vim.api.nvim_buf_set_option(bufnr, 'buftype', 'acwrite')
-
-        -- TODO: Use explicit client id from buffer!
-        local destination = plugin:client_destination()
-        local settings = plugin:server_settings_for_client() or {}
-        local mappings = assert(
-            settings and settings.file and settings.file.mappings,
-            'Missing file mappings for server ' .. tostring(destination and destination.host)
-        )
-        apply_mappings(bufnr, mappings)
-    end
-
-    -- Add stateful information to the buffer, helping keep track of it
-    (function()
-        local buffer = plugin.buf(bufnr)
-        buffer.set_path(opts.canonicalized_path)
-        buffer.set_type(opts.is_dir and 'dir' or 'file')
-
-        -- Add the raw path as an alternative path that can be used
-        -- to look up this buffer
-        buffer.add_alt_path(opts.raw_path, { dedup = true })
-    end)()
-
-    -- Display the buffer in the specified window, defaulting to current
-    vim.api.nvim_win_set_buf(winnr, bufnr)
-
-    if opts.is_file then
-        -- Set our filetype to whatever the contents actually are (or file extension is)
-        local success, filetype = pcall(vim.filetype.match, { buf = bufnr })
-        if success and filetype then
-            log.fmt_debug('Setting buffer %s filetype to %s', bufnr, filetype)
-            vim.bo[bufnr].filetype = filetype
-        end
-
-        -- Launch any associated LSP clients
-        -- TODO: Use client id associated with buffer, not default client
-        local client = assert(plugin:client(), 'No connection has been established!')
-        client:connect_lsp_clients({
-            bufnr = bufnr,
-            path = plugin.buf(bufnr).assert_path(),
-            settings = plugin:server_settings_for_client().lsp,
-        })
-    end
-end
+local checker      = require('distant.editor.open.checker')
+local configurator = require('distant.editor.open.configurator')
+local loader       = require('distant.editor.open.loader')
+local qflist       = require('distant.editor.open.qflist')
 
 --- @class distant.editor.OpenOpts
 --- @field path string #Path to file or directory
@@ -433,32 +30,80 @@ return function(opts)
     opts = opts or {}
     log.fmt_trace('editor.open(%s)', opts)
 
-    local path
+    --------------------------------------------------------------------------
+    -- CLEAN UP OPTIONS
+    --------------------------------------------------------------------------
+
     if type(opts) == 'string' then
-        path = opts
-        opts = { path = path }
-    elseif type(opts) == 'table' then
-        path = opts.path
+        opts = { path = opts }
     end
 
-    vim.validate({ opts = { opts, 'table' } })
+    --------------------------------------------------------------------------
+    -- SPLIT REMOTE AND LOCAL PATHS
+    --------------------------------------------------------------------------
 
     -- Ensure that local_path is without prefix and path is with prefix
-    local local_path = utils.strip_prefix(path, 'distant://')
-    path = 'distant://' .. path
+    local local_path = utils.strip_prefix(opts.path, 'distant://')
+    log.fmt_debug('Local path: %s', local_path)
+
+    local path = 'distant://' .. local_path
+    log.fmt_debug('Distant path: %s', path)
+
+    --------------------------------------------------------------------------
+    -- SEARCH FOR EXISTING PATH & USE ITS CLIENT
+    --------------------------------------------------------------------------
 
     -- Determine if we already have a buffer with the matching name
-    local bufnr = plugin.buf.find_bufnr({ path = local_path }) or -1
-    local buf_exists = bufnr ~= -1
+    log.fmt_debug('Searching for buffer: %s', local_path)
+    local buffer = plugin.buf.find({ path = local_path })
+    local bufnr = buffer and buffer:bufnr()
+
+    --- @type string|nil
+    local client_id
+    if bufnr ~= nil then
+        log.fmt_debug('Found existing buffer: %s', bufnr)
+
+        client_id = plugin.buf(bufnr).client_id()
+        if client_id ~= nil then
+            log.fmt_debug('Using existing buffer client: %s', client_id)
+        end
+    else
+        log.debug('No buffer found.')
+    end
+
+    --------------------------------------------------------------------------
+    -- EVALUATE PATH ON REMOTE MACHINE
+    --------------------------------------------------------------------------
 
     -- Retrieve information about our path, capturing the canonicalized path
     -- if possible without the distant:// prefix
-    local p = check_path(local_path, { timeout = opts.timeout, interval = opts.interval })
-    log.fmt_debug('retrieved path info for %s: %s', p.path, p)
+    log.fmt_debug('Evaluating path: %s', local_path)
+    local path_info = checker.check_path({
+        client_id = client_id,
+        path = local_path,
+        timeout = opts.timeout,
+        interval = opts.interval,
+    })
+
+    -- Recheck if we have this buffer if no buffer was found earlier
+    -- and the supplied path and evaluated path are different
+    if buffer == nil and local_path ~= path_info.path then
+        log.fmt_debug('Searching for buffer using evaluated path: %s', path_info.path)
+        buffer = plugin.buf.find({ path = path_info.path })
+        bufnr = buffer and buffer:bufnr()
+        if bufnr ~= nil then
+            log.fmt_debug('Found existing buffer: %s', bufnr)
+        else
+            log.debug('No buffer found.')
+        end
+    end
 
     -- Construct universal remote buffer name (distant:// + canonicalized path)
-    local buf_name = 'distant://' .. p.path
-    log.fmt_debug('does buf %s exist? %s', buf_name, buf_exists and 'yes' or 'no')
+    local buf_name = 'distant://' .. path_info.path
+
+    --------------------------------------------------------------------------
+    -- CLEAR OUT EXISTING BUFFER
+    --------------------------------------------------------------------------
 
     -- If we were given a different buf than what matched, then we have a duplicate
     -- which can happen from symlinks and we want to merge by unloading the duplicate
@@ -468,54 +113,97 @@ return function(opts)
     --       and shown; so, completely deleting the other buffer should not be a
     --       problem. The main change required is updating the quickfix lists that
     --       refer to the wrong buffer
-    if buf_exists and type(opts.bufnr) == 'number' and opts.bufnr > 0 and opts.bufnr ~= bufnr then
+    if bufnr ~= nil and opts.bufnr ~= nil and bufnr ~= opts.bufnr then
         -- TODO: Update all quickfix lists with new buffer number, which involves
         --       a vim.schedule since we cannot update quickfix lists here if
         --       invoked from an autocommand
         vim.api.nvim_buf_delete(opts.bufnr, { force = true })
     end
 
+    --------------------------------------------------------------------------
+    -- LOAD BUFFER CONTENTS
+    --------------------------------------------------------------------------
+
     -- If the buffer didn't exist already (or if forcing reload), load contents
-    -- into the buffer, optionally creating it if the buffer id is -1
+    -- into the buffer, creating it if there is no buffer
     local cursor = { line = opts.line, col = opts.col }
-    if not buf_exists or opts.reload then
+    if not bufnr or opts.reload then
         local view
-        if buf_exists then
+
+        -- If the buffer already existed, we save the view of it
+        if bufnr ~= nil then
             view = vim.fn.winsaveview()
-            log.fmt_trace('buf %s, winsaveview() = %s', bufnr, view)
+            log.fmt_trace('Buffer %s :: winsaveview() = %s', bufnr, view)
 
             -- Special case where a quickfix list created the buffer without content
             if not plugin.buf(bufnr).has_data() then
-                local override = get_qflist_selection_cursor(bufnr)
+                local override = qflist.get_qflist_selection_cursor(bufnr)
                 if override then
                     cursor = override
-                    log.fmt_trace('buf %s, override cursor = %s', bufnr, cursor)
+                    log.fmt_trace('Buffer %s :: override cursor = %s', bufnr, cursor)
                 end
             end
         end
 
         -- Load content and either place it inside the provided buffer or create
         -- a new buffer in one is not provided (buf <= 0)
-        bufnr = load_content(p, bufnr, opts)
-        log.fmt_debug('loaded %s into buf %s', p.path, bufnr)
+        local results = loader.load({
+            bufnr = bufnr,
+            path = path_info.path,
+            is_dir = path_info.is_dir,
+            is_file = path_info.is_file,
+            missing = path_info.missing,
+            client_id = client_id,
+            timeout = opts.timeout,
+            interval = opts.interval,
+        })
 
-        if buf_exists then
+        -- If we had a buffer going into loading and came out with a different
+        -- one, something went wrong and we need to fail
+        if bufnr ~= nil and results.bufnr ~= bufnr then
+            error(('Loaded contents into wrong buffer! Expected buffer %s, actual buffer %s'):format(
+                bufnr, results.bufnr
+            ))
+        end
+
+        -- Update buffer to be the one we loaded into
+        bufnr = results.bufnr
+
+        -- Report loading in debug
+        if results.created then
+            log.fmt_debug('Created buffer %s', results.bufnr)
+        end
+        log.fmt_debug('Loaded contents into buffer %s', bufnr)
+
+        -- If we did not create the buffer, restore our view
+        if not results.created then
             vim.fn.winrestview(view)
-            log.fmt_trace('buf %s, winrestview()', bufnr)
+            log.fmt_trace('Buffer %s :: winrestview()', bufnr)
         end
     end
 
+    --------------------------------------------------------------------------
+    -- CONFIGURE BUFFER
+    --------------------------------------------------------------------------
+
     -- Reconfigure the buffer, setting its name and various properties as well as
     -- launching and attaching LSP clients if necessary
-    configure_buf({
+    log.fmt_debug('Configuring buffer %s', bufnr)
+    configurator.configure({
         bufnr = bufnr,
         name = buf_name,
-        canonicalized_path = p.path,
+        canonicalized_path = path_info.path,
         raw_path = local_path,
-        is_dir = p.is_dir,
-        is_file = p.is_file or p.missing,
+        is_dir = path_info.is_dir,
+        is_file = path_info.is_file,
+        missing = path_info.missing,
+        client_id = client_id,
         winnr = opts.winnr,
     })
+
+    --------------------------------------------------------------------------
+    -- JUMP TO POSITION IN BUFFER
+    --------------------------------------------------------------------------
 
     -- Update position in buffer if provided new position
     if cursor.line ~= nil or cursor.col ~= nil then
@@ -529,9 +217,14 @@ return function(opts)
         end
         col = col or cur_col
         vim.schedule(function()
+            log.fmt_debug('Jumping to line %s, col %s in buffer %s', line, col)
             vim.api.nvim_win_set_cursor(opts.winnr or 0, { line, col })
         end)
     end
+
+    --------------------------------------------------------------------------
+    -- RETURN CREATED BUFFER
+    --------------------------------------------------------------------------
 
     -- Final check to make sure we aren't returning a garbage buffer number
     assert(bufnr > 0, 'Invalid bufnr being returned')
