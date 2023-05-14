@@ -45,13 +45,14 @@ M.__index   = M
 --- @field value string|distant.core.api.search.QueryCondition[]
 
 --- @class distant.core.api.search.QueryOptions
---- @field allow_file_types? 'dir'|'file'|'symlink'[]
+--- @field allow_file_types? ('dir'|'file'|'symlink')[]
 --- @field include? distant.core.api.search.QueryCondition
 --- @field exclude? distant.core.api.search.QueryCondition
 --- @field follow_symbolic_links? boolean
 --- @field limit? integer
 --- @field max_depth? integer
 --- @field pagination? integer
+--- @field upward? boolean
 
 --- @param opts {transport:distant.core.api.Transport}
 --- @return distant.core.api.Searcher
