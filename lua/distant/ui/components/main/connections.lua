@@ -88,9 +88,7 @@ local function AvailableConnections(opts)
     table.insert(rows, {
         p.none '',
         p.Bold 'ID',
-        p.Bold 'Scheme',
         p.Bold 'Host',
-        p.Bold 'Port',
     })
 
     local has_connections = not vim.tbl_isempty(opts.available)
@@ -105,15 +103,6 @@ local function AvailableConnections(opts)
     for _, id in ipairs(ids) do
         local destination = opts.available[id]
 
-        --- @type string|number|nil
-        local port_str = destination.port
-
-        if type(port_str) == 'number' then
-            port_str = tostring(port_str)
-        else
-            port_str = ''
-        end
-
         local selected = ''
         if id == opts.selected then
             selected = '*'
@@ -122,9 +111,7 @@ local function AvailableConnections(opts)
         table.insert(rows, {
             p.Bold(selected),
             p.muted(tostring(id)),
-            p.highlight(destination.scheme or ''),
             p.highlight(destination.host),
-            p.highlight(port_str),
         })
 
         extra[#rows] = {}
@@ -153,13 +140,15 @@ local function AvailableConnections(opts)
             -- When expanded, show it
             ui.When(opts.info[id] ~= nil, function()
                 local info = opts.info[id]
-                local lines = {}
-
-                table.insert(lines, { p.muted('Options: ' .. tostring(info.options)) })
+                local lines = {
+                    { p.muted 'Kind: ',    p.muted(info.destination.scheme) },
+                    { p.muted 'Port: ',    p.muted(tostring(info.destination.port or '')) },
+                    { p.muted 'Options: ', p.muted(tostring(info.options)) },
+                }
 
                 return ui.CascadingStyleNode(
                     { 'INDENT' },
-                    { ui.HlTextNode(lines) }
+                    { ui.Table(lines) }
                 )
             end),
         }
