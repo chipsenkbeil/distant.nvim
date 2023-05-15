@@ -18,7 +18,7 @@ end
 return function(state)
     return ui.CascadingStyleNode({ 'CENTERED' }, {
         ui.HlTextNode {
-            ui.When(state.view.is_showing_help, {
+            ui.When(state.view.help.active, {
                 p.none '             ',
                 p.header_secondary(' ' .. state.header.title_prefix .. ' distant.nvim '),
                 version_node(),
@@ -29,9 +29,9 @@ return function(state)
                 version_node(),
             }),
             ui.When(
-                state.view.is_showing_help,
-                { p.none '        press ', p.highlight_secondary 'g?', p.none ' for connections' },
-                { p.none 'press ', p.highlight 'g?', p.none ' for help' }
+                state.view.help.active,
+                { p.none '        press ', p.highlight_secondary '?', p.none ' for connections' },
+                { p.none 'press ', p.highlight '?', p.none ' for help' }
             ),
             { p.Comment 'https://github.com/chipsenkbeil/distant.nvim' },
             {

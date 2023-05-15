@@ -5,7 +5,7 @@ local plugin = require('distant')
 
 ---@param state distant.ui.State
 local function Ship(state)
-    local ship_indent = { (' '):rep(state.view.ship_indentation), '' }
+    local ship_indent = { (' '):rep(state.view.help.ship_indentation), '' }
     -- stylua: ignore start
     local ship = {
         { ship_indent, p.muted '/^v^\\',                         p.none '         |    |    |' },
@@ -13,7 +13,7 @@ local function Ship(state)
         { ship_indent, p.muted '   ', p.muted '/^v^\\',
             p.none '    )___))___))___)\\     ',
             p.highlight_secondary(
-                state.view.ship_exclamation) },
+                state.view.help.ship_exclamation) },
         { ship_indent, p.none '           )____)____)_____)\\\\' },
         { ship_indent, p.none '         _____|____|____|____\\\\\\__' },
         { ship_indent, p.muted '         ',                           p.none '\\                   /' },
@@ -24,12 +24,12 @@ local function Ship(state)
         { p.highlight '    ^^^^  ^^  ^^^    ^ ^^^    ^^^ <>< ^^^^     ' },
         { p.highlight '     ><> ^^^     ^^    ><> ^^     ^^    ^      ' },
     }
-    if state.view.ship_indentation < 0 then
+    if state.view.help.ship_indentation < 0 then
         for _, shipline in ipairs(ship) do
             local removed_chars = 0
             for _, span in ipairs(shipline) do
                 local span_length = #span[1]
-                local chars_to_remove = (math.abs(state.view.ship_indentation) - removed_chars)
+                local chars_to_remove = (math.abs(state.view.help.ship_indentation) - removed_chars)
                 span[1] = string.sub(span[1], chars_to_remove + 1)
                 removed_chars = removed_chars + (span_length - #span[1])
             end
@@ -47,7 +47,7 @@ local function GenericHelp(state)
     local keymap_tuples = {}
 
     -- Add our globals that we want to show at the top
-    table.insert(keymap_tuples, { 'Toggle help', 'g?' })
+    table.insert(keymap_tuples, { 'Toggle help', '?' })
     table.insert(keymap_tuples, { 'Refresh tab', 'r' })
 
     -- Add our view-specific keybindings
@@ -60,7 +60,7 @@ local function GenericHelp(state)
     table.insert(keymap_tuples, { 'Close window', 'q' })
     table.insert(keymap_tuples, { 'Close window', '<Esc>' })
 
-    local is_current_settings_expanded = state.view.is_current_settings_expanded
+    local is_current_settings_expanded = state.view.help.is_current_settings_expanded
 
     return ui.Node {
         ui.HlTextNode {
@@ -105,7 +105,7 @@ return function(state)
     local heading = ui.Node {}
 
     return ui.CascadingStyleNode({ 'INDENT' }, {
-        ui.HlTextNode(state.view.has_changed and p.none '' or p.Comment '(change view by pressing its number)'),
+        ui.HlTextNode(state.view.help.has_changed and p.none '' or p.Comment '(change view by pressing its number)'),
         heading,
         GenericHelp(state),
         ui.EmptyLine(),

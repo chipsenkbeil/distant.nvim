@@ -14,7 +14,7 @@ local Tabs        = require('distant.ui.components.tabs')
 --- @return distant.core.ui.Node
 local function GlobalKeybinds(state)
     return ui.Node {
-        ui.Keybind('g?', 'TOGGLE_HELP', nil, true),
+        ui.Keybind('?', 'TOGGLE_HELP', nil, true),
         ui.Keybind('q', 'CLOSE_WINDOW', nil, true),
         ui.Keybind('<Esc>', 'CLOSE_WINDOW', nil, true),
         ui.Keybind('r', 'RELOAD_TAB', { tab = state.view.current, force = true }, true),
@@ -42,13 +42,22 @@ local INITIAL_STATE = {
     },
     --- @class distant.ui.state.View
     view = {
-        is_showing_help = false,
-        is_current_settings_expanded = false,
-        language_filter = nil,
+        --- Which view to display
         current = 'Connections',
-        has_changed = false,
-        ship_indentation = 0,
-        ship_exclamation = '',
+
+        --- Help-specific view state
+        help = {
+            --- Show help
+            active = false,
+            --- Show settings within help
+            is_current_settings_expanded = false,
+            --- Display extra help tip if false
+            has_changed = false,
+            --- Ship position
+            ship_indentation = 0,
+            --- Ship ???
+            ship_exclamation = '',
+        },
     },
     --- @class distant.ui.state.Header
     header = {
@@ -62,10 +71,10 @@ local function view(state)
         GlobalKeybinds(state),
         Header(state),
         Tabs(state),
-        ui.When(state.view.is_showing_help, function()
+        ui.When(state.view.help.active, function()
             return Help(state)
         end),
-        ui.When(not state.view.is_showing_help, function()
+        ui.When(not state.view.help.active, function()
             return Main(state)
         end),
         Footer(state),
@@ -101,13 +110,13 @@ local function ship_animation(window)
             function(tick)
                 ---@param state distant.ui.State
                 window:mutate_state(function(state)
-                    state.view.ship_indentation = tick
+                    state.view.help.ship_indentation = tick
                     if tick > -5 then
-                        state.view.ship_exclamation = 'https://github.com/sponsors/chipsenkbeil'
+                        state.view.help.ship_exclamation = 'https://github.com/sponsors/chipsenkbeil'
                     elseif tick > -27 then
-                        state.view.ship_exclamation = 'Sponsor distant.nvim development!'
+                        state.view.help.ship_exclamation = 'Sponsor distant.nvim development!'
                     else
-                        state.view.ship_exclamation = ''
+                        state.view.help.ship_exclamation = ''
                     end
                 end)
             end,
@@ -124,8 +133,8 @@ local function toggle_help(event)
 
     ---@param state distant.ui.State
     window:mutate_state(function(state)
-        state.view.is_showing_help = not state.view.is_showing_help
-        if state.view.is_showing_help then
+        state.view.help.active = not state.view.help.active
+        if state.view.help.active then
             help_animation(window)
             ship_animation(window)
         end
