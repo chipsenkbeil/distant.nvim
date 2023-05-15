@@ -70,7 +70,7 @@ function M.configure(opts)
         vim.bo[bufnr].modifiable = false
 
         local destination = plugin:client_destination(opts.client_id)
-        local settings = plugin:server_settings_for_client() or {}
+        local settings = plugin:server_settings_for_client(opts.client_id) or {}
         local mappings = assert(
             settings and settings.dir and settings.dir.mappings,
             'Missing dir mappings for server' .. tostring(destination and destination.host)
@@ -84,7 +84,7 @@ function M.configure(opts)
         vim.bo[bufnr].buftype = 'acwrite'
 
         local destination = plugin:client_destination(opts.client_id)
-        local settings = plugin:server_settings_for_client() or {}
+        local settings = plugin:server_settings_for_client(opts.client_id) or {}
         local mappings = assert(
             settings and settings.file and settings.file.mappings,
             'Missing file mappings for server ' .. tostring(destination and destination.host)
