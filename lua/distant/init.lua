@@ -699,8 +699,7 @@ end
 --- active client's destination if no id is specified.
 ---
 --- Note: This does NOT refresh the list of clients being managed by the
---- manager process. This is merely a means to construct a Lua wrapper around
---- a client using a connection id.
+--- manager process.
 ---
 --- @param id? distant.core.manager.ConnectionId # optional client id, if not provided uses the active id
 --- @return distant.core.Destination|nil # client destination if exists, otherwise nil
