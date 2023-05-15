@@ -15,12 +15,14 @@
 --- p.Bold 'My Bold Text'
 --- ```
 ---
---- @type table<string, fun(text:string):distant.core.ui.Span>
+--- @alias distant.plugin.ui.Palette table<string, fun(text:string):distant.core.ui.Span>
+--- @type distant.plugin.ui.Palette
 local M = {}
 
 --- @param highlight string
 --- @return fun(text:string):distant.core.ui.Span
 local function hl(highlight)
+    --- Maps text to a span.
     --- @param text string
     --- @return distant.core.ui.Span
     return function(text)
@@ -73,11 +75,12 @@ M.warning = hl('DistantWarning')
 --- Creates a span with a heading highlight.
 M.heading = hl('DistantHeading')
 
-setmetatable(M, {
-    __index = function(self, key)
-        self[key] = hl(key)
-        return self[key]
+return setmetatable(M, {
+    --- @param tbl distant.plugin.ui.Palette
+    --- @param key string
+    --- @return (fun(text:string):distant.core.ui.Span)|nil to_span
+    __index = function(tbl, key)
+        tbl[key] = hl(key)
+        return tbl[key]
     end,
 })
-
-return M
