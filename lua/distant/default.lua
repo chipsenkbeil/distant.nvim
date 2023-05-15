@@ -56,6 +56,15 @@ local DEFAULT_SETTINGS = {
         --- communication on Unix machines
         --- @type string|nil
         unix_socket = nil,
+        --- @class distant.plugin.settings.network.Timeout
+        timeout = {
+            --- Maximimum time to wait (in milliseconds) for requests to finish
+            --- @type integer
+            max = 15 * 1000,
+            --- Time to wait (in milliseconds) inbetween checks to see if a request timed out
+            --- @type integer
+            interval = 256,
+        },
     },
     --- Collection of settings for servers defined by their hostname.
     ---
@@ -124,17 +133,8 @@ local DEFAULT_SETTINGS = {
             lsp = {},
         },
     },
-    --- @class distant.plugin.settings.Timeout
-    timeout = {
-        --- Maximimum time to wait (in milliseconds) for requests to finish
-        --- @type integer
-        max = 15 * 1000,
-        --- Time to wait (in milliseconds) inbetween checks to see if a request timed out
-        --- @type integer
-        interval = 256,
-    },
 }
 
 return {
-    settings = DEFAULT_SETTINGS
+    SETTINGS = DEFAULT_SETTINGS
 }
