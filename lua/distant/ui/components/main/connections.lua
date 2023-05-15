@@ -79,7 +79,7 @@ local function ManagerConnection()
     }
 end
 
---- @param opts {connections:distant.core.manager.ConnectionMap, selected?:distant.core.manager.ConnectionId}
+--- @param opts distant.ui.state.info.Connections
 --- @return distant.core.ui.INode
 local function AvailableConnections(opts)
     local rows = {}
@@ -93,17 +93,17 @@ local function AvailableConnections(opts)
         p.Bold 'Port',
     })
 
-    local has_connections = not vim.tbl_isempty(opts.connections)
+    local has_connections = not vim.tbl_isempty(opts.available)
     local extra = {}
 
     --- Sort by id so we can ensure that we render in the same
     --- order every time, otherwise the table jumps around
     --- @type distant.core.manager.ConnectionId[]
-    local ids = vim.deepcopy(vim.tbl_keys(opts.connections))
+    local ids = vim.deepcopy(vim.tbl_keys(opts.available))
     table.sort(ids)
 
     for _, id in ipairs(ids) do
-        local destination = opts.connections[id]
+        local destination = opts.available[id]
 
         --- @type string|number|nil
         local port_str = destination.port
@@ -149,6 +149,19 @@ local function AvailableConnections(opts)
                 'KILL_CONNECTION',
                 { id = id, destination = destination }
             ),
+
+            -- When expanded, show it
+            ui.When(opts.info[id] ~= nil, function()
+                local info = opts.info[id]
+                local lines = {}
+
+                table.insert(lines, { p.muted('Options: ' .. tostring(info.options)) })
+
+                return ui.CascadingStyleNode(
+                    { 'INDENT' },
+                    { ui.HlTextNode(lines) }
+                )
+            end),
         }
     end
 
@@ -234,10 +247,7 @@ return function(state)
     return ui.Node {
         ui.EmptyLine(),
         ManagerConnection(),
-        AvailableConnections({
-            connections = state.info.connections.available,
-            selected = state.info.connections.selected,
-        }),
+        AvailableConnections(state.info.connections),
         ConnectionsFromSettings(),
     }
 end

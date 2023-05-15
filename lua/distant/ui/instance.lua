@@ -26,16 +26,21 @@ end
 
 ---@class distant.ui.State
 local INITIAL_STATE = {
+    --- @class distant.ui.state.Info
     info = {
+        --- @class distant.ui.state.info.Connections
         connections = {
             --- @type distant.core.manager.ConnectionId|nil
             selected = nil,
             --- @type distant.core.manager.ConnectionMap
             available = {},
+            --- @type table<distant.core.manager.ConnectionId, distant.core.manager.Info>
+            info = {},
         },
         ---@type distant.core.api.SystemInfoPayload|nil
         system_info = nil,
     },
+    --- @class distant.ui.state.View
     view = {
         is_showing_help = false,
         is_current_settings_expanded = false,
@@ -45,6 +50,7 @@ local INITIAL_STATE = {
         ship_indentation = 0,
         ship_exclamation = '',
     },
+    --- @class distant.ui.state.Header
     header = {
         title_prefix = '', -- for animation
     },
@@ -188,13 +194,26 @@ local function toggle_expand_connection(event)
     local payload = event.payload
     local id = payload.id
 
-    -- Load our manager and refresh the connections
-    -- before attempting to expand one
-    plugin:connections({}, function(err, _)
-        assert(not err, err)
+    --- @type distant.ui.State
+    local state = event.state.get()
 
-        -- TODO: Expand it
-    end)
+    -- If no info set for the connection, retrieve it and set it
+    if not state.info.connections.info[id] then
+        plugin:assert_manager():info({ connection = id }, function(err, info)
+            assert(not err, tostring(err))
+
+            --- @param state distant.ui.State
+            event.state.mutate(function(state)
+                state.info.connections.info[id] = info
+            end)
+        end)
+    else
+        -- Otherwise, clear the connection info to hide it
+        --- @param state distant.ui.State
+        event.state.mutate(function(state)
+            state.info.connections.info[id] = nil
+        end)
+    end
 end
 
 --- @param event distant.core.ui.window.EffectEvent
