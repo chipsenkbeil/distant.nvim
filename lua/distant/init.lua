@@ -75,7 +75,7 @@ function M:new(opts)
 
     instance.api = require('distant.api')
     instance.buf = require('distant.buffer')
-    instance.settings = vim.deepcopy(DEFAULT.settings)
+    instance.settings = vim.deepcopy(DEFAULT.SETTINGS)
     instance.version = vim.deepcopy(VERSION)
 
     return instance
@@ -169,8 +169,8 @@ end
 --- @return string|nil err, distant.core.Manager|nil manager
 function M:load_manager(opts, cb)
     -- Update our opts with default setting values if not overwritten
-    local timeout = opts.timeout or self.settings.timeout.max
-    local interval = opts.interval or self.settings.timeout.interval
+    local timeout = opts.timeout or self.settings.network.timeout.max
+    local interval = opts.interval or self.settings.network.timeout.interval
     local log_file = opts.log_file or self.settings.manager.log_file
     local log_level = opts.log_level or self.settings.manager.log_level
 
@@ -387,8 +387,8 @@ function M:connections(opts, cb)
     local rx
     if not cb then
         cb, rx = utils.oneshot_channel(
-            opts.timeout or self.settings.timeout.max,
-            opts.interval or self.settings.timeout.interval
+            opts.timeout or self.settings.network.timeout.max,
+            opts.interval or self.settings.network.timeout.interval
         )
     end
 
@@ -806,10 +806,6 @@ function M:cli_path(opts)
 
     return bin
 end
-
--------------------------------------------------------------------------------
--- VERSION API
--------------------------------------------------------------------------------
 
 -------------------------------------------------------------------------------
 -- WRAP API
