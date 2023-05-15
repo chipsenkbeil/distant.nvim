@@ -11,7 +11,7 @@ local DISPLAY_LINE_LEN = 40
 --- @field query distant.core.api.search.Query
 --- @field settings telescope.distant.finder.Settings
 --- @field results telescope.distant.finder.Entry[]
---- @field private __search? distant.core.api.Searcher #active search (internal)
+--- @field private __searcher? distant.core.api.Searcher #active search (internal)
 local M = {}
 M.__index = M
 
@@ -172,14 +172,14 @@ function M:__find(prompt, process_result, process_complete)
             end
 
             process_complete()
-            self.__search = nil
+            self.__searcher = nil
         end
 
         -- Search using the active client
         --- @diagnostic disable-next-line:redefined-local
         plugin.api.search(opts, function(err, search)
             assert(not err, err)
-            self.__search = search
+            self.__searcher = search
         end)
     end)
 end
@@ -193,16 +193,17 @@ function M:close(cb)
     end
     self.results = {}
 
-    if self.__search ~= nil then
-        if not self.__search:is_done() then
-            self.__search:cancel(function(err)
+    local searcher = self.__searcher
+    if searcher ~= nil then
+        if not searcher:is_done() then
+            searcher:cancel(function(err)
                 cb(tostring(err))
             end)
         else
             cb()
         end
 
-        self.__search = nil
+        self.__searcher = nil
     else
         cb()
     end

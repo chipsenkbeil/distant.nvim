@@ -134,11 +134,11 @@ local window = Window:new({
 --- @param opts distant.core.api.MetadataOpts
 return function(opts)
     opts = opts or {}
+    log.fmt_trace('editor.show_metadata(%s)', opts)
     local path = opts.path
     if not path then
         error('opts.path is missing')
     end
-    log.fmt_trace('editor.show.metadata(%s)', opts)
 
     window:open()
 
