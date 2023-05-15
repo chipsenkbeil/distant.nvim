@@ -602,11 +602,13 @@ function M:__setup(settings)
 
     -- Populate our settings with some defaults (avoiding require cyclical loop)
     log.debug('distant:setup:settings:defaults')
+    local editor = require('distant.editor')
     local nav = require('distant.nav')
     self.settings.servers['*'].dir.mappings = {
         ['<Return>'] = nav.actions.edit,
         ['-']        = nav.actions.up,
         ['K']        = nav.actions.mkdir,
+        ['M']        = nav.actions.metadata,
         ['N']        = nav.actions.newfile,
         ['R']        = nav.actions.rename,
         ['D']        = nav.actions.remove,

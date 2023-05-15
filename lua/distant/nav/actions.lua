@@ -7,7 +7,7 @@ local utils  = require('distant-core').utils
 local M      = {}
 
 --- Returns the separator used by the remote system
---- @param client_id? string
+--- @param client_id? distant.core.manager.ConnectionId
 --- @return string
 local function remote_sep(client_id)
     local err, system_info = plugin.api(client_id).cached_system_info({})
@@ -24,7 +24,7 @@ local function path_under_cursor()
 end
 
 --- Returns the full path under cursor by joining it with the base path
---- @param client_id? string
+--- @param client_id? distant.core.manager.ConnectionId
 --- @return string|nil
 local function full_path_under_cursor(client_id)
     local base_path = plugin.buf.path()
@@ -56,6 +56,15 @@ M.edit = function(opts)
             timeout = opts.timeout,
             interval = opts.interval,
         })
+    end
+end
+
+--- Displays metadata for the path under the cursor.
+M.metadata = function()
+    local client_id = plugin.buf.client_id()
+    local path = full_path_under_cursor(client_id)
+    if path ~= nil then
+        editor.show_metadata({ path = path })
     end
 end
 
