@@ -18,12 +18,16 @@ function M.apply_mappings(bufnr, mappings)
 
         -- For each key combination, map our callback to it
         for _, lhs in ipairs(lhs) do
-            vim.api.nvim_buf_set_keymap(bufnr, 'n', lhs, '', {
-                noremap = true,
-                silent = true,
-                nowait = true,
-                callback = callback,
-            })
+            -- Only map non-empty key combinations to enable
+            -- users to remove combinations by placing a blank string
+            if type(lhs) == 'string' and lhs:len() > 0 then
+                vim.api.nvim_buf_set_keymap(bufnr, 'n', lhs, '', {
+                    noremap = true,
+                    silent = true,
+                    nowait = true,
+                    callback = callback,
+                })
+            end
         end
     end
 end
