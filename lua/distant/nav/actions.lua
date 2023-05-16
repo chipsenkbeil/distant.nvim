@@ -156,6 +156,42 @@ M.mkdir = function(opts)
     end
 end
 
+--- Copies a file or directory within the current directory
+---
+--- ### Options
+---
+--- * path: If provided, is used as new directory path joined to current directory
+---
+--- @param opts? {path?:string}
+M.copy = function(opts)
+    opts = opts or {}
+
+    local client_id = plugin.buf.client_id()
+    local base_path = plugin.buf.path()
+    if base_path ~= nil then
+        local src_path = full_path_under_cursor(client_id)
+        if src_path ~= nil then
+            --- @diagnostic disable-next-line:redundant-parameter
+            local dst_path = opts.path or vim.fn.input('Copy name: ', src_path)
+            if dst_path == '' then
+                return
+            end
+
+            local err = plugin.api(client_id).copy({ src = src_path, dst = dst_path })
+
+            if not err then
+                editor.open({
+                    client_id = client_id,
+                    path = base_path,
+                    reload = true,
+                })
+            else
+                log.error(string.format('Failed to rename %s to %s: %s', src_path, dst_path, err))
+            end
+        end
+    end
+end
+
 --- Renames a file or directory within the current directory
 ---
 --- ### Options
@@ -208,14 +244,28 @@ M.remove = function(opts)
     if base_path ~= nil then
         local path = full_path_under_cursor(client_id)
         if path ~= nil then
+            -- Do not force by default
+            local force = false
+
             -- Unless told not to show, we always prompt when deleting
             if not opts.no_prompt then
-                if vim.fn.confirm("Delete?: " .. path_under_cursor(), "&Yes\n&No", 1) ~= 1 then
+                local choice = vim.fn.confirm("Delete?: " .. path_under_cursor(), "&Yes\n&Force\n&No", 1)
+
+                -- 0 is cancel, 3 is no
+                if choice == 0 or choice == 3 then
                     return
                 end
+
+                -- 2 is force
+                force = choice == 2
             end
 
-            local err = plugin.api(client_id).remove(vim.tbl_extend('keep', { path = path }, opts))
+            local err = plugin.api(client_id).remove({
+                path = path,
+                force = force,
+                timeout = opts.timeout,
+                interval = opts.interval,
+            })
 
             if not err then
                 editor.open({
@@ -224,7 +274,7 @@ M.remove = function(opts)
                     reload = true
                 })
             else
-                log.error(string.format('Failed to remove %s: %s', path, err))
+                log.fmt_error('Failed to remove %s: %s', path, tostring(err))
             end
         end
     end

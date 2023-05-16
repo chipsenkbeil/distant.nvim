@@ -21,6 +21,62 @@ local DEFAULT_SETTINGS = {
         --- @type distant.core.log.Level|nil
         log_level = nil,
     },
+    --- @alias distant.plugin.settings.Keymap
+    --- | string # single key combination
+    --- | string[] # multiple key combinations (any of these)
+    ---
+    --- Collection of key mappings across the plugin.
+    --- @class distant.plugin.settings.KeymapSettings
+    keymap = {
+        --- Mappings that apply when editing a remote directory.
+        --- @class distant.plugin.settings.keymap.DirSettings
+        dir = {
+            --- If true, will apply keybindings when the buffer is created.
+            --- @type boolean
+            enabled = true,
+            --- Keymap to copy the file or directory under the cursor.
+            --- @type distant.plugin.settings.Keymap
+            copy = 'C',
+            --- Keymap to edit the file or directory under the cursor.
+            --- @type distant.plugin.settings.Keymap
+            edit = '<Return>',
+            --- Keymap to display metadata for the file or directory under the cursor.
+            --- @type distant.plugin.settings.Keymap
+            metadata = 'M',
+            --- Keymap to create a new directory within the open directory.
+            --- @type distant.plugin.settings.Keymap
+            newdir = 'K',
+            --- Keymap to create a new file within the open directory.
+            --- @type distant.plugin.settings.Keymap
+            newfile = 'N',
+            --- Keymap to rename the file or directory under the cursor.
+            --- @type distant.plugin.settings.Keymap
+            rename = 'R',
+            --- Keymap to remove the file or directory under the cursor.
+            --- @type distant.plugin.settings.Keymap
+            remove = 'D',
+            --- Keymap to navigate up into the parent directory.
+            --- @type distant.plugin.settings.Keymap
+            up = '-',
+        },
+        --- Mappings that apply when editing a remote file.
+        --- @class distant.plugin.settings.keymap.FileSettings
+        file = {
+            --- If true, will apply keybindings when the buffer is created.
+            --- @type boolean
+            enabled = true,
+            --- Keymap to navigate up into the parent directory.
+            --- @type distant.plugin.settings.Keymap
+            up = '-',
+        },
+        --- Mappings that apply to distant's user interface.
+        --- @class distant.plugin.settings.keymap.UserInterfaceSettings
+        ui = {
+            --- Mappings that apply to the main window.
+            main = {},
+            --- Used to exit the window
+        },
+    },
     --- Manager-specific settings that are applied when this plugin controls the manager.
     --- @class distant.plugin.settings.ManagerSettings
     manager = {
@@ -48,14 +104,6 @@ local DEFAULT_SETTINGS = {
         --- associated with a singular neovim instance
         --- @type boolean
         private = false,
-        --- If provided, will overwrite the pipe name used for network
-        --- communication on Windows machines
-        --- @type string|nil
-        windows_pipe = nil,
-        --- If provided, will overwrite the unix socket path used for network
-        --- communication on Unix machines
-        --- @type string|nil
-        unix_socket = nil,
         --- @class distant.plugin.settings.network.Timeout
         timeout = {
             --- Maximimum time to wait (in milliseconds) for requests to finish
@@ -65,6 +113,14 @@ local DEFAULT_SETTINGS = {
             --- @type integer
             interval = 256,
         },
+        --- If provided, will overwrite the pipe name used for network
+        --- communication on Windows machines
+        --- @type string|nil
+        windows_pipe = nil,
+        --- If provided, will overwrite the unix socket path used for network
+        --- communication on Unix machines
+        --- @type string|nil
+        unix_socket = nil,
     },
     --- Collection of settings for servers defined by their hostname.
     ---
@@ -87,22 +143,6 @@ local DEFAULT_SETTINGS = {
                 --- @field username? string # username when connecting to the server (defaults to user running neovim)
                 --- @field options? string # options to pass along to distant when connecting (e.g. ssh backend)
                 default = {},
-            },
-
-            --- Settings that apply to the navigation interface
-            --- @class distant.plugin.settings.server.DirSettings
-            dir = {
-                --- Mappings to apply to the navigation interface
-                --- @type table<string, fun()>
-                mappings = {},
-            },
-
-            --- Settings that apply when editing a remote file
-            --- @class distant.plugin.settings.server.FileSettings
-            file = {
-                --- Mappings to apply to remote files
-                --- @type table<string, fun()>
-                mappings = {},
             },
 
             --- Settings that apply when launching a server on a remote machine

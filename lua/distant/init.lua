@@ -466,10 +466,18 @@ function M:server_settings_for_host(host)
     log.fmt_trace('distant:server_settings_for_host(%s)', vim.inspect(host))
     self:__assert_initialized()
 
+    local default_settings = self.settings.servers['*'] or {}
+
+    -- Short circuit if we were told to retrieve default settings
+    if host == '*' then
+        return default_settings
+    end
+
+    -- Otherwise, merge specifics with defaults, keeping the specifics
     return vim.tbl_deep_extend(
         'keep',
         self.settings.servers[host] or {},
-        self.settings.servers['*'] or {}
+        default_settings
     )
 end
 
@@ -600,25 +608,8 @@ function M:__setup(settings)
     -- POPULATE SETTINGS
     --------------------------------------------------------------------------
 
-    -- Populate our settings with some defaults (avoiding require cyclical loop)
-    log.debug('distant:setup:settings:defaults')
-    local editor = require('distant.editor')
-    local nav = require('distant.nav')
-    self.settings.servers['*'].dir.mappings = {
-        ['<Return>'] = nav.actions.edit,
-        ['-']        = nav.actions.up,
-        ['K']        = nav.actions.mkdir,
-        ['M']        = nav.actions.metadata,
-        ['N']        = nav.actions.newfile,
-        ['R']        = nav.actions.rename,
-        ['D']        = nav.actions.remove,
-    }
-    self.settings.servers['*'].file.mappings = {
-        ['-'] = nav.actions.up,
-    }
-
     -- Update our global settings by merging with the provided settings
-    log.debug('distant:setup:settings:user')
+    log.debug('distant:setup:settings')
     self.settings = vim.tbl_deep_extend('force', self.settings, settings)
 
     --------------------------------------------------------------------------

@@ -69,13 +69,21 @@ function M.configure(opts)
         vim.bo[bufnr].buftype = 'nofile'
         vim.bo[bufnr].modifiable = false
 
-        local destination = plugin:client_destination(opts.client_id)
-        local settings = plugin:server_settings_for_client(opts.client_id) or {}
-        local mappings = assert(
-            settings and settings.dir and settings.dir.mappings,
-            'Missing dir mappings for server' .. tostring(destination and destination.host)
-        )
-        mapper.apply_mappings(bufnr, mappings)
+        -- If enabled, apply our directory keymappings
+        local keymap = plugin.settings.keymap.dir
+        if keymap.enabled then
+            local nav = require('distant.nav')
+            mapper.apply_mappings(bufnr, {
+                [keymap.copy]     = nav.actions.copy,
+                [keymap.edit]     = nav.actions.edit,
+                [keymap.metadata] = nav.actions.metadata,
+                [keymap.newdir]   = nav.actions.mkdir,
+                [keymap.newfile]  = nav.actions.newfile,
+                [keymap.rename]   = nav.actions.rename,
+                [keymap.remove]   = nav.actions.remove,
+                [keymap.up]       = nav.actions.up,
+            })
+        end
     else
         log.fmt_debug('Setting buffer %s as a file', bufnr)
 
@@ -83,13 +91,14 @@ function M.configure(opts)
         -- control where it is going
         vim.bo[bufnr].buftype = 'acwrite'
 
-        local destination = plugin:client_destination(opts.client_id)
-        local settings = plugin:server_settings_for_client(opts.client_id) or {}
-        local mappings = assert(
-            settings and settings.file and settings.file.mappings,
-            'Missing file mappings for server ' .. tostring(destination and destination.host)
-        )
-        mapper.apply_mappings(bufnr, mappings)
+        -- If enabled, apply our file keymappings
+        local keymap = plugin.settings.keymap.file
+        if keymap.enabled then
+            local nav = require('distant.nav')
+            mapper.apply_mappings(bufnr, {
+                [keymap.up] = nav.actions.up,
+            })
+        end
     end
 
     -- Add stateful information to the buffer, helping keep track of it

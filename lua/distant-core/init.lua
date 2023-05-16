@@ -3,7 +3,6 @@ return {
     builder      = require('distant-core.builder'),
     Client       = require('distant-core.client'),
     Cli          = require('distant-core.cli'),
-    data         = require('distant-core.data'),
     Destination  = require('distant-core.destination'),
     EventEmitter = require('distant-core.emitter'),
     inspect      = require('distant-core.inspect'),
