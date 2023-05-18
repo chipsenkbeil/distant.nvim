@@ -79,7 +79,7 @@ local function ManagerConnection()
     }
 end
 
---- @param opts distant.ui.state.info.Connections
+--- @param opts distant.ui.windows.main.state.info.Connections
 --- @return distant.core.ui.INode
 local function AvailableConnections(opts)
     local rows = {}
@@ -230,7 +230,7 @@ local function ConnectionsFromSettings()
     }
 end
 
---- @param state distant.ui.State
+--- @param state distant.ui.windows.main.State
 --- @return distant.core.ui.INode
 return function(state)
     return ui.Node {

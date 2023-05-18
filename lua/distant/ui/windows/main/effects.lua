@@ -5,7 +5,7 @@ local plugin      = require('distant')
 local function toggle_expand_current_settings(event)
     local window = event.window
 
-    ---@param state distant.ui.State
+    ---@param state distant.ui.windows.main.State
     window:mutate_state(function(state)
         state.view.is_current_settings_expanded = not state.view.is_current_settings_expanded
     end)
@@ -29,12 +29,12 @@ local function reload_tab(event)
             -- Update our available connections
             plugin:connections({}, function(err, connections)
                 assert(not err, err)
-                ---@param state distant.ui.State
+                ---@param state distant.ui.windows.main.State
                 window:mutate_state(function(state)
                     state.info.connections.available = connections
                 end)
             end)
-            ---@param state distant.ui.State
+            ---@param state distant.ui.windows.main.State
             window:mutate_state(function(state)
                 local id
                 local client = plugin:client()
@@ -48,7 +48,7 @@ local function reload_tab(event)
                 assert(not err, tostring(err))
                 assert(system_info)
 
-                ---@param state distant.ui.State
+                ---@param state distant.ui.windows.main.State
                 window:mutate_state(function(state)
                     state.info.system_info = system_info
                 end)
@@ -63,7 +63,7 @@ local function toggle_expand_connection(event)
     local payload = event.payload
     local id = payload.id
 
-    --- @type distant.ui.State
+    --- @type distant.ui.windows.main.State
     local state = event.state.get()
 
     -- If no info set for the connection, retrieve it and set it
@@ -71,14 +71,14 @@ local function toggle_expand_connection(event)
         plugin:assert_manager():info({ connection = id }, function(err, info)
             assert(not err, tostring(err))
 
-            --- @param state distant.ui.State
+            --- @param state distant.ui.windows.main.State
             event.state.mutate(function(state)
                 state.info.connections.info[id] = info
             end)
         end)
     else
         -- Otherwise, clear the connection info to hide it
-        --- @param state distant.ui.State
+        --- @param state distant.ui.windows.main.State
         event.state.mutate(function(state)
             state.info.connections.info[id] = nil
         end)
@@ -151,7 +151,7 @@ local function set_view(event)
     local view = event.payload
     local window = event.window
 
-    ---@param state distant.ui.State
+    ---@param state distant.ui.windows.main.State
     window:mutate_state(function(state)
         state.view.current = view
         state.view.has_changed = true

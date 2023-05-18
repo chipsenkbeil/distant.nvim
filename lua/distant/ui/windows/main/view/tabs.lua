@@ -27,7 +27,7 @@ local function create_tab_span(text, index, is_active, use_secondary_highlight)
     end
 end
 
---- @param state distant.ui.State
+--- @param state distant.ui.windows.main.State
 --- @return distant.core.ui.CascadingStyleNode
 return function(state)
     --- Represents all of the spans representing all of the tabs on a line

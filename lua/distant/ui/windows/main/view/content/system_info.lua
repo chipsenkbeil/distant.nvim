@@ -1,7 +1,7 @@
 local p  = require('distant.ui.palette')
 local ui = require('distant-core.ui')
 
---- @param state distant.ui.State
+--- @param state distant.ui.windows.main.State
 --- @return distant.core.ui.INode
 return function(state)
     local system_info = state.info.system_info

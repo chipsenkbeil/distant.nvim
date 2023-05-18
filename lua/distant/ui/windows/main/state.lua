@@ -1,8 +1,8 @@
----@class distant.ui.State
+--- @class distant.ui.windows.main.State
 local INITIAL_STATE = {
-    --- @class distant.ui.state.Info
+    --- @class distant.ui.windows.main.state.Info
     info = {
-        --- @class distant.ui.state.info.Connections
+        --- @class distant.ui.windows.main.state.info.Connections
         connections = {
             --- @type distant.core.manager.ConnectionId|nil
             selected = nil,
@@ -14,7 +14,7 @@ local INITIAL_STATE = {
         ---@type distant.core.api.SystemInfoPayload|nil
         system_info = nil,
     },
-    --- @class distant.ui.state.View
+    --- @class distant.ui.windows.main.state.View
     view = {
         --- Which view to display
         current = 'Connections',
@@ -33,7 +33,7 @@ local INITIAL_STATE = {
             ship_exclamation = '',
         },
     },
-    --- @class distant.ui.state.Header
+    --- @class distant.ui.windows.main.state.Header
     header = {
         title_prefix = '', -- for animation
     },

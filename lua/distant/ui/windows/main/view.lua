@@ -6,7 +6,7 @@ local Header  = require('distant.ui.windows.main.view.header')
 local Help    = require('distant.ui.windows.main.view.help')
 local Tabs    = require('distant.ui.windows.main.view.tabs')
 
---- @param state distant.ui.State
+--- @param state distant.ui.windows.main.State
 --- @return distant.core.ui.Node
 local function GlobalKeybinds(state)
     return ui.Node {
@@ -20,7 +20,7 @@ local function GlobalKeybinds(state)
     }
 end
 
---- @param state distant.ui.State
+--- @param state distant.ui.windows.main.State
 --- @return distant.core.ui.INode
 return function(state)
     return ui.Node {

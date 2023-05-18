@@ -14,7 +14,7 @@ local function version_node()
     end
 end
 
----@param state distant.ui.State
+---@param state distant.ui.windows.main.State
 return function(state)
     return ui.CascadingStyleNode({ 'CENTERED' }, {
         ui.HlTextNode {
