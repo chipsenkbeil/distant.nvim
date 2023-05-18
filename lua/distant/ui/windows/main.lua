@@ -1,18 +1,18 @@
 local plugin = require('distant')
 local Window = require('distant-core.ui').Window
 
+local WINOPTS = {
+    border       = 'none',
+    winhighlight = { 'NormalFloat:DistantNormal' },
+}
+
 local window = Window:new({
-    name = 'distant.nvim',
-    filetype = 'distant',
-    view = require('distant.ui.windows.main.view'),
+    name          = 'distant.nvim',
+    filetype      = 'distant-window',
+    view          = require('distant.ui.windows.main.view'),
     initial_state = require('distant.ui.windows.main.state'),
-    effects = require('distant.ui.windows.main.effects'),
-    winopts = {
-        border = 'none',
-        winhighlight = {
-            'NormalFloat:DistantNormal',
-        },
-    },
+    effects       = require('distant.ui.windows.main.effects'),
+    winopts       = WINOPTS,
 })
 
 plugin:on('connection:changed', function()

@@ -3,7 +3,7 @@ return {
     ['CLOSE_WINDOW'] = function(event)
         local window = event.window
 
-        --- @param state distant.ui.windows.metadata.State
+        --- @param state distant.plugin.ui.windows.metadata.State
         window:mutate_state(function(state)
             state.path = nil
             state.metadata = nil
@@ -11,4 +11,3 @@ return {
         window:close()
     end,
 }
-

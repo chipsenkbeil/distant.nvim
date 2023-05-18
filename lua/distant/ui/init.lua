@@ -1,6 +1,6 @@
 local colors = require('distant.ui.colors')
 
---- @class distant.Ui
+--- @class distant.plugin.Ui
 local M = {}
 
 function M.initialize()

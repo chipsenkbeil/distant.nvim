@@ -3,7 +3,7 @@ local p      = require('distant.ui.palette')
 local plugin = require('distant')
 local ui     = require('distant-core.ui')
 
----@param state distant.ui.windows.main.State
+---@param state distant.plugin.ui.windows.main.State
 local function Ship(state)
     local ship_indent = { (' '):rep(state.view.help.ship_indentation), '' }
     -- stylua: ignore start
@@ -41,7 +41,7 @@ local function Ship(state)
     }
 end
 
----@param state distant.ui.windows.main.State
+---@param state distant.plugin.ui.windows.main.State
 local function GenericHelp(state)
     --- @type {[1]: string, [2]: string}[]
     local keymap_tuples = {}
@@ -99,7 +99,7 @@ local function GenericHelp(state)
     }
 end
 
----@param state distant.ui.windows.main.State
+---@param state distant.plugin.ui.windows.main.State
 return function(state)
     ---@type distant.core.ui.INode
     local heading = ui.Node {}

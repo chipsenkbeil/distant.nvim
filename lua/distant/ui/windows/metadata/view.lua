@@ -1,7 +1,7 @@
 local p  = require('distant.ui.palette')
 local ui = require('distant-core.ui')
 
---- @param state distant.ui.windows.metadata.State
+--- @param state distant.plugin.ui.windows.metadata.State
 return function(state)
     local path, metadata = state.path, state.metadata
 

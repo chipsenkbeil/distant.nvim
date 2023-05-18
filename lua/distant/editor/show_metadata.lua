@@ -18,7 +18,7 @@ return function(opts)
 
     window:open()
 
-    --- @param state distant.ui.windows.metadata.State
+    --- @param state distant.plugin.ui.windows.metadata.State
     window:mutate_state(function(state)
         state.path = opts.path
     end)
@@ -33,7 +33,7 @@ return function(opts)
     assert(not err, tostring(err))
     assert(metadata)
 
-    --- @param state distant.ui.windows.metadata.State
+    --- @param state distant.plugin.ui.windows.metadata.State
     window:mutate_state(function(state)
         state.path = opts.path
         state.metadata = metadata

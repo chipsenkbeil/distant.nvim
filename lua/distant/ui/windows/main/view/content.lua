@@ -3,7 +3,7 @@ local ui          = require('distant-core.ui')
 local Connections = require('distant.ui.windows.main.view.content.connections')
 local SystemInfo  = require('distant.ui.windows.main.view.content.system_info')
 
---- @param state distant.ui.windows.main.State
+--- @param state distant.plugin.ui.windows.main.State
 --- @return distant.core.ui.INode
 return function(state)
     return ui.CascadingStyleNode({ 'INDENT' }, {

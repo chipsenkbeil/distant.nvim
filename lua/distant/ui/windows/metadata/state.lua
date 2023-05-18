@@ -1,4 +1,4 @@
---- @class distant.ui.windows.metadata.State
+--- @class distant.plugin.ui.windows.metadata.State
 local INITIAL_STATE = {
     --- @type string|nil
     path = nil,
