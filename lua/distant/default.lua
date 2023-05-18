@@ -72,9 +72,31 @@ local DEFAULT_SETTINGS = {
         --- Mappings that apply to distant's user interface.
         --- @class distant.plugin.settings.keymap.UserInterfaceSettings
         ui = {
+            --- Used to exit the window.
+            --- @type distant.plugin.settings.Keymap
+            exit = { 'q', '<Esc>' },
+
             --- Mappings that apply to the main window.
-            main = {},
-            --- Used to exit the window
+            main = {
+                --- Mappings for the connections tab.
+                connections = {
+                    --- Kill the connection under cursor.
+                    --- @type distant.plugin.settings.Keymap
+                    kill = 'K',
+
+                    --- Toggle information about the server/connection under cursor.
+                    --- @type distant.plugin.settings.Keymap
+                    toggle_info = 'I',
+                },
+
+                --- Used to bring up the help menu.
+                --- @type distant.plugin.settings.Keymap
+                help = { '?', 'h' },
+
+                --- Used to refresh data in a tab.
+                --- @type distant.plugin.settings.Keymap
+                refresh = 'R',
+            },
         },
     },
     --- Manager-specific settings that are applied when this plugin controls the manager.

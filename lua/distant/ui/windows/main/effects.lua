@@ -7,7 +7,7 @@ local function toggle_expand_current_settings(event)
 
     ---@param state distant.plugin.ui.windows.main.State
     window:mutate_state(function(state)
-        state.view.is_current_settings_expanded = not state.view.is_current_settings_expanded
+        state.view.help.is_current_settings_expanded = not state.view.help.is_current_settings_expanded
     end)
 end
 

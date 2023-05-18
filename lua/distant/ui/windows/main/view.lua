@@ -3,7 +3,6 @@ local ui      = require('distant-core.ui')
 local Content = require('distant.ui.windows.main.view.content')
 local Footer  = require('distant.ui.windows.main.view.footer')
 local Header  = require('distant.ui.windows.main.view.header')
-local Help    = require('distant.ui.windows.main.view.help')
 local Tabs    = require('distant.ui.windows.main.view.tabs')
 
 --- @param state distant.plugin.ui.windows.main.State
@@ -17,6 +16,7 @@ local function GlobalKeybinds(state)
 
         ui.Keybind('1', 'SET_VIEW', 'Connections', true),
         ui.Keybind('2', 'SET_VIEW', 'System Info', true),
+        ui.Keybind('3', 'SET_VIEW', 'Help', true),
     }
 end
 
@@ -27,12 +27,7 @@ return function(state)
         GlobalKeybinds(state),
         Header(state),
         Tabs(state),
-        ui.When(state.view.help.active, function()
-            return Help(state)
-        end),
-        ui.When(not state.view.help.active, function()
-            return Content(state)
-        end),
+        Content(state),
         Footer(state),
     }
 end

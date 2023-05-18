@@ -34,7 +34,7 @@ return function(state)
     --- @type distant.core.ui.Span[]
     local tabs = {}
 
-    for i, text in ipairs { 'Connections', 'System Info' } do
+    for i, text in ipairs { 'Connections', 'System Info', 'Help' } do
         --- @diagnostic disable-next-line:missing-parameter
         vim.list_extend(
             tabs,
