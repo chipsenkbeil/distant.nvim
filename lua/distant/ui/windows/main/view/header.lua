@@ -1,6 +1,6 @@
-local ui = require('distant-core.ui')
-local p = require('distant.ui.palette')
+local p      = require('distant.ui.palette')
 local plugin = require('distant')
+local ui     = require('distant-core.ui')
 
 --- @return distant.core.ui.HlTextNode
 local function version_node()

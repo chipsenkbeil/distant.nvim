@@ -1,7 +1,7 @@
-local ui = require('distant-core.ui')
-local log = require('distant-core.log')
-local p = require('distant.ui.palette')
+local log    = require('distant-core.log')
+local p      = require('distant.ui.palette')
 local plugin = require('distant')
+local ui     = require('distant-core.ui')
 
 ---@param state distant.ui.State
 local function Ship(state)

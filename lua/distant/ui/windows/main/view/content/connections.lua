@@ -1,5 +1,5 @@
+local p  = require('distant.ui.palette')
 local ui = require('distant-core.ui')
-local p = require('distant.ui.palette')
 
 --- @return distant.core.ui.INode
 local function ManagerConnection()

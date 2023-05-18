@@ -1,5 +1,5 @@
+local p  = require 'distant.ui.palette'
 local ui = require 'distant-core.ui'
-local p = require 'distant.ui.palette'
 
 --- Creates a series of spans that represent a tab visually.
 --- @param text string
@@ -38,7 +38,7 @@ return function(state)
         --- @diagnostic disable-next-line:missing-parameter
         vim.list_extend(
             tabs,
-            create_tab_span(text, i, state.view.current == text, state.view.is_showing_help)
+            create_tab_span(text, i, state.view.current == text, state.view.help.active)
         )
     end
     return ui.CascadingStyleNode({ 'INDENT' }, {

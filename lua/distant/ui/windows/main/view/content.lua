@@ -1,7 +1,7 @@
-local ui = require('distant-core.ui')
+local ui          = require('distant-core.ui')
 
-local Connections = require('distant.ui.components.main.connections')
-local SystemInfo = require('distant.ui.components.main.system_info')
+local Connections = require('distant.ui.windows.main.view.content.connections')
+local SystemInfo  = require('distant.ui.windows.main.view.content.system_info')
 
 --- @param state distant.ui.State
 --- @return distant.core.ui.INode
