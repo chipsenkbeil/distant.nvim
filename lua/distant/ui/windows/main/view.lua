@@ -1,3 +1,4 @@
+local plugin  = require('distant')
 local ui      = require('distant-core.ui')
 
 local Content = require('distant.ui.windows.main.view.content')
@@ -8,16 +9,35 @@ local Tabs    = require('distant.ui.windows.main.view.tabs')
 --- @param state distant.plugin.ui.windows.main.State
 --- @return distant.core.ui.Node
 local function GlobalKeybinds(state)
-    return ui.Node {
-        ui.Keybind('?', 'TOGGLE_HELP', nil, true),
-        ui.Keybind('q', 'CLOSE_WINDOW', nil, true),
-        ui.Keybind('<Esc>', 'CLOSE_WINDOW', nil, true),
-        ui.Keybind('r', 'RELOAD_TAB', { tab = state.view.current, force = true }, true),
+    local keybindings = {}
 
-        ui.Keybind('1', 'SET_VIEW', 'Connections', true),
-        ui.Keybind('2', 'SET_VIEW', 'System Info', true),
-        ui.Keybind('3', 'SET_VIEW', 'Help', true),
-    }
+    --- @param keymap distant.plugin.settings.Keymap
+    --- @param effect string
+    --- @param payload any
+    local function add(keymap, effect, payload)
+        local keymaps = keymap
+
+        if type(keymaps) == 'string' then
+            keymaps = { keymaps }
+        end
+
+        for _, lhs in ipairs(keymaps) do
+            table.insert(keybindings, ui.Keybind(lhs, effect, payload, true))
+        end
+    end
+
+    local keymaps = plugin.settings.keymap.ui
+
+    -- General window actions
+    add(keymaps.exit, 'CLOSE_WINDOW', nil)
+    add(keymaps.main.tabs.refresh, 'RELOAD_TAB', { tab = state.view.current, force = true })
+
+    -- Navigation tied to tabs
+    add(keymaps.main.tabs.goto_connections, 'SET_VIEW', 'Connections')
+    add(keymaps.main.tabs.goto_system_info, 'SET_VIEW', 'System Info')
+    add(keymaps.main.tabs.goto_help, 'SET_VIEW', 'Help')
+
+    return ui.Node(keybindings)
 end
 
 --- @param state distant.plugin.ui.windows.main.State

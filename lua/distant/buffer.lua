@@ -418,6 +418,8 @@ local function make_buffer(buf)
     --- @return distant.plugin.Buffer|nil
     function M.find(opts)
         local components = M.parse_name(opts.path)
+        local scheme = components.scheme or 'distant'
+        local connection = opts.connection or components.connection
         local path = components.path
 
         if type(path) == 'string' then
@@ -431,8 +433,8 @@ local function make_buffer(buf)
             --
             --- @diagnostic disable-next-line:param-type-mismatch
             local bufnr = vim.fn.bufnr(file_pattern({
-                scheme = components.scheme,
-                connection = opts.connection or components.connection,
+                scheme = scheme,
+                connection = connection,
                 path = path,
             }), 0)
             if bufnr ~= -1 then
@@ -443,7 +445,7 @@ local function make_buffer(buf)
             -- as the primary or one of the alternate paths
             --- @diagnostic disable-next-line:redefined-local
             for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
-                if make_buffer(bufnr).has_matching_path(path, { connection = opts.connection }) then
+                if make_buffer(bufnr).has_matching_path(path, { connection = connection }) then
                     return make_buffer(bufnr)
                 end
             end

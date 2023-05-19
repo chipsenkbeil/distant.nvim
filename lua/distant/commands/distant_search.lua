@@ -1,7 +1,7 @@
 local editor = require('distant.editor')
 local utils = require('distant.commands.utils')
 
---- DistantSearch pattern [paths ...] [opt1=... opt2=...]
+--- DistantSearch pattern [path=...] [target=...] [opt1=... opt2=...]
 --- @param cmd NvimCommand
 local function command(cmd)
     local input = utils.parse_args(cmd.args)
@@ -12,12 +12,7 @@ local function command(cmd)
     local interval = tonumber(input.opts.interval)
 
     local pattern = input.args[1]
-    local paths = {}
-    for i, path in ipairs(input.args) do
-        if i > 1 then
-            table.insert(paths, path)
-        end
-    end
+    local path = input.opts.path or '.'
     local target = input.opts.target or 'contents'
     local options = {}
     for key, value in pairs(input.opts or {}) do
@@ -26,13 +21,8 @@ local function command(cmd)
         end
     end
 
-    -- If no path provided, default to current working directory
-    if vim.tbl_isempty(paths) then
-        table.insert(paths, '.')
-    end
-
     local query = {
-        paths = paths,
+        paths = { path },
         target = target,
         condition = {
             type = 'regex',

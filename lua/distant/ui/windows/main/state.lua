@@ -19,18 +19,15 @@ local INITIAL_STATE = {
         --- Which view to display
         current = 'Connections',
 
+        --- Indication that the view has been altered
+        has_changed = false,
+
         --- Help-specific view state
         help = {
             --- Show help
             active = false,
             --- Show settings within help
             is_current_settings_expanded = false,
-            --- Display extra help tip if false
-            has_changed = false,
-            --- Ship position
-            ship_indentation = 0,
-            --- Ship ???
-            ship_exclamation = '',
         },
     },
     --- @class distant.plugin.ui.windows.main.state.Header

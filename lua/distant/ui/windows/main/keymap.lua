@@ -8,7 +8,7 @@ local M = {}
 --- @param sep? distant.core.ui.Span # optional separator to use between spans
 --- @return distant.core.ui.Span[]
 function M.help_key_spans(hl, sep)
-    return keymap.keymap_tospans(plugin.settings.keymap.ui.main.help, function(lhs)
+    return keymap.keymap_tospans(plugin.settings.keymap.ui.main.tabs.goto_help, function(lhs)
         return hl(lhs)
     end, sep)
 end

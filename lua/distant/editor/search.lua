@@ -30,7 +30,11 @@ local function add_matches_to_qflist(id, matches)
     local items = {}
 
     for _, match in ipairs(matches) do
-        local filename = 'distant://' .. tostring(match.path)
+        local filename = plugin.buf.build_name({
+            scheme = 'distant',
+            connection = plugin:active_client_id(),
+            path = tostring(match.path),
+        })
         local item = {
             -- Add a more friendly name for display only
             module = tostring(match.path),
@@ -49,10 +53,10 @@ local function add_matches_to_qflist(id, matches)
             item.end_col = match.submatches[1]['end']
         end
 
-        item.bufnr = plugin.buf.find_bufnr({ path = match.path }) or -1
+        item.bufnr = plugin.buf.find_bufnr({ path = filename })
 
         -- Create the buffer as unlisted and not scratch for the filename
-        if item.bufnr == -1 then
+        if not item.bufnr then
             log.fmt_trace('%s does not exist, so creating new buffer', filename)
             item.bufnr = vim.api.nvim_create_buf(false, false)
             if item.bufnr == 0 then

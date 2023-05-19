@@ -5,15 +5,15 @@ local plugin = require('distant')
 local ui     = require('distant-core.ui')
 
 ---@param state distant.plugin.ui.windows.main.State
-local function GenericHelp(state)
+return function(state)
     --- @type {[1]: string, [2]: distant.plugin.settings.Keymap}[]
     local keymap_tuples = {}
 
     local keymaps = plugin.settings.keymap.ui
 
     -- Add our globals that we want to show at the top
-    table.insert(keymap_tuples, { 'Toggle help', keymaps.main.help })
-    table.insert(keymap_tuples, { 'Refresh tab', keymaps.main.refresh })
+    table.insert(keymap_tuples, { 'Toggle help', keymaps.main.tabs.goto_help })
+    table.insert(keymap_tuples, { 'Refresh tab', keymaps.main.tabs.refresh })
 
     -- Add our view-specific keybindings
     table.insert(keymap_tuples, { 'Toggle connection/server information', keymaps.main.connections.toggle_info })
@@ -62,17 +62,4 @@ local function GenericHelp(state)
             return ui.HlTextNode(current_settings)
         end),
     }
-end
-
----@param state distant.plugin.ui.windows.main.State
-return function(state)
-    ---@type distant.core.ui.INode
-    local heading = ui.Node {}
-
-    return ui.CascadingStyleNode({ 'INDENT' }, {
-        ui.HlTextNode(state.view.help.has_changed and p.none '' or p.Comment '(change view by pressing its number)'),
-        heading,
-        GenericHelp(state),
-        ui.EmptyLine(),
-    })
 end

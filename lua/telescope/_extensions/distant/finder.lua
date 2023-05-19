@@ -159,8 +159,11 @@ function M:__find(prompt, process_result, process_complete)
             end
         end
 
-        -- On completion, we process dangling results and clear our search
-        opts.on_done = function(matches)
+        -- Search using the active client
+        --- @diagnostic disable-next-line:redefined-local
+        local err, searcher = plugin.api.search(opts, function(err, matches)
+            assert(not err, tostring(err))
+
             for _, match in ipairs(matches) do
                 local entry = make_entry(match)
                 table.insert(self.results, entry)
@@ -173,14 +176,10 @@ function M:__find(prompt, process_result, process_complete)
 
             process_complete()
             self.__searcher = nil
-        end
-
-        -- Search using the active client
-        --- @diagnostic disable-next-line:redefined-local
-        plugin.api.search(opts, function(err, search)
-            assert(not err, err)
-            self.__searcher = search
         end)
+
+        assert(not err, tostring(err))
+        self.__searcher = searcher
     end)
 end
 

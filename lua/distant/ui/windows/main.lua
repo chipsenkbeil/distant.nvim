@@ -11,7 +11,7 @@ local window = Window:new({
     filetype      = 'distant-window',
     view          = require('distant.ui.windows.main.view'),
     initial_state = require('distant.ui.windows.main.state'),
-    effects       = require('distant.ui.windows.main.effects'),
+    effects       = require('distant.ui.windows.main.effects').handlers,
     winopts       = WINOPTS,
 })
 

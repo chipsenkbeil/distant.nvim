@@ -89,13 +89,24 @@ local DEFAULT_SETTINGS = {
                     toggle_info = 'I',
                 },
 
-                --- Used to bring up the help menu.
-                --- @type distant.plugin.settings.Keymap
-                help = { '?', 'h' },
+                --- General mappings for tabs.
+                tabs = {
+                    --- Used to bring up the connections tab.
+                    --- @type distant.plugin.settings.Keymap
+                    goto_connections = 'C',
 
-                --- Used to refresh data in a tab.
-                --- @type distant.plugin.settings.Keymap
-                refresh = 'R',
+                    --- Used to bring up the system info tab.
+                    --- @type distant.plugin.settings.Keymap
+                    goto_system_info = 'S',
+
+                    --- Used to bring up the help menu.
+                    --- @type distant.plugin.settings.Keymap
+                    goto_help = '?',
+
+                    --- Used to refresh data in a tab.
+                    --- @type distant.plugin.settings.Keymap
+                    refresh = 'R',
+                }
             },
         },
     },
