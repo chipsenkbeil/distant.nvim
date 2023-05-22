@@ -178,6 +178,13 @@ local DEFAULT_SETTINGS = {
                 default = {},
             },
 
+            --- If specified, will apply the current working directory to any cases of spawning processes,
+            --- opening directories & files, starting shells, and wrapping commands.
+            ---
+            --- Will be overwritten if an explicit `cwd` or absolute path is provided in those situations.
+            --- @type string|nil
+            cwd = nil,
+
             --- Settings that apply when launching a server on a remote machine
             --- @class distant.plugin.settings.server.LaunchSettings
             launch = {

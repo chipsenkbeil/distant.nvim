@@ -53,6 +53,7 @@ local VERSION        = {
 --- @class distant.Plugin
 --- @field api distant.plugin.Api # plugin API for working remotely
 --- @field buf distant.plugin.Buffer # plugin buffer interface for working with buffer data
+--- @field editor distant.plugin.Editor # interface to working with the editor
 --- @field settings distant.plugin.Settings # plugin user-defined settings
 --- @field version distant.plugin.Version # plugin version information
 ---
@@ -73,10 +74,11 @@ function M:new(opts)
     local instance = opts.instance or {}
     setmetatable(instance, M)
 
-    instance.api = require('distant.api')
-    instance.buf = require('distant.buffer')
+    instance.api      = require('distant.api')
+    instance.buf      = require('distant.buffer')
+    instance.editor   = require('distant.editor')
     instance.settings = vim.deepcopy(DEFAULT.SETTINGS)
-    instance.version = vim.deepcopy(VERSION)
+    instance.version  = vim.deepcopy(VERSION)
 
     return instance
 end

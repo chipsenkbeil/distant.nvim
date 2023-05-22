@@ -29,9 +29,9 @@ return function(opts)
     -- Load the contents of the buffer
     -- TODO: This only works if the buffer is not hidden, but is
     --       this a problem for the write cmd since the buffer
-    --       shouldn't be hidden?
+    --       shouldn't be hidden? Otherwise, an empty list is returned.
     --- @diagnostic disable-next-line:param-type-mismatch
-    local lines = vim.fn.getbufline(buf, 1, '$')
+    local lines = vim.api.nvim_buf_get_lines(buf, 1, -1, false)
 
     -- Make sure we're using the right client
     local client_id = plugin.buf(buf).client_id()

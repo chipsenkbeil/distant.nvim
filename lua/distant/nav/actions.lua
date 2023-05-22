@@ -1,4 +1,3 @@
-local editor = require('distant.editor')
 local log    = require('distant-core').log
 local plugin = require('distant')
 local utils  = require('distant-core').utils
@@ -45,7 +44,7 @@ M.edit = function(opts)
     local client_id = plugin.buf.client_id()
     local path = full_path_under_cursor(client_id)
     if path ~= nil then
-        editor.open({
+        plugin.editor.open({
             client_id = client_id,
             path = path,
             bufnr = opts.bufnr,
@@ -64,7 +63,7 @@ M.metadata = function()
     local client_id = plugin.buf.client_id()
     local path = full_path_under_cursor(client_id)
     if path ~= nil then
-        editor.show_metadata({ path = path })
+        plugin.editor.show_metadata({ path = path })
     end
 end
 
@@ -88,7 +87,7 @@ M.up = function(opts)
     if base_path ~= nil then
         local parent = utils.parent_path(base_path)
         if parent ~= nil then
-            editor.open({
+            plugin.editor.open({
                 path = parent,
                 reload = reload,
                 client_id = client_id,
@@ -116,7 +115,7 @@ M.newfile = function(opts)
         end
 
         local path = utils.join_path(remote_sep(client_id), { base_path, name })
-        editor.open({
+        plugin.editor.open({
             path = path,
             client_id = client_id,
         })
@@ -145,7 +144,7 @@ M.mkdir = function(opts)
         local err = plugin.api(client_id).create_dir({ path = path, all = true })
 
         if not err then
-            editor.open({
+            plugin.editor.open({
                 client_id = client_id,
                 path = base_path,
                 reload = true,
@@ -180,7 +179,7 @@ M.copy = function(opts)
             local err = plugin.api(client_id).copy({ src = src_path, dst = dst_path })
 
             if not err then
-                editor.open({
+                plugin.editor.open({
                     client_id = client_id,
                     path = base_path,
                     reload = true,
@@ -216,7 +215,7 @@ M.rename = function(opts)
             local err = plugin.api(client_id).rename({ src = old_path, dst = new_path })
 
             if not err then
-                editor.open({
+                plugin.editor.open({
                     client_id = client_id,
                     path = base_path,
                     reload = true,
@@ -268,7 +267,7 @@ M.remove = function(opts)
             })
 
             if not err then
-                editor.open({
+                plugin.editor.open({
                     client_id = client_id,
                     path = base_path,
                     reload = true

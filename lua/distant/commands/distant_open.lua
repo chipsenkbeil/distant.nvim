@@ -1,4 +1,4 @@
-local editor = require('distant.editor')
+local plugin = require('distant')
 local utils = require('distant.commands.utils')
 
 --- DistantOpen path [opt1=... opt2=...]
@@ -23,7 +23,7 @@ local function command(cmd)
     -- TODO: Support bang! to force-reload a file, and
     --       by default not reload it if there are
     --       unsaved changes
-    editor.open(opts)
+    plugin.editor.open(opts)
 end
 
 --- @type DistantCommand

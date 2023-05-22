@@ -6,12 +6,12 @@ local PLUGIN_NAME = 'distant.nvim'
 --- @return string
 M.plugin_name = function() return PLUGIN_NAME end
 
---- Represents the separator for use with local file system
+--- Represents the separator for use with local file system.
 ---
 --- From https://github.com/williamboman/nvim-lsp-installer/blob/main/lua/nvim-lsp-installer/path.lua
 ---
 --- @type '\\'|'/'
-local SEPARATOR = (function()
+local LOCAL_SEPARATOR = (function()
     --- @diagnostic disable-next-line: undefined-global
     if jit then
         --- @diagnostic disable-next-line: undefined-global
@@ -26,10 +26,11 @@ local SEPARATOR = (function()
     end
 end)()
 
+--- Represents the local separator used by this machine.
 --- @return string
-M.seperator = function() return SEPARATOR end
+M.seperator = function() return LOCAL_SEPARATOR end
 
---- Returns path to cache directory for this plugin
+--- Returns path to cache directory for this plugin.
 --- @param path string|string[]|nil #if provided, will be appended to path
 --- @return string
 M.cache_path = function(path)
@@ -37,7 +38,7 @@ M.cache_path = function(path)
         vim.fn.stdpath('cache') ..
         M.seperator() ..
         M.plugin_name()
-        )
+    )
 
     if type(path) == 'table' and vim.tbl_islist(path) then
         for _, component in ipairs(path) do
@@ -50,7 +51,7 @@ M.cache_path = function(path)
     return full_path
 end
 
---- Returns path to data directory for this plugin
+--- Returns path to data directory for this plugin.
 --- @param path string|string[]|nil #if provided, will be appended to path
 --- @return string
 M.data_path = function(path)
@@ -58,7 +59,7 @@ M.data_path = function(path)
         vim.fn.stdpath('data') ..
         M.seperator() ..
         M.plugin_name()
-        )
+    )
 
     if type(path) == 'table' and vim.tbl_islist(path) then
         for _, component in ipairs(path) do
@@ -73,10 +74,11 @@ end
 
 --- @alias distant.core.utils.OperatingSystem 'windows'|'linux'|'macos'|'bsd'|'solaris'|'unknown'
 --- @alias distant.core.utils.Architecture 'x86'|'x86_64'|'powerpc'|'arm'|'mips'|'unknown'
-
---- Original from https://gist.github.com/soulik/82e9d02a818ce12498d1
+--- Retrieves the operating system and architecture of the local machine.
 ---
---- @return distant.core.utils.OperatingSystem, distant.core.utils.Architecture
+--- * Original from https://gist.github.com/soulik/82e9d02a818ce12498d1.
+---
+--- @return distant.core.utils.OperatingSystem os, distant.core.utils.Architecture arch
 M.detect_os_arch = function()
     local raw_os_name, raw_arch_name = '', ''
 
@@ -148,7 +150,7 @@ M.detect_os_arch = function()
     return os_name, arch_name
 end
 
---- Returns a string with the given prefix removed if it is found in the string
+--- Returns a string with the given prefix removed if it is found in the string.
 --- @param s string
 --- @param prefix string
 --- @return string
@@ -162,7 +164,7 @@ M.strip_prefix = function(s, prefix)
 end
 
 --- Returns a string with the given prefix removed if it is found in the string
---- in the form "file/path:line,col" -> "file/path", line, col
+--- in the form `"file/path:line,col" -> "file/path", line, col`.
 ---
 --- @param s string
 --- @return string s, number|nil line, number|nil col
@@ -175,7 +177,7 @@ M.strip_line_col = function(s)
     end
 end
 
---- Returns a new id for use in sending messages
+--- Returns a new id for use in sending messages.
 --- @return fun():number #Randomly generated id
 M.next_id = (function()
     -- Ensure that we have something kind-of random
@@ -186,7 +188,7 @@ M.next_id = (function()
     end
 end)()
 
---- Returns the parent path of the given path, or nil if there is no parent
+--- Returns the parent path of the given path, or nil if there is no parent.
 --- @param path string
 --- @return string|nil
 M.parent_path = function(path)
@@ -197,7 +199,7 @@ M.parent_path = function(path)
     end
 end
 
---- Join multiple path components together, separating by /
+--- Join multiple path components together, separating by `sep`.
 --- @param sep string
 --- @param paths string[]
 --- @return string #The path as a string
@@ -218,6 +220,7 @@ M.join_path = function(sep, paths)
     return path
 end
 
+--- Creates a new directory locally.
 --- @param opts {path:string, parents?:boolean, mode?:number}
 --- @param cb fun(err:string|nil)
 M.mkdir = function(opts, cb)
@@ -274,6 +277,7 @@ M.mkdir = function(opts, cb)
     end)
 end
 
+--- Applies a bitmask of either AND, OR, XOR.
 --- From https://stackoverflow.com/a/32389020
 --- @param a integer #number to be masked
 --- @param b integer #mask

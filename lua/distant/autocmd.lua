@@ -1,4 +1,3 @@
-local editor = require('distant.editor')
 local plugin = require('distant')
 local log    = require('distant-core').log
 local utils  = require('distant-core').utils
@@ -56,7 +55,7 @@ local function _initialize()
             }))
 
             log.fmt_debug('Reading %s into buffer %s', path, bufnr)
-            editor.open({
+            plugin.editor.open({
                 path = path,
                 bufnr = bufnr,
                 line = line,
@@ -76,7 +75,7 @@ local function _initialize()
             local bufnr = opts.buf
             if type(bufnr) == 'number' and bufnr ~= -1 then
                 log.fmt_debug('Writing buffer %s', bufnr)
-                editor.write({ buf = bufnr })
+                plugin.editor.write({ buf = bufnr })
             end
         end,
     })

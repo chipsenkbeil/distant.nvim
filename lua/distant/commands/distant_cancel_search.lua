@@ -1,4 +1,4 @@
-local editor = require('distant.editor')
+local plugin = require('distant')
 local utils = require('distant.commands.utils')
 
 --- DistantCancelSearch
@@ -7,7 +7,7 @@ local function command(cmd)
     local input = utils.parse_args(cmd.args)
     utils.paths_to_number(input.opts, { 'timeout', 'interval' })
 
-    editor.cancel_search()
+    plugin.editor.cancel_search()
 end
 
 --- @type DistantCommand

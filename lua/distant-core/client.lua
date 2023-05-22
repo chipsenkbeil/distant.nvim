@@ -227,6 +227,9 @@ end
 ---
 --- * `bufnr` specifies the buffer to use. If -1, will create a new buffer.
 --- * `winnr` specifies the window to use. Default is current window.
+--- * `cmd` is the optional command to use instead of the server's default shell.
+--- * `cwd` is the optional current working directory to set for the shell when spawning it.
+--- * `env` is the optional map of environment variable values to supply to the shell.
 ---
 --- @param opts {bufnr:number, winnr?:number, cmd?:string|string[], cwd?:string, env?:table<string, string>}
 --- @return number job-id

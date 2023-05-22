@@ -1,4 +1,4 @@
-local editor = require('distant.editor')
+local plugin = require('distant')
 local utils = require('distant.commands.utils')
 
 --- DistantSearch pattern [path=...] [target=...] [opt1=... opt2=...]
@@ -31,7 +31,7 @@ local function command(cmd)
         options = options,
     }
 
-    editor.search({
+    plugin.editor.search({
         query = query,
         timeout = timeout,
         interval = interval,

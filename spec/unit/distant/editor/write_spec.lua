@@ -2,35 +2,11 @@ local editor = require('distant.editor')
 local plugin = require('distant')
 local match  = require('luassert.match')
 local stub   = require('luassert.stub')
-local vars   = require('distant-core.vars')
-
---- Creates a stubbed vars.buf(...) instance
---- that returns a table with only `remote_path`
---- that is also stubbed to return `value`
---- upon call to `get()`
----
---- Returns the stubbed `vars.buf(...).remote_path.get`
-local function stub_vars_buf_remote_path_get(value)
-    local remote_path = {
-        get = function()
-        end
-    }
-    stub(remote_path, 'get', value)
-
-    local buf = { remote_path = remote_path }
-    stub(vars, 'buf', buf)
-
-    return remote_path.get
-end
 
 describe('distant.editor.write', function()
     it('should do nothing if the buffer does not have a remote path', function()
-        local remote_path_get = stub_vars_buf_remote_path_get(nil)
-        stub(plugin.api, 'write_file_text')
-
-        editor.write(123)
-        assert.stub(remote_path_get).was.called_with(123)
-        assert.stub(plugin.api.write_file_text).was.not_called()
+        local result = editor.write({ buf = 123 })
+        assert.equal(result, false)
     end)
 
     it('should write all lines of the buffer to the remote file', function()

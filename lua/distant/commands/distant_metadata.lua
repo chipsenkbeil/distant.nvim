@@ -1,4 +1,4 @@
-local editor = require('distant.editor')
+local plugin = require('distant')
 local utils  = require('distant.commands.utils')
 
 --- DistantMetadata path [opt1=... opt2=...]
@@ -10,7 +10,7 @@ local function command(cmd)
     local path = input.args[1]
     input.opts.path = path
 
-    editor.show_metadata(input.opts)
+    plugin.editor.show_metadata(input.opts)
 end
 
 --- @type DistantCommand

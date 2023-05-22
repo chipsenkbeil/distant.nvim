@@ -1,4 +1,4 @@
-local editor = require('distant.editor')
+local plugin = require('distant')
 local utils = require('distant.commands.utils')
 
 --- DistantConnect destination [opt1=..., opt2=...]
@@ -15,7 +15,7 @@ local function command(cmd)
         return
     end
 
-    editor.connect(input.opts, function(err)
+    plugin.editor.connect(input.opts, function(err)
         if not err then
             vim.notify('Connected to ' .. destination)
         else
