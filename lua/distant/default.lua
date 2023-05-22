@@ -93,11 +93,11 @@ local DEFAULT_SETTINGS = {
                 tabs = {
                     --- Used to bring up the connections tab.
                     --- @type distant.plugin.settings.Keymap
-                    goto_connections = 'C',
+                    goto_connections = '1',
 
                     --- Used to bring up the system info tab.
                     --- @type distant.plugin.settings.Keymap
-                    goto_system_info = 'S',
+                    goto_system_info = '2',
 
                     --- Used to bring up the help menu.
                     --- @type distant.plugin.settings.Keymap
