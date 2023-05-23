@@ -1,5 +1,6 @@
-local p  = require('distant.ui.palette')
-local ui = require('distant-core.ui')
+local consts = require('distant.ui.windows.main.constants')
+local p      = require('distant.ui.palette')
+local ui     = require('distant-core.ui')
 
 --- @return distant.core.ui.INode
 local function ManagerConnection()
@@ -119,21 +120,21 @@ local function AvailableConnections(opts)
             -- Return/Enter to switch
             ui.Keybind(
                 '<CR>',
-                'SWITCH_ACTIVE_CONNECTION',
+                consts.EFFECTS.SWITCH_ACTIVE_CONNECTION,
                 { id = id, destination = destination }
             ),
 
             -- Shift-i to expand information
             ui.Keybind(
                 '<S-i>',
-                'TOGGLE_EXPAND_CONNECTION',
+                consts.EFFECTS.TOGGLE_EXPAND_CONNECTION,
                 { id = id, destination = destination }
             ),
 
             -- Shift-k to kill
             ui.Keybind(
                 '<S-k>',
-                'KILL_CONNECTION',
+                consts.EFFECTS.KILL_CONNECTION,
                 { id = id, destination = destination }
             ),
 
@@ -208,7 +209,7 @@ local function ConnectionsFromSettings()
             -- Return/Enter to launch the server
             ui.Keybind(
                 '<CR>',
-                'LAUNCH_SERVER',
+                consts.EFFECTS.LAUNCH_SERVER,
                 { host = host, settings = server }
             ),
         }

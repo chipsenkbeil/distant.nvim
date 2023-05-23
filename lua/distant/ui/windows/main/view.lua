@@ -1,6 +1,7 @@
 local plugin  = require('distant')
 local ui      = require('distant-core.ui')
 
+local consts  = require('distant.ui.windows.main.constants')
 local Content = require('distant.ui.windows.main.view.content')
 local Footer  = require('distant.ui.windows.main.view.footer')
 local Header  = require('distant.ui.windows.main.view.header')
@@ -29,13 +30,13 @@ local function GlobalKeybinds(state)
     local keymaps = plugin.settings.keymap.ui
 
     -- General window actions
-    add(keymaps.exit, 'CLOSE_WINDOW', nil)
-    add(keymaps.main.tabs.refresh, 'RELOAD_TAB', { tab = state.view.current, force = true })
+    add(keymaps.exit, consts.EFFECTS.CLOSE_WINDOW, nil)
+    add(keymaps.main.tabs.refresh, consts.EFFECTS.RELOAD_TAB, { tab = state.view.current, force = true })
 
     -- Navigation tied to tabs
-    add(keymaps.main.tabs.goto_connections, 'SET_VIEW', 'Connections')
-    add(keymaps.main.tabs.goto_system_info, 'SET_VIEW', 'System Info')
-    add(keymaps.main.tabs.goto_help, 'SET_VIEW', 'Help')
+    add(keymaps.main.tabs.goto_connections, consts.EFFECTS.SET_VIEW, 'Connections')
+    add(keymaps.main.tabs.goto_system_info, consts.EFFECTS.SET_VIEW, 'System Info')
+    add(keymaps.main.tabs.goto_help, consts.EFFECTS.SET_VIEW, 'Help')
 
     return ui.Node(keybindings)
 end

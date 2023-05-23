@@ -1,3 +1,4 @@
+local consts = require('distant.ui.windows.main.constants')
 local keymap = require('distant.ui.keymap')
 local log    = require('distant-core.log')
 local p      = require('distant.ui.palette')
@@ -47,7 +48,7 @@ return function(state)
                 p.highlight ' :help distant-settings',
             },
         },
-        ui.Keybind('<CR>', 'TOGGLE_EXPAND_CURRENT_SETTINGS', nil),
+        ui.Keybind('<CR>', consts.EFFECTS.TOGGLE_EXPAND_CURRENT_SETTINGS, nil),
         ui.When(is_current_settings_expanded, function()
             --- @type string[]
             --- @diagnostic disable-next-line:missing-parameter

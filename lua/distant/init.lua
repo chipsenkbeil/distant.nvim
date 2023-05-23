@@ -327,8 +327,8 @@ function M:connect(opts, cb)
 
     local destination = opts.destination
     assert(destination, 'Destination is missing')
-    if type(destination) == 'table' then
-        destination = destination:as_string()
+    if type(destination) == 'string' then
+        destination = Destination:parse(destination)
     end
 
     self:load_manager({

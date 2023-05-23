@@ -138,7 +138,7 @@ end
 ---   Will need to invoke `Driver:initialize` in order to set up client & manager.
 --- * `settings` - if provided, will merge with global settings.
 ---
---- @param opts {label:string, debug?:boolean, lazy?:boolean, settings?:distant.plugin.Settings}
+--- @param opts {label:string, debug?:boolean, lazy?:boolean, no_client?:boolean, no_manager?:boolean, settings?:distant.plugin.Settings}
 --- @return spec.e2e.Driver
 function M:setup(opts)
     opts = opts or {}
@@ -155,6 +155,8 @@ function M:setup(opts)
     if not opts.lazy then
         instance:initialize({
             label = opts.label,
+            no_client = opts.no_client,
+            no_manager = opts.no_manager,
             settings = opts.settings,
         })
     end
@@ -165,7 +167,7 @@ end
 --- Initializes the driver by invoking `setup` on the plugin to start a manager
 --- and then creates a local client to use for testing.
 ---
---- @param opts {label:string, settings?:distant.plugin.Settings, timeout?:number, interval?:number}
+--- @param opts {label:string, no_client?:boolean, no_manager?:boolean, settings?:distant.plugin.Settings, timeout?:number, interval?:number}
 --- @return spec.e2e.Driver
 function M:initialize(opts)
     opts = opts or {}
@@ -177,6 +179,9 @@ function M:initialize(opts)
 
     -- Setup our plugin with provided settings, forcing the private network for setup
     plugin:setup(vim.tbl_deep_extend('force', opts.settings or {}, {
+        manager = {
+            lazy = opts.no_manager == true,
+        },
         network = {
             private = true,
             windows_pipe = 'nvim-test-' .. next_id(),
@@ -186,10 +191,13 @@ function M:initialize(opts)
         wait = SETUP_TIMEOUT,
     })
 
-    self.__client = initialize_client({
-        timeout = opts.timeout,
-        interval = opts.interval,
-    })
+    -- Initialize a test client unless told explicitly not to do so
+    if not opts.no_client then
+        self.__client = initialize_client({
+            timeout = opts.timeout,
+            interval = opts.interval,
+        })
+    end
 
     return self
 end

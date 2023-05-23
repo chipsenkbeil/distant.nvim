@@ -1,3 +1,4 @@
+local consts = require('distant.ui.windows.main.constants')
 local window = require('distant.ui.windows.main')
 
 --- Distant
@@ -12,8 +13,8 @@ local function command(cmd)
     -- NOTE: Must be invoked after opening window
     --       as the effect handlers aren't set
     --       until after it is opened!
-    window:dispatch('RELOAD_TAB', {
-        tab = { 'Connections', 'System Info' },
+    window:dispatch(consts.EFFECTS.RELOAD_TAB, {
+        tab = { consts.VIEW.CONNECTIONS, consts.VIEW.SYSTEM_INFO },
         force = false,
     })
 end

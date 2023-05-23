@@ -18,6 +18,11 @@ local DEFAULT_UI_WIDTH = 0.8
 --- @type distant.core.ui.window.Height
 local DEFAULT_UI_HEIGHT = 0.9
 
+--- Wraps `debounced_fn` to schedule its execution using `vim.schedule`.
+---
+--- In the situation where the resulting function is invoked before the
+--- previous call finishes executing, the new call is ignored.
+---
 --- @generic T
 --- @param debounced_fn fun(arg1: T)
 --- @return fun(arg1: T)
@@ -360,7 +365,14 @@ function M:open()
 
         self.state.__unsubscribe(false)
         self:__open()
-        self:__draw(self.__renderer(self.state.get()))
+
+        -- Draw immediately after opening to make sure the content is visible
+        self:redraw({ immediate = true })
+
+        -- NOTE: We schedule one redraw after the initial draw
+        --       to capture state changes that happen shortly
+        --       after opening
+        self:redraw()
     end)
 end
 
@@ -380,6 +392,31 @@ function M:close()
             vim.api.nvim_del_augroup_by_id(self.__autoclose_augroup)
         end
     end)
+end
+
+--- Force the window to redraw its contents. Does nothing if the window is not open.
+---
+--- ### Options
+---
+--- * `immediate` - if true, will draw immediately instead of scheduling a draw.
+---
+--- @param opts? {immediate?:boolean}
+function M:redraw(opts)
+    if not self:is_open() then
+        return
+    end
+
+    opts = opts or {}
+
+    local function draw()
+        self:__draw(self.__renderer(self.state.get()))
+    end
+
+    if opts.immediate then
+        draw()
+    else
+        vim.schedule(draw)
+    end
 end
 
 --- Sets the cursor position within the open window.
@@ -449,7 +486,7 @@ end
 
 --- Triggers an effect directly (versus with keybindings).
 --- @param effect string # name of the effect
---- @param payload? table # optional payload to send to the effect, available as the `payload` field
+--- @param payload? any # optional payload to send to the effect, available as the `payload` field
 function M:dispatch(effect, payload)
     vim.schedule(function()
         local effect_handler = self.__registered_effect_handlers[effect]

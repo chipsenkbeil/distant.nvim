@@ -1,3 +1,5 @@
+local consts = require('distant.ui.windows.main.constants')
+
 --- @class distant.plugin.ui.windows.main.State
 local INITIAL_STATE = {
     --- @class distant.plugin.ui.windows.main.state.Info
@@ -17,7 +19,8 @@ local INITIAL_STATE = {
     --- @class distant.plugin.ui.windows.main.state.View
     view = {
         --- Which view to display
-        current = 'Connections',
+        --- @type distant.plugin.ui.windows.main.View
+        current = consts.VIEW.CONNECTIONS,
 
         --- Indication that the view has been altered
         has_changed = false,

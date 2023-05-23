@@ -11,9 +11,13 @@ describe('distant.commands.DistantConnect', function()
         -- Configure to avoid setting up a client or manager
         -- as our test should verify that a manager and client
         -- are started automatically for us.
+        --
+        -- NOTE: We still need to setup the plugin to enable
+        --       the commands, so we cannot use lazy here.
         driver = Driver:setup({
             label = 'distant.commands.DistantConnect',
-            lazy = true,
+            no_client = true,
+            no_manager = true,
         })
     end)
 
