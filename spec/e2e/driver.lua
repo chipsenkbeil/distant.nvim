@@ -1,5 +1,6 @@
 local AuthHandler = require('distant-core').AuthHandler
 local config = require('spec.e2e.config')
+local Destination = require('distant-core').Destination
 local editor = require('distant.editor')
 local plugin = require('distant')
 
@@ -20,11 +21,13 @@ local Window = require('spec.e2e.driver.window')
 --- @field label string
 --- @field private __debug boolean
 --- @field private __client? distant.core.Client #active client being used by this driver
---- @field private __manager? distant.core.Manager #active manager being used by this driver
 --- @field private __fixtures spec.e2e.Fixture[] #fixtures managed by this driver
---- @field private __mode 'distant'|'ssh' #mode in which the driver is being run
 local M = {}
 M.__index = M
+
+--- Maximum time (in milliseconds) to wait for the driver to finish setting up
+--- @type integer
+local SETUP_TIMEOUT = 10 * 1000
 
 --- Maximum random value (inclusive) in form of [1, MAX_RAND_VALUE]
 local MAX_RAND_VALUE = 100000
@@ -53,11 +56,6 @@ local function ssh_cmd(cmd, args)
     }
 end
 
-local function launch_mode(opts)
-    opts = opts or {}
-    return opts.mode or config.mode or 'distant'
-end
-
 -------------------------------------------------------------------------------
 -- DRIVER SETUP & TEARDOWN
 -------------------------------------------------------------------------------
@@ -65,11 +63,8 @@ end
 --- @type distant.core.Client|nil
 local client = nil
 
---- @type distant.core.Manager|nil
-local manager = nil
-
 --- Initialize a client if one has not been initialized yet
---- @param opts? {args?:string[], mode?:'distant'|'ssh', timeout?:number, interval?:number}
+--- @param opts? {args?:string[], timeout?:number, interval?:number}
 --- @return distant.core.Client
 local function initialize_client(opts)
     opts = opts or {}
@@ -77,117 +72,48 @@ local function initialize_client(opts)
         return client
     end
 
-    local timeout = opts.timeout or config.timeout
-    local interval = opts.interval or config.timeout_interval
-
     local log_file = vim.fn.tempname()
 
     -- Print out our log location and flush to ensure that it shows up in case we get stuck
     print('Logging initialized', log_file)
     io.stdout:flush()
 
-    -- Attempt to launch and connect to a remote session
-    -- NOTE: We bump up our port range as tests are run in parallel and each
-    --       stand up a new distant connection AND server, meaning we need
-    --       to avoid running out of ports!
-    -- TODO: Because of the above situation, should we instead have drivers use
-    --       the same connection and only have one perform an actual launch?
-    local host = config.host
-    local distant_bin = config.bin
+    -- Update our launch options
+    opts = {
+        destination = Destination:new({
+            scheme = 'ssh',
+            host = config.host,
+            port = config.port,
+            username = config.user,
+        }),
+        auth = AuthHandler:dummy(),
+        distant = {
+            bin = config.bin,
+            args = vim.list_extend({
+                '--current-dir', config.root_dir,
+                '--shutdown', 'lonely=60',
+                '--port', '8080:8999',
+            }, opts.args or {})
+        },
+        timeout = opts.timeout,
+        interval = opts.interval,
+    }
 
-    --- @diagnostic disable-next-line:missing-parameter
-    local distant_args = vim.list_extend({
-        '--current-dir', config.root_dir,
-        '--shutdown', 'lonely=60',
-        '--port', '8080:8999',
-    }, opts.args or {})
-
-    local options = {}
-    if config.ssh_backend then
-        options['ssh.backend'] = config.ssh_backend
-    end
-
-    local dummy_auth = AuthHandler:new()
-
-    -- All password challenges return the same password
-    --- @diagnostic disable-next-line:duplicate-set-field
-    dummy_auth.on_challenge = function(_, msg)
-        local answers = {}
-        local i = 1
-        local n = tonumber(#msg.questions)
-        while i <= n do
-            table.insert(answers, config.password or '')
-            i = i + 1
+    editor.launch(opts, function(err, c)
+        if err then
+            local desc = string.format('editor.launch(%s)', vim.inspect(opts))
+            error(string.format(
+                'For %s, failed: %s',
+                desc, err
+            ))
+        else
+            client = c
         end
-        return answers
-    end
+    end)
 
-    -- Verify any host received
-    --- @diagnostic disable-next-line:duplicate-set-field
-    dummy_auth.on_verification = function(_, _) return true end
-
-    -- Errors should fail completely
-    --- @diagnostic disable-next-line:duplicate-set-field
-    dummy_auth.on_error = function(_, err) error(err) end
-
-    -- If mode is distant, launch, otherwise if mode is ssh, connect
-    local mode = launch_mode(opts)
-    if mode == 'distant' then
-        local destination = host
-        if config.user then
-            destination = config.user .. '@' .. destination
-        end
-        destination = 'ssh://' .. destination
-        local launch_opts = {
-            destination = destination,
-            auth = dummy_auth,
-            distant = {
-                bin = distant_bin,
-                args = distant_args,
-            },
-            options = options,
-        }
-
-        editor.launch(launch_opts, function(err, c)
-            if err then
-                local desc = string.format(
-                    'editor.launch({ destination = %s, distant_bin = %s, distant_args = %s })',
-                    destination, distant_bin, vim.inspect(distant_args)
-                )
-                error(string.format(
-                    'For %s, failed: %s',
-                    desc, err
-                ))
-            else
-                client = c
-            end
-        end)
-    elseif mode == 'ssh' then
-        local destination = 'ssh://' .. host
-        editor.connect({
-            destination = destination,
-            auth = dummy_auth,
-        }, function(err, c)
-            if err then
-                local desc = string.format(
-                    'editor.connect({ destination = %s })',
-                    destination
-                )
-                error(string.format(
-                    'For %s, failed: %s',
-                    desc, err
-                ))
-            else
-                client = c
-            end
-        end)
-    else
-        error('Unsupported mode: ' .. mode)
-    end
-
-    local _, status = vim.wait(timeout, function()
+    local _, status = vim.wait(opts.timeout or config.timeout, function()
         return client ~= nil
-    end, interval)
+    end, opts.interval or config.timeout_interval)
 
     if client then
         return client
@@ -198,36 +124,6 @@ local function initialize_client(opts)
     else
         error('Client not initialized in time (status == ???)')
     end
-end
-
---- Initialize a manager if one has not been initialized yet
---- @param opts {label:string, bin?:string, network?:distant.core.manager.Network, timeout?:number, interval?:number}
---- @return distant.core.Manager
-local function initialize_manager(opts)
-    opts = opts or {}
-    if manager ~= nil then
-        return manager
-    end
-
-    local label = opts.label
-    if label then
-        opts.network = vim.tbl_extend('keep', config.network or {}, {
-            windows_pipe = 'nvim-test-' .. label .. '-' .. next_id(),
-            unix_socket = '/tmp/nvim-test-' .. label .. '-' .. next_id() .. '.sock',
-        })
-    end
-
-    local err, local_manager = plugin:load_manager({
-        reload = true,
-        bin = opts.bin,
-        network = opts.network,
-        timeout = opts.timeout,
-        interval = opts.interval,
-    })
-    assert(not err, err)
-    manager = assert(local_manager, 'load_manager did not return a manager')
-
-    return manager
 end
 
 --- Initializes a driver for e2e tests.
@@ -246,61 +142,69 @@ function M:setup(opts)
     opts = opts or {}
 
     -- Create a new instance and assign the session to it
+    --- @type spec.e2e.Driver
     local instance = {}
     setmetatable(instance, M)
     instance.label = assert(opts.label, 'Missing label in setup')
     instance.__debug = opts.debug or false
     instance.__client = nil
-    instance.__manager = nil
     instance.__fixtures = {}
-    instance.__mode = launch_mode(opts)
 
     if not opts.lazy then
-        instance:initialize(opts)
+        instance:initialize({
+            label = opts.label,
+            settings = opts.settings,
+        })
     end
 
     return instance
 end
 
---- Initializes the client of the driver.
---- @param opts table
+--- Initializes the driver by invoking `setup` on the plugin to start a manager
+--- and then creates a local client to use for testing.
+---
+--- @param opts {label:string, settings?:distant.plugin.Settings, timeout?:number, interval?:number}
 --- @return spec.e2e.Driver
 function M:initialize(opts)
     opts = opts or {}
 
-    -- Setup our plugin with provided settings
-    plugin:setup(opts.settings or {})
+    -- If already initialized, skip!
+    if plugin:is_initialized() then
+        return self
+    end
 
-    -- NOTE: Need to initialize early as driver is conflicting with itself
-    --       due to random not being random enough between driver tests
-    --       to prevent the same socket/windows pipe conflicting between
-    --       multiple managers
-    self.__manager = initialize_manager(opts)
+    -- Setup our plugin with provided settings, forcing the private network for setup
+    plugin:setup(vim.tbl_deep_extend('force', opts.settings or {}, {
+        network = {
+            private = true,
+            windows_pipe = 'nvim-test-' .. next_id(),
+            unix_socket = '/tmp/nvim-test-' .. next_id() .. '.sock',
+        }
+    }), {
+        wait = SETUP_TIMEOUT,
+    })
 
-    self.__client = initialize_client(opts)
+    self.__client = initialize_client({
+        timeout = opts.timeout,
+        interval = opts.interval,
+    })
+
     return self
 end
 
 --- Tears down driver, cleaning up resources
 function M:teardown()
     self.__client = nil
-    self.__manager = nil
 
     for _, fixture in ipairs(self.__fixtures) do
         fixture:remove({ ignore_errors = true })
     end
 end
 
---- Returns the mode the driver is in (distant|ssh)
---- @return 'distant'|'ssh'
-function M:mode()
-    return self.__mode
-end
-
 --- Returns the path to the CLI used by this driver.
 --- @return string
-function M:path_to_cli()
-    return plugin:path_to_cli()
+function M:cli_path()
+    return plugin:cli_path()
 end
 
 -------------------------------------------------------------------------------

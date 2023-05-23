@@ -79,7 +79,7 @@ describe('distant.api', function()
             assert(res)
 
             assert.are.equal(res.file_type, 'symlink')
-            assert.are.equal(res.canonicalized_path, file:path())
+            assert.are.equal(res.canonicalized_path, file:canonicalized_path())
         end)
 
         it('should fail if the path does not exist', function()

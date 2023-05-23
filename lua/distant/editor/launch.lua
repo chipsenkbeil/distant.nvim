@@ -14,7 +14,7 @@ local plugin = require('distant')
 
 --- @class distant.editor.launch.DistantOpts
 --- @field bin? string
---- @field args? string
+--- @field args? string|string[]
 
 --- Launches a new instance of the distance binary on the remote machine and sets
 --- up a session so clients are able to communicate with it

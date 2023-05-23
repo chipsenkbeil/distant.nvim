@@ -18,6 +18,7 @@ describe('distant.editor.write', function()
 
         -- Populate a fake client in our plugin to make sure that
         -- we can stub out the write operation
+        plugin.__manager = nil
 
         -- Specify that our buffer represents a remote file
         plugin.buf(buf).set_data({

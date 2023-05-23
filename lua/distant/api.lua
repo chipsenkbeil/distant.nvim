@@ -81,8 +81,8 @@ local function make_api(client_id)
     end
 
     --- @param opts distant.core.api.CapabilitiesOpts
-    --- @param cb? fun(err?:distant.core.api.Error, payload?:string[])
-    --- @return distant.core.api.Error|nil err, string[]|nil capabilities
+    --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.CapabilitiesPayload)
+    --- @return distant.core.api.Error|nil err, distant.core.api.CapabilitiesPayload|nil capabilities
     function M.capabilities(opts, cb)
         return api():capabilities(opts, cb)
     end

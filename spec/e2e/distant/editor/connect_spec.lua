@@ -24,7 +24,7 @@ describe('distant.editor.connect', function()
 
     it('should establish a connection with the specified server', function()
         -- Spawn a server locally for us to connect to
-        local server = Server:new({ binary = driver:path_to_cli() })
+        local server = Server:new({ binary = driver:cli_path() })
         local err, details = server:listen({
             shutdown = { key = 'lonely', value = 30 },
         })

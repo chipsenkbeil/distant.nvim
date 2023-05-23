@@ -5,12 +5,95 @@ local log = require('distant-core.log')
 local M = {}
 M.__index = M
 
+--- @class distant.core.auth.NewOpts
+--- @field on_challenge? fun(msg:distant.core.auth.OnChallengeMsg):string[]
+--- @field on_error? fun(msg:distant.core.auth.OnErrorMsg)
+--- @field on_finished? fun()
+--- @field on_info? fun(text:string)
+--- @field on_initialization? fun(msg:distant.core.auth.OnInitializationMsg):string[]
+--- @field on_start_method? fun(method:string)
+--- @field on_verification? fun(msg:distant.core.auth.OnVerificationMsg):boolean
+
 --- Creates a new instance of the authentication handler.
+---
+--- Takes an optional collection of callbacks to invoke when receiving authentication requests.
+---
+--- @param opts? distant.core.auth.NewOpts
 --- @return distant.core.AuthHandler
-function M:new()
+function M:new(opts)
+    opts = opts or {}
     local instance = {}
     setmetatable(instance, M)
+
+    if type(opts.on_challenge) == 'function' then
+        instance.on_challenge = function(_, msg)
+            return opts.on_challenge(msg)
+        end
+    end
+
+    if type(opts.on_error) == 'function' then
+        instance.on_error = function(_, msg)
+            return opts.on_error(msg)
+        end
+    end
+
+    if type(opts.on_finished) == 'function' then
+        instance.on_finished = function(_)
+            return opts.on_finished()
+        end
+    end
+
+    if type(opts.on_info) == 'function' then
+        instance.on_info = function(_, msg)
+            return opts.on_info(msg)
+        end
+    end
+
+    if type(opts.on_initialization) == 'function' then
+        instance.on_initialization = function(_, msg)
+            return opts.on_initialization(msg)
+        end
+    end
+
+    if type(opts.on_start_method) == 'function' then
+        instance.on_start_method = function(_, msg)
+            return opts.on_start_method(msg)
+        end
+    end
+
+    if type(opts.on_verification) == 'function' then
+        instance.on_verification = function(_, msg)
+            return opts.on_verification(msg)
+        end
+    end
+
     return instance
+end
+
+--- Creates a dummy authentication handler that always returns the specified
+--- `password` (or empty string) for password prompts and passes verification requests.
+---
+--- @param opts? {password?:string}
+--- @return distant.core.AuthHandler
+function M:dummy(opts)
+    opts = opts or {}
+
+    local password = opts.password or ''
+    return M:new({
+        on_challenge = function(msg)
+            local answers = {}
+
+            --- @diagnostic disable-next-line:unused-local
+            for _, question in ipairs(msg.questions) do
+                table.insert(answers, password)
+            end
+
+            return answers
+        end,
+        on_verification = function(_)
+            return true
+        end,
+    })
 end
 
 --- Returns true if the provided message with a type is an authentication request.
@@ -108,7 +191,8 @@ function M:handle_request(msg, reply)
 end
 
 --- Invoked when authentication is starting, containing available methods to use for authentication.
---- @param msg {methods:string[]}
+--- @alias distant.core.auth.OnInitializationMsg {methods:string[]}
+--- @param msg distant.core.auth.OnInitializationMsg
 --- @return string[] #authentication methods to use
 function M:on_initialization(msg)
     return msg.methods
@@ -121,7 +205,8 @@ function M:on_start_method(method)
 end
 
 --- Invoked when a request to answer some questions is received during authentication.
---- @param msg {questions:distant.core.auth.Question[], extra?:distant.core.auth.Extra}
+--- @alias distant.core.auth.OnChallengeMsg {questions:distant.core.auth.Question[], extra?:distant.core.auth.Extra}
+--- @param msg distant.core.auth.OnChallengeMsg
 --- @return string[]
 function M:on_challenge(msg)
     if msg.extra then
@@ -145,7 +230,8 @@ function M:on_challenge(msg)
 end
 
 --- Invoked when a request to verify some information is received during authentication.
---- @param msg {kind:distant.core.auth.VerificationKind, text:string}
+--- @alias distant.core.auth.OnVerificationMsg {kind:distant.core.auth.VerificationKind, text:string}
+--- @param msg distant.core.auth.OnVerificationMsg
 --- @return boolean
 function M:on_verification(msg)
     local answer = vim.fn.input(string.format('%s\nEnter [y/N]> ', msg.text))
@@ -164,7 +250,8 @@ end
 --- Invoked when an error is encountered during authentication.
 --- Fatal errors indicate the end of authentication.
 ---
---- @param err {kind:distant.core.auth.ErrorKind, text:string}
+--- @alias distant.core.auth.OnErrorMsg {kind:distant.core.auth.ErrorKind, text:string}
+--- @param err distant.core.auth.OnErrorMsg
 function M:on_error(err)
     log.fmt_error('Authentication error: %s', err.text)
 

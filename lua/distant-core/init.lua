@@ -11,6 +11,7 @@ return {
     log          = require('distant-core.log'),
     Manager      = require('distant-core.manager'),
     Server       = require('distant-core.server'),
+    Timeout      = require('distant-core.timeout'),
     ui           = require('distant-core.ui'),
     utils        = require('distant-core.utils'),
     Version      = require('distant-core.version'),

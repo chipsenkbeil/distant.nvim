@@ -95,19 +95,13 @@ local function verify_ok(payload)
 end
 
 --- @param payload table
---- @return string[]
-local function map_capabilities(payload)
-    return payload.supported
-end
-
---- @param payload table
 --- @return boolean
 local function verify_capabilities(payload)
     return (
         payload.type == 'capabilities'
         and type(payload.supported) == 'table'
         and vim.tbl_islist(payload.supported)
-        )
+    )
 end
 
 --- @param payload table
@@ -182,14 +176,14 @@ local function verify_system_info(payload)
         and type(payload.main_separator) == 'string'
         and type(payload.username) == 'string'
         and type(payload.shell) == 'string'
-        )
+    )
 end
 
 --- Mapping of request types to handlers to verify and map responses.
 --- @alias distant.core.api.RequestHandlers { map:(fun(payload:table):any), verify:(fun(payload:table):boolean) }
 --- @type { [distant.core.api.RequestType]: distant.core.api.RequestHandlers }
 local RESPONSE_HANDLERS = {
-    [REQUEST_TYPE.CAPABILITIES]     = { map = map_capabilities, verify = verify_capabilities },
+    [REQUEST_TYPE.CAPABILITIES]     = { map = identity, verify = verify_capabilities },
     [REQUEST_TYPE.CANCEL_SEARCH]    = { map = identity, verify = verify_ok },
     [REQUEST_TYPE.COPY]             = { map = identity, verify = verify_ok },
     [REQUEST_TYPE.DIR_CREATE]       = { map = identity, verify = verify_ok },
@@ -395,9 +389,10 @@ function M:append_file_text(opts, cb)
 end
 
 --- @alias distant.core.api.CapabilitiesOpts {timeout?:number, interval?:number}
+--- @alias distant.core.api.CapabilitiesPayload {supported:string[]}
 --- @param opts distant.core.api.CapabilitiesOpts
---- @param cb? fun(err?:distant.core.api.Error, payload?:string[])
---- @return distant.core.api.Error|nil err, string[]|nil capabilities
+--- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.CapabilitiesPayload)
+--- @return distant.core.api.Error|nil err, distant.core.api.CapabilitiesPayload|nil capabilities
 function M:capabilities(opts, cb)
     vim.validate({
         opts = { opts, 'table' },

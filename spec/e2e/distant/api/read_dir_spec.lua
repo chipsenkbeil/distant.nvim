@@ -75,10 +75,23 @@ describe('distant.api', function()
             local err, res = plugin.api.read_dir({ path = root:path(), absolute = true })
             assert(not err, tostring(err))
             assert(res)
+
+            local dir_path = root:dir('dir'):path()
+            local file_path = root:file('file'):path()
+            local symlink_path = root:symlink('link'):path()
+
+            -- On MacOS, this will also canonicalize our temp directory, so grab a canonicalized base path
+            if driver:detect_remote_os() == 'macos' then
+                local root_path = assert(root:canonicalized_path())
+                dir_path = root_path .. '/dir'
+                file_path = root_path .. '/file'
+                symlink_path = root_path .. '/link'
+            end
+
             assert.are.same({
-                { path = root:dir('dir'):path(),      file_type = 'dir',     depth = 1 },
-                { path = root:file('file'):path(),    file_type = 'file',    depth = 1 },
-                { path = root:symlink('link'):path(), file_type = 'symlink', depth = 1 },
+                { path = dir_path,     file_type = 'dir',     depth = 1 },
+                { path = file_path,    file_type = 'file',    depth = 1 },
+                { path = symlink_path, file_type = 'symlink', depth = 1 },
             }, res.entries)
         end)
 

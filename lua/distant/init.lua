@@ -512,10 +512,17 @@ function M:__assert_initialized()
     end
 end
 
---- Applies provided settings to overall settings available.
+--- Applies provided settings to overall settings available. By default, this runs asynchronously.
+---
+--- ### Options
+---
+--- * `wait` - if provided, will wait up to the specified maximum milliseconds for the setup to complete.
+---
 --- @param settings distant.plugin.Settings
-function M:setup(settings)
-    log.fmt_trace('distant:setup(%s)', settings)
+--- @param opts? {wait?:integer}
+function M:setup(settings, opts)
+    opts = opts or {}
+    log.fmt_trace('distant:setup(settings = %s, opts = %s)', settings, opts)
     if self:is_initialized() then
         log.warn(table.concat({
             'distant:setup() called more than once!',
@@ -556,6 +563,20 @@ function M:setup(settings)
 
     -- Ensure that we are properly initialized with user-provided settings
     self:__setup(settings)
+
+    -- If we were told to setup the plugin synchronously, block until ready
+    if type(opts.wait) == 'number' then
+        --- @type integer
+        local timeout = opts.wait
+
+        assert(
+            vim.wait(timeout, function() return self:is_initialized() end),
+            string.format(
+                'Timeout of %.2fs reached waiting for distant:setup() to complete',
+                timeout
+            )
+        )
+    end
 end
 
 --- Initialize the plugin. Invoked during setup process after user-defined
