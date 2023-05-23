@@ -12,7 +12,8 @@ describe('distant.editor.launch', function()
         -- are started automatically for us.
         driver = Driver:setup({
             label = 'distant.editor.launch',
-            lazy = true,
+            no_client = true,
+            no_manager = true,
         })
     end)
 

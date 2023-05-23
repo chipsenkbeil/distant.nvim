@@ -13,7 +13,8 @@ describe('distant.editor.connect', function()
         -- are started automatically for us.
         driver = Driver:setup({
             label = 'distant.editor.connect',
-            lazy = true,
+            no_client = true,
+            no_manager = true,
         })
     end)
 
