@@ -114,10 +114,16 @@ function M:set_log_level(value)
     return self
 end
 
---- Sets `--lsp`
+--- Sets `--lsp` or `--lsp <value>`
+--- @param value boolean|string
 --- @return distant.core.builder.SpawnCmdBuilder
-function M:set_lsp()
-    self.cmd:set('lsp')
+function M:set_lsp(value)
+    vim.validate({ value = { value, { 'boolean', 'string' } } })
+    if value == true then
+        self.cmd:set('lsp')
+    else
+        self.cmd:set('lsp', value)
+    end
     return self
 end
 

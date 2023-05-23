@@ -217,6 +217,13 @@ function M:cli_path()
     return plugin:cli_path()
 end
 
+--- @return integer|nil
+function M:client_id()
+    if self.__client then
+        return self.__client:connection()
+    end
+end
+
 -------------------------------------------------------------------------------
 -- DRIVER DEBUG FUNCTIONS
 -------------------------------------------------------------------------------
@@ -301,6 +308,17 @@ function M:detect_remote_family(opts)
         return 'windows'
     else
         return 'unknown'
+    end
+end
+
+--- Returns the path separator for the remote system, caching the result for future requests.
+--- @param opts? {reload?:boolean}
+--- @return string
+function M:detect_remote_path_separator(opts)
+    if self:detect_remote_family(opts) == 'windows' then
+        return '\\'
+    else
+        return '/'
     end
 end
 

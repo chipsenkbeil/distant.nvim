@@ -192,7 +192,17 @@ function M:connect_lsp_clients(opts)
                             end
                         end
 
-                        local cmd = self:wrap({ lsp = config.cmd })
+                        --- TODO: This is a hack because distant-core should have no concept
+                        ---       that we need to specify an LSP scheme replacement like this,
+                        ---       but we have to right now. Is there a better way to do this?
+                        --- @type string|nil
+                        local scheme
+                        local connection = self:network().connection
+                        if connection then
+                            scheme = ('distant://%s@'):format(connection)
+                        end
+
+                        local cmd = self:wrap({ lsp = config.cmd, scheme = scheme })
                         log.fmt_debug('Starting LSP %s: %s', label, cmd)
 
                         -- Start LSP server using the provided configuration, replacing the
@@ -269,6 +279,7 @@ end
 --- @field shell? string|string[]|true
 --- @field cwd? string
 --- @field env? table<string,string>
+--- @field scheme? string
 
 --- Wraps cmd, lsp, or shell to be invoked via distant. Returns
 --- a string if the input is a string, or a list if the input
@@ -305,7 +316,7 @@ function M:wrap(opts)
         result = cmd:set_from_tbl(self.config.network):as_list()
         table.insert(result, 1, self.config.binary)
     elseif has_lsp then
-        local cmd = builder.spawn(opts.lsp):set_lsp()
+        local cmd = builder.spawn(opts.lsp):set_lsp(opts.scheme or true)
         if opts.cwd then
             cmd = cmd:set_current_dir(opts.cwd)
         end

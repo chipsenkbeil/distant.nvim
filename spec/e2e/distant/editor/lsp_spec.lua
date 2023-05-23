@@ -14,13 +14,17 @@ end
 
 --- Creates a lua project using the provided remote directory
 --- @param root spec.e2e.RemoteDir
+--- @return spec.e2e.RemoteDir lua_dir
 local function make_lua_project(root)
-    assert(root:file('init.lua'):write(d(2, [[
+    local lua_dir = root:dir('lua')
+    assert(lua_dir:make(), 'Failed to create lua/')
+
+    assert(lua_dir:file('init.lua'):write(d(2, [[
         local other = require('other')
         other.say('Hello, world!')
-    ]])), 'Failed to create init.lua')
+    ]])), 'Failed to create lua/init.lua')
 
-    assert(root:file('other.lua'):write(d(2, [[
+    assert(lua_dir:file('other.lua'):write(d(2, [[
         local M = {}
 
         function M.say(msg)
@@ -28,7 +32,9 @@ local function make_lua_project(root)
         end
 
         return M
-    ]])), 'Failed to create src/other.rs')
+    ]])), 'Failed to create lua/other.rs')
+
+    return lua_dir
 end
 
 --- @param bufnr number
@@ -108,12 +114,13 @@ describe('distant.editor.lsp', function()
         vim.lsp.set_log_level('TRACE')
 
         driver:debug_print('Making lua project')
-        make_lua_project(root)
+        local lua_dir = make_lua_project(root)
 
         -- Open main.rs, which should start the LSP server
-        driver:debug_print('Opening init.lua')
-        local init_lua = root:file('init.lua')
+        local init_lua = lua_dir:file('init.lua')
+        driver:debug_print('Opening ' .. init_lua:path())
         local buffer = driver:buffer(editor.open(init_lua:path()))
+        driver:debug_print('Opened into buffer ' .. buffer:id())
         assert(buffer:is_focused(), 'init.lua buffer not in focus')
 
         -- Wait for the language server to be ready
@@ -154,8 +161,11 @@ describe('distant.editor.lsp', function()
         buffer = driver:buffer()
         assert.are.equal('lua', buffer:filetype())
         assert.are.equal('acwrite', buffer:buftype())
-        assert.are.equal('distant://' .. root:file('other.lua'):path(), buffer:name())
-        assert.are.equal(root:file('other.lua'):path(), buffer:remote_path())
+        assert.are.equal(
+            'distant://' .. driver:client_id() .. '@' .. lua_dir:file('other.lua'):canonicalized_path(),
+            buffer:name()
+        )
+        assert.are.equal(lua_dir:file('other.lua'):canonicalized_path(), buffer:remote_path())
         buffer.assert.same(d(3, [[
             local M = {}
 

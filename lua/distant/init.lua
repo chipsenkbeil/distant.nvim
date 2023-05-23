@@ -15,7 +15,7 @@ local Version        = require('distant-core').Version
 local DEFAULT        = require('distant.default')
 
 --- Represents the minimum version of the CLI supported by this plugin.
-local MIN_VERSION    = Version:parse('0.20.0-alpha.5')
+local MIN_VERSION    = Version:parse('0.20.0-alpha.6')
 
 --- Represents the version of the plugin (not CLI).
 local PLUGIN_VERSION = Version:parse('0.2.0')
@@ -832,6 +832,7 @@ end
 --- @field shell? string|string[]|true # wraps a shell, taking an optional shell command
 --- @field cwd? string # specifies the current working directory
 --- @field env? table<string,string> # specifies environment variables for the spawned process
+--- @field scheme? string # if provided, uses this scheme instead of the default (lsp only)
 
 --- Performs a client wrapping of the given `cmd`, `lsp`, or `shell` parameter.
 ---
@@ -857,6 +858,11 @@ function M:wrap(opts)
         shell = opts.shell,
         cwd = opts.cwd,
         env = opts.env,
+        scheme = self.buf.build_name({
+            scheme = 'distant',
+            connection = self:active_client_id(),
+            path = '',
+        }),
     })
 end
 

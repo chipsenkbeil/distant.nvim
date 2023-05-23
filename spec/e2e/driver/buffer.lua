@@ -73,13 +73,19 @@ end
 --- Return the remote path associated with the buffer, if it has one.
 --- @return string|nil
 function M:remote_path()
-    return self:try_get_var('distant_remote_path')
+    local tbl = self:try_get_var('distant')
+    if type(tbl) == 'table' then
+        return tbl.path
+    end
 end
 
 --- Return the remote type associated with the buffer, if it has one.
 --- @return string|nil
 function M:remote_type()
-    return self:try_get_var('distant_remote_type')
+    local tbl = self:try_get_var('distant')
+    if type(tbl) == 'table' then
+        return tbl.type
+    end
 end
 
 --- Reads lines from buffer as a single string separated by newlines.
