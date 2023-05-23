@@ -72,10 +72,10 @@ local function initialize_client(opts)
         return client
     end
 
-    local log_file = vim.fn.tempname()
+    local log_file = string.format('%s_log.txt', vim.fn.tempname())
 
     -- Print out our log location and flush to ensure that it shows up in case we get stuck
-    print('Logging initialized', log_file)
+    print('Client logging initialized', log_file)
     io.stdout:flush()
 
     -- Update our launch options
@@ -93,6 +93,8 @@ local function initialize_client(opts)
                 '--current-dir', config.root_dir,
                 '--shutdown', 'lonely=60',
                 '--port', '8080:8999',
+                '--log-file', log_file,
+                '--log-level', 'trace',
             }, opts.args or {})
         },
         timeout = opts.timeout,

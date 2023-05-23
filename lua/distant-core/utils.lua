@@ -312,14 +312,19 @@ end
 --- The `rx` function will throw an error if timed out, so make sure to
 --- use `pcall` if you want to capture the error instead of throwing it.
 ---
---- @param timeout number is the milliseconds that rx will wait
---- @param interval number is the milliseconds to wait inbetween checking for a message
+--- @param timeout integer # Milliseconds that rx will wait
+--- @param interval? integer # Milliseconds to wait inbetween checking for a message (default 200)
 --- @return fun(...) tx, fun():...  rx #tx sends the value and rx receives the value
 M.oneshot_channel = function(timeout, interval)
     vim.validate({
         timeout = { timeout, 'number' },
-        interval = { interval, 'number' },
+        interval = { interval, 'number', true },
     })
+
+    -- 200 is the default for vim.wait interval, but we still want to be explicit
+    if type(interval) ~= 'number' then
+        interval = 200
+    end
 
     -- Will store our result
     local data
@@ -332,7 +337,7 @@ M.oneshot_channel = function(timeout, interval)
 
     local rx = function()
         -- Wait for the result to be set, or time out
-        local success = vim.wait(
+        local success, code = vim.wait(
             timeout,
             function() return data ~= nil end,
             interval
@@ -340,7 +345,15 @@ M.oneshot_channel = function(timeout, interval)
 
         -- If we failed, report the error
         if not success then
-            error('Timeout of ' .. tostring(timeout) .. ' exceeded!')
+            local timeout_str = tostring(timeout)
+            if timeout > 1000 then
+                timeout_str = string.format('%.2f', timeout)
+            end
+            if code == -1 then
+                error('Timeout of ' .. timeout_str .. ' exceeded!')
+            elseif code == -2 then
+                error('Timeout of ' .. timeout_str .. ' interrupted!')
+            end
         end
 
         -- Grab and clear our temporary variable if it is set and return it's value

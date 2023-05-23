@@ -10,7 +10,7 @@ M.__index   = M
 
 --- @class distant.core.api.search.Internal
 --- @field id? integer #unsigned 32-bit id, assigned once the search starts
---- @field on_done? fun(matches:distant.core.api.search.Match[])
+--- @field on_done fun(matches:distant.core.api.search.Match[])
 --- @field on_results? fun(matches:distant.core.api.search.Match[])
 --- @field on_start? fun(id:integer)
 --- @field matches distant.core.api.search.Match[] #will be populated if `on_results`, `on_start`, `on_done` are nil
@@ -63,6 +63,8 @@ function M:new(opts)
         matches = {},
         transport = opts.transport,
         status = 'inactive',
+        on_done = function(_)
+        end,
     }
 
     return instance
@@ -91,10 +93,10 @@ function M:handle(payload)
         end
         self.__internal.status = 'done'
 
-        if type(self.__internal.on_done) == 'function' then
-            self.__internal.on_done(self.__internal.matches)
-            self.__internal.matches = {}
-        end
+        local matches = self.__internal.matches
+        self.__internal.matches = {}
+
+        self.__internal.on_done(matches)
         return true
     elseif payload.type == 'search_results' then
         local id = assert(tonumber(payload.id), 'Malformed search started event! Missing id. ' .. vim.inspect(payload))
@@ -153,13 +155,15 @@ end
 ---
 --- @param opts DistantApiSearcherExecuteOpts
 --- @param cb? fun(err?:distant.core.api.Error, matches?:distant.core.api.search.Match[])
---- @return distant.core.api.Error|nil, distant.core.api.search.Match[]|nil
+--- @return distant.core.api.Error|nil err, distant.core.api.search.Match[]|nil matches
 function M:execute(opts, cb)
     local tx, rx = utils.oneshot_channel(
         opts.timeout or self.__internal.transport.config.timeout,
         opts.interval or self.__internal.transport.config.interval
     )
 
+    -- We always handle the done state of a search by either leveraging
+    -- the provided callback or feeding the results back through the channel
     self.__internal.on_done = function(matches)
         if not vim.tbl_isempty(matches) then
             for _, match in ipairs(matches) do
@@ -173,6 +177,7 @@ function M:execute(opts, cb)
             tx({ matches = self.__internal.matches })
         end
     end
+
     self.__internal.on_results = opts.on_results
     self.__internal.on_start = opts.on_start
     self.__internal.timeout = opts.timeout
@@ -227,7 +232,7 @@ end
 
 --- Cancels the search if running asynchronously.
 --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.OkPayload)
---- @return distant.core.api.Error|nil, distant.core.api.OkPayload|nil
+--- @return distant.core.api.Error|nil err, distant.core.api.OkPayload|nil payload
 function M:cancel(cb)
     return self.__internal.transport:send({
         payload = {
