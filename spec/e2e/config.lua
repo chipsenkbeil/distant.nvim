@@ -4,6 +4,7 @@ local cwd = os.getenv('PWD') or io.popen('cd'):read()
 
 local M = {
     cwd              = cwd,
+    lsp_cmd          = os.getenv('DISTANT_LSP_CMD') or 'lua-language-server',
     root_dir         = os.getenv('DISTANT_ROOT_DIR') or cwd,
     bin              = os.getenv('DISTANT_BIN'),
     host             = os.getenv('DISTANT_HOST') or 'localhost',

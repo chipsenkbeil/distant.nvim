@@ -1,3 +1,4 @@
+local config = require('spec.e2e.config')
 local editor = require('distant.editor')
 local Driver = require('spec.e2e.driver')
 
@@ -11,42 +12,23 @@ local function d(level, text)
     return table.concat(out, '\n')
 end
 
---- Creates a rust project using the provided remote directory
+--- Creates a lua project using the provided remote directory
 --- @param root spec.e2e.RemoteDir
-local function make_rust_project(root)
-    assert(root:file('Cargo.toml'):write(d(2, [[
-        [package]
-        name = "testapp"
-        version = "0.1.0"
-        edition = "2018"
+local function make_lua_project(root)
+    assert(root:file('init.lua'):write(d(2, [[
+        local other = require('other')
+        other.say('Hello, world!')
+    ]])), 'Failed to create init.lua')
 
-        [dependencies]
-    ]])), 'Failed to create Cargo.toml')
+    assert(root:file('other.lua'):write(d(2, [[
+        local M = {}
 
-    assert(root:dir('src'):make(), 'Failed to make src/ dir')
+        function M.say(msg)
+            print(msg)
+        end
 
-    assert(root:dir('src'):file('main.rs'):write(d(2, [[
-        mod other;
-
-        fn main() {
-            other::say_hello();
-        }
-    ]])), 'Failed to create src/main.rs')
-
-    assert(root:dir('src'):file('other.rs'):write(d(2, [[
-        pub fn say_hello() {
-            println!("Hello, world!");
-        }
+        return M
     ]])), 'Failed to create src/other.rs')
-end
-
---- @param driver spec.e2e.Driver
---- @param root spec.e2e.RemoteDir
-local function build_rust_project(driver, root)
-    local results = driver:exec('sh', { '-c', '"cd ' .. root:path() .. ' && $HOME/.cargo/bin/cargo build"' })
-    if not results.success then
-        error('Failed to build Rust project: ' .. results.output)
-    end
 end
 
 --- @param bufnr number
@@ -99,13 +81,16 @@ describe('distant.editor.lsp', function()
         end
 
         driver:initialize({
+            -- Provide custom settings to define our LSP for the server
             settings = {
-                ['*'] = {
-                    lsp = {
-                        ['rust'] = {
-                            cmd = { 'rls' },
-                            filetypes = { 'rust' },
-                            root_dir = root_dir,
+                servers = {
+                    ['*'] = {
+                        lsp = {
+                            ['lua'] = {
+                                cmd = { config.lsp_cmd },
+                                filetypes = { 'lua' },
+                                root_dir = root_dir,
+                            }
                         }
                     }
                 }
@@ -122,17 +107,14 @@ describe('distant.editor.lsp', function()
         driver:debug_print(string.format('LSP will log to %s', vim.lsp.get_log_path()))
         vim.lsp.set_log_level('TRACE')
 
-        driver:debug_print('Making rust project')
-        make_rust_project(root)
-
-        driver:debug_print('Building rust project')
-        build_rust_project(driver, root)
+        driver:debug_print('Making lua project')
+        make_lua_project(root)
 
         -- Open main.rs, which should start the LSP server
-        driver:debug_print('Opening main.rs')
-        local main_rs = root:dir('src'):file('main.rs')
-        local buffer = driver:buffer(editor.open(main_rs:path()))
-        assert(buffer:is_focused(), 'main.rs buffer not in focus')
+        driver:debug_print('Opening init.lua')
+        local init_lua = root:file('init.lua')
+        local buffer = driver:buffer(editor.open(init_lua:path()))
+        assert(buffer:is_focused(), 'init.lua buffer not in focus')
 
         -- Wait for the language server to be ready
         driver:debug_print('Waiting on language server')
@@ -142,11 +124,11 @@ describe('distant.editor.lsp', function()
             string.format('Language server not ready after %0.2fs', time / 1000.0)
         )
 
-        -- Jump to other::say_hello() and have cursor on say_hello
-        driver:debug_print('Jumping to say_hello')
-        local ln, col = driver:window():move_cursor_to('say_hello')
-        assert.are.equal(4, ln)
-        assert.are.equal(11, col)
+        -- Jump to other.say() and have cursor on say
+        driver:debug_print('Jumping to say')
+        local ln, col = driver:window():move_cursor_to('say')
+        assert.are.equal(2, ln)
+        assert.are.equal(6, col)
 
         -- Perform request in blocking fashion to make sure that we're ready
         -- NOTE: This does not perform a jump or anything else
@@ -170,19 +152,23 @@ describe('distant.editor.lsp', function()
         -- Ensure that we properly populated the new buffer
         driver:debug_print('Checking buffer is properly populated')
         buffer = driver:buffer()
-        assert.are.equal('rust', buffer:filetype())
+        assert.are.equal('lua', buffer:filetype())
         assert.are.equal('acwrite', buffer:buftype())
-        assert.are.equal('distant://' .. root:dir('src'):file('other.rs'):path(), buffer:name())
-        assert.are.equal(root:dir('src'):file('other.rs'):path(), buffer:remote_path())
+        assert.are.equal('distant://' .. root:file('other.lua'):path(), buffer:name())
+        assert.are.equal(root:file('other.lua'):path(), buffer:remote_path())
         buffer.assert.same(d(3, [[
-            pub fn say_hello() {
-                println!("Hello, world!");
-            }
+            local M = {}
+
+            function M.say(msg)
+                print(msg)
+            end
+
+            return M
         ]]))
     end)
 
     pending('should support renaming symbols in remote files', function()
-        make_rust_project(root)
+        make_lua_project(root)
         driver:exec('sh', { '-c', '"cd ' .. root:path() .. ' && $HOME/.cargo/bin/cargo build"' })
 
         -- Open main.rs, which should start the LSP server
