@@ -125,13 +125,7 @@ function M:set_lines(lines, opts)
     end
 
     -- Write the lines to the buffer, overwriting any existing lines
-    vim.api.nvim_buf_set_lines(
-        self.__id,
-        0,
-        vim.api.nvim_buf_line_count(self.__id),
-        true,
-        lines
-    )
+    vim.api.nvim_buf_set_lines(self.__id, 0, -1, false, lines)
 
     -- Restore old value if forced to change
     if opts.force then
