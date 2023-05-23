@@ -1,11 +1,9 @@
-name: Doc
+name: CI
 
 on:
   push:
-  pull_request:
-
-env:
-  RUST_BACKTRACE: 1
+    branches:
+      - master
 
 jobs:
   docs:

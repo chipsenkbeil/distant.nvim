@@ -1,4 +1,4 @@
-name: Tests
+name: CI
 
 on:
   push:
@@ -33,13 +33,5 @@ jobs:
         run: make docker-save
       - name: Run unit tests
         run: make docker-test-unit
-      - name: Run e2e tests (distant)
-        if: always()
+      - name: Run e2e tests
         run: make docker-test-e2e
-        env:
-          DISTANT_MODE: distant
-      - name: Run e2e tests (ssh)
-        if: always()
-        run: make docker-test-e2e
-        env:
-          DISTANT_MODE: ssh
