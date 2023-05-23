@@ -3,8 +3,8 @@ local plugin = require('distant')
 local Driver = require('spec.e2e.driver')
 
 describe('distant.editor.open', function()
-    --- @type spec.e2e.Driver, spec.e2e.RemoteFile, spec.e2e.RemoteDir
-    local driver, file, dir
+    --- @type spec.e2e.Driver, spec.e2e.RemoteFile, spec.e2e.RemoteDir, string
+    local driver, file, dir, sep
 
     before_each(function()
         driver = Driver:setup({ label = 'distant.editor.open' })
@@ -16,6 +16,7 @@ describe('distant.editor.open', function()
             },
         })
         dir = driver:new_dir_fixture()
+        sep = driver:detect_remote_path_separator()
     end)
 
     after_each(function()
@@ -37,8 +38,8 @@ describe('distant.editor.open', function()
 
         -- Verify the buffer contains the items
         buffer.assert.same({
-            'dir1',
-            'dir2',
+            'dir1' .. sep,
+            'dir2' .. sep,
             'file1',
             'file2',
             'file3',
@@ -55,7 +56,10 @@ describe('distant.editor.open', function()
         assert.are.equal('dir', buffer:remote_type())
 
         -- Verify we set dir-specific buffer properties
-        assert.are.equal('distant://' .. remote_path, buffer:name())
+        assert.are.equal(
+            'distant://' .. driver:client_id() .. '@' .. remote_path,
+            buffer:name()
+        )
         assert.are.equal('distant-dir', buffer:filetype())
         assert.are.equal('nofile', buffer:buftype())
         assert.is.falsy(buffer:modifiable())
@@ -85,7 +89,10 @@ describe('distant.editor.open', function()
         assert.are.equal('file', buffer:remote_type())
 
         -- Verify we set file-specific buffer properties
-        assert.are.equal('distant://' .. remote_path, buffer:name())
+        assert.are.equal(
+            'distant://' .. driver:client_id() .. '@' .. remote_path,
+            buffer:name()
+        )
         assert.are.equal('text', buffer:filetype())
         assert.are.equal('acwrite', buffer:buftype())
 
@@ -152,7 +159,10 @@ describe('distant.editor.open', function()
         assert.are.equal('file', buffer:remote_type())
 
         -- Verify we set file-specific buffer properties
-        assert.are.equal('distant://' .. remote_path, buffer:name())
+        assert.are.equal(
+            'distant://' .. driver:client_id() .. '@' .. remote_path,
+            buffer:name()
+        )
         assert.are.equal('text', buffer:filetype())
         assert.are.equal('acwrite', buffer:buftype())
 
@@ -176,8 +186,8 @@ describe('distant.editor.open', function()
 
         -- Verify the buffer contains the items
         buffer.assert.same({
-            'dir1',
-            'dir2',
+            'dir1' .. sep,
+            'dir2' .. sep,
             'file1',
             'file2',
             'file3',
@@ -194,7 +204,10 @@ describe('distant.editor.open', function()
         assert.are.equal('dir', buffer:remote_type())
 
         -- Verify we set dir-specific buffer properties
-        assert.are.equal('distant://' .. remote_path, buffer:name())
+        assert.are.equal(
+            'distant://' .. driver:client_id() .. '@' .. remote_path,
+            buffer:name()
+        )
         assert.are.equal('distant-dir', buffer:filetype())
         assert.are.equal('nofile', buffer:buftype())
         assert.is.falsy(buffer:modifiable())

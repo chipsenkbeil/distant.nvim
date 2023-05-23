@@ -100,6 +100,7 @@ function M:client(connection)
         -- results in more than one transport spawning.
         if not self.clients[connection] then
             self.clients[connection] = Client:new({
+                id = connection,
                 binary = self.config.binary,
                 network = {
                     connection = connection,

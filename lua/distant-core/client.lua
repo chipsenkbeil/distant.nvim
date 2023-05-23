@@ -4,6 +4,7 @@ local log     = require('distant-core.log')
 
 --- Represents a distant.core.client
 --- @class distant.core.Client
+--- @field id distant.core.manager.ConnectionId # id tied to the client's connection
 --- @field api distant.core.Api
 --- @field private config {binary:string, network:distant.core.client.Network}
 --- @field private __state distant.core.client.State
@@ -11,7 +12,7 @@ local M       = {}
 M.__index     = M
 
 --- @class distant.core.client.Network
---- @field connection? distant.core.manager.ConnectionId #id of the connection tied to the client
+--- @field connection distant.core.manager.ConnectionId #id of the connection tied to the client
 --- @field unix_socket? string #path to the unix socket of the manager
 --- @field windows_pipe? string #name of the windows pipe of the manager
 
@@ -20,19 +21,23 @@ M.__index     = M
 --- @field lsp {clients:table<string, number>} Mapping of label -> client id
 
 --- Creates a new instance of a distant.core.client
---- @param opts {binary:string, network:distant.core.client.Network}
+--- @param opts {id:distant.core.manager.ConnectionId, binary:string, network:distant.core.client.Network}
 --- @return distant.core.Client
 function M:new(opts)
     opts = opts or {}
 
     local instance = {}
     setmetatable(instance, M)
+    instance.id = assert(opts.id, 'Client missing id')
     instance.config = {
         binary = opts.binary,
-        network = vim.deepcopy(opts.network) or {},
+        network = vim.tbl_deep_extend('force', vim.deepcopy(opts.network) or {}, {
+            connection = instance.id
+        }),
     }
     assert(instance.config.binary, 'Client missing binary')
     assert(instance.config.network, 'Client missing network')
+    assert(instance.id == instance.config.network.connection, 'Client id and connection are different')
 
     instance.api = Api:new({
         binary = instance.config.binary,
@@ -53,12 +58,6 @@ end
 --- @return distant.core.client.Network
 function M:network()
     return vim.deepcopy(self.config.network)
-end
-
---- Returns the id of the connection this client represents.
---- @return distant.core.manager.ConnectionId
-function M:connection()
-    return assert(self.config.network.connection)
 end
 
 --- Loads the system information for the connected server. This will be cached
@@ -195,12 +194,7 @@ function M:connect_lsp_clients(opts)
                         --- TODO: This is a hack because distant-core should have no concept
                         ---       that we need to specify an LSP scheme replacement like this,
                         ---       but we have to right now. Is there a better way to do this?
-                        --- @type string|nil
-                        local scheme
-                        local connection = self:network().connection
-                        if connection then
-                            scheme = ('distant://%s@'):format(connection)
-                        end
+                        local scheme = ('distant://%s@'):format(self.id)
 
                         local cmd = self:wrap({ lsp = config.cmd, scheme = scheme })
                         log.fmt_debug('Starting LSP %s: %s', label, cmd)

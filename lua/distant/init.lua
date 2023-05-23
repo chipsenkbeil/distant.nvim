@@ -438,9 +438,9 @@ function M:server_settings_for_client(id)
     log.fmt_trace('distant:server_settings_for_client(%s)', vim.inspect(id))
     self:__assert_initialized()
 
-    -- If given a client, retrieve its connection as the id
+    -- If given a client, use its id
     if type(id) == 'table' then
-        id = id:connection()
+        id = id.id
     end
 
     --- @cast id distant.core.manager.ConnectionId|nil
@@ -742,9 +742,9 @@ end
 function M:set_active_client_id(id)
     self:__assert_initialized()
 
-    -- If given a client, retrieve its connection as the id
+    -- If given a client, retrieve its id
     if type(id) == 'table' then
-        id = id:connection()
+        id = id.id
     end
 
     -- If given a string, convert it to a number

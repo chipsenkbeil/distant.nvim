@@ -172,27 +172,29 @@ end
 function M:initialize(opts)
     opts = opts or {}
 
-    -- If already initialized, skip!
-    if plugin:is_initialized() then
-        return self
+    -- Only try to setup the plugin if not initialized yet
+    if not plugin:is_initialized() then
+        -- Setup our plugin with provided settings, forcing the private network for setup
+        plugin:setup(vim.tbl_deep_extend('force', opts.settings or {}, {
+            manager = {
+                lazy = opts.no_manager == true,
+            },
+            network = {
+                private = true,
+                windows_pipe = 'nvim-test-' .. next_id(),
+                unix_socket = '/tmp/nvim-test-' .. next_id() .. '.sock',
+            }
+        }), {
+            wait = SETUP_TIMEOUT,
+        })
     end
-
-    -- Setup our plugin with provided settings, forcing the private network for setup
-    plugin:setup(vim.tbl_deep_extend('force', opts.settings or {}, {
-        manager = {
-            lazy = opts.no_manager == true,
-        },
-        network = {
-            private = true,
-            windows_pipe = 'nvim-test-' .. next_id(),
-            unix_socket = '/tmp/nvim-test-' .. next_id() .. '.sock',
-        }
-    }), {
-        wait = SETUP_TIMEOUT,
-    })
 
     -- Initialize a test client unless told explicitly not to do so
     if not opts.no_client then
+        if self.__client then
+            self:debug_print('Warning, client is still initialized and is being overwritten!')
+        end
+
         self.__client = initialize_client({
             timeout = opts.timeout,
             interval = opts.interval,
@@ -220,7 +222,7 @@ end
 --- @return integer|nil
 function M:client_id()
     if self.__client then
-        return self.__client:connection()
+        return self.__client.id
     end
 end
 
