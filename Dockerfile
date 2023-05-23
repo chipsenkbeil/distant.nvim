@@ -60,7 +60,7 @@ RUN sudo mkdir -p /var/run/sshd \
     && cp /home/$user/.ssh/id_rsa.pub /home/$user/.ssh/authorized_keys \
     && echo 'StrictHostKeyChecking no' > /home/$user/.ssh/config
 
-ARG DISTANT_VERSION=0.20.0-alpha.5
+ARG DISTANT_VERSION=0.20.0-alpha.6
 
 # Install distant binary and make sure its in a path for everyone
 ARG distant_release=https://github.com/chipsenkbeil/distant/releases/download/v$DISTANT_VERSION
