@@ -67,11 +67,23 @@ describe('distant.editor.search', function()
         -- Verify the quickfix list is populated accordingly
         local items = to_tbl(vim.fn.getqflist())
 
+        -- NOTE: The order in which these items get populated will dictate
+        --       which bufnr is assigned. E.g. if file_2 is handled first,
+        --       it would have bufnr 3, but if it was handled second, it
+        --       would have bufnr 4. Because we cannot control that, we
+        --       want to validate that they occupy these buffers and then
+        --       delete the value so we can test everything else!
+        local bufnrs = vim.tbl_map(function(item) return item.bufnr end, vim.tbl_values(items))
+        table.sort(bufnrs)
+        assert.are.same(bufnrs, { 3, 4 })
+        for _, item in pairs(items) do
+            item.bufnr = nil
+        end
+
         -- NOTE: We make it a map with keys so we can compare
         --       regardless of the order of the items
         assert.are.same({
             [file_2:path()] = {
-                bufnr = 3,
                 col = 1,
                 end_col = 1,
                 end_lnum = 1,
@@ -85,7 +97,6 @@ describe('distant.editor.search', function()
                 vcol = 0
             },
             [dir_1_file_1:path()] = {
-                bufnr = 4,
                 col = 1,
                 end_col = 1,
                 end_lnum = 1,
