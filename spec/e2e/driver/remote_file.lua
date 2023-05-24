@@ -66,7 +66,7 @@ function M:read(opts)
     local path = os.tmpname()
 
     --- Copy remote file into local one
-    local success = self.__driver:scp(
+    local success = self.__driver:copy(
         self.__path,
         path,
         vim.tbl_extend('keep', { src = 'remote', dst = 'local' }, opts)
@@ -91,7 +91,7 @@ function M:write(contents, opts)
     self.__driver:local_file(path):write(contents)
 
     --- Copy local file into remote one
-    local success = self.__driver:scp(
+    local success = self.__driver:copy(
         path,
         self.__path,
         vim.tbl_extend('keep', { src = 'local', dst = 'remote' }, opts)

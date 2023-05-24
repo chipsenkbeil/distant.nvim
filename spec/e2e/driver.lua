@@ -91,7 +91,7 @@ local function initialize_client(opts)
             bin = config.bin,
             args = vim.list_extend({
                 '--current-dir', config.root_dir,
-                '--shutdown', 'lonely=60',
+                '--shutdown', 'lonely=5',
                 '--port', '8080:8999',
                 '--log-file', log_file,
                 '--log-level', 'trace',
@@ -351,11 +351,12 @@ function M:exec(cmd, args, opts)
     return { success = success, output = out }
 end
 
+--- Copies a file from a local/remote location to another local/remote location.
 --- @param src string #path to file to copy (remote or local)
 --- @param dst string #path to copy to (remote or local)
 --- @param opts {src:'local'|'remote', dst:'local'|'remote', ignore_errors?:boolean}
 --- @return boolean
-function M:scp(src, dst, opts)
+function M:copy(src, dst, opts)
     local cmd = { 'scp', '-P', config.port }
 
     if opts.src == 'local' then
