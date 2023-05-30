@@ -57,7 +57,7 @@ return function(opts)
     -- PARSE NAME & DERIVE LOCAL PATH & CONNECTION
     --------------------------------------------------------------------------
 
-    -- Parse [distant://[{CONNECTION}@]]{PATH} into components
+    -- Parse [distant[+{CONNECTION}]://]{PATH} into components
     local components = plugin.buf.parse_name(opts.path)
 
     -- Validate that our connection matches that of the name

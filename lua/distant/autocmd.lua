@@ -14,20 +14,33 @@ local utils  = require('distant-core').utils
 local function _initialize()
     log.trace('Initializing autocmds')
     local autogroup_id = vim.api.nvim_create_augroup('distant', { clear = true })
+    local PATTERN = { 'distant://*', 'distant+*://*' }
+
+    -- NOTE: Matching our pattern seems to produce weird results with an absolute
+    --       path that acts as a prefix to our pattern. So we need to extract.
+    --- @param match string
+    --- @return string|nil
+    local function extract_match(match)
+        local i = string.find(match, 'distant')
+        if type(i) == 'number' then
+            return string.sub(match, i)
+        end
+    end
 
     -- If we enter a buffer that is not initialized, we trigger a BufReadCmd
     vim.api.nvim_create_autocmd({ 'BufEnter' }, {
         group = autogroup_id,
-        pattern = 'distant://*',
+        pattern = PATTERN,
         --- @param opts neovim.AutocmdOpts
         callback = function(opts)
             local bufnr = opts.buf
+            local match = extract_match(opts.match)
 
             if not plugin.buf(bufnr).has_data() then
                 log.fmt_debug('Buffer %s is not initialized, so triggering BufReadCmd', bufnr)
                 vim.api.nvim_exec_autocmds('BufReadCmd', {
                     group = 'distant',
-                    pattern = opts.match,
+                    pattern = match,
                 })
             end
         end,
@@ -36,11 +49,11 @@ local function _initialize()
     -- Primary entrypoint to load remote files
     vim.api.nvim_create_autocmd({ 'BufReadCmd', 'FileReadCmd' }, {
         group = autogroup_id,
-        pattern = 'distant://*',
+        pattern = PATTERN,
         --- @param opts neovim.AutocmdOpts
         callback = function(opts)
             local bufnr = opts.buf
-            local fname = opts.match
+            local fname = extract_match(opts.match)
 
             local components = plugin.buf.parse_name(fname)
             local connection = components.connection
@@ -69,7 +82,7 @@ local function _initialize()
     -- Primary entrypoint to write remote files
     vim.api.nvim_create_autocmd({ 'BufWriteCmd' }, {
         group = autogroup_id,
-        pattern = 'distant://*',
+        pattern = PATTERN,
         --- @param opts neovim.AutocmdOpts
         callback = function(opts)
             local bufnr = opts.buf

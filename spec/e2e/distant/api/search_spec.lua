@@ -56,7 +56,7 @@ describe('distant.api.search', function()
                 type = 'path',
                 path = root:path(),
                 submatches = { {
-                    match = { type = 'text', value = root:path() },
+                    match = root:path(),
                     start = 0,
                     ['end'] = string.len(root:path())
                 } },
@@ -65,7 +65,7 @@ describe('distant.api.search', function()
                 type = 'path',
                 path = root:dir('dir'):path(),
                 submatches = { {
-                    match = { type = 'text', value = root:dir('dir'):path() },
+                    match = root:dir('dir'):path(),
                     start = 0,
                     ['end'] = string.len(root:dir('dir'):path())
                 } },
@@ -74,7 +74,7 @@ describe('distant.api.search', function()
                 type = 'path',
                 path = root:dir('dir'):dir('dir2'):path(),
                 submatches = { {
-                    match = { type = 'text', value = root:dir('dir'):dir('dir2'):path() },
+                    match = root:dir('dir'):dir('dir2'):path(),
                     start = 0,
                     ['end'] = string.len(root:dir('dir'):dir('dir2'):path())
                 } },
@@ -83,7 +83,7 @@ describe('distant.api.search', function()
                 type = 'path',
                 path = root:dir('dir'):dir('dir2'):file('file3'):path(),
                 submatches = { {
-                    match = { type = 'text', value = root:dir('dir'):dir('dir2'):file('file3'):path() },
+                    match = root:dir('dir'):dir('dir2'):file('file3'):path(),
                     start = 0,
                     ['end'] = string.len(root:dir('dir'):dir('dir2'):file('file3'):path())
                 } },
@@ -92,7 +92,7 @@ describe('distant.api.search', function()
                 type = 'path',
                 path = root:dir('dir'):file('file2'):path(),
                 submatches = { {
-                    match = { type = 'text', value = root:dir('dir'):file('file2'):path() },
+                    match = root:dir('dir'):file('file2'):path(),
                     start = 0,
                     ['end'] = string.len(root:dir('dir'):file('file2'):path())
                 } },
@@ -101,7 +101,7 @@ describe('distant.api.search', function()
                 type = 'path',
                 path = root:file('file'):path(),
                 submatches = { {
-                    match = { type = 'text', value = root:file('file'):path() },
+                    match = root:file('file'):path(),
                     start = 0,
                     ['end'] = string.len(root:file('file'):path())
                 } },
@@ -110,7 +110,7 @@ describe('distant.api.search', function()
                 type = 'path',
                 path = root:symlink('link'):path(),
                 submatches = { {
-                    match = { type = 'text', value = root:symlink('link'):path() },
+                    match = root:symlink('link'):path(),
                     start = 0,
                     ['end'] = string.len(root:symlink('link'):path())
                 } },
@@ -160,7 +160,7 @@ describe('distant.api.search', function()
                 type = 'path',
                 path = root:dir('dir'):dir('dir2'):path(),
                 submatches = { {
-                    match = { type = 'text', value = 'dir2' },
+                    match = 'dir2',
                     start = string.len(root:dir('dir'):path()) + 1,
                     ['end'] = string.len(root:dir('dir'):path()) + 1 + string.len('dir2'),
                 } },
@@ -169,7 +169,7 @@ describe('distant.api.search', function()
                 type = 'path',
                 path = root:dir('dir'):dir('dir2'):file('file3'):path(),
                 submatches = { {
-                    match = { type = 'text', value = 'dir2' },
+                    match = 'dir2',
                     start = string.len(root:dir('dir'):path()) + 1,
                     ['end'] = string.len(root:dir('dir'):path()) + 1 + string.len('dir2'),
                 } },
@@ -226,7 +226,7 @@ describe('distant.api.search', function()
                 type = 'path',
                 path = root:dir('dir'):dir('dir2'):file('file3'):path(),
                 submatches = { {
-                    match = { type = 'text', value = 'file' },
+                    match = 'file',
                     start = string.len(root:dir('dir'):dir('dir2'):path()) + 1,
                     ['end'] = string.len(root:dir('dir'):dir('dir2'):path()) + 1 + string.len('file'),
                 } },
@@ -235,7 +235,7 @@ describe('distant.api.search', function()
                 type = 'path',
                 path = root:dir('dir'):file('file2'):path(),
                 submatches = { {
-                    match = { type = 'text', value = 'file' },
+                    match = 'file',
                     start = string.len(root:dir('dir'):path()) + 1,
                     ['end'] = string.len(root:dir('dir'):path()) + 1 + string.len('file'),
                 } },
@@ -244,7 +244,7 @@ describe('distant.api.search', function()
                 type = 'path',
                 path = root:file('file'):path(),
                 submatches = { {
-                    match = { type = 'text', value = 'file' },
+                    match = 'file',
                     start = string.len(root:path()) + 1,
                     ['end'] = string.len(root:path()) + 1 + string.len('file'),
                 } },
@@ -288,7 +288,7 @@ describe('distant.api.search', function()
                 type = 'path',
                 path = root:dir('dir'):dir('dir2'):file('file3'):path(),
                 submatches = { {
-                    match = { type = 'text', value = 'file' },
+                    match = 'file',
                     start = string.len(root:dir('dir'):dir('dir2'):path()) + 1,
                     ['end'] = string.len(root:dir('dir'):dir('dir2'):path()) + 1 + string.len('file'),
                 } },
@@ -297,7 +297,7 @@ describe('distant.api.search', function()
                 type = 'path',
                 path = root:dir('dir'):file('file2'):path(),
                 submatches = { {
-                    match = { type = 'text', value = 'file' },
+                    match = 'file',
                     start = string.len(root:dir('dir'):path()) + 1,
                     ['end'] = string.len(root:dir('dir'):path()) + 1 + string.len('file'),
                 } },
@@ -306,7 +306,7 @@ describe('distant.api.search', function()
                 type = 'path',
                 path = root:file('file'):path(),
                 submatches = { {
-                    match = { type = 'text', value = 'file' },
+                    match = 'file',
                     start = string.len(root:path()) + 1,
                     ['end'] = string.len(root:path()) + 1 + string.len('file'),
                 } },

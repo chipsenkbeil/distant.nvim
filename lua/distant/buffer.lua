@@ -246,7 +246,7 @@ local function make_buffer(buf)
 
     --- Constructs a full name based on components.
     ---
-    --- Format: [{SCHEME}://[{CONNECTION}@]]PATH
+    --- Format: [{SCHEME}[+{CONNECTION}]://PATH
     ---
     --- * `scheme` - the scheme of the name such as "distant".
     --- * `connection` - the connection id of the client tied to the buffer.
@@ -257,17 +257,18 @@ local function make_buffer(buf)
     function M.build_name(components)
         local name = ''
         if components.scheme then
-            name = name .. components.scheme .. '://'
+            name = name .. components.scheme
             if components.connection then
-                name = name .. tostring(components.connection) .. '@'
+                name = name .. '+' .. tostring(components.connection)
             end
+            name = name .. '://'
         end
         return name .. components.path
     end
 
     --- Parses the buffer's name into individual components.
     ---
-    --- Format: [{SCHEME}://[{CONNECTION}@]]PATH
+    --- Format: [{SCHEME}[+{CONNECTION}]://PATH
     ---
     --- * `scheme` - the scheme of the name such as "distant".
     --- * `connection` - the connection id of the client tied to the buffer.
@@ -296,16 +297,19 @@ local function make_buffer(buf)
         end
 
         -- If we found a scheme, look for the connection next
+        -- by seeing if we have a +{CONNECTION} within the scheme
+        --
+        -- If we do, we split out the scheme and connection
         if scheme then
-            i, j = string.find(name, '.+@')
+            -- Will return nil if nothing found
+            i = string.find(scheme, '+')
 
-            -- If at start of string and long enough, we have a connection
-            if i == 1 and j ~= nil and j > 1 then
+            if type(i) == 'number' and i > 1 and i < scheme:len() then
                 connection = assert(
-                    tonumber(string.sub(name, i, j - 1)),
+                    tonumber(string.sub(scheme, i + 1)),
                     'invalid connection, must be a 32-bit unsigned integer'
                 )
-                name = string.sub(name, j + 1)
+                scheme = string.sub(scheme, 1, i - 1)
             end
         end
 
@@ -366,7 +370,7 @@ local function make_buffer(buf)
             return false
         end
 
-        -- Parse [distant://[{CONNECTION}@]]path into its components
+        -- Parse [distant[+{CONNECTION}]://path into its components
         local components = M.parse_name(path)
 
         -- If the connection from the path doesn't match our own, exit early
@@ -427,8 +431,8 @@ local function make_buffer(buf)
             -- portion without a trailing slash
             path = remove_trailing_slash(path)
 
-            -- Check if we have a buffer in the form of distant://[{CONNECTION}@]path
-            -- where the "{CONNECTION}@" is optional, indicating the client
+            -- Check if we have a buffer in the form of distant[+{CONNECTION}]://path
+            -- where the "+{CONNECTION}" is optional, indicating the client
             -- tied to the buffer
             --
             --- @diagnostic disable-next-line:param-type-mismatch

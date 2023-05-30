@@ -102,8 +102,8 @@ local function add_matches_to_qflist(id, matches)
 
             -- If we have text, assign up to 100 characters, truncating with suffix ...
             -- if we have a longer line
-            if match.lines.type == 'text' then
-                local text = match.lines.value
+            if type(match.lines) == 'string' then
+                local text = match.lines
 
                 --- @cast text string
                 item.text = text

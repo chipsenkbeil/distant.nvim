@@ -115,7 +115,7 @@ local EFFECTS     = {
                     local id
                     local client = plugin:client()
                     if client then
-                        id = client:connection()
+                        id = client.id
                     end
                     state.info.connections.selected = id
                 end)

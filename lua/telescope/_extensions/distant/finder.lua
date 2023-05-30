@@ -33,24 +33,20 @@ end
 --- @param match distant.core.api.search.Match
 --- @return telescope.distant.finder.Entry|nil
 local function make_entry(match)
-    local path_with_scheme = match.path
-    if not vim.startswith(path_with_scheme, 'distant://') then
-        path_with_scheme = 'distant://' .. path_with_scheme
-    end
-
+    local components = plugin.buf.parse_name(match.path)
     local entry = {
         value = match,
         valid = true,
         ordinal = match.path,
         display = match.path,
-        filename = path_with_scheme,
+        filename = 'distant://' .. components.path,
     }
 
     if match.type == 'path' then
         return entry
     elseif match.type == 'contents' then
         -- Skip binary matches
-        if match.lines.type == 'bytes' then
+        if type(match.lines) ~= 'string' then
             return
         end
 
@@ -60,8 +56,8 @@ local function make_entry(match)
             entry.col = match.submatches[1].start + 1
         end
 
-        local lines = match.lines.value
-        assert(type(lines) == 'string', 'Invalid match lines type')
+        local lines = match.lines
+        --- @cast lines string
 
         -- :line,col:{LINE}
         local suffix = ':'

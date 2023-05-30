@@ -57,7 +57,7 @@ describe('distant.editor.open', function()
 
         -- Verify we set dir-specific buffer properties
         assert.are.equal(
-            'distant://' .. driver:client_id() .. '@' .. remote_path,
+            'distant+' .. driver:client_id() .. '://' .. remote_path,
             buffer:name()
         )
         assert.are.equal('distant-dir', buffer:filetype())
@@ -90,7 +90,7 @@ describe('distant.editor.open', function()
 
         -- Verify we set file-specific buffer properties
         assert.are.equal(
-            'distant://' .. driver:client_id() .. '@' .. remote_path,
+            'distant+' .. driver:client_id() .. '://' .. remote_path,
             buffer:name()
         )
         assert.are.equal('text', buffer:filetype())
@@ -160,7 +160,7 @@ describe('distant.editor.open', function()
 
         -- Verify we set file-specific buffer properties
         assert.are.equal(
-            'distant://' .. driver:client_id() .. '@' .. remote_path,
+            'distant+' .. driver:client_id() .. '://' .. remote_path,
             buffer:name()
         )
         assert.are.equal('text', buffer:filetype())
@@ -205,7 +205,7 @@ describe('distant.editor.open', function()
 
         -- Verify we set dir-specific buffer properties
         assert.are.equal(
-            'distant://' .. driver:client_id() .. '@' .. remote_path,
+            'distant+' .. driver:client_id() .. '://' .. remote_path,
             buffer:name()
         )
         assert.are.equal('distant-dir', buffer:filetype())

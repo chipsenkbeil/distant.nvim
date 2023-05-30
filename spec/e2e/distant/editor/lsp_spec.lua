@@ -162,7 +162,7 @@ describe('distant.editor.lsp', function()
         assert.are.equal('lua', buffer:filetype())
         assert.are.equal('acwrite', buffer:buftype())
         assert.are.equal(
-            'distant://' .. driver:client_id() .. '@' .. lua_dir:file('other.lua'):canonicalized_path(),
+            'distant+' .. driver:client_id() .. '://' .. lua_dir:file('other.lua'):canonicalized_path(),
             buffer:name()
         )
         assert.are.equal(lua_dir:file('other.lua'):canonicalized_path(), buffer:remote_path())

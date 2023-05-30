@@ -194,7 +194,7 @@ function M:connect_lsp_clients(opts)
                         --- TODO: This is a hack because distant-core should have no concept
                         ---       that we need to specify an LSP scheme replacement like this,
                         ---       but we have to right now. Is there a better way to do this?
-                        local scheme = ('distant://%s@'):format(self.id)
+                        local scheme = ('distant+%s'):format(self.id)
 
                         local cmd = self:wrap({ lsp = config.cmd, scheme = scheme })
                         log.fmt_debug('Starting LSP %s: %s', label, cmd)

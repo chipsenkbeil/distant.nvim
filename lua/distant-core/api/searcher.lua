@@ -32,7 +32,7 @@ M.__index   = M
 --- @field start integer #(base index 0) inclusive byte offset representing start of match
 --- @field end integer #(base index 0) inclusive byte offset representing end of match
 
---- @alias distant.core.api.search.MatchData {type:'bytes', value:integer[]}|{type:'text', value:string}
+--- @alias distant.core.api.search.MatchData integer[]|string
 
 --- @class distant.core.api.search.Query
 --- @field target 'contents'|'path'
