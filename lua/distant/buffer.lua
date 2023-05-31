@@ -244,39 +244,80 @@ local function make_buffer(buf)
     --- @alias distant.plugin.buffer.NameComponents
     --- | {scheme:string|nil, connection:distant.core.manager.ConnectionId|nil, path:string}
 
+    --- @alias distant.plugin.buffer.NameFormat
+    --- | '"modern"' # use modern naming format (requires neovim 0.10+)
+    --- | '"legacy"' # use legacy naming format
+
+    --- @return distant.plugin.buffer.NameFormat
+    local function default_name_format()
+        -- TODO: If https://github.com/neovim/neovim/pull/23834 gets implemented, we
+        --       can detect the neovim version and use the modern format; otherwise,
+        --       we will be stuck with "legacy" forever
+        return 'legacy'
+    end
+
     --- Constructs a full name based on components.
     ---
-    --- Format: [{SCHEME}[+{CONNECTION}]://PATH
+    --- ### Components
     ---
     --- * `scheme` - the scheme of the name such as "distant".
     --- * `connection` - the connection id of the client tied to the buffer.
     --- * `path` - the remainder of the name.
     ---
+    --- ### Format
+    ---
+    --- * "modern" - `[{SCHEME}[+{CONNECTION}]://PATH`
+    --- * "legacy" - `[{SCHEME}://[{CONNECTION}@]PATH`
+    ---
     --- @param components distant.plugin.buffer.NameComponents
+    --- @param opts? {format?:distant.plugin.buffer.NameFormat}
     --- @return string
-    function M.build_name(components)
+    function M.build_name(components, opts)
+        local format = (opts or {}).format or default_name_format()
+
         local name = ''
-        if components.scheme then
-            name = name .. components.scheme
-            if components.connection then
-                name = name .. '+' .. tostring(components.connection)
+
+        if format == 'modern' then
+            if components.scheme then
+                name = name .. components.scheme
+                if components.connection then
+                    name = name .. '+' .. tostring(components.connection)
+                end
+                name = name .. '://'
             end
-            name = name .. '://'
+        elseif format == 'legacy' then
+            if components.scheme then
+                name = name .. components.scheme .. '://'
+                if components.connection then
+                    name = name .. tostring(components.connection) .. '@'
+                end
+            end
+        else
+            error('Invalid name format: ' .. vim.inspect(format))
         end
+
         return name .. components.path
     end
 
     --- Parses the buffer's name into individual components.
     ---
-    --- Format: [{SCHEME}[+{CONNECTION}]://PATH
+    --- ### Components
     ---
     --- * `scheme` - the scheme of the name such as "distant".
     --- * `connection` - the connection id of the client tied to the buffer.
     --- * `path` - the remainder of the name.
     ---
+    --- ### Format
+    ---
+    --- * "modern" - `[{SCHEME}[+{CONNECTION}]://PATH`
+    --- * "legacy" - `[{SCHEME}://[{CONNECTION}@]PATH`
+    ---
     --- @param name? string # name to parse, using the selected buffer's full name if no name provided
+    --- @param opts? {format?:distant.plugin.buffer.NameFormat}
     --- @return distant.plugin.buffer.NameComponents components
-    function M.parse_name(name)
+    function M.parse_name(name, opts)
+        local format = (opts or {}).format or default_name_format()
+
         --- @type string|nil, distant.core.manager.ConnectionId|nil, number|nil, number|nil
         local scheme, connection, i, j
 
@@ -284,7 +325,6 @@ local function make_buffer(buf)
         if not name then
             name = vim.api.nvim_buf_get_name(buf)
         end
-
         -- Look for the scheme first
         i, j = string.find(name, '.+://')
 
@@ -296,21 +336,39 @@ local function make_buffer(buf)
             name = string.sub(name, j + 1)
         end
 
-        -- If we found a scheme, look for the connection next
-        -- by seeing if we have a +{CONNECTION} within the scheme
-        --
-        -- If we do, we split out the scheme and connection
-        if scheme then
-            -- Will return nil if nothing found
-            i = string.find(scheme, '+')
+        if format == 'modern' then
+            -- If we found a scheme, look for the connection next
+            -- by seeing if we have a +{CONNECTION} within the scheme
+            --
+            -- If we do, we split out the scheme and connection
+            if scheme then
+                -- Will return nil if nothing found
+                i = string.find(scheme, '+')
 
-            if type(i) == 'number' and i > 1 and i < scheme:len() then
-                connection = assert(
-                    tonumber(string.sub(scheme, i + 1)),
-                    'invalid connection, must be a 32-bit unsigned integer'
-                )
-                scheme = string.sub(scheme, 1, i - 1)
+                if type(i) == 'number' and i > 1 and i < scheme:len() then
+                    connection = assert(
+                        tonumber(string.sub(scheme, i + 1)),
+                        'invalid connection, must be a 32-bit unsigned integer'
+                    )
+                    scheme = string.sub(scheme, 1, i - 1)
+                end
             end
+        elseif format == 'legacy' then
+            -- If we found a scheme, look for the connection next
+            if scheme then
+                i, j = string.find(name, '.+@')
+
+                -- If at start of string and long enough, we have a connection
+                if i == 1 and j ~= nil and j > 1 then
+                    connection = assert(
+                        tonumber(string.sub(name, i, j - 1)),
+                        'invalid connection, must be a 32-bit unsigned integer'
+                    )
+                    name = string.sub(name, j + 1)
+                end
+            end
+        else
+            error('Invalid name format: ' .. vim.inspect(format))
         end
 
         -- Return our results, with everything remaining in the name

@@ -113,9 +113,11 @@ end
 ---
 --- * `bufnr` - buffer handle to attach LSP clients
 --- * `path` - path on remote machine of buffer, used to determine which settings to apply
+--- * `scheme` - used to change the scheme used in the editor to `file` for the language server
+---              and vice versa. If not provided, defaults to `distant`.
 --- * `settings` - collection of LSP settings to apply
 ---
---- @param opts {bufnr:number, path:string, settings:distant.plugin.settings.server.LspSettings}
+--- @param opts {bufnr:number, path:string, scheme?:string, settings:distant.plugin.settings.server.LspSettings}
 --- @return number[] client_ids All ids of the LSP clients (if any) established with the buffer
 function M:connect_lsp_clients(opts)
     log.fmt_trace('client.connect_lsp_clients(%s)', opts)
@@ -191,12 +193,7 @@ function M:connect_lsp_clients(opts)
                             end
                         end
 
-                        --- TODO: This is a hack because distant-core should have no concept
-                        ---       that we need to specify an LSP scheme replacement like this,
-                        ---       but we have to right now. Is there a better way to do this?
-                        local scheme = ('distant+%s'):format(self.id)
-
-                        local cmd = self:wrap({ lsp = config.cmd, scheme = scheme })
+                        local cmd = self:wrap({ lsp = config.cmd, scheme = opts.scheme })
                         log.fmt_debug('Starting LSP %s: %s', label, cmd)
 
                         -- Start LSP server using the provided configuration, replacing the
