@@ -56,10 +56,17 @@ describe('distant.editor.open', function()
         assert.are.equal('dir', buffer:remote_type())
 
         -- Verify we set dir-specific buffer properties
-        assert.are.equal(
-            'distant+' .. driver:client_id() .. '://' .. remote_path,
-            buffer:name()
-        )
+        if plugin.buf.name.default_format() == 'modern' then
+            assert.are.equal(
+                'distant+' .. driver:client_id() .. '://' .. remote_path,
+                buffer:name()
+            )
+        else
+            assert.are.equal(
+                'distant://' .. driver:client_id() .. '://' .. remote_path,
+                buffer:name()
+            )
+        end
         assert.are.equal('distant-dir', buffer:filetype())
         assert.are.equal('nofile', buffer:buftype())
         assert.is.falsy(buffer:modifiable())
@@ -89,10 +96,17 @@ describe('distant.editor.open', function()
         assert.are.equal('file', buffer:remote_type())
 
         -- Verify we set file-specific buffer properties
-        assert.are.equal(
-            'distant+' .. driver:client_id() .. '://' .. remote_path,
-            buffer:name()
-        )
+        if plugin.buf.name.default_format() == 'modern' then
+            assert.are.equal(
+                'distant+' .. driver:client_id() .. '://' .. remote_path,
+                buffer:name()
+            )
+        else
+            assert.are.equal(
+                'distant://' .. driver:client_id() .. '://' .. remote_path,
+                buffer:name()
+            )
+        end
         assert.are.equal('text', buffer:filetype())
         assert.are.equal('acwrite', buffer:buftype())
 
@@ -159,10 +173,17 @@ describe('distant.editor.open', function()
         assert.are.equal('file', buffer:remote_type())
 
         -- Verify we set file-specific buffer properties
-        assert.are.equal(
-            'distant+' .. driver:client_id() .. '://' .. remote_path,
-            buffer:name()
-        )
+        if plugin.buf.name.default_format() == 'modern' then
+            assert.are.equal(
+                'distant+' .. driver:client_id() .. '://' .. remote_path,
+                buffer:name()
+            )
+        else
+            assert.are.equal(
+                'distant://' .. driver:client_id() .. '://' .. remote_path,
+                buffer:name()
+            )
+        end
         assert.are.equal('text', buffer:filetype())
         assert.are.equal('acwrite', buffer:buftype())
 
@@ -204,10 +225,17 @@ describe('distant.editor.open', function()
         assert.are.equal('dir', buffer:remote_type())
 
         -- Verify we set dir-specific buffer properties
-        assert.are.equal(
-            'distant+' .. driver:client_id() .. '://' .. remote_path,
-            buffer:name()
-        )
+        if plugin.buf.name.default_format() == 'modern' then
+            assert.are.equal(
+                'distant+' .. driver:client_id() .. '://' .. remote_path,
+                buffer:name()
+            )
+        else
+            assert.are.equal(
+                'distant://' .. driver:client_id() .. '://' .. remote_path,
+                buffer:name()
+            )
+        end
         assert.are.equal('distant-dir', buffer:filetype())
         assert.are.equal('nofile', buffer:buftype())
         assert.is.falsy(buffer:modifiable())

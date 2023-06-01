@@ -57,8 +57,8 @@ return function(opts)
     -- PARSE NAME & DERIVE LOCAL PATH & CONNECTION
     --------------------------------------------------------------------------
 
-    -- Parse [distant[+{CONNECTION}]://]{PATH} into components
-    local components = plugin.buf.parse_name(opts.path)
+    -- Parse path into components
+    local components = plugin.buf.name.parse({ name = opts.path })
 
     -- Validate that our connection matches that of the name
     if components.connection then
@@ -146,7 +146,7 @@ return function(opts)
     end
 
     -- Construct universal remote buffer name using the canonicalized path
-    local buf_name = plugin.buf.build_name({
+    local buf_name = plugin.buf.name.build({
         scheme = 'distant',
         connection = connection,
         path = path_info.path,

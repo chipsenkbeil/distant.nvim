@@ -52,7 +52,6 @@ end
 
 --- @enum distant.core.api.RequestType
 local REQUEST_TYPE = {
-    CAPABILITIES     = 'capabilities',
     CANCEL_SEARCH    = 'cancel_search',
     COPY             = 'copy',
     DIR_CREATE       = 'dir_create',
@@ -75,6 +74,7 @@ local REQUEST_TYPE = {
     SYSTEM_INFO      = 'system_info',
     UNWATCH          = 'unwatch',
     WATCH            = 'watch',
+    VERSION          = 'version',
 }
 
 -------------------------------------------------------------------------------
@@ -92,16 +92,6 @@ end
 --- @param payload distant.core.api.OkPayload
 local function verify_ok(payload)
     return type(payload) == 'table' and payload.type == 'ok'
-end
-
---- @param payload table
---- @return boolean
-local function verify_capabilities(payload)
-    return (
-        payload.type == 'capabilities'
-        and type(payload.supported) == 'table'
-        and vim.tbl_islist(payload.supported)
-    )
 end
 
 --- @param payload table
@@ -179,11 +169,21 @@ local function verify_system_info(payload)
     )
 end
 
+--- @param payload table
+--- @return boolean
+local function verify_version(payload)
+    return (
+        payload.type == 'version'
+        and type(payload.server_version) == 'string'
+        and type(payload.protocol_version) == 'table'
+        and type(payload.capabilities) == 'table'
+    )
+end
+
 --- Mapping of request types to handlers to verify and map responses.
 --- @alias distant.core.api.RequestHandlers { map:(fun(payload:table):any), verify:(fun(payload:table):boolean) }
 --- @type { [distant.core.api.RequestType]: distant.core.api.RequestHandlers }
 local RESPONSE_HANDLERS = {
-    [REQUEST_TYPE.CAPABILITIES]     = { map = identity, verify = verify_capabilities },
     [REQUEST_TYPE.CANCEL_SEARCH]    = { map = identity, verify = verify_ok },
     [REQUEST_TYPE.COPY]             = { map = identity, verify = verify_ok },
     [REQUEST_TYPE.DIR_CREATE]       = { map = identity, verify = verify_ok },
@@ -206,6 +206,7 @@ local RESPONSE_HANDLERS = {
     [REQUEST_TYPE.SYSTEM_INFO]      = { map = identity, verify = verify_system_info },
     [REQUEST_TYPE.UNWATCH]          = { map = identity, verify = verify_ok },
     [REQUEST_TYPE.WATCH]            = { map = identity, verify = verify_ok },
+    [REQUEST_TYPE.VERSION]          = { map = identity, verify = verify_version },
 }
 
 -------------------------------------------------------------------------------
@@ -380,31 +381,6 @@ function M:append_file_text(opts, cb)
             type = ty,
             path = opts.path,
             text = opts.text,
-        },
-        map = handlers.map,
-        verify = handlers.verify,
-        timeout = opts.timeout,
-        interval = opts.interval,
-    }, cb)
-end
-
---- @alias distant.core.api.CapabilitiesOpts {timeout?:number, interval?:number}
---- @alias distant.core.api.CapabilitiesPayload {supported:string[]}
---- @param opts distant.core.api.CapabilitiesOpts
---- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.CapabilitiesPayload)
---- @return distant.core.api.Error|nil err, distant.core.api.CapabilitiesPayload|nil capabilities
-function M:capabilities(opts, cb)
-    vim.validate({
-        opts = { opts, 'table' },
-        cb = { cb, 'function', true },
-    })
-
-    local ty = REQUEST_TYPE.CAPABILITIES
-    local handlers = assert(RESPONSE_HANDLERS[ty], 'Missing handlers for ' .. ty)
-
-    return self.transport:send({
-        payload = {
-            type = ty,
         },
         map = handlers.map,
         verify = handlers.verify,
@@ -944,6 +920,35 @@ function M:unwatch(opts, cb)
         payload = {
             type = ty,
             path = opts.path,
+        },
+        map = handlers.map,
+        verify = handlers.verify,
+        timeout = opts.timeout,
+        interval = opts.interval,
+    }, cb)
+end
+
+--- @class distant.core.api.VersionPayload
+--- @field server_version string
+--- @field protocol_version {[1]: integer, [2]: integer, [3]: integer}
+--- @field capabilities string[]
+
+--- @alias distant.core.api.VersionOpts {timeout?:number, interval?:number}
+--- @param opts distant.core.api.VersionOpts
+--- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.VersionPayload)
+--- @return distant.core.api.Error|nil err, distant.core.api.VersionPayload|nil version
+function M:version(opts, cb)
+    vim.validate({
+        opts = { opts, 'table' },
+        cb = { cb, 'function', true },
+    })
+
+    local ty = REQUEST_TYPE.VERSION
+    local handlers = assert(RESPONSE_HANDLERS[ty], 'Missing handlers for ' .. ty)
+
+    return self.transport:send({
+        payload = {
+            type = ty,
         },
         map = handlers.map,
         verify = handlers.verify,

@@ -241,12 +241,15 @@ local function make_buffer(buf)
     -- NAME API
     --------------------------------------------------------------------------
 
-    --- @alias distant.plugin.buffer.NameComponents
-    --- | {scheme:string|nil, connection:distant.core.manager.ConnectionId|nil, path:string}
-
     --- @alias distant.plugin.buffer.NameFormat
     --- | '"modern"' # use modern naming format (requires neovim 0.10+)
     --- | '"legacy"' # use legacy naming format
+
+    --- @alias distant.plugin.buffer.NameComponents
+    --- | {scheme:string|nil, connection:distant.core.manager.ConnectionId|nil, path:string}
+
+    --- @alias distant.plugin.buffer.NameComponentsAndFormat
+    --- | {scheme:string|nil, connection:distant.core.manager.ConnectionId|nil, format:distant.plugin.buffer.NameFormat|nil, path:string}
 
     --- @return distant.plugin.buffer.NameFormat
     local function default_name_format()
@@ -256,120 +259,209 @@ local function make_buffer(buf)
         return 'legacy'
     end
 
+    --- Validates a string against RFC3986 to verify it is a scheme.
+    ---
+    --- @param scheme string
+    --- @return boolean
+    local function is_scheme(scheme)
+        if type(scheme) ~= 'string' then
+            return false
+        end
+
+        -- Must start with lowercase alphabetic character and then
+        -- consist only of alphabetic, digit, '.', '+', or '-' chars
+        local i, j = scheme:find('%l[%w%.%+%-]*')
+
+        -- Must match the entire scheme exactly
+        return i == 1 and j == scheme:len()
+    end
+
+    --- @class distant.plugin.buffer.Name
+    local Name = {}
+
+    --- Provides name-oriented functionality tied to the buffer.
+    M.name = Name
+
+    --- Returns the default format used by buffers for their name.
+    --- @return distant.plugin.buffer.NameFormat
+    function Name.default_format()
+        return default_name_format()
+    end
+
+    --- @alias distant.plugin.buffer.name.PrefixOpts
+    --- | {name?:string, format?:distant.plugin.buffer.NameFormat}
+    --- | {scheme:string, connection?:distant.core.manager.ConnectionId, format?:distant.plugin.buffer.NameFormat}
+
+    --- Returns the prefix tied to the buffer's name, a provided name, or builds a
+    --- prefix from the given components.
+    ---
+    --- @param opts? distant.plugin.buffer.name.PrefixOpts
+    --- @return string
+    function Name.prefix(opts)
+        opts = opts or {}
+
+        -- Use provided options, or default to current buffer name and default format
+        local name = opts.name
+        if not opts.scheme and not name then
+            name = vim.api.nvim_buf_get_name(buf)
+        end
+
+        if type(name) == 'string' then
+            -- If we have a name, we want to parse it to get the components
+            -- to build the prefix
+            local components = Name.parse({
+                format = opts.format,
+                name = name,
+            })
+
+            -- Build the name without the path to get the prefix alongside the separator
+            name = Name.build({
+                connection = components.connection,
+                format = opts.format,
+                path = '',
+                scheme = components.scheme,
+            })
+        elseif type(opts.scheme) == 'string' then
+            -- If provided the scheme (and optional connection), build the name and
+            -- extract the prefix portion from it
+            name = Name.build({
+                connection = opts.connection,
+                format = opts.format,
+                path = '',
+                scheme = opts.scheme,
+            })
+        end
+
+        --- @cast name string
+
+        -- Chop off the ending :// from modern or legacy format
+        -- or just : if it happens to have been translated to
+        -- exclude the authority
+        if vim.endswith(name, '://') then
+            name = name:sub(1, -4)
+        elseif vim.endswith(name, ':') then
+            name = name:sub(1, -2)
+        end
+
+        return name
+    end
+
     --- Constructs a full name based on components.
     ---
     --- ### Components
     ---
-    --- * `scheme` - the scheme of the name such as "distant".
     --- * `connection` - the connection id of the client tied to the buffer.
     --- * `path` - the remainder of the name.
+    --- * `scheme` - the scheme of the name such as "distant".
     ---
     --- ### Format
     ---
     --- * "modern" - `[{SCHEME}[+{CONNECTION}]://PATH`
-    --- * "legacy" - `[{SCHEME}://[{CONNECTION}@]PATH`
+    --- * "legacy" - `[{SCHEME}://[{CONNECTION}://]PATH`
     ---
-    --- @param components distant.plugin.buffer.NameComponents
-    --- @param opts? {format?:distant.plugin.buffer.NameFormat}
+    --- @param opts distant.plugin.buffer.NameComponentsAndFormat
     --- @return string
-    function M.build_name(components, opts)
-        local format = (opts or {}).format or default_name_format()
+    function Name.build(opts)
+        opts = opts or {}
+        local path = assert(opts.path, 'Path is required')
+        local format = opts.format or default_name_format()
 
         local name = ''
+        local scheme = opts.scheme
 
         if format == 'modern' then
-            if components.scheme then
-                name = name .. components.scheme
-                if components.connection then
-                    name = name .. '+' .. tostring(components.connection)
+            if scheme then
+                assert(is_scheme(scheme), 'Invalid scheme: ' .. scheme)
+                name = name .. scheme
+                if opts.connection then
+                    name = name .. '+' .. tostring(opts.connection)
                 end
                 name = name .. '://'
             end
         elseif format == 'legacy' then
-            if components.scheme then
-                name = name .. components.scheme .. '://'
-                if components.connection then
-                    name = name .. tostring(components.connection) .. '@'
+            if scheme then
+                assert(is_scheme(scheme), 'Invalid scheme: ' .. scheme)
+                name = name .. scheme .. '://'
+                if opts.connection then
+                    name = name .. tostring(opts.connection) .. '://'
                 end
             end
         else
             error('Invalid name format: ' .. vim.inspect(format))
         end
 
-        return name .. components.path
+        return name .. path
     end
 
     --- Parses the buffer's name into individual components.
     ---
     --- ### Components
     ---
-    --- * `scheme` - the scheme of the name such as "distant".
     --- * `connection` - the connection id of the client tied to the buffer.
     --- * `path` - the remainder of the name.
+    --- * `scheme` - the scheme of the name such as "distant".
     ---
     --- ### Format
     ---
     --- * "modern" - `[{SCHEME}[+{CONNECTION}]://PATH`
-    --- * "legacy" - `[{SCHEME}://[{CONNECTION}@]PATH`
+    --- * "legacy" - `[{SCHEME}://[{CONNECTION}://]PATH`
     ---
-    --- @param name? string # name to parse, using the selected buffer's full name if no name provided
-    --- @param opts? {format?:distant.plugin.buffer.NameFormat}
+    --- @param opts? {format?:distant.plugin.buffer.NameFormat, name?:string}
     --- @return distant.plugin.buffer.NameComponents components
-    function M.parse_name(name, opts)
-        local format = (opts or {}).format or default_name_format()
+    function Name.parse(opts)
+        opts = opts or {}
+        local name = opts.name or vim.api.nvim_buf_get_name(buf)
+        local format = opts.format or default_name_format()
 
         --- @type string|nil, distant.core.manager.ConnectionId|nil, number|nil, number|nil
         local scheme, connection, i, j
 
-        -- Grab our buffer's full name if no name is provided
-        if not name then
-            name = vim.api.nvim_buf_get_name(buf)
-        end
         -- Look for the scheme first
-        i, j = string.find(name, '.+://')
+        i, j = string.find(name, '://')
 
-        -- If at start of string and long enough, we have a scheme,
-        -- so parse it out (before the ://) and advance the name
-        -- to be after the ://
-        if i == 1 and j ~= nil and j > 3 then
-            scheme = string.sub(name, i, j - 3)
+        -- If we found a match, there is a scheme, so split off the scheme and name
+        if type(i) == 'number' and type(j) == 'number' and i > 1 then
+            scheme = string.sub(name, 1, i - 1)
             name = string.sub(name, j + 1)
         end
 
         if format == 'modern' then
-            -- If we found a scheme, look for the connection next
-            -- by seeing if we have a +{CONNECTION} within the scheme
-            --
-            -- If we do, we split out the scheme and connection
             if scheme then
-                -- Will return nil if nothing found
                 i = string.find(scheme, '+')
 
                 if type(i) == 'number' and i > 1 and i < scheme:len() then
+                    -- Everything after the + is the connection
                     connection = assert(
                         tonumber(string.sub(scheme, i + 1)),
                         'invalid connection, must be a 32-bit unsigned integer'
                     )
+
+                    -- Everything before the + is the scheme
                     scheme = string.sub(scheme, 1, i - 1)
                 end
             end
         elseif format == 'legacy' then
-            -- If we found a scheme, look for the connection next
             if scheme then
-                i, j = string.find(name, '.+@')
+                -- Look for next :// which is used to separate the connection
+                i, j = string.find(name, '://')
 
-                -- If at start of string and long enough, we have a connection
-                if i == 1 and j ~= nil and j > 1 then
+                if type(i) == 'number' and i > 1 and j < name:len() then
+                    -- Everything before the :// is the connection
                     connection = assert(
-                        tonumber(string.sub(name, i, j - 1)),
+                        tonumber(string.sub(name, 1, i - 1)),
                         'invalid connection, must be a 32-bit unsigned integer'
                     )
+
+                    -- Everything after the :// is the path
                     name = string.sub(name, j + 1)
                 end
             end
         else
             error('Invalid name format: ' .. vim.inspect(format))
         end
+
+        -- Verify our scheme is valid if we got text
+        assert(not scheme or is_scheme(scheme), 'Invalid scheme: ' .. vim.inspect(scheme))
 
         -- Return our results, with everything remaining in the name
         -- being treated as our path
@@ -401,10 +493,10 @@ local function make_buffer(buf)
     end
 
     --- Builds a vim file pattern to use with `vim.fn.bufnr()`.
-    --- @param opts distant.plugin.buffer.NameComponents
+    --- @param opts distant.plugin.buffer.NameComponentsAndFormat
     --- @return string
     local function file_pattern(opts)
-        return '^' .. M.build_name(opts) .. '$'
+        return '^' .. M.name.build(opts) .. '$'
     end
 
     --- Scans all path variables to see if there is a matching path.
@@ -428,8 +520,8 @@ local function make_buffer(buf)
             return false
         end
 
-        -- Parse [distant[+{CONNECTION}]://path into its components
-        local components = M.parse_name(path)
+        -- Parse path (representing full name) into its components
+        local components = M.name.parse({ name = path })
 
         -- If the connection from the path doesn't match our own, exit early
         if components.connection and components.connection ~= M.client_id() then
@@ -475,11 +567,12 @@ local function make_buffer(buf)
     --- * `path` - if specified, will look for a buffer with matching path.
     ---   Will look for distant://path and path itself.
     --- * `connection` - will enforce that the matching buffer has the same connection.
+    --- * `format` - type of buffer name to search (optional defaulting based on neovim version)
     ---
-    --- @param opts {path:string, connection?:distant.core.manager.ConnectionId}
+    --- @param opts {path:string, connection?:distant.core.manager.ConnectionId, format?:distant.plugin.buffer.NameFormat}
     --- @return distant.plugin.Buffer|nil
     function M.find(opts)
-        local components = M.parse_name(opts.path)
+        local components = M.name.parse({ name = opts.path })
         local scheme = components.scheme or 'distant'
         local connection = opts.connection or components.connection
         local path = components.path
@@ -498,6 +591,7 @@ local function make_buffer(buf)
                 scheme = scheme,
                 connection = connection,
                 path = path,
+                format = opts.format,
             }), 0)
             if bufnr ~= -1 then
                 return make_buffer(bufnr)
@@ -515,7 +609,7 @@ local function make_buffer(buf)
     end
 
     --- Like `buf.find`, but returns the buffer number instead of the buffer.
-    --- @param opts {path:string, connection?:distant.core.manager.ConnectionId}
+    --- @param opts distant.plugin.buffer.NameComponentsAndFormat
     --- @return number|nil
     function M.find_bufnr(opts)
         local buffer = M.find(opts)

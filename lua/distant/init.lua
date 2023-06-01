@@ -852,17 +852,20 @@ function M:wrap(opts)
         'Client unavailable for wrapping'
     )
 
+    -- Construct the prefix we want to remove
+    -- when wrapping an LSP server
+    local prefix = M.buf.name.prefix({
+        scheme = 'distant',
+        connection = self:active_client_id(),
+    })
+
     return client:wrap({
         cmd = opts.cmd,
         lsp = opts.lsp,
         shell = opts.shell,
         cwd = opts.cwd,
         env = opts.env,
-        scheme = self.buf.build_name({
-            scheme = 'distant',
-            connection = self:active_client_id(),
-            path = '',
-        }),
+        scheme = prefix,
     })
 end
 

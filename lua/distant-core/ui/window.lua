@@ -453,7 +453,6 @@ function M:set_sticky_cursor(tag)
         if new_sticky_cursor_line then
             self.__sticky_cursor = tag
 
-            -- TODO: Should we throw an assertion error here instead?
             if self.__win ~= nil then
                 local cursor = vim.api.nvim_win_get_cursor(self.__win)
                 vim.api.nvim_win_set_cursor(self.__win, { new_sticky_cursor_line, cursor[2] })

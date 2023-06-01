@@ -154,7 +154,7 @@ function M.configure(opts)
         client:connect_lsp_clients({
             bufnr = bufnr,
             path = plugin.buf(bufnr).assert_path(),
-            scheme = error('TODO: Provide scheme!'),
+            scheme = plugin.buf(bufnr).name.prefix(),
             settings = plugin:server_settings_for_client().lsp,
         })
     end

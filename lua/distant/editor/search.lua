@@ -30,7 +30,7 @@ local function add_matches_to_qflist(id, matches)
     local items = {}
 
     for _, match in ipairs(matches) do
-        local filename = plugin.buf.build_name({
+        local filename = plugin.buf.name.build({
             scheme = 'distant',
             connection = plugin:active_client_id(),
             path = tostring(match.path),

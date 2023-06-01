@@ -16,17 +16,6 @@ local function _initialize()
     local autogroup_id = vim.api.nvim_create_augroup('distant', { clear = true })
     local PATTERN = { 'distant://*', 'distant+*://*' }
 
-    -- NOTE: Matching our pattern seems to produce weird results with an absolute
-    --       path that acts as a prefix to our pattern. So we need to extract.
-    --- @param match string
-    --- @return string|nil
-    local function extract_match(match)
-        local i = string.find(match, 'distant')
-        if type(i) == 'number' then
-            return string.sub(match, i)
-        end
-    end
-
     -- If we enter a buffer that is not initialized, we trigger a BufReadCmd
     vim.api.nvim_create_autocmd({ 'BufEnter' }, {
         group = autogroup_id,
@@ -34,7 +23,7 @@ local function _initialize()
         --- @param opts neovim.AutocmdOpts
         callback = function(opts)
             local bufnr = opts.buf
-            local match = extract_match(opts.match)
+            local match = opts.match
 
             if not plugin.buf(bufnr).has_data() then
                 log.fmt_debug('Buffer %s is not initialized, so triggering BufReadCmd', bufnr)
@@ -53,15 +42,15 @@ local function _initialize()
         --- @param opts neovim.AutocmdOpts
         callback = function(opts)
             local bufnr = opts.buf
-            local fname = extract_match(opts.match)
+            local fname = opts.match
 
-            local components = plugin.buf.parse_name(fname)
+            local components = plugin.buf.name.parse({ name = fname })
             local connection = components.connection
             local path, line, col = utils.strip_line_col(components.path)
 
             -- Ensure our buffer is named without the line/column,
             -- but with the appropriate prefixes
-            vim.api.nvim_buf_set_name(bufnr, plugin.buf.build_name({
+            vim.api.nvim_buf_set_name(bufnr, plugin.buf.name.build({
                 scheme = 'distant',
                 connection = connection,
                 path = path,

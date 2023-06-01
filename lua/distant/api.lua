@@ -80,13 +80,6 @@ local function make_api(client_id)
         return client():cached_system_info(opts, cb)
     end
 
-    --- @param opts distant.core.api.CapabilitiesOpts
-    --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.CapabilitiesPayload)
-    --- @return distant.core.api.Error|nil err, distant.core.api.CapabilitiesPayload|nil capabilities
-    function M.capabilities(opts, cb)
-        return api():capabilities(opts, cb)
-    end
-
     --- @param opts distant.core.api.CopyOpts
     --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.OkPayload)
     --- @return distant.core.api.Error|nil err, distant.core.api.OkPayload|nil payload
@@ -196,6 +189,13 @@ local function make_api(client_id)
     --- @return distant.core.api.Error|nil err, distant.core.api.OkPayload|nil payload
     function M.unwatch(opts, cb)
         return api():unwatch(opts, cb)
+    end
+
+    --- @param opts distant.core.api.VersionOpts
+    --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.VersionPayload)
+    --- @return distant.core.api.Error|nil err, distant.core.api.VersionPayload|nil version
+    function M.version(opts, cb)
+        return api():version(opts, cb)
     end
 
     return M

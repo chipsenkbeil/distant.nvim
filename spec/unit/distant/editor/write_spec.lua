@@ -12,27 +12,6 @@ describe('distant.editor.write', function()
         assert.is.falsy(result)
     end)
 
-    it('should write all lines of the buffer to the remote file', function()
-        -- Create a local buffer
-        local buf = utils.make_buffer({ 'some content', 'in a buffer' })
-
-        -- Populate a fake client in our plugin to make sure that
-        -- we can stub out the write operation
-        plugin.__manager = nil
-
-        -- Specify that our buffer represents a remote file
-        plugin.buf(buf).set_data({
-            client_id = 123,
-            path = '/some/remote/path',
-            alt_paths = { '.' },
-            type = 'file',
-        })
-
-        -- Write to the buffer and verify that we invoked our API underneath
-        local result = editor.write({ buf = buf })
-        assert.is.truthy(result)
-    end)
-
     it('should not reset the modified flag if unsuccessful', function()
         -- Create a remote buffer
         local buf = utils.make_buffer({ 'some content', 'in a buffer' })

@@ -1,6 +1,6 @@
 local config = require('spec.e2e.config')
-local editor = require('distant.editor')
 local Driver = require('spec.e2e.driver')
+local plugin = require('distant')
 
 -- Remove indentation
 local function d(level, text)
@@ -119,7 +119,7 @@ describe('distant.editor.lsp', function()
         -- Open main.rs, which should start the LSP server
         local init_lua = lua_dir:file('init.lua')
         driver:debug_print('Opening ' .. init_lua:path())
-        local buffer = driver:buffer(editor.open(init_lua:path()))
+        local buffer = driver:buffer(plugin.editor.open(init_lua:path()))
         driver:debug_print('Opened into buffer ' .. buffer:id())
         assert(buffer:is_focused(), 'init.lua buffer not in focus')
 
@@ -161,10 +161,18 @@ describe('distant.editor.lsp', function()
         buffer = driver:buffer()
         assert.are.equal('lua', buffer:filetype())
         assert.are.equal('acwrite', buffer:buftype())
-        assert.are.equal(
-            'distant+' .. driver:client_id() .. '://' .. lua_dir:file('other.lua'):canonicalized_path(),
-            buffer:name()
-        )
+
+        if plugin.buf.name.default_format() == 'modern' then
+            assert.are.equal(
+                'distant+' .. driver:client_id() .. '://' .. lua_dir:file('other.lua'):canonicalized_path(),
+                buffer:name()
+            )
+        else
+            assert.are.equal(
+                'distant://' .. driver:client_id() .. '://' .. lua_dir:file('other.lua'):canonicalized_path(),
+                buffer:name()
+            )
+        end
         assert.are.equal(lua_dir:file('other.lua'):canonicalized_path(), buffer:remote_path())
         buffer.assert.same(d(3, [[
             local M = {}
@@ -183,7 +191,7 @@ describe('distant.editor.lsp', function()
 
         -- Open main.rs, which should start the LSP server
         local main_rs = root:dir('src'):file('main.rs')
-        local buf = driver:buffer(editor.open(main_rs:path()))
+        local buf = driver:buffer(plugin.editor.open(main_rs:path()))
 
         -- Wait for the language server to be ready
         assert(

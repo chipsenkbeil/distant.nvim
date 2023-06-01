@@ -33,7 +33,7 @@ end
 --- @param match distant.core.api.search.Match
 --- @return telescope.distant.finder.Entry|nil
 local function make_entry(match)
-    local components = plugin.buf.parse_name(match.path)
+    local components = plugin.buf.name.parse({ name = match.path })
     local entry = {
         value = match,
         valid = true,
