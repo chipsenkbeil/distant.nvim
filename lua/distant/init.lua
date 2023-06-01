@@ -688,6 +688,36 @@ function M:__setup_manager(opts)
 end
 
 -------------------------------------------------------------------------------
+-- SHELL API
+-------------------------------------------------------------------------------
+
+--- Spawns a shell connected to the buffer with handle `bufnr`.
+---
+--- * `bufnr` specifies the buffer to use. If -1, will create a new buffer. Default is -1.
+--- * `winnr` specifies the window to use. Default is current window.
+--- * `cmd` is the optional command to use instead of the server's default shell.
+--- * `cwd` is the optional current working directory to set for the shell when spawning it.
+--- * `env` is the optional map of environment variable values to supply to the shell.
+---
+--- Will fail with an error if the shell fails to spawn.
+---
+--- @param opts {bufnr:number, winnr?:number, cmd?:string|string[], cwd?:string, env?:table<string, string>}
+--- @return number bufnr
+function M:spawn_shell(opts)
+    opts = opts or {}
+
+    -- If not specified, set buffer to be created
+    if type(opts.bufnr) ~= 'number' then
+        opts.bufnr = -1
+    end
+
+    local client = assert(self:client(), 'No client established')
+    local _, bufnr = client:spawn_shell(opts)
+    self.buf(bufnr).set_client_id(client.id)
+    return bufnr
+end
+
+-------------------------------------------------------------------------------
 -- UTILITIES API
 -------------------------------------------------------------------------------
 

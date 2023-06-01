@@ -235,7 +235,7 @@ end
 --- Will fail with an error if the shell fails to spawn.
 ---
 --- @param opts {bufnr:number, winnr?:number, cmd?:string|string[], cwd?:string, env?:table<string, string>}
---- @return number job-id
+--- @return number job-id, number bufnr
 function M:spawn_shell(opts)
     -- Get or create the buffer we will be using with this terminal,
     -- ensure it is no longer modifiable, switch to it, and then
@@ -261,7 +261,7 @@ function M:spawn_shell(opts)
         error(self.config.binary .. ' is not executable')
     end
 
-    return job_id
+    return job_id, bufnr
 end
 
 --- @class distant.core.client.WrapOpts

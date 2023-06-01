@@ -17,8 +17,7 @@ local function command(cmd)
     end
 
     -- Spawn a shell in a new buffer, taking over the current window
-    local client = assert(plugin:client(), 'No client established')
-    client:spawn_shell({ bufnr = -1, cmd = cmd })
+    plugin:spawn_shell({ cmd = cmd })
 end
 
 --- @type DistantCommand
