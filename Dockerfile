@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 anatolelucet/neovim:0.7.0-ubuntu
+FROM --platform=linux/amd64 anatolelucet/neovim:0.8.0-ubuntu
 
 # Install all of the packages we need
 #
@@ -60,7 +60,7 @@ RUN sudo mkdir -p /var/run/sshd \
     && cp /home/$user/.ssh/id_rsa.pub /home/$user/.ssh/authorized_keys \
     && echo 'StrictHostKeyChecking no' > /home/$user/.ssh/config
 
-ARG DISTANT_VERSION=0.19.0
+ARG DISTANT_VERSION=0.20.0-alpha.7
 
 # Install distant binary and make sure its in a path for everyone
 ARG distant_release=https://github.com/chipsenkbeil/distant/releases/download/v$DISTANT_VERSION

@@ -1,1414 +1,165 @@
-*distant.txt*   Plugin that supports working with remote machines
-                                                                          0.2
->
-       _______  ______  ______  ________  ______  __    __ ________ 
-      |       \|      \/      \|        \/      \|  \  |  \        \
-      | ▓▓▓▓▓▓▓\\▓▓▓▓▓▓  ▓▓▓▓▓▓\\▓▓▓▓▓▓▓▓  ▓▓▓▓▓▓\ ▓▓\ | ▓▓\▓▓▓▓▓▓▓▓
-      | ▓▓  | ▓▓ | ▓▓ | ▓▓___\▓▓  | ▓▓  | ▓▓__| ▓▓ ▓▓▓\| ▓▓  | ▓▓   
-      | ▓▓  | ▓▓ | ▓▓  \▓▓    \   | ▓▓  | ▓▓    ▓▓ ▓▓▓▓\ ▓▓  | ▓▓   
-      | ▓▓  | ▓▓ | ▓▓  _\▓▓▓▓▓▓\  | ▓▓  | ▓▓▓▓▓▓▓▓ ▓▓\▓▓ ▓▓  | ▓▓   
-      | ▓▓__/ ▓▓_| ▓▓_|  \__| ▓▓  | ▓▓  | ▓▓  | ▓▓ ▓▓ \▓▓▓▓  | ▓▓   
-      | ▓▓    ▓▓   ▓▓ \\▓▓    ▓▓  | ▓▓  | ▓▓  | ▓▓ ▓▓  \▓▓▓  | ▓▓   
-       \▓▓▓▓▓▓▓ \▓▓▓▓▓▓ \▓▓▓▓▓▓    \▓▓   \▓▓   \▓▓\▓▓   \▓▓   \▓▓   
-<
+*distant.txt*           For Neovim >= 0.8.0           Last change: 2023 May 22
 
 ==============================================================================
-                                                                *distant.nvim*
+Table of Contents                                  *distant-table-of-contents*
 
-Distant.nvim is a plugin for working with remote machines. It enables you to
-read, write, and execute from the comfort of your local machine and serves as
-an alternative to `ssh` and `mosh` sessions that rely on installing and
-running neovim directly on the remote machine.
-
-==============================================================================
-TABLE OF CONTENTS                                                *distant-toc*
-
-1.  Introduction .......................................|distant-introduction|
-2.  Quick Start ..........................................|distant-quickstart|
-3.  Installation .......................................|distant-installation|
-4.  Commands ...............................................|distant-commands|
-5.  Settings ...............................................|distant-settings|
-6.  Navigation ...........................................|distant-navigation|
-7.  Lua API .................................................|distant-lua-api|
-8.  Extensions ...........................................|distant-extensions|
-9.  FAQ .........................................................|distant-faq|
-10. Changelog .............................................|distant-changelog|
-11. Credits .................................................|distant-credits|
-12. License .................................................|distant-license|
+1. distant.nvim                                         |distant-distant.nvim|
+  - Features                                   |distant-distant.nvim-features|
+  - Installation & Setup           |distant-distant.nvim-installation-&-setup|
+  - Getting Started                     |distant-distant.nvim-getting-started|
+  - Documentation                         |distant-distant.nvim-documentation|
+  - Demo                                           |distant-distant.nvim-demo|
+  - License                                     |distant-distant.nvim-license|
 
 ==============================================================================
-INTRODUCTION                                            *distant-introduction*
+1. distant.nvim                                         *distant-distant.nvim*
 
-Welcome to the neovim plugin built around the Lua bindings for distant, a set
-of tooling and libraries dedicated to interaction with remote machines.
+<https://github.com/chipsenkbeil/distant.nvim/actions/workflows/ci.yml>
 
-In order to operate against a remote machine, you first need to establish a
-connection to it. To do this, you run `:DistantLaunch {destination}` where the
-destination points to the remote machine and can be an IP address like
-`127.0.0.1` or a domain like `example.com`.
+A wrapper around `distant` <https://github.com/chipsenkbeil/distant> that
+enables users to edit remote files from the comfort of their local environment.
 
-The launch command will attempt to SSH into the remote machine using port 22
-by default and start an instance of the distant server.
+- **Requires neovim 0.7+**
+- **Requires distant 0.20.0-alpha.4**
 
-Once started, all remote operations will be sent to that machine! You can try
-out something simple like displaying a list of files, directories, and
-symlinks by running `:DistantOpen /some/dir`, which will open a dialog that
-displays all of the contents of the specified directory.
+**(Alpha stage software) This plugin is in rapid development and may break or
+change frequently!**
 
-==============================================================================
-QUICK START                                               *distant-quickstart*
 
-Using packer.nvim (https://github.com/wbthomason/packer.nvim), the quickest
-way to get up and running is the following:
->
-  use {
-    'chipsenkbeil/distant.nvim',
-    config = function()
-      require('distant').setup {
-        -- Applies Chip's personal settings to every machine you connect to
-        --
-        -- 1. Ensures that distant servers terminate with no connections
-        -- 2. Provides navigation bindings for remote directories
-        -- 3. Provides keybinding to jump into a remote file's parent directory
-        ['*'] = require('distant.settings').chip_default()
-      }
-    end
-  }
-<
-The above will initialize the plugin with the following:
+FEATURES                                       *distant-distant.nvim-features*
 
-1. Any spawned distant server will shutdown after 60 seconds of inactivity
-2. Standard keybindings are assigned for remote buffers (described below)
+Supportsthe following features against remote machines:
 
-Within a file:~
+- Retrieving a list of available files & directories
+- Editing remote files
+- Creating and deleting files & directories
+- Copying files & directories
+- Renaming files & directories
+- Running |LSPs| remotely and getting live results locally
+- telescope.nvim <https://github.com/nvim-telescope/telescope.nvim> integration via `:Telescope distant search`
 
-{lhs}       {rhs}
---------    -----------------------------------
--           lua |distant.nav.actions.up()|
 
-Within a directory:~
+INSTALLATION & SETUP               *distant-distant.nvim-installation-&-setup*
 
-{lhs}       {rhs}
---------    -----------------------------------
-<Return>    lua |distant.nav.actions.edit()|
--           lua |distant.nav.actions.up()|
-K           lua |distant.nav.actions.mkdir()|
-N           lua |distant.nav.actions.newfile()|
-R           lua |distant.nav.actions.rename()|
-D           lua |distant.nav.actions.remove()|
 
-==============================================================================
-INSTALLATION                                            *distant-installation*
+  It is **highly** recommended to not use the master branch of this plugin.
+  Instead, prefer either a branch (`v0.1` or `v0.2`) or a specific tag (`v0.1.1`)
+  to lock in the plugin. When using a branch, you will get rolling updates to
+  that branch. When using a tag, you are locked into the features and stability
+  of the plugin at that point!
+Using packer.nvim <https://github.com/wbthomason/packer.nvim>, the quickest way
+to get up and running is the following:
 
-This plugin acts as a wrapper around the Lua bindings to distant's core and
-ssh libraries. In order for this library to function, `distant_lua.so` (or
-`distant_lua.dll` for Windows) must be placed in the lua directory of this
-plugin.
-
-Sound complicated? Not to worry! This plugin provides support to automatically
-install the shared library for you and will automatically begin the dialog
-when you first attempt to invoke a command or function associated with
-distant.
-
-You can trigger the installation dialog manually by running `:DistantInstall`.
->
-  1. Download a prebuilt lib
-  2. Build from source
-  3. Copy local lib
-<
-Download a prebuilt lib~
-
-Selecting this option will query Github releases for the latest batch,
-downloading the release you select. The specific library will be downloaded
-based on the detected operation system and architecture of your local machine. 
-
-For instance, an M1 Mac will download `distant_lua-macos-arm.dylib` whereas a
-Linux machine will download `distant_lua-linux64-gnu.so`. The library
-downloaded will be renamed to work with this plugin.
-
-This requires that your machine have `curl`, `wget`, or `fetch` installed and
-available on your path.
-
-Build from source~
-
-Selecting this option will download the latest copy of the distant repository
-from https://github.com/chipsenkbeil/distant.
-
-Once downloaded, the source will be built using `cargo build --release` and the
-resulting shared library will be copied into the appropriate location.
-
-This requires that your machine have both `git` and `cargo` installed.
-Additionally, due to the build requirements of distant's library, you will
-also need `perl` to build a vendored copy of `openssh`.
-
-Copy local lib~
-
-Selecting this option will prompt for the path to a `so`, `dylib`, or `dll` to
-copy to the lua directory of this plugin.
-
-==============================================================================
-COMMANDS                                                    *distant-commands*
-
-This plugin provides vim commands that can be used to initiate different tasks
-remotely. It also includes specialized commands such as `DistantLaunch` that is
-used to start a remote session.
-
-Commands support {positional} and {key=value} pairs. Positional arguments are
-relative to each other and are not influenced by key=value pairs inbetween.
->
-  :DistantLaunch ssh://name@example.com:2222
-<
-Commands also support quoted strings as values such as
->
-  :DistantLaunch ssh://example.com distant.args="--log-file distant.log --log-level trace"
-<
-
-Specialized commands~
-
-These commands are geared towards performing actions that expose some dialogs
-or other user interfaces within neovim.
-
-DistantOpen {path} {opts}                                        *DistantOpen*
-
-    Opens a file for editing or a directory for navigation.
-
-    The open command accepts a path as its first argument and then an optional
-    series of named parameters in the form of `name=value`.
-
-    Options: ~
-        {buf}       (number)   if provided, will replace the specified buffer
-                               with the contents of the file or directory at
-                               the specified path (default: 0)
-        {reload}   (boolean)   if true, will reload the buffer by performing a
-                               network query to get the file or directory 
-                               contents (default: false)
-        {timeout}   (number)   maximum time in milliseconds before failing
-                               (default: settings.max_timeout)
-        {interval}  (number)   approximate time in milliseconds between each
-                               check to see if the operation completed
-                               (default: settings.timeout_interval)
-
-    Examples: ~
->
-        :DistantOpen /path/to/file
-        :DistantOpen "some path/with spaces"
-        :DistantOpen /path/to/file reload=true
-<
-
-DistantLaunch {destination} {opts}                             *DistantLaunch*
-
-    Opens a dialog to launch distant on a remote machine.
-
-    The launch command accepts a destination as its first argument and then an
-    optional series of named parameters in the form of `name=value`.
-    Destination is in the form of scheme://[user@]host[:port]
-
-    Options: ~
-        {distant.bin}    (string)  path to binary of `distant` on the remote
-                                   machine (default: "distant")
-        {distant.args}   (string)  additional arguments to provide to the
-                                   server during `distant listen`
-                                   (default: "")
-        {distant.use_login_shell}
-                        (boolean)  if true, will spawn the distant server
-                                   using a login shell (default: true)
-        {options}  (string|table)  additional options to provide to the
-                                   handler of the destination in the form of
-                                   `key="value",key2="value2"`. Can also use
-                                   table notation in the form of
-                                   `options.key="value"` (default: "")
-        {timeout}        (number)  maximum time in milliseconds before failing
-                                   (default: settings.max_timeout)
-        {interval}       (number)  approximate time in milliseconds between
-                                   each check to see if the operation completed
-                                   (default: settings.timeout_interval)
-
-    Examples: ~
->
-        :DistantLaunch example.com
-        :DistantLaunch ssh://example.com
-        :DistantLaunch ssh://example.com:2222 distant.bin=/path/to/distant
-<
-
-DistantConnect {destination} {opts}                           *DistantConnect*
-
-    Attempts to connect to a running distant server at the specified
-    destination.
-
-    Will prompt for the secret key used to communicate with the server.
-
-    Options: ~
-        {options}  (string|table)  additional options to provide to the
-                                   handler of the destination in the form of
-                                   `key="value",key2="value2"`. Can also use
-                                   table notation in the form of
-                                   `options.key="value"` (default: "")
-        {timeout}        (number)  maximum time in milliseconds before failing
-                                   (default: settings.max_timeout)
-        {interval}       (number)  approximate time in milliseconds between
-                                   each check to see if the operation completed
-                                   (default: settings.timeout_interval)
-
-    Examples: ~
->
-        :DistantConnect example.com:2222
-        :DistantConnect ssh://example.com:2222
-        :DistantConnect distant://example.com:2222 timeout=5000
-<
-
-DistantInstall [reinstall]                                    *DistantInstall*
-
-    Triggers installation process for the C library.
-
-    If the word "reinstall" appears after `:DistantInstall`, then the
-    installation dialog will appear even if the binary is already installed.
-
-    Examples: ~
->
-        :DistantInstall
-        :DistantInstall reinstall
-<
-
-DistantMetadata {path} {opts}                                *DistantMetadata*
-
-    Presents information about some path on a remote machine.
-
-    The metadata command accepts a path as its first argument and then an
-    optional series of named parameters in the form of `name=value`.
-
-    Options: ~
-        {canonicalize}      (boolean)  if true, includes a canoncalized
-                                       version of the given path in the result
-                                       (default: false)
-        {resolve_file_type} (boolean)  if true, determines the file type of
-                                       symlinks (dir or file) rather than
-                                       returning "symlink" as the file type
-                                       (default: false)
-        {timeout}            (number)  maximum time in milliseconds before
-                                       failing (default: settings.max_timeout)
-        {interval}           (number)  approximate time in milliseconds
-                                       between each check to see if the
-                                       operation completed
-                                       (default: settings.timeout_interval)
-
-    Examples: ~
->
-        :DistantMetadata /path/to/file
-        :DistantMetadata /path/to/file resolve_file_type=true
-<
-
-DistantShell [{cmd} {arg1} {arg2} ...]                          *DistantShell*
-
-    Spawns a new terminal connected to the remote machine. Defaults to using
-    the shell of the user on the remote machine, but can use an alternative
-    command if provided.
-
-    Examples: ~
->
-        :DistantShell
-        :DistantShell /bin/bash -l
-<
-
-DistantSessionInfo                                        *DistantSessionInfo*
-
-    Presents information related to the remote connection.
-
-DistantSystemInfo                                          *DistantSystemInfo*
-
-    Presents information about the remote machine.
-
-DistantClientVersion                                    *DistantClientVersion*
-
-    Prints the version of the `distant` client binary that would be used
-    for establishing connections to a remote machine.
-
-Function commands~
-
-These commands are purely wrappers around existing functions that accept those
-function's arguments as input.
-
-DistantCopy {src} {dst} {opts}                                   *DistantCopy*
-
-    Copies a remote file or directory to another remote location.
-
-    The copy command accepts a src path and dst path as its first two arguments
-    and then an optional series of named parameters in the form of `name=value`.
-
-    Options: ~
-        {timeout}  (number)   maximum time in milliseconds before failing
-                              (default: settings.max_timeout)
-        {interval} (number)   approximate time in milliseconds between each
-                              check to see if the operation completed
-                              (default: settings.timeout_interval)
-
-    Examples: ~
->
-        :DistantCopy /path/to/file /new/path/to/file
-        :DistantCopy /path/to/file /new/path/to/file timeout=500
-<
-
-DistantMkdir {path} {opts}                                      *DistantMkdir*
-
-    Creates a new directory on the remote machine.
-
-    The mkdir command accepts a src path and dst path as its first two
-    arguments and then an optional series of named parameters in the form of
-    `name=value`.
-
-    Options: ~
-        {all}      (boolean)  if true, create all intermediate path components
-                              (default: false)
-        {timeout}   (number)  maximum time in milliseconds before failing
-                              (default: settings.max_timeout)
-        {interval}  (number)  approximate time in milliseconds between each
-                              check to see if the operation completed
-                              (default: settings.timeout_interval)
-
-    Examples: ~
->
-        :DistantMkdir /path/to/dir
-        :DistantMkdir /path/to/dir all=true
-<
-
-DistantRemove {path} {opts}                                    *DistantRemove*
-
-    Removes a remote file, directory, or symlink.
-
-    The remove command accepts a src path and dst path as its first two
-    arguments and then an optional series of named parameters in the form of
-    `name=value`.
-
-    Options: ~
-        {force}    (number)   if true, will remove non-empty directories,
-                              otherwise this function will fail if
-                              encountering non-empty directories
-                              (default: false)
-        {timeout}  (number)   maximum time in milliseconds before failing
-                              (default: settings.max_timeout)
-        {interval} (number)   approximate time in milliseconds between each
-                              check to see if the operation completed
-                              (default: settings.timeout_interval)
-
-    Examples: ~
->
-        :DistantRemove /path/to/file
-        :DistantRemove /path/to/dir force=true
-<
-
-DistantRename {src} {dst} {opts}                               *DistantRename*
-
-    Renames a remote file, directory, or symlink.
-
-    The rename command accepts a src path and dst path as its first two
-    arguments and then an optional series of named parameters in the form of
-    `name=value`.
-
-    Options: ~
-        {timeout}  (number)   maximum time in milliseconds before failing
-                              (default: settings.max_timeout)
-        {interval} (number)   approximate time in milliseconds between each
-                              check to see if the operation completed
-                              (default: settings.timeout_interval)
-
-    Examples: ~
->
-        :DistantRename /path/to/file /new/path/to/file
-        :DistantRename /path/to/file /new/path/to/file timeout=500
-<
-
-DistantRun {cmd} {arg1} {arg2} ...                                *DistantRun*
-
-    Runs a remote program to completion, returning table of stdout, stderr,
-    and exit code.
-
-    Examples: ~
->
-        :DistantRun echo "hello world"
-        :DistantRun ls -l
-<
-
-DistantSearch {pattern} [ {path} ... ] {opts}                  *DistantSearch*
-
-    Searches using the provided pattern (regular expression) for files within
-    the provided paths. If no path is provided, the current directory of the
-    server is used instead.
-
-    The search command accepts a pattern and optional series of paths as its
-    arguments followed by an optional series of named parameters in the form
-    of `name=value`.
-
-    Options: ~
-        {target}     (string) if 'contents', a file's contents are searched
-                              using the pattern. If 'path', the
-                              file/directory/symlink path is evaluated using
-                              the pattern instead. (default: 'contents')
-        {include}    (string) if provided, will only include matches whose
-                              paths match the given regex
-        {exclude}    (string) if provided, will only include matches whose
-                              paths do not match the given regex
-        {limit}      (number) if provided, will stop after finding N matches
-                              to receive results (default: nil)
-        {pagination} (number) if provided, N matches will be sent at a time,
-                              instead of waiting until the search completes
-                              to receive results (default: nil)
-        {min_depth}  (number) if provided, will start traversing in search of
-                              matches once reaching depth N where 0 is the
-                              provided path, 1 is its children, 2 is its
-                              grandchildren, etc. (default: nil)
-        {max_depth}  (number) if provided, will stop traversing in search of
-                              matches after reaching depth N where 0 is the
-                              provided path, 1 is its children, 2 is its
-                              grandchildren, etc. (default: nil)
-        {timeout}    (number) maximum time in milliseconds before failing
-                              (default: settings.max_timeout)
-        {interval}   (number) approximate time in milliseconds between each
-                              check to see if the operation completed
-                              (default: settings.timeout_interval)
-
-    Examples: ~
->
-        :DistantSearch hello.*
-        :DistantSearch hello.* some/path
-        :DistantSearch hello.* some/path limit=5
-<
-
-==============================================================================
-SETTINGS                                                    *distant-settings*
-
-Engaging with remote machines can require some specific configuration per
-host. To that end, distant.nvim provides the ability to define settings across
-all or individual hosts and supports overriding previously-defined settings.
-
-Defining settings is done by calling `require('distant').setup({opts})`:
->
-  require('distant').setup {
-    -- Any settings defined here are applied to all hosts
-    ['*'] = {},
-
-    -- Any settings defined here are applied only to example.com
-    ['example.com'] = {},
-  }
-<
-
-distant.setup({opts})                                        *distant.setup()*
-
-    Defines the global settings for use with this plugin. Each destination is
-    in the form of [scheme://][username@]host[:port] where the scheme will
-    default to distant if none is provided.
-
-    Parameters: ~
-        {opts}   (string) -> (table)  settings associated with this plugin,
-                                      keyed by destination whose value is
-                                      the associated options for that
-                                      destination (default: {})
-
-    Options: ~
-        {ssh}              (SshOpts)  ssh settings (default: {})
-        {distant}      (DistantOpts)  distant server settings (default: {})
-        {file}            (FileOpts)  settings that apply when editing remote
-                                      files (default: {})
-        {dir}              (DirOpts)  settings that apply when editing remote
-                                      directories (default: {})
-        {lsp}  (string) -> (LspOpts)  settings to use when starting LSP
-                                      instances, where each key is a string
-                                      representing an arbitrary label and
-                                      each value is a collection
-                                      (default: {})
-        {max_timeout}       (number)  maximum time in milliseconds to finish
-                                      requests (default: 15000 aka 15s)
-        {timeout_interval}  (number)  approximate time in milliseconds between
-                                      each check to see if a request has timed
-                                      out (default: 250 aka 0.25s)
-        {poll_interval}     (number)  approximate time in milliseconds between
-                                      each check to see if an async function
-                                      has completed (default: 250 aka 0.25s)
-
-    FileOpts: ~
-        {mappings}           (table)  table of (string) -> (function) that
-                                      is used to create buffer-local key
-                                      bindings within remote file buffers
-                                      from "key" to "function"
-
-    DirOpts: ~
-        {mappings}           (table)  table of (string) -> (function) that
-                                      is used to create buffer-local key
-                                      bindings within remote dir buffers
-                                      from "key" to "function"
-
-    LspOpts: ~
-        {root_dir}          (string)  root directory of the project that
-                                      will be using this language server
-                                      (required)
-        {filetypes}          (table)  list of file types to explicitly
-                                      support by this language server; if
-                                      the list is empty, then all file types
-                                      are supported by this server
-                                      (default: {})
-        {...}      (string) -> (any)  all other settings mirror those found
-                                      in |vim.lsp.start_client|
-
-    SshOpts: ~
-        {user}              (string)  alternative user for connecting to the
-                                      ssh server (default: "<neovim user>")
-        {port}              (number)  port of the ssh server (default: 22)
-
-    DistantOpts: ~
-        {bin}               (string)  path to binary of `distant` on the remote
-                                      machine (default: "distant")
-        {args}              (string)  additional arguments to provide to the
-                                      server during `distant listen`
-                                      (default: "")
-        {use_login_shell}  (boolean)  if true, will spawn the distant server
-                                      using a login shell (default: false)
-
-    Examples: ~
->
-        local actions = require('distant.nav.actions')
-        require('distant').setup {
-          -- Any settings defined here are applied to all hosts
-          ['*'] = {
-            distant = {
-              args = {'--shutdown', 'lonely=60'},
-            },
-            file = {
-              mappings = {
-                ['-']         = actions.up,
-              },
-            },
-            dir = {
-              mappings = {
-                ['<Return>']  = actions.edit,
-                ['-']         = actions.up,
-                ['K']         = actions.mkdir,
-                ['N']         = actions.newfile,
-                ['R']         = actions.rename,
-                ['D']         = actions.remove,
-              }
-            },
-          },
-
-          -- Any settings defined here are applied only to example.com
-          ['example.com'] = {
-            distant = {
-              bin = '/path/to/distant',
-            },
-            lsp = {
-              ['My Rust Project'] = {
-                cmd = { '/path/to/rust-analyzer' },
-                filetypes = { 'rust' },
-                root_dir = '/path/to/project-rs',
-                on_attach = function()
-                  nnoremap('gD', '<CMD>lua vim.lsp.buf.declaration()<CR>')
-                  nnoremap('gd', '<CMD>lua vim.lsp.buf.definition()<CR>')
-                  nnoremap('gh', '<CMD>lua vim.lsp.buf.hover()<CR>')
-                  nnoremap('gi', '<CMD>lua vim.lsp.buf.implementation()<CR>')
-                  nnoremap('gr', '<CMD>lua vim.lsp.buf.references()<CR>')
-                end,
-              },
-            },
-          },
-        }
-<
-
-distant.settings.chip_default()              *distant.settings.chip_default()*
-
-    Returns host-wide settings used by Chip.
-
-    Return: ~
-        {settings}  (table)
-
-    Examples: ~
->
+>lua
+    use {
+      'chipsenkbeil/distant.nvim',
+      branch = 'v0.2',
+      config = function()
         require('distant').setup {
           -- Applies Chip's personal settings to every machine you connect to
           --
           -- 1. Ensures that distant servers terminate with no connections
           -- 2. Provides navigation bindings for remote directories
           -- 3. Provides keybinding to jump into a remote file's parent directory
-          ['*'] = require('distant.settings').chip_default()
+          [''] = require('distant.settings').chip_default()
         }
+      end
+    }
 <
 
-==============================================================================
-NAVIGATION                                                *distant-navigation*
+The above will initialize the plugin with the following:
 
-When using distant.nvim, one of the most common needs is to navigate between
-files and directories. The obvious way to do this is by using the command
-|DistantOpen|, which will load or reopen the appropriate buffer matching the
-file or directory. However, this can get cumbersome to do repeatedly. Luckily,
-this plugin provides another way to navigate around remote machines!
+1. Any spawned distant server will shutdown after 60 seconds of inactivity
+2. Standard keybindings are assigned for remote buffers (described below)
 
-Similar to the experience found using netrw + vim-vinegar or vim-dirvish,
-distant.nvim offers an experience where you can jump into a directory view
-and perform operations such as creating files & directories, renaming files,
-and opening up files within local buffers.
 
-This functionality is made available through `distant.nav.actions`, which
-exposes a series of Lua functions that enable you to navigate and manipulate
-your filesystem. These functions are designed to be assigned to key mappings
-that are placed on remote file and directory buffers.
+WITHIN A FILE
 
-Navigation action functions~
+  Key   Action
+  ----- ------------------------------
+  -     lua distant.nav.actions.up()
 
-distant.nav.actions.edit({opts})                  *distant.nav.actions.edit()*
+WITHIN A DIRECTORY
 
-    Opens the a file or directory, using the path denoted by the line under
-    the cursor.
+  Key        Action
+  ---------- -----------------------------------
+  <Return>   lua distant.nav.actions.edit()
+  -          lua distant.nav.actions.up()
+  K          lua distant.nav.actions.mkdir()
+  N          lua distant.nav.actions.newfile()
+  R          lua distant.nav.actions.rename()
+  D          lua distant.nav.actions.remove()
 
-    1. In the case of a file, it is loaded into a buffer
-    2. In the case of a directory, the navigator enters it
+POST-SETUP
 
-    Parameters: ~
-        {opts}         (table)  options associated with the function
+Run `:DistantInstall` to complete the setup.
 
-    Options: ~
-        {timeout}     (number)  maximum time in milliseconds before failing
-                                (default: settings.max_timeout)
-        {interval}    (number)  approximate time in milliseconds between each
-                                check to see if the operation completed
-                                (default: settings.timeout_interval)
+- For more information on installation, check out `:help distant-installation`
+- For more information on settings, check out `:help distant-settings`
 
-distant.nav.actions.mkdir({opts})                *distant.nav.actions.mkdir()*
 
-    Creates a directory within the current directory.
+GETTING STARTED                         *distant-distant.nvim-getting-started*
 
-    Will do nothing if not in a remote directory buffer.
+In order to operate against a remote machine, we first need to establish a
+connection to it. To do this, we run `:DistantLaunch {host}` where the host
+points to the remote machine and can be an IP address like `127.0.0.1` or a
+domain like `example.com`.
 
-    Parameters: ~
-        {opts}         (table)  options associated with the function
+The launch command will attempt to SSH into the remote machine using port 22 by
+default and start an instance of `distant`
+<https://github.com/chipsenkbeil/distant>.
 
-    Options: ~
-        {path}        (string)  if provided, new path relative to the current
-                                directory for the directory, otherwise will
-                                prompt for path (default: "")
-        {timeout}     (number)  maximum time in milliseconds before failing
-                                (default: settings.max_timeout)
-        {interval}    (number)  approximate time in milliseconds between each
-                                check to see if the operation completed
-                                (default: settings.timeout_interval)
+Once started, all remote operations will be sent to that machine! You can try
+out something simple like displaying a list of files, directories, and symlinks
+by running `:DistantOpen /some/dir`, which will open a dialog that displays all
+of the contents of the specified directory.
 
-distant.nav.actions.newfile({opts})            *distant.nav.actions.newfile()*
 
-    Creates a new file in the current directory.
+DOCUMENTATION                             *distant-distant.nvim-documentation*
 
-    Will do nothing if not in a remote directory buffer.
+For more details on available functions, settings, commands, and more, please
+check out the vim help documentation via `:help distant.txt` <doc/distant.txt>.
 
-    Parameters: ~
-        {opts}         (table)  options associated with the function
 
-    Options: ~
-        {path}        (string)  if provided, new path relative to the current
-                                directory for the file, otherwise will prompt
-                                for path (default: "")
-        {timeout}     (number)  maximum time in milliseconds before failing
-                                (default: settings.max_timeout)
-        {interval}    (number)  approximate time in milliseconds between each
-                                check to see if the operation completed
-                                (default: settings.timeout_interval)
+DEMO                                               *distant-distant.nvim-demo*
 
-distant.nav.actions.rename({opts})              *distant.nav.actions.rename()*
 
-    Renames a file or directory within the current directory.
+INTRO VIDEO ~
 
-    Selects the path denoted by the line under the cursor. Will do nothing if
-    not in a remote directory buffer.
+Demonstrates using distant.nvim to edit files and use a language server on a
+remote machine.
 
-    Parameters: ~
-        {opts}         (table)  options associated with the function
+<https://www.youtube.com/watch?v=BuW2b1Ii0RI>
 
-    Options: ~
-        {path}        (string)  if provided, new path for the file or
-                                directory, otherwise will prompt for path
-                                (default: "")
-        {timeout}     (number)  maximum time in milliseconds before failing
-                                (default: settings.max_timeout)
-        {interval}    (number)  approximate time in milliseconds between each
-                                check to see if the operation completed
-                                (default: settings.timeout_interval)
 
-distant.nav.actions.remove({opts})              *distant.nav.actions.remove()*
+V0.1.0 UPDATE ~
 
-    Removes a file or directory within the current directory.
+Demonstrates the new release of distant.nvim (v0.1.0) leveraging distant’s
+new lua module (v0.15.0). Main highlights include:
 
-    Selects the path denoted by the line under the cursor. Will do nothing if
-    not in a remote directory buffer.
+- integrated ssh authentication
+- ssh mode
+- refactored and simplified vim & Lua APIs
+- complete help documentation
 
-    Parameters: ~
-        {opts}         (table)  options associated with the function
+<https://www.youtube.com/watch?v=wVAsbpByQ3o>
 
-    Options: ~
-        {force}      (boolean)  if true, will remove directories that are not
-                                empty (default: false)
-        {no_prompt}  (boolean)  if true, will not prompt before removing
-                                (default: false)
-        {timeout}     (number)  maximum time in milliseconds before failing
-                                (default: settings.max_timeout)
-        {interval}    (number)  approximate time in milliseconds between each
-                                check to see if the operation completed
-                                (default: settings.timeout_interval)
 
-distant.nav.actions.up({opts})                      *distant.nav.actions.up()*
+LICENSE                                         *distant-distant.nvim-license*
 
-    Moves up to the parent directory of the current file or directory.
+This project is licensed under either of
 
-    Will do nothing if not in a remote buffer.
-
-    Parameters: ~
-        {opts}         (table)  options associated with the function
-
-    Options: ~
-        {reload}     (boolean)  if true, will perform a network request to
-                                reload the file or directory even if it is
-                                already loaded into a buffer
-                                (default: false)
-        {timeout}     (number)  maximum time in milliseconds before failing
-                                (default: settings.max_timeout)
-        {interval}    (number)  approximate time in milliseconds between each
-                                check to see if the operation completed
-                                (default: settings.timeout_interval)
+Apache License, Version 2.0, (LICENSE-APACHE or apache-license
+<http://www.apache.org/licenses/LICENSE-2.0>) MIT license (LICENSE-MIT or
+mit-license <http://opensource.org/licenses/MIT>) at your option.
 
 ==============================================================================
-LUA API                                                      *distant-lua-api*
+2. Links                                                       *distant-links*
 
-Blocking Functions~
+1. *CI*: https://github.com/chipsenkbeil/distant.nvim/actions/workflows/ci.yml/badge.svg
+2. *Intro Video*: https://img.youtube.com/vi/BuW2b1Ii0RI/0.jpg
+3. *v0.1.0 update*: https://img.youtube.com/vi/wVAsbpByQ3o/0.jpg
 
-Synchronous functions are available that perform the given operation in a
-blocking fashion. Each function takes a single argument, which is a table
-containing the arguments relevant for the function. Each function returns two
-values: err being a string or false, and result being the results of the
-function call if it has any (like file text).
+Generated by panvimdoc <https://github.com/kdheepak/panvimdoc>
 
->
-  local fn = require('distant.fn')
-
-  local err, text = fn.read_file_text({path = 'path/to/file'})
-  if err then
-    vim.api.nvim_err_writeln(err)
-    return
-  end
-
-  print('Read file contents', text)
-<
-
-Asynchronous Functions~
-
-Every blocking function can also be called in a non-blocking fashion. This is
-done by supplying a callback function as the last argument.
-
->
-  local fn = require('distant.fn')
-
-  fn.read_file_text({path = 'path/to/file'}, function(err, text)
-    if err then
-      vim.api.nvim_err_writeln(err)
-      return
-    end
-
-    print('Read file contents', text)
-  end)
-<
-
-distant.fn.append_file({opts}, {cb})                *distant.fn.append_file()*
-
-    Appends binary data to a remote file.
-
-    Parameters: ~
-        {opts}      (table)   options associated with the function
-        {cb}     (function)   callback used with async invocation (optional)
-
-    Options: ~
-        {path}     (string)   path to the file on the remote machine
-        {data}      (table)   data as a list of bytes to append to the file
-        {timeout}  (number)   maximum time in milliseconds before failing
-                              (default: settings.max_timeout)
-        {interval} (number)   approximate time in milliseconds between each
-                              check to see if the operation completed
-                              (default: settings.timeout_interval)
-
-    Return: ~
-        {err}  (string|nil)   returns an error if it occurs (synchronous only)
-
-distant.fn.append_file_text({opts}, {cb})        *distant.fn.append_file_text*
-
-    Appends text to a remote file.
-
-    Parameters: ~
-        {opts}      (table)   options associated with the function
-        {cb}     (function)   callback used with async invocation (optional)
-
-    Options: ~
-        {path}     (string)   path to the file on the remote machine
-        {text}     (string)   text to append to the file
-        {timeout}  (number)   maximum time in milliseconds before failing
-                              (default: settings.max_timeout)
-        {interval} (number)   approximate time in milliseconds between each
-                              check to see if the operation completed
-                              (default: settings.timeout_interval)
-
-    Return: ~
-        {err}  (string|nil)   returns an error if it occurs (synchronous only)
-
-distant.fn.copy({opts}, {cb})                                *distant.fn.copy*
-
-    Copies a remote file or directory to another remote location.
-
-    Parameters: ~
-        {opts}      (table)   options associated with the function
-        {cb}     (function)   callback used with async invocation (optional)
-
-    Options: ~
-        {src}      (string)   path to the existing file on the remote machine
-        {dst}      (string)   path to where to copy the file to on the
-                              remote machine
-        {timeout}  (number)   maximum time in milliseconds before failing
-                              (default: settings.max_timeout)
-        {interval} (number)   approximate time in milliseconds between each
-                              check to see if the operation completed
-                              (default: settings.timeout_interval)
-
-    Return: ~
-        {err}  (string|nil)   returns an error if it occurs (synchronous only)
-
-distant.fn.create_dir({opts}, {cb})                    *distant.fn.create_dir*
-
-    Creates a new directory on the remote machine.
-
-    Parameters: ~
-        {opts}       (table)  options associated with the function
-        {cb}      (function)  callback used with async invocation (optional)
-
-    Options: ~
-        {path}      (string)  path where the directory will be created
-        {all}      (boolean)  if true, create all intermediate path components
-                              (default: false)
-        {timeout}   (number)  maximum time in milliseconds before failing
-                              (default: settings.max_timeout)
-        {interval}  (number)  approximate time in milliseconds between each
-                              check to see if the operation completed
-                              (default: settings.timeout_interval)
-
-    Return: ~
-        {err}   (string|nil)  returns an error if it occurs (synchronous only)
-
-distant.fn.exists({opts}, {cb})                            *distant.fn.exists*
-
-    Determines whether or not the path exists on the remote machine.
-
-    Parameters: ~
-        {opts}      (table)   options associated with the function
-        {cb}     (function)   callback used with async invocation (optional)
-
-    Options: ~
-        {path}     (string)   path to check if it exists
-        {timeout}  (number)   maximum time in milliseconds before failing
-                              (default: settings.max_timeout)
-        {interval} (number)   approximate time in milliseconds between each
-                              check to see if the operation completed
-                              (default: settings.timeout_interval)
-
-    Return: ~
-        {err}  (string|nil)   an error if it occurs (synchronous only)
-        {res} (boolean|nil)   true/false indicator of whether or not the path
-                              exists on the remote machine (synchronous only)
-
-distant.fn.metadata({opts}, {cb})                        *distant.fn.metadata*
-
-    Retrieves metadata about a remote file, directory, or symlink.
-
-    Parameters: ~
-        {opts}                (table)  options associated with the function
-        {cb}               (function)  callback used with async invocation
-                                       (optional)
-
-    Options: ~
-        {path}               (string)  path to file, directory, or symlink
-                                       whose metadata to retrieve
-        {canonicalize}      (boolean)  if true, includes a canoncalized
-                                       version of the given path in the result
-                                       (default: false)
-        {resolve_file_type} (boolean)  if true, determines the file type of
-                                       symlinks (dir or file) rather than
-                                       returning "symlink" as the file type
-                                       (default: false)
-        {timeout}            (number)  maximum time in milliseconds before
-                                       failing (default: settings.max_timeout)
-        {interval}           (number)  approximate time in milliseconds
-                                       between each check to see if the
-                                       operation completed
-                                       (default: settings.timeout_interval)
-
-    Return: ~
-        {err}            (string|nil)  an error if it occurs (synchronous only)
-        {res}          (Metadata|nil)  table of metadata (synchronous only)
-
-    Metadata: ~
-        {canonicalized_path} 
-                         (string|nil)  canonicalized path to the file or
-                                       directory, resolving symlinks, only
-                                       included if canonicalize = true
-        {file_type}          (string)  type of entry as one of file, dir,
-                                       or symlink
-        {len}                (number)  size of the file, directory, or
-                                       symlink in bytes (will be 0 if unknown)
-        {readonly}          (boolean)  whether or not the file, directory,
-                                       or symlink is marked as unwriteable
-        {accessed}       (number|nil)  last time (in milliseconds) when
-                                       the file, directory, or symlink was
-                                       accessed
-        {created}        (number|nil)  time (in milliseconds) when the
-                                       file, directory, or symlink was
-                                       created
-        {modified}       (number|nil)  last time (in milliseconds) when
-                                       the file, directory, or symlink was
-                                       modified
-
-distant.fn.read_dir({opts}, {cb})                        *distant.fn.read_dir*
-
-    Lists remote files & directories for the given path on the remote machine.
-
-    Parameters: ~
-        {opts}            (table)  options associated with the function
-        {cb}           (function)  callback used with async invocation 
-                                   (optional)
-
-    Options: ~
-        {path}           (string)  path to the directory on the remote machine
-        {depth}          (number)  maximum depth to traverse with 0 indicating
-                                   there is no maximum depth and 1 indicating
-                                   the most immediate children within the
-                                   directory (default: 1)
-        {absolute}      (boolean)  whether or not to return absolute or
-                                   relative paths (default: false)
-        {canonicalize}  (boolean)  whether or not to canonicalize the
-                                   resulting paths, meaning returning the
-                                   canonical, absolute form of a path with
-                                   all intermediate components normalized
-                                   and symbolic links resolved. Note that
-                                   the flag absolute must be true to have
-                                   absolute paths returned, even if
-                                   canonicalize is flagged as true
-                                   (default: false)
-        {include_root}  (boolean)  whether or not to include the root
-                                   directory in the retrieved entries. If
-                                   included, the root directory will also
-                                   be a canonicalized, absolute path and
-                                   will not follow any of the other flags
-                                   (default: false)
-        {timeout}        (number)  maximum time in milliseconds before
-                                   failing (default: settings.max_timeout)
-        {interval}       (number)  approximate time in milliseconds
-                                   between each check to see if the
-                                   operation completed
-                                   (default: settings.timeout_interval)
-
-    Return: ~
-        {err}        (string|nil)  an error if it occurs (synchronous only)
-        {res}  
-           (EntriesAndErrors|nil)  table of entries & errors (synchronous only)
-
-    EntriesAndErrors: ~
-        {entries}         (table)  list of entries within the directory
-        {errors}         (string)  list of errors that occurred during
-                                   traversal
-
-    Entry: ~
-        {path}           (string)  path to the entry, which will be relative to
-                                   the input directory unless {absolute} is
-                                   true or {canonicalize} is true and the
-                                   path would appear outside the input
-                                   directory as a result
-        {file_type}      (string)  type of entry as one of file, dir, or symlink
-        {depth}          (number)  depth of the entry, 0 being the directory
-                                   itself, 1 being the immediate children, etc.
-
-distant.fn.read_file({opts}, {cb})                      *distant.fn.read_file*
-
-    Reads a remote file, returning its content as a list of bytes.
-
-    Parameters: ~
-        {opts}      (table)   options associated with the function
-        {cb}     (function)   callback used with async invocation (optional)
-
-    Options: ~
-        {path}     (string)   path to the file to read
-        {timeout}  (number)   maximum time in milliseconds before failing
-                              (default: settings.max_timeout)
-        {interval} (number)   approximate time in milliseconds between each
-                              check to see if the operation completed
-                              (default: settings.timeout_interval)
-
-    Return: ~
-        {err}  (string|nil)   an error if it occurs (synchronous only)
-        {res}   (table|nil)   list of bytes representing file contents
-                              (synchronous only)
-
-distant.fn.read_file_text({opts}, {cb})            *distant.fn.read_file_text*
-
-    Reads a remote file, returning its content as text.
-
-    Parameters: ~
-        {opts}      (table)   options associated with the function
-        {cb}     (function)   callback used with async invocation (optional)
-
-    Options: ~
-        {path}     (string)   path to the file to read
-        {timeout}  (number)   maximum time in milliseconds before failing
-                              (default: settings.max_timeout)
-        {interval} (number)   approximate time in milliseconds between each
-                              check to see if the operation completed
-                              (default: settings.timeout_interval)
-
-    Return: ~
-        {err}  (string|nil)   an error if it occurs (synchronous only)
-        {res}  (string|nil)   string representing file contents
-                              (synchronous only)
-
-distant.fn.remove({opts}, {cb})                            *distant.fn.remove*
-
-    Removes a remote file, directory, or symlink.
-
-    Parameters: ~
-        {opts}      (table)   options associated with the function
-        {cb}     (function)   callback used with async invocation (optional)
-
-    Options: ~
-        {path}     (string)   path to the file, directory, or symlink to
-                              remove on a remote machine
-        {force}    (number)   if true, will remove non-empty directories,
-                              otherwise this function will fail if
-                              encountering non-empty directories
-                              (default: false)
-        {timeout}  (number)   maximum time in milliseconds before failing
-                              (default: settings.max_timeout)
-        {interval} (number)   approximate time in milliseconds between each
-                              check to see if the operation completed
-                              (default: settings.timeout_interval)
-
-    Return: ~
-        {err}  (string|nil)   an error if it occurs (synchronous only)
-
-distant.fn.rename({opts}, {cb})                            *distant.fn.rename*
-
-    Renames a remote file, directory, or symlink.
-
-    Parameters: ~
-        {opts}      (table)   options associated with the function
-        {cb}     (function)   callback used with async invocation (optional)
-
-    Options: ~
-        {src}      (string)   path to the file, directory, or symlink to
-                              rename on a remote machine
-        {dst}      (string)   path to the new location for the file,
-                              directory, or symlink on a remote machine
-        {timeout}  (number)   maximum time in milliseconds before failing
-                              (default: settings.max_timeout)
-        {interval} (number)   approximate time in milliseconds between each
-                              check to see if the operation completed
-                              (default: settings.timeout_interval)
-
-    Return: ~
-        {err}  (string|nil)   an error if it occurs (synchronous only)
-
-distant.fn.spawn({opts}, {cb})                              *distant.fn.spawn*
-
-    Starts a process, returning it to support writing stdin and reading
-    stdout and stderr.
-
-    Parameters: ~
-        {opts}            (table)  options associated with the function
-        {cb}           (function)  callback used with async invocation
-                                   (optional)
-
-    Options: ~
-        {cmd}            (string)  path to binary to execute on remote machine
-        {args}     (string|table)  arguments to provide to {cmd}
-        {detached}      (boolean)  if true, process is not killed if client
-                                   disconnects from distant server 
-                                   (default: false)
-        {timeout}        (number)  maximum time in milliseconds before failing
-                                   (default: settings.max_timeout)
-        {interval}       (number)  approximate time in milliseconds between
-                                   each check to see if the operation completed
-                                   (default: settings.timeout_interval)
-
-    Return: ~
-        {err}        (string|nil)  an error if it occurs (synchronous only)
-        {res}       (Process|nil)  result containing pointer to
-                                   actively-running process on remote machine
-                                   (synchronous only)
-
-    Process: ~
-        {id}             (number)  id associated with process (not pid)
-        {is_active}    (function)  returns true if process still running
-        {close_stdin}  (function)  closes stdin of remote process
-        {write_stdin}  (function)  writes text to stdin of remote process,
-                                   taking optional callback as second arg
-                                   to return asynchronously when finished,
-                                   otherwise acts as a blocking function
-                                   returning err if failed
-        {read_stdout}  (function)  reads text from stdout of remote process,
-                                   taking optional callback as second arg
-                                   to return asynchronously when finished,
-                                   otherwise acts as a blocking function,
-                                   returning (err, text) where err is
-                                   string|nil and text is string|nil
-        {read_stderr}  (function)  reads text from stderr of remote process,
-                                   taking optional callback as second arg
-                                   to return asynchronously when finished,
-                                   otherwise acts as a blocking function,
-                                   returning (err, text) where err is
-                                   string|nil and text is string|nil
-        {wait}         (function)  consumes process reference to wait for
-                                   the process to complete and yield its
-                                   output, taking an optional callback
-                                   to return asynchronously when finished,
-                                   yielding (err, output) where err is
-                                   string|nil and output is Output|nil
-        {kill}         (function)  sends a kill request to the remote process,
-                                   taking optional callback to return
-                                   asynchronously when finished, otherwise
-                                   acts as a blocking function returning err
-                                   where err is string|nil
-        {abort}        (function)  aborts the process locally, meaning that
-                                   the connection to the process is severed
-
-    Output: ~
-        {success}       (boolean)  true if process exited successfully
-        {exit_code}  (number|nil)  exit code if available
-        {stdout}         (string)  collected stdout from process execution
-        {stderr}         (string)  collected stderr from process execution
-
-distant.fn.spawn_wait({opts}, {cb})                    *distant.fn.spawn_wait*
-
-    Runs a remote program to completion, returning table of stdout, stderr,
-    and exit code.
-
-    Parameters: ~
-        {opts}            (table)  options associated with the function
-        {cb}           (function)  callback used with async invocation
-                                   (optional)
-
-    Options: ~
-        {cmd}            (string)  path to binary to execute on remote machine
-        {args}     (string|table)  arguments to provide to {cmd}
-        {detached}      (boolean)  if true, process is not killed if client
-                                   disconnects from distant server 
-                                   (default: false)
-        {timeout}        (number)  maximum time in milliseconds before failing
-                                   (default: settings.max_timeout)
-        {interval}       (number)  approximate time in milliseconds between
-                                   each check to see if the operation completed
-                                   (default: settings.timeout_interval)
-
-    Return: ~
-        {err}        (string|nil)  an error if it occurs (synchronous only)
-        {res}        (Output|nil)  result containing execution results such as
-                                   exit code and stdout (synchronous only)
-
-    Output: ~
-        {success}       (boolean)  true if process exited successfully
-        {exit_code}  (number|nil)  exit code if available
-        {stdout}         (string)  collected stdout from process execution
-        {stderr}         (string)  collected stderr from process execution
-
-distant.fn.system_info({opts}, {cb})                  *distant.fn.system_info*
-
-    Retrieves information about the remote machine such as its os name and
-    arch.
-
-    Parameters: ~
-        {opts}             (table)  options associated with the function
-        {cb}            (function)  callback used with async invocation
-                                    (optional)
-
-    Options: ~
-        {timeout}         (number)  maximum time in milliseconds before failing
-                                    (default: settings.max_timeout)
-        {interval}        (number)  approximate time in milliseconds between
-                                    each check to see if the operation
-                                    completed
-                                    (default: settings.timeout_interval)
-
-    Return: ~
-        {err}         (string|nil)  an error if it occurs (synchronous only)
-        {res}     (SystemInfo|nil)  result containing system information
-                                    (synchronous only)
-
-    SystemInfo: ~
-        {family}          (string)  family of the operating system
-        {os}              (string)  name of the specific operating system
-        {arch}            (string)  architecture of the CPU
-        {current_dir}     (string)  current working directory of the running
-                                    server process
-        {main_separator}  (string)  primary separator for path components for
-                                    the current platform
-
-distant.fn.write_file({opts}, {cb})                    *distant.fn.write_file*
-
-    Writes list of bytes to a remote file.
-
-    Parameters: ~
-        {opts}      (table)   options associated with the function
-        {cb}     (function)   callback used with async invocation (optional)
-
-    Options: ~
-        {path}     (string)   path to the remote file
-        {data}      (table)   list of bytes to write to the remote file
-        {timeout}  (number)   maximum time in milliseconds before failing
-                              (default: settings.max_timeout)
-        {interval} (number)   approximate time in milliseconds between each
-                              check to see if the operation completed
-                              (default: settings.timeout_interval)
-
-    Return: ~
-        {err}  (string|nil)   an error if it occurs (synchronous only)
-
-distant.fn.write_file_text({opts}, {cb})          *distant.fn.write_file_text*
-
-    Writes text to a remote file.
-
-    Parameters: ~
-        {opts}      (table)   options associated with the function
-        {cb}     (function)   callback used with async invocation (optional)
-
-    Options: ~
-        {path}     (string)   path to the remote file
-        {text}     (string)   text to write to the remote file
-        {timeout}  (number)   maximum time in milliseconds before failing
-                              (default: settings.max_timeout)
-        {interval} (number)   approximate time in milliseconds between each
-                              check to see if the operation completed
-                              (default: settings.timeout_interval)
-
-    Return: ~
-        {err}  (string|nil)   an error if it occurs (synchronous only)
-
-==============================================================================
-EXTENSIONS                                                *distant-extensions*
-
-Alongside core features available in the plugin, there are also integrations
-into other plugins. Today, distant.nvim supports:
-
-* `telescope.nvim` (https://github.com/nvim-telescope/telescope.nvim)
-
-telescope.nvim~
-
-Traditional searching features are available via `telescope.nvim`. There are
-two ways to trigger the prompt:
-
-Command: ~
->
-        :Telescope distant search
-<
-
-Lua: ~
->
-        lua require('telescope').extensions.distant.search({
-            paths = {'some/dir'},
-            pagination = 1,
-        })
-<
-
-==============================================================================
-FAQ                                                              *distant-faq*
-
-How does this plugin differ from using neovim with sshfs?  *distant-faq-sshfs*
-
-  There are a couple of the primary differences that come to mind:
-
-    1. `Filesystem`: sshfs is built using FUSE, meaning that you need support
-    for it as a userland filesystem. distant.nvim requires no special
-    filesystem as the file contents are only reflected in buffers. Anything
-    you read goes into a buffer and anything you write gets transmitted across
-    the network directly through the distant library.
-
-    2. `Program locations`: distant supports running programs on the remote
-    machine, colocated with your files. Language servers would run on the
-    remote machine, for instance. When using sshfs to mount the remote file
-    system on your local machine, you would then run programs locally and
-    point them to the mounted files.
-
-    With distant, you are leveraging the resources of a remote machine. This
-    can be advantageous if you want to perform CPU or GPU intensive operations
-    without heavily impacting your local machine. With sshfs, you are
-    leveraging the resources of a local machine for programs that you run.
-    Depending on what you're doing, this can be much more expensive.
-
-    If a program needs to access the filesystem frequently, this would
-    transmit a lot of requests over the network, especially if working over a
-    large set of files. With distant, all of the filesystem operations would
-    happen directly on the remote machine and only the program's output would
-    be transmitted over the network.
-
-  There are other technical differences, but the distinctions above are - at
-  the moment - the differences that stand out. In some cases, using sshfs
-  might be preferred, but for my use personally and at work this is the
-  preferred method. :)
-
-  If you want to think of what this more closely relates to, then take a look
-  at VS Code Remote Development or the formerly-active Nuclide project.
-
-==============================================================================
-CHANGELOG                                                  *distant-changelog*
-
-Latest ~
-
-v0.2.0 ~
-
-  * Change `plugin` to use `distant` binary instead of Lua library
-  * Add |DistantShell| command to launch a remote shell
-  * Add |DistantSearch| command to perform a remote search and populate a
-    quickfix list
-  * Add |DistantClientVersion| command to print the version of the client
-  * Change |DistantInstall| parameter from `reload` to `reinstall`
-  * Update minimum `distant` version to `0.19.0`
-  * Change |DistantLaunch| parameters
-    * `external_ssh` -> `ssh_external`
-    * `extra_server_args` -> `distant_args`
-    * `identity_file` -> `ssh_identity_file`
-    * `port` -> `ssh_port`
-    * `username` -> `ssh_username`
-    * `shutdown_after` has been renamed to `shutdown` and supports multiple rules
-  * Update launch and connection functionality to use a destination in the
-    form of `[scheme://][username@]host[:port]` instead of individually
-    providing a host, port, and mode for defining servers
-  * Remove `args` from |distant.fn.spawn_wait| in favor of `cmd` taking
-    all of the arguments as part of the string
-  * Add function `distant.state.client:shell():to_cmd()` that can be used to
-    generate the cli command used to spawn the shell
-
-v0.1.2 ~
-
-  * Add logging initialization for distant lua shared library
-  * Fix `poll_interval` to be properly applied when polling futures
-  * Add |DistantConnect| as new command alternative to |DistantLaunch|
-  * Fix failing to load Rust lua module getting masked by a prompt to
-    install the module when an error is encountered
-
-v0.1.1 ~
-
-  * Fix `ssh.port` usage in |DistantLaunch| not converting from string -> u16
-  * Add print & error output for launch and install command completion
-  * Fix LSP start_client failing as checking for local executable fails for
-    remote binary
-  * Fix settings not getting applied to |DistantLaunch|
-  * Add [reload] parameter to |DistantInstall| to force dialog to appear
-  * Write initial distant.txt documentation
-
-v0.1.0 ~
-
-  * First release of plugin against v0.15.0 of distant binary and Lua module
-
-==============================================================================
-CREDITS                                                      *distant-credits*
-
-Font for logo used at the top of this help doc curtesy of
-https://texteditor.com/ using 3D Blocks font.
-
-==============================================================================
-LICENSE                                                      *distant-license*
-
-This project is licensed under either of Apache License (Version 2.0) or MIT
-license at your option.
-
-vim:tw=78:ts=8:ft=help:norl:
+vim:tw=78:ts=8:noet:ft=help:norl:

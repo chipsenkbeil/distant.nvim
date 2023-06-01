@@ -1,56 +1,52 @@
-local log = require('distant.log')
-local fn = require('distant.fn')
+local log = require('distant-core.log')
+local plugin = require('distant')
 
 local DEFAULT_LIMIT = 10000
 local DISPLAY_LINE_LEN = 40
 
---- @class DistantFinderSettings
+--- @class telescope.distant.finder.Settings
 --- @field minimum_len number #minimum length of input before sending a query
 
---- @class DistantFinder
---- @field query DistantSearchQuery
---- @field settings DistantFinderSettings
---- @field results DistantFinderEntry[]
---- @field __searcher DistantSearcher|nil #active searcher (internal)
-local Finder = {}
-Finder.__index = Finder
+--- @class telescope.distant.Finder
+--- @field query distant.core.api.search.Query
+--- @field settings telescope.distant.finder.Settings
+--- @field results telescope.distant.finder.Entry[]
+--- @field private __searcher? distant.core.api.Searcher #active search (internal)
+local M = {}
+M.__index = M
 
 --- Invoking itself will call the internal `_find` method
-Finder.__call = function(t, ...)
+M.__call = function(t, ...)
     return t:__find(...)
 end
 
---- @class DistantFinderEntry
+--- @class telescope.distant.finder.Entry
 --- @field value any #required, but can be anything
 --- @field ordinal string #text used for filtering
 --- @field display string|function #either the text to display or a function that takes the entry and converts it into a string
---- @field valid boolean|nil #if set to false, the entry will not be displayed by the picker
---- @field filename string|nil #path of file that will be opened (if set)
---- @field bufnr number|nil #buffer that will be opened (if set)
---- @field lnum number|nil #jumps to this line (if set)
---- @field col number|nil #jumps to this column (if set)
+--- @field valid? boolean #if set to false, the entry will not be displayed by the picker
+--- @field filename? string #path of file that will be opened (if set)
+--- @field bufnr? number #buffer that will be opened (if set)
+--- @field lnum? number #jumps to this line (if set)
+--- @field col? number #jumps to this column (if set)
 
---- @param match DistantSearchMatch
---- @return DistantFinderEntry|nil
+--- @param match distant.core.api.search.Match
+--- @return telescope.distant.finder.Entry|nil
 local function make_entry(match)
-    local path_with_scheme = match.path
-    if not vim.startswith(path_with_scheme, 'distant://') then
-        path_with_scheme = 'distant://' .. path_with_scheme
-    end
-
+    local components = plugin.buf.name.parse({ name = match.path })
     local entry = {
         value = match,
         valid = true,
         ordinal = match.path,
         display = match.path,
-        filename = path_with_scheme,
+        filename = 'distant://' .. components.path,
     }
 
     if match.type == 'path' then
         return entry
     elseif match.type == 'contents' then
         -- Skip binary matches
-        if match.lines.type == 'bytes' then
+        if type(match.lines) ~= 'string' then
             return
         end
 
@@ -60,12 +56,15 @@ local function make_entry(match)
             entry.col = match.submatches[1].start + 1
         end
 
+        local lines = match.lines
+        --- @cast lines string
+
         -- :line,col:{LINE}
         local suffix = ':'
             .. entry.lnum .. ','
             .. (entry.col or 1) .. ':'
-            .. match.lines.value:sub(1, DISPLAY_LINE_LEN)
-            .. (#match.lines.value > DISPLAY_LINE_LEN and '...' or '')
+            .. lines:sub(1, DISPLAY_LINE_LEN)
+            .. (#lines > DISPLAY_LINE_LEN and '...' or '')
 
         -- Clean up the text to prevent it being a blob/string buffer
         -- by removing control characters and null (\0) that can appear
@@ -79,14 +78,14 @@ local function make_entry(match)
     end
 end
 
---- @class DistantFinderOpts
---- @field query DistantSearchQuery #query to execute whose results will be captured
---- @field settings DistantFinderSettings|nil
+--- @class telescope.distant.finder.NewOpts
+--- @field query distant.core.api.search.Query #query to execute whose results will be captured
+--- @field settings telescope.distant.finder.Settings|nil
 
---- Creates a new finder that takes
---- @param opts DistantFinderOpts
---- @return DistantFinder
-function Finder:new(opts)
+--- Creates a new finder.
+--- @param opts telescope.distant.finder.NewOpts
+--- @return telescope.distant.Finder
+function M:new(opts)
     opts = opts or {}
 
     assert(opts.query, 'query is required')
@@ -120,8 +119,9 @@ function Finder:new(opts)
     return obj
 end
 
---- Spawns the search task
-function Finder:__find(prompt, process_result, process_complete)
+--- Spawns the search task.
+--- @private
+function M:__find(prompt, process_result, process_complete)
     -- Make sure we aren't already searching by stopping anything running
     self:close(function(err)
         assert(not err, err)
@@ -155,8 +155,11 @@ function Finder:__find(prompt, process_result, process_complete)
             end
         end
 
-        -- On completion, we process dangling results and clear our searcher
-        opts.on_done = function(matches)
+        -- Search using the active client
+        --- @diagnostic disable-next-line:redefined-local
+        local err, searcher = plugin.api.search(opts, function(err, matches)
+            assert(not err, tostring(err))
+
             for _, match in ipairs(matches) do
                 local entry = make_entry(match)
                 table.insert(self.results, entry)
@@ -169,26 +172,27 @@ function Finder:__find(prompt, process_result, process_complete)
 
             process_complete()
             self.__searcher = nil
-        end
-
-        --- @diagnostic disable-next-line:redefined-local
-        fn.search(opts, function(err, searcher)
-            assert(not err, err)
-            self.__searcher = searcher
         end)
+
+        assert(not err, tostring(err))
+        self.__searcher = searcher
     end)
 end
 
---- Cancels the finder's ongoing task
+--- Cancels the finder's ongoing task.
+---
+--- @private
 --- @param cb fun(err:string|nil)
-function Finder:close(cb)
-    cb = cb or function() end
+function M:close(cb)
+    cb = cb or function()
+    end
     self.results = {}
 
-    if self.__searcher ~= nil then
-        if not self.__searcher.done then
-            self.__searcher.cancel(function(err)
-                cb(err)
+    local searcher = self.__searcher
+    if searcher ~= nil then
+        if not searcher:is_done() then
+            searcher:cancel(function(err)
+                cb(tostring(err))
             end)
         else
             cb()
@@ -200,4 +204,4 @@ function Finder:close(cb)
     end
 end
 
-return Finder
+return M

@@ -1,19 +1,23 @@
-local log = require('distant.log')
-local state = require('distant.state')
+local log    = require('distant-core').log
+local plugin = require('distant')
 
---- @class EditorConnectOpts
---- @field destination string
+--- @alias distant.editor.connect.Destination
+--- | string
+--- | distant.core.Destination
+
+--- @class distant.editor.ConnectOpts
+--- @field destination distant.editor.connect.Destination
 ---
---- @field auth AuthHandler|nil
---- @field interval number|nil
---- @field log_level DistantLogLevel|nil
---- @field log_file string|nil
---- @field options string|table<string, any>
---- @field timeout number|nil
+--- @field auth? distant.core.AuthHandler
+--- @field interval? number
+--- @field log_level? 'off'|'error'|'warn'|'info'|'debug'|'trace'
+--- @field log_file? string
+--- @field options? string|table<string, any>
+--- @field timeout? number
 
 --- Connects to a running distance binary on the remote machine
---- @param opts EditorConnectOpts
---- @param cb fun(err:string|nil, client:Client|nil)
+--- @param opts distant.editor.ConnectOpts
+--- @param cb fun(err?:string, client?:distant.core.Client)
 return function(opts, cb)
     opts = opts or {}
     cb = cb or function(err)
@@ -25,13 +29,15 @@ return function(opts, cb)
     log.fmt_trace('editor.connect(%s)', opts)
 
     -- Load settings for the particular host
-    state:load_settings(opts.destination)
-    opts = vim.tbl_deep_extend('keep', opts, state.settings or {})
+    local destination = opts.destination
+    if type(destination) == 'table' then
+        --- @type string
+        destination = destination:as_string()
+    end
 
     -- Connect and update our active client
-    return state:connect({
-        destination = opts.destination,
-
+    return plugin:connect({
+        destination = destination,
         -- User-defined settings
         auth = opts.auth,
         log_file = opts.log_file,

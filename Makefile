@@ -72,8 +72,8 @@ define test_exec
 @nvim \
 	--headless \
 	--noplugin \
-	-u spec/spec.vim \
-	-c "lua require('plenary.test_harness').test_directory('spec/$(1)', {minimal_init='spec/spec.vim'$(if 2,$(COMMA)$(2))})"
+	-u spec/init.lua \
+	-c "lua require('plenary.test_harness').test_directory('spec/$(1)', {minimal_init='spec/init.lua'$(if 2,$(COMMA)$(2))})"
 endef
 
 ###############################################################################
@@ -93,6 +93,9 @@ test: test-unit test-e2e ## Runs all tests in a headless neovim instance on the 
 test-arg: vendor ## Runs all tests for the given custom path (ARG) inside spec/ in a headless neovim instance on the local machine
 	$(call test_exec,$(ARG))
 
+test-arg-seq: vendor ## Runs all tests for the given custom path (ARG) inside spec/ in a headless neovim instance on the local machine (in sequence)
+	$(call test_exec,$(ARG),sequential = true)
+
 test-unit: vendor ## Runs unit tests in a headless neovim instance on the local machine
 	$(call test_exec,unit/)
 
@@ -104,7 +107,7 @@ vendor: vendor/plenary.nvim
 
 # Pulls in the latest version of plenary.nvim, which we use to run our tests
 vendor/plenary.nvim:
-	@git clone https://github.com/nvim-lua/plenary.nvim.git vendor/plenary.nvim || \
+	@git clone --depth 1 https://github.com/nvim-lua/plenary.nvim.git vendor/plenary.nvim || \
 		( cd vendor/plenary.nvim && git pull --rebase; )
 
 clean: ## Cleans out vendor directory

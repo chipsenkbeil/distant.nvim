@@ -1,27 +1,26 @@
-local log = require('distant.log')
-local state = require('distant.state')
+local log    = require('distant-core').log
+local plugin = require('distant')
 
---- @class EditorLaunchOpts
---- @field destination string
+--- @class distant.editor.LaunchOpts
+--- @field destination string|distant.core.Destination
 ---
---- @field auth AuthHandler|nil
---- @field distant EditorLaunchDistantOpts|nil
---- @field interval number|nil
---- @field log_level DistantLogLevel|nil
---- @field log_file string|nil
---- @field options string|table<string, any>
---- @field timeout number|nil
+--- @field auth? distant.core.AuthHandler
+--- @field distant? distant.editor.launch.DistantOpts
+--- @field interval? number
+--- @field log_level? 'off'|'error'|'warn'|'info'|'debug'|'trace'
+--- @field log_file? string
+--- @field options? string|table<string, any>
+--- @field timeout? number
 
---- @class EditorLaunchDistantOpts
---- @field bin string|nil
---- @field args string|nil
---- @field use_login_shell boolean|nil #true by default unless specified as false
+--- @class distant.editor.launch.DistantOpts
+--- @field bin? string
+--- @field args? string|string[]
 
 --- Launches a new instance of the distance binary on the remote machine and sets
 --- up a session so clients are able to communicate with it
 ---
---- @param opts EditorLaunchOpts
---- @param cb fun(err:string|nil, client:Client|nil)
+--- @param opts distant.editor.LaunchOpts
+--- @param cb fun(err?:string, client?:distant.core.Client)
 return function(opts, cb)
     opts = opts or {}
     cb = cb or function(err)
@@ -34,27 +33,20 @@ return function(opts, cb)
 
     -- Load settings for the particular host
     local destination = opts.destination
-    state:load_settings(destination)
-    opts = vim.tbl_deep_extend('keep', opts, state.settings or {})
-
-    -- We want to use a login shell by default unless explicitly told
-    -- not to do so
-    local use_login_shell = true
-    if opts.distant and type(opts.distant.use_login_shell) == 'boolean' then
-        use_login_shell = opts.distant.use_login_shell
+    if type(destination) == 'table' then
+        --- @type string
+        destination = destination:as_string()
     end
 
     -- Create a new client to be used as our active client
-    return state:launch({
-        destination = opts.destination,
-
+    return plugin:launch({
+        destination = destination,
         -- User-defined settings
         auth = opts.auth,
         distant = opts.distant and opts.distant.bin,
         distant_args = opts.distant and opts.distant.args,
         log_file = opts.log_file,
         log_level = opts.log_level,
-        no_shell = not use_login_shell,
         options = opts.options,
         timeout = opts.timeout,
         interval = opts.interval,

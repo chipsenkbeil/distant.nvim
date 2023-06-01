@@ -1,5 +1,5 @@
-local distant = require('telescope._extensions.distant.search')
+local extension = require('telescope._extensions.distant.extension')
 
 return require('telescope').register_extension {
-    exports = distant.pickers,
+    exports = extension.pickers,
 }
