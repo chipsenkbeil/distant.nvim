@@ -366,4 +366,41 @@ M.oneshot_channel = function(timeout, interval)
     return tx, rx
 end
 
+--- Checks whether the object is callable, being a function or implementing __call.
+--- @param x any
+--- @return boolean
+function M.callable(x)
+    if type(x) == 'function' then
+        return true
+    elseif type(x) == 'table' then
+        local mt = getmetatable(x)
+        return type(mt) == 'table' and type(mt.__call) == 'function'
+    else
+        return false
+    end
+end
+
+--- Use with `vim.validate` to check if a function or implements __call.
+---
+--- @param opts? {optional?:boolean}
+--- @return fun(x:any):(boolean, string|nil)
+function M.validate_callable(opts)
+    local optional = (opts or {}).optional == true
+
+    return function(x)
+        local callable = M.callable(x)
+
+        if type(x) == 'nil' and optional then
+            callable = true
+        end
+
+        local msg
+        if not callable then
+            msg = vim.inspect(x) .. ' is not callable'
+        end
+
+        return callable, msg
+    end
+end
+
 return M

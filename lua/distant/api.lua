@@ -22,6 +22,10 @@ local function make_api(client_id)
         return client().api
     end
 
+    --------------------------------------------------------------------------
+    -- CLASS DEFINITION
+    --------------------------------------------------------------------------
+
     --- Interface to use the API methods of the plugin.
     --
     --- Can be called like a function and provided a client id in order to operate
@@ -43,6 +47,10 @@ local function make_api(client_id)
         end
     })
 
+    --------------------------------------------------------------------------
+    -- UTILITY METHODS
+    --------------------------------------------------------------------------
+
     --- Returns whether or not the api is ready for use.
     --- @return boolean
     function M.is_ready()
@@ -54,6 +62,78 @@ local function make_api(client_id)
     function M.client_id()
         return client_id
     end
+
+    --------------------------------------------------------------------------
+    -- BATCH API
+    --------------------------------------------------------------------------
+
+    --- Sends a series of API requests together as a single batch.
+    ---
+    --- * `opts` - list of requests to send as well as specific options that can be passed.
+    --- * `opts.timeout` - maximum time (in milliseconds) to wait for a synchronous response.
+    --- * `opts.interval` - time (in milliseconds) between polls for completion for a synchronous response.
+    ---
+    --- # Synchronous Example
+    ---
+    --- ```lua
+    --- local err, results = api.batch({
+    ---     { type = 'exists', path = '/path/to/file1.txt' },
+    ---     { type = 'exists', path = '/path/to/file2.txt' },
+    ---     { type = 'metadata', path = '/path/to/file3.txt' },
+    ---     { type = 'system_info' },
+    --- })
+    ---
+    --- -- Verify we did not get an error
+    --- assert(not err, tostring(err))
+    ---
+    --- -- { payload = true }
+    --- print(vim.inspect(results[1]))
+    ---
+    --- -- { payload = value = false }
+    --- print(vim.inspect(results[2]))
+    ---
+    --- -- { err = distant.api.Error { .. } }
+    --- print(vim.inspect(results[3]))
+    ---
+    --- -- { payload = { family = 'unix', .. } }
+    --- print(vim.inspect(results[4]))
+    --- ```
+    ---
+    --- # Asynchronous Example
+    ---
+    --- ```lua
+    --- api.batch({
+    ---     { type = 'exists', path = '/path/to/file1.txt' },
+    ---     { type = 'exists', path = '/path/to/file2.txt' },
+    ---     { type = 'metadata', path = '/path/to/file3.txt' },
+    ---     { type = 'system_info' },
+    --- }, function(err, results)
+    ---     assert(not err, tostring(err))
+    ---
+    ---     -- { payload = true }
+    ---     print(vim.inspect(results[1]))
+    ---
+    ---     -- { payload = value = false }
+    ---     print(vim.inspect(results[2]))
+    ---
+    ---     -- { err = distant.api.Error { .. } }
+    ---     print(vim.inspect(results[3]))
+    ---
+    ---     -- { payload = { family = 'unix', .. } }
+    ---     print(vim.inspect(results[4]))
+    --- end)
+    --- ```
+    ---
+    --- @param opts {[number]: table, timeout?:number, interval?:number}
+    --- @param cb? fun(err?:distant.core.api.Error, payload?:{err?:distant.core.api.Error, payload?:table}[])
+    --- @return distant.core.api.Error|nil err, {err?:distant.core.api.Error, payload?:table}[]|nil payload
+    function M.batch(opts, cb)
+        return api():batch(opts, cb)
+    end
+
+    --------------------------------------------------------------------------
+    -- DISTANT API
+    --------------------------------------------------------------------------
 
     --- @param opts distant.core.api.AppendFileOpts
     --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.api.OkPayload)

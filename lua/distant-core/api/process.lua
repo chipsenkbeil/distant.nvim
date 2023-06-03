@@ -76,7 +76,7 @@ function M:handle(payload)
         self.__internal.status.success = success
         self.__internal.status.exit_code = exit_code
 
-        if type(self.__internal.on_done) == 'function' then
+        if self.__internal.on_done and utils.callable(self.__internal.on_done) then
             self.__internal.on_done({
                 success = success,
                 exit_code = exit_code,
@@ -95,7 +95,7 @@ function M:handle(payload)
             log.fmt_warn('Received a "proc_stdout" event with id %s that does not match %s', id, self:id())
         end
 
-        if type(self.__internal.on_stdout) == 'function' then
+        if self.__internal.on_stdout and utils.callable(self.__internal.on_stdout) then
             self.__internal.on_stdout(data)
         else
             for _, byte in ipairs(data) do
@@ -111,7 +111,7 @@ function M:handle(payload)
             log.fmt_warn('Received a "proc_stderr" event with id %s that does not match %s', id, self:id())
         end
 
-        if type(self.__internal.on_stderr) == 'function' then
+        if self.__internal.on_stderr and utils.callable(self.__internal.on_stderr) then
             self.__internal.on_stderr(data)
         else
             for _, byte in ipairs(data) do
@@ -210,7 +210,7 @@ function M:spawn(opts, cb)
     )
 
     self.__internal.on_done = function(results)
-        if type(cb) == 'function' then
+        if cb and utils.callable(cb) then
             cb(nil, results)
         else
             tx({ results = results })
@@ -263,7 +263,7 @@ function M:spawn(opts, cb)
         end,
     }, function(payload)
         if not self:handle(payload) then
-            if type(cb) == 'function' then
+            if cb and utils.callable(cb) then
                 cb(Error:new({
                     kind = Error.kinds.invalid_data,
                     description = 'Invalid response payload: ' .. vim.inspect(payload),
@@ -312,7 +312,7 @@ function M:write_stdin(data, cb)
             table.insert(self.__internal.stdin, byte)
         end
 
-        if type(cb) == 'function' then
+        if cb and utils.callable(cb) then
             return
         else
             return nil, { type = 'ok' }

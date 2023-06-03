@@ -2,6 +2,8 @@ local Cli                  = require('distant-core.cli')
 local utils                = require('distant-core.utils')
 local Version              = require('distant-core.version')
 
+local validate_callable    = utils.validate_callable
+
 -------------------------------------------------------------------------------
 -- CONFIGURATION DEFAULTS
 -------------------------------------------------------------------------------
@@ -49,7 +51,7 @@ end
 --- @param opts QueryReleaseApiOpts
 --- @param cb fun(err?:string, result?:table)
 local function query_release_api(opts, cb)
-    vim.validate({ opts = { opts, 'table' }, cb = { cb, 'function' } })
+    vim.validate({ opts = { opts, 'table' }, cb = { cb, validate_callable() } })
 
     -- Build our query string of ?page=N&per_page=N
     local query = ''
@@ -124,7 +126,7 @@ end
 --- @param opts QueryReleaseListOpts
 --- @param cb fun(err?:string, entries?:ReleaseEntry[])
 local function query_release_list(opts, cb)
-    vim.validate({ opts = { opts, 'table' }, cb = { cb, 'function' } })
+    vim.validate({ opts = { opts, 'table' }, cb = { cb, validate_callable() } })
     if type(opts.asset_name) ~= 'string' then
         error('opts.asset_name is required and must be a string')
     end
@@ -321,7 +323,7 @@ end
 --- @param opts DownloadBinaryOpts
 --- @param cb fun(err?:string, path?:string) #where result is an error message or the binary path
 local function download_binary(opts, cb)
-    vim.validate({ opts = { opts, 'table' }, cb = { cb, 'function' } })
+    vim.validate({ opts = { opts, 'table' }, cb = { cb, validate_callable() } })
 
     --- @type string
     local host_platform = HOST_PLATFORM
@@ -396,7 +398,7 @@ end
 --- @param path? string
 --- @param cb fun(err?:string, path?:string) #where result is an error message or the binary path
 local function copy_binary(path, cb)
-    vim.validate({ path = { path, 'string', true }, cb = { cb, 'function' } })
+    vim.validate({ path = { path, 'string', true }, cb = { cb, validate_callable() } })
 
     if not path then
         path = vim.fn.input('Path to binary: ')
@@ -562,7 +564,7 @@ end
 function M.install(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
-        cb = { cb, 'function' },
+        cb = { cb, validate_callable() },
     })
     opts.reinstall = opts.reinstall == true
 

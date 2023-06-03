@@ -1,4 +1,7 @@
 local log = require('distant-core.log')
+local utils = require('distant-core.utils')
+
+local callable = utils.callable
 
 --- @class distant.core.AuthHandler
 --- @field finished boolean #true if handler has finished performing authentication
@@ -25,43 +28,43 @@ function M:new(opts)
     local instance = {}
     setmetatable(instance, M)
 
-    if type(opts.on_challenge) == 'function' then
+    if opts.on_challenge and callable(opts.on_challenge) then
         instance.on_challenge = function(_, msg)
             return opts.on_challenge(msg)
         end
     end
 
-    if type(opts.on_error) == 'function' then
+    if opts.on_error and callable(opts.on_error) then
         instance.on_error = function(_, msg)
             return opts.on_error(msg)
         end
     end
 
-    if type(opts.on_finished) == 'function' then
+    if opts.on_finished and callable(opts.on_finished) then
         instance.on_finished = function(_)
             return opts.on_finished()
         end
     end
 
-    if type(opts.on_info) == 'function' then
+    if opts.on_info and callable(opts.on_info) then
         instance.on_info = function(_, msg)
             return opts.on_info(msg)
         end
     end
 
-    if type(opts.on_initialization) == 'function' then
+    if opts.on_initialization and callable(opts.on_initialization) then
         instance.on_initialization = function(_, msg)
             return opts.on_initialization(msg)
         end
     end
 
-    if type(opts.on_start_method) == 'function' then
+    if opts.on_start_method and callable(opts.on_start_method) then
         instance.on_start_method = function(_, msg)
             return opts.on_start_method(msg)
         end
     end
 
-    if type(opts.on_verification) == 'function' then
+    if opts.on_verification and callable(opts.on_verification) then
         instance.on_verification = function(_, msg)
             return opts.on_verification(msg)
         end

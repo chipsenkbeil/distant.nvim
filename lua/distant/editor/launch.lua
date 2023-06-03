@@ -1,5 +1,6 @@
-local log    = require('distant-core').log
-local plugin = require('distant')
+local log               = require('distant-core').log
+local plugin            = require('distant')
+local validate_callable = require('distant-core').utils.validate_callable
 
 --- @class distant.editor.LaunchOpts
 --- @field destination string|distant.core.Destination
@@ -28,7 +29,7 @@ return function(opts, cb)
             log.error(err)
         end
     end
-    vim.validate({ opts = { opts, 'table' }, cb = { cb, 'function' } })
+    vim.validate({ opts = { opts, 'table' }, cb = { cb, validate_callable() } })
     log.fmt_trace('editor.launch(%s)', opts)
 
     -- Load settings for the particular host
