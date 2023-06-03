@@ -1,4 +1,3 @@
-local Cli = require('distant-core.cli')
 local plugin = require('distant')
 
 --- DistantClientVersion
@@ -6,7 +5,7 @@ local plugin = require('distant')
 --- @diagnostic disable-next-line:unused-local
 local function command(cmd)
     local version = assert(
-        Cli:new({ bin = plugin:cli_path() }):version(),
+        plugin:cli():version(),
         'Unable to retrieve version'
     )
     print(version)

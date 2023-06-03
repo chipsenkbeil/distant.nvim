@@ -588,7 +588,7 @@ function M.install(opts, cb)
     -- If we are given a minimum version and have a pre-existing binary,
     -- we want to check the version to see if we can return it
     if has_bin and min_version and not opts.reinstall then
-        local version = has_bin and Cli:new({ bin = local_bin }):version()
+        local version = has_bin and Cli:new({ path = local_bin }):version()
         local valid_version = version and min_version:can_upgrade_to(
             version,
             { allow_unstable_upgrade = true }

@@ -3,17 +3,17 @@ local utils   = require('distant-core.utils')
 local Version = require('distant-core.version')
 
 --- @class distant.core.Cli
---- @field bin string #path to the distant cli binary
+--- @field path string #path to the distant cli binary
 local M       = {}
 M.__index     = M
 
 --- Creates a new instance of the cli.
---- @param opts {bin:string}
+--- @param opts {path:string}
 --- @return distant.core.Cli
 function M:new(opts)
     local instance = {}
     setmetatable(instance, M)
-    instance.bin = opts.bin
+    instance.path = opts.path
     return instance
 end
 
@@ -25,7 +25,7 @@ function M:version()
     end
 
     -- Retrieve a raw version string in the form of "distant x.y.z-aaa.bbb"
-    local raw_version = vim.fn.system(self.bin .. ' --version')
+    local raw_version = vim.fn.system(self.path .. ' --version')
     if not raw_version then
         return
     end
@@ -45,7 +45,7 @@ end
 --- Returns true if the binary pointed to is executable.
 --- @return boolean
 function M:is_executable()
-    return vim.fn.executable(self.bin) == 1
+    return vim.fn.executable(self.path) == 1
 end
 
 --- Checks if the cli binary is available on path, and installs the binary if
@@ -59,7 +59,7 @@ end
 --- * `reinstall` indicates that the pre-existing `bin` will be ignored.
 --- * `allow_unstable_upgrade` indicates that we will allow `0.x.x`
 ---
---- @param opts {min_version:distant.core.Version, allow_unstable_upgrade?:boolean, reinstall?:boolean, timeout?:number, interval?:number}
+--- @param opts {min_version:distant.core.Version, reinstall?:boolean, timeout?:number, interval?:number}
 --- @param cb fun(err?:string, path?:string) #Path is the path to the installed binary
 function M:install(opts, cb)
     vim.validate({
@@ -75,11 +75,7 @@ function M:install(opts, cb)
             log.warn('Unable to detect binary version')
             return 'fail-check-version'
         end
-        local ok = version:can_upgrade_from(
-            opts.min_version,
-            { allow_unstable_upgrade = opts.allow_unstable_upgrade }
-        )
-        if ok then
+        if version:compatible(opts.min_version) then
             return 'ok'
         else
             return 'invalid-version'
@@ -89,9 +85,9 @@ function M:install(opts, cb)
     -- If the cli's binary is available, check if it's valid and
     -- if so we can exit
     if self:is_executable() then
-        local status = validate_cli(self.bin)
+        local status = validate_cli(self.path)
         if status == 'ok' then
-            vim.schedule(function() cb(nil, self.bin) end)
+            vim.schedule(function() cb(nil, self.path) end)
             return
         elseif status == 'fail-check-version' then
             vim.schedule(function() cb('Unable to detect binary version', nil) end)
@@ -110,7 +106,7 @@ function M:install(opts, cb)
         else
             local status = validate_cli(path)
             if status == 'ok' then
-                self.bin = path
+                self.path = path
                 cb(nil, path)
             elseif status == 'invalid-version' then
                 cb('Incompatible version detected', nil)
