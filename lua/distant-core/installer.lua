@@ -375,10 +375,7 @@ local function download_binary(opts, cb)
             function(entry) return entry.description end,
             vim.tbl_filter(function(entry)
                 local version = parse_tag_into_version(entry.tag)
-                return not min_version or ((not not version) and min_version:can_upgrade_to(
-                    version,
-                    { allow_unstable_upgrade = true }
-                ))
+                return not min_version or ((not not version) and version:compatible(min_version))
             end, entries)
         )
         local choice = prompt_choices({
@@ -567,7 +564,7 @@ function M.install(opts, cb)
         opts = { opts, 'table' },
         cb = { cb, 'function' },
     })
-    opts.reinstall = not (not opts.reinstall)
+    opts.reinstall = opts.reinstall == true
 
     local local_bin = bin_path()
     local has_bin = vim.fn.executable(local_bin) == 1
@@ -589,10 +586,7 @@ function M.install(opts, cb)
     -- we want to check the version to see if we can return it
     if has_bin and min_version and not opts.reinstall then
         local version = has_bin and Cli:new({ path = local_bin }):version()
-        local valid_version = version and min_version:can_upgrade_to(
-            version,
-            { allow_unstable_upgrade = true }
-        )
+        local valid_version = version and version:compatible(min_version)
 
         if valid_version then
             cb(nil, local_bin)

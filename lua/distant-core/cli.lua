@@ -85,7 +85,7 @@ function M:install(opts, cb)
 
     -- If the cli's binary is available, check if it's valid and
     -- if so we can exit
-    if self:is_executable() then
+    if not opts.reinstall and self:is_executable() then
         local status = validate_cli(self.path)
         if status == 'ok' then
             vim.schedule(function() cb(nil, self.path) end)
