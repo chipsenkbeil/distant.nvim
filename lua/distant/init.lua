@@ -807,71 +807,32 @@ function M:assert_manager()
     return assert(self:manager(), 'Manager is not initialized')
 end
 
---- Looks for a valid cli path, testing the version to make
---- sure that it meets the minimum requirement.
----
---- The path is then cached for future retrievals, although
---- the option `force` can be used to redo the retrieval process.
----
---- If no valid path can be found, `nil` is returned.
----
---- @type fun(plugin:distant.Plugin, opts?:{force?:boolean}):(string|nil)
-local find_valid_cli_path = (function()
-    --- @type string|nil
-    local path
-
-    --- @param path string
-    --- @return boolean
-    local function check_version(path)
-        local version = Cli:new({ path = path }):version()
-        return version and version:compatible(MIN_VERSION) or false
-    end
-
-    --- @param plugin distant.Plugin
-    --- @param opts? {force?:boolean}
-    --- @return string|nil
-    return function(plugin, opts)
-        opts = opts or {}
-
-        -- If we have a cached path and are not forcing, return it
-        if path and not opts.force then
-            return path
-        end
-
-        -- Check if our settings path is valid, and return it
-        path = plugin.settings.client.bin
-        if check_version(path) then
-            return path
-        end
-
-        -- Check if our installer path is valid, and return it
-        path = installer.path()
-        if check_version(path) then
-            return path
-        end
-
-        -- Neither path worked, so clear our cached path
-        -- and return nothing
-        path = nil
-
-        return path
-    end
-end)()
-
 --- Returns a CLI pointing to the appropriate binary.
+---
+--- If no `path` is provided, the path defined in plugin settings will be used.
+---
+--- If that path is not executable and the path was not changed from the default
+--- value, the path managed by the installer will be used instead.
+---
 --- @param opts? {path?:string}
 --- @return distant.core.Cli
 function M:cli(opts)
     opts = opts or {}
-    local path = opts.path or find_valid_cli_path(self)
-    if path then
-        print('path', path)
-        return Cli:new({ path = path })
-    else
-        error(('distant is not available on path or does not meet minimum version of %s'):format(
-            tostring(self.version.cli.min)
-        ))
+
+    -- Use the provided path, or default to the settings path
+    --
+    -- If the settings path is a default value, then we fall
+    -- back to the installer path if the default is not executable
+    local path = opts.path
+    if not path then
+        path = self.settings.client.bin
+        local is_default = path == 'distant' or path == 'distant.exe'
+        if not Cli:new({ path = path }):is_executable() and is_default then
+            path = installer.path()
+        end
     end
+
+    return Cli:new({ path = path })
 end
 
 -------------------------------------------------------------------------------

@@ -11,9 +11,10 @@ M.__index     = M
 --- @param opts {path:string}
 --- @return distant.core.Cli
 function M:new(opts)
+    opts = opts or {}
     local instance = {}
     setmetatable(instance, M)
-    instance.path = opts.path
+    instance.path = assert(opts.path, 'missing path')
     return instance
 end
 
@@ -67,10 +68,10 @@ function M:install(opts, cb)
         cb = { cb, 'function' },
     })
 
-    --- @param bin string #Path to binary
+    --- @param path string #Path to binary
     --- @return 'fail-check-version'|'invalid-version'|'ok'
-    local function validate_cli(bin)
-        local version = M:new({ bin = bin }):version()
+    local function validate_cli(path)
+        local version = M:new({ path = path }):version()
         if not version then
             log.warn('Unable to detect binary version')
             return 'fail-check-version'
