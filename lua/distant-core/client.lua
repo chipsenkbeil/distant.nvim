@@ -1,6 +1,10 @@
-local Api     = require('distant-core.api')
-local builder = require('distant-core.builder')
-local log     = require('distant-core.log')
+local Api               = require('distant-core.api')
+local builder           = require('distant-core.builder')
+local log               = require('distant-core.log')
+local utils             = require('distant-core.utils')
+
+local callable          = utils.callable
+local validate_callable = utils.validate_callable
 
 --- Represents a distant.core.client
 --- @class distant.core.Client
@@ -8,8 +12,8 @@ local log     = require('distant-core.log')
 --- @field api distant.core.Api
 --- @field private config {binary:string, network:distant.core.client.Network}
 --- @field private __state distant.core.client.State
-local M       = {}
-M.__index     = M
+local M                 = {}
+M.__index               = M
 
 --- @class distant.core.client.Network
 --- @field connection distant.core.manager.ConnectionId #id of the connection tied to the client
@@ -71,7 +75,7 @@ end
 function M:cached_system_info(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
-        cb = { cb, 'function', true },
+        cb = { cb, validate_callable({ optional = true }) },
     })
 
     if not opts.reload and self.__state.cache.system_info ~= nil then
@@ -163,7 +167,7 @@ function M:connect_lsp_clients(opts)
                 root_dir = config_root_dir
             elseif type(config_root_dir) == 'table' then
                 root_dir = find(config_root_dir, path_starts_with)
-            elseif type(config_root_dir) == 'function' then
+            elseif config_root_dir and callable(config_root_dir) then
                 root_dir = config_root_dir(path)
             end
 
@@ -188,7 +192,7 @@ function M:connect_lsp_clients(opts)
                                 log.fmt_error('Client terminated: %s', vim.lsp.client_errors[client_id])
                             end
 
-                            if type(config.on_exit) == 'function' then
+                            if config.on_exit and callable(config.on_exit) then
                                 config.on_exit(code, signal, client_id)
                             end
                         end

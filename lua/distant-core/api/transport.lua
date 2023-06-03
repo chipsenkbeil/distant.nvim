@@ -152,7 +152,7 @@ function M:start(cb)
 
         self:stop()
 
-        if type(cb) == 'function' then
+        if cb and utils.callable(cb) then
             vim.schedule(function()
                 cb(status.exit_code)
             end)
@@ -203,7 +203,7 @@ function M:send(opts, cb)
     local payload = opts.payload
 
     -- Asynchronous if cb provided, otherwise synchronous
-    if type(cb) == 'function' then
+    if cb and utils.callable(cb) then
         self:send_async({ payload = payload }, function(res)
             if type(res) == 'table' and res.type == 'error' then
                 if type(res.kind) ~= 'string' or type(res.description) ~= 'string' then

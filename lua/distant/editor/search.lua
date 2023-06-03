@@ -1,5 +1,8 @@
 local plugin             = require('distant')
 local log                = require('distant-core').log
+local utils              = require('distant-core').utils
+
+local callable           = utils.callable
 
 local DEFAULT_PAGINATION = 10
 local MAX_LINE_LEN       = 100
@@ -184,7 +187,7 @@ function M.search(opts, cb)
         match_cnt = match_cnt + #matches
         vim.notify('Search matched ' .. tostring(match_cnt) .. ' times')
 
-        if type(user_on_results) == 'function' then
+        if user_on_results and callable(user_on_results) then
             return user_on_results(matches)
         end
     end
@@ -207,7 +210,7 @@ function M.search(opts, cb)
 
         vim.cmd([[ copen ]])
 
-        if type(user_on_start) == 'function' then
+        if user_on_start and callable(user_on_start) then
             return user_on_start(id)
         end
     end
@@ -235,7 +238,7 @@ function M.search(opts, cb)
         M.__active_search.qfid = nil
         M.__active_search.searcher = nil
 
-        if type(user_on_done) == 'function' then
+        if user_on_done and callable(user_on_done) then
             return user_on_done(err, matches)
         end
     end

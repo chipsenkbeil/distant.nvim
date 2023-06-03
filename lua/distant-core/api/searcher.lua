@@ -1,12 +1,14 @@
-local Error = require('distant-core.api.error')
-local log   = require('distant-core.log')
-local utils = require('distant-core.utils')
+local Error    = require('distant-core.api.error')
+local log      = require('distant-core.log')
+local utils    = require('distant-core.utils')
+
+local callable = utils.callable
 
 --- Represents an active search.
 --- @class distant.core.api.Searcher
 --- @field private __internal distant.core.api.search.Internal
-local M     = {}
-M.__index   = M
+local M        = {}
+M.__index      = M
 
 --- @class distant.core.api.search.Internal
 --- @field id? integer #unsigned 32-bit id, assigned once the search starts
@@ -82,7 +84,7 @@ function M:handle(payload)
         self.__internal.id = id
         self.__internal.status = 'active'
 
-        if type(self.__internal.on_start) == 'function' then
+        if self.__internal.on_start and utils.callable(self.__internal.on_start) then
             self.__internal.on_start(id)
         end
         return true
@@ -108,7 +110,7 @@ function M:handle(payload)
             log.fmt_warn('Received a "search_results" event with id %s that does not match %s', id, self:id())
         end
 
-        if type(self.__internal.on_results) == 'function' then
+        if self.__internal.on_results and utils.callable(self.__internal.on_results) then
             self.__internal.on_results(matches)
         else
             for _, m in ipairs(matches) do
@@ -171,7 +173,7 @@ function M:execute(opts, cb)
             end
         end
 
-        if type(cb) == 'function' then
+        if cb and utils.callable(cb) then
             cb(nil, self.__internal.matches)
         else
             tx({ matches = self.__internal.matches })
@@ -197,7 +199,7 @@ function M:execute(opts, cb)
         end,
     }, function(payload)
         if not self:handle(payload) then
-            if type(cb) == 'function' then
+            if cb and callable(cb) then
                 cb(Error:new({
                     kind = Error.kinds.invalid_data,
                     description = 'Invalid response payload: ' .. vim.inspect(payload)

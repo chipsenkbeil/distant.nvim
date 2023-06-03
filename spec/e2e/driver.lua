@@ -3,6 +3,7 @@ local config = require('spec.e2e.config')
 local Destination = require('distant-core').Destination
 local editor = require('distant.editor')
 local plugin = require('distant')
+local utils = require('distant-core').utils
 
 local Buffer = require('spec.e2e.driver.buffer')
 local LocalFile = require('spec.e2e.driver.local_file')
@@ -10,6 +11,12 @@ local RemoteDir = require('spec.e2e.driver.remote_dir')
 local RemoteFile = require('spec.e2e.driver.remote_file')
 local RemoteSymlink = require('spec.e2e.driver.remote_symlink')
 local Window = require('spec.e2e.driver.window')
+
+--- Used to indicate how long the driver will wait to capture a response.
+local CAPTURE_TIMEOUT = {
+    MAX      = 5000,
+    INTERVAL = 100,
+}
 
 --- @alias spec.e2e.Fixture
 --- | spec.e2e.LocalFile
@@ -279,6 +286,35 @@ end
 --- @return boolean
 function M:is_log_trace_enabled()
     return self.__log_level <= vim.log.levels.TRACE
+end
+
+-------------------------------------------------------------------------------
+-- DRIVER CAPTURE FUNCTIONS
+-------------------------------------------------------------------------------
+
+--- Creates a new capture callback that can be passed to asynchronous functions
+--- that take a callback. The callback also exposes a wait method to wait
+--- for the result.
+---
+--- @generic T
+--- @generic E
+--- @param opts? {timeout?:integer, interval?:integer}
+--- @return {__call:fun(err:E, payload:T), wait:fun():(E, T)}
+function M:new_capture(opts)
+    opts = opts or {}
+    local tx, rx = utils.oneshot_channel(
+        tonumber(opts.timeout) or CAPTURE_TIMEOUT.MAX,
+        tonumber(opts.interval) or CAPTURE_TIMEOUT.INTERVAL
+    )
+
+    local capture = { wait = rx }
+    setmetatable(capture, {
+        __call = function(_, ...)
+            tx(...)
+        end,
+    })
+
+    return capture
 end
 
 -------------------------------------------------------------------------------

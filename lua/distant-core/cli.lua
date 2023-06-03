@@ -1,11 +1,13 @@
-local log     = require('distant-core.log')
-local utils   = require('distant-core.utils')
-local Version = require('distant-core.version')
+local log               = require('distant-core.log')
+local utils             = require('distant-core.utils')
+local Version           = require('distant-core.version')
+
+local validate_callable = utils.validate_callable
 
 --- @class distant.core.Cli
 --- @field path string #path to the distant cli binary
-local M       = {}
-M.__index     = M
+local M                 = {}
+M.__index               = M
 
 --- Creates a new instance of the cli.
 --- @param opts {path:string}
@@ -65,7 +67,7 @@ end
 function M:install(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
-        cb = { cb, 'function' },
+        cb = { cb, validate_callable() },
     })
 
     --- @param path string #Path to binary

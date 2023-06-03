@@ -4,6 +4,10 @@ local Searcher = require('distant-core.api.searcher')
 local Transport = require('distant-core.api.transport')
 
 local log = require('distant-core.log')
+local utils = require('distant-core.utils')
+
+local callable = utils.callable
+local validate_callable = utils.validate_callable
 
 -------------------------------------------------------------------------------
 -- CLASS DEFINITION & CREATION
@@ -223,25 +227,25 @@ local RESPONSE_HANDLERS = {
 ---
 --- ```lua
 --- local err, results = api.batch({
----     { type = 'exists', path = '/path/to/file1.txt },
----     { type = 'exists', path = '/path/to/file2.txt },
----     { type = 'metadata', path = '/path/to/file3.txt },
+---     { type = 'exists', path = '/path/to/file1.txt' },
+---     { type = 'exists', path = '/path/to/file2.txt' },
+---     { type = 'metadata', path = '/path/to/file3.txt' },
 ---     { type = 'system_info' },
 --- })
 ---
 --- -- Verify we did not get an error
 --- assert(not err, tostring(err))
 ---
---- -- { payload = true }
+--- -- { type = 'exists', value = true }
 --- print(vim.inspect(results[1]))
 ---
---- -- { payload = value = false }
+--- -- { type = 'exists', value = false }
 --- print(vim.inspect(results[2]))
 ---
---- -- { err = distant.api.Error { .. } }
+--- -- { type = 'error', kind = '...', description = '...' }
 --- print(vim.inspect(results[3]))
 ---
---- -- { payload = { family = 'unix', .. } }
+--- -- { type = 'system_info', family = 'unix', ... }
 --- print(vim.inspect(results[4]))
 --- ```
 ---
@@ -249,35 +253,34 @@ local RESPONSE_HANDLERS = {
 ---
 --- ```lua
 --- api.batch({
----     { type = 'exists', path = '/path/to/file1.txt },
----     { type = 'exists', path = '/path/to/file2.txt },
----     { type = 'metadata', path = '/path/to/file3.txt },
+---     { type = 'exists', path = '/path/to/file1.txt' },
+---     { type = 'exists', path = '/path/to/file2.txt' },
+---     { type = 'metadata', path = '/path/to/file3.txt' },
 ---     { type = 'system_info' },
 --- }, function(err, results)
 ---     assert(not err, tostring(err))
 ---
----     -- { payload = true }
+---     -- { type = 'exists', value = true }
 ---     print(vim.inspect(results[1]))
 ---
----     -- { payload = value = false }
+---     -- { type = 'exists', value = false }
 ---     print(vim.inspect(results[2]))
 ---
----     -- { err = distant.api.Error { .. } }
+---     -- { type = 'error', kind = '...', description = '...' }
 ---     print(vim.inspect(results[3]))
 ---
----     -- { payload = { family = 'unix', .. } }
+---     -- { type = 'system_info', family = 'unix', ... }
 ---     print(vim.inspect(results[4]))
 --- end)
 --- ```
 ---
---- @generic T: table
 --- @param opts {[number]: table, timeout?:number, interval?:number}
 --- @param cb? fun(err?:distant.core.api.Error, payload?:{err?:distant.core.api.Error, payload?:table}[])
 --- @return distant.core.api.Error|nil err, {err?:distant.core.api.Error, payload?:table}[]|nil payload
 function M:batch(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
-        cb = { cb, 'function', true },
+        cb = { cb, validate_callable({ optional = true }) },
     })
 
     local timeout = opts.timeout
@@ -309,20 +312,19 @@ function M:batch(opts, cb)
             for idx, data in ipairs(payload) do
                 local h = handlers[idx]
                 if data.type == 'error' then
-                    payload[idx] = { err = Error:new(data) }
+                    payload[idx] = data
                 elseif h then
                     if h.verify(data) then
-                        payload[idx] = { payload = h.map(data) }
+                        payload[idx] = data
                     else
                         payload[idx] = {
-                            err = Error:new({
-                                kind = Error.kinds.invalid_data,
-                                description = 'Invalid response payload: ' .. vim.inspect(data),
-                            })
+                            type = 'error',
+                            kind = Error.kinds.invalid_data,
+                            description = 'Invalid response payload: ' .. vim.inspect(data),
                         }
                     end
                 else
-                    payload[idx] = { payload = data }
+                    payload[idx] = data
                 end
             end
 
@@ -344,7 +346,7 @@ end
 function M:append_file(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
-        cb = { cb, 'function', true },
+        cb = { cb, validate_callable({ optional = true }) },
     })
 
     local ty = REQUEST_TYPE.FILE_APPEND
@@ -370,7 +372,7 @@ end
 function M:append_file_text(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
-        cb = { cb, 'function', true },
+        cb = { cb, validate_callable({ optional = true }) },
     })
 
     local ty = REQUEST_TYPE.FILE_APPEND_TEXT
@@ -396,7 +398,7 @@ end
 function M:copy(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
-        cb = { cb, 'function', true },
+        cb = { cb, validate_callable({ optional = true }) },
     })
 
     local ty = REQUEST_TYPE.COPY
@@ -422,7 +424,7 @@ end
 function M:create_dir(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
-        cb = { cb, 'function', true },
+        cb = { cb, validate_callable({ optional = true }) },
     })
 
     local ty = REQUEST_TYPE.DIR_CREATE
@@ -448,7 +450,7 @@ end
 function M:exists(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
-        cb = { cb, 'function', true },
+        cb = { cb, validate_callable({ optional = true }) },
     })
 
     local ty = REQUEST_TYPE.EXISTS
@@ -494,7 +496,7 @@ end
 function M:metadata(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
-        cb = { cb, 'function', true },
+        cb = { cb, validate_callable({ optional = true }) },
     })
 
     local ty = REQUEST_TYPE.METADATA
@@ -539,7 +541,7 @@ end
 function M:read_dir(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
-        cb = { cb, 'function', true },
+        cb = { cb, validate_callable({ optional = true }) },
     })
 
     local ty = REQUEST_TYPE.DIR_READ
@@ -568,7 +570,7 @@ end
 function M:read_file(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
-        cb = { cb, 'function', true },
+        cb = { cb, validate_callable({ optional = true }) },
     })
 
     local ty = REQUEST_TYPE.FILE_READ
@@ -593,7 +595,7 @@ end
 function M:read_file_text(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
-        cb = { cb, 'function', true },
+        cb = { cb, validate_callable({ optional = true }) },
     })
 
     local ty = REQUEST_TYPE.FILE_READ_TEXT
@@ -621,7 +623,7 @@ end
 function M:remove(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
-        cb = { cb, 'function', true },
+        cb = { cb, validate_callable({ optional = true }) },
     })
 
     local ty = REQUEST_TYPE.REMOVE
@@ -647,7 +649,7 @@ end
 function M:rename(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
-        cb = { cb, 'function', true },
+        cb = { cb, validate_callable({ optional = true }) },
     })
 
     local ty = REQUEST_TYPE.RENAME
@@ -679,14 +681,14 @@ end
 function M:search(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
-        cb = { cb, 'function', true },
+        cb = { cb, validate_callable({ optional = true }) },
     })
 
     local searcher = Searcher:new({
         transport = self.transport
     })
 
-    if type(cb) == 'function' then
+    if cb and callable(cb) then
         -- Asynchronous, so we start executing and return the search so it can be canceled
         searcher:execute({
             query = opts.query,
@@ -715,14 +717,14 @@ end
 function M:spawn(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
-        cb = { cb, 'function', true },
+        cb = { cb, validate_callable({ optional = true }) },
     })
 
     local process = Process:new({
         transport = self.transport
     })
 
-    if type(cb) == 'function' then
+    if cb and callable(cb) then
         -- Asynchronous, so we start executing and return the process so it can be
         -- written to, killed, or have its pty resized
         process:spawn(opts, cb)
@@ -751,7 +753,7 @@ end
 function M:system_info(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
-        cb = { cb, 'function', true },
+        cb = { cb, validate_callable({ optional = true }) },
     })
 
     local ty = REQUEST_TYPE.SYSTEM_INFO
@@ -775,7 +777,7 @@ end
 function M:write_file(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
-        cb = { cb, 'function', true },
+        cb = { cb, validate_callable({ optional = true }) },
     })
 
     local ty = REQUEST_TYPE.FILE_WRITE
@@ -801,7 +803,7 @@ end
 function M:write_file_text(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
-        cb = { cb, 'function', true },
+        cb = { cb, validate_callable({ optional = true }) },
     })
 
     local ty = REQUEST_TYPE.FILE_WRITE_TEXT
@@ -868,7 +870,7 @@ end
 function M:watch(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
-        cb = { cb, 'function' },
+        cb = { cb, validate_callable() },
     })
 
     local ty = REQUEST_TYPE.WATCH
@@ -910,7 +912,7 @@ end
 function M:unwatch(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
-        cb = { cb, 'function', true },
+        cb = { cb, validate_callable({ optional = true }) },
     })
 
     local ty = REQUEST_TYPE.UNWATCH
@@ -940,7 +942,7 @@ end
 function M:version(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
-        cb = { cb, 'function', true },
+        cb = { cb, validate_callable({ optional = true }) },
     })
 
     local ty = REQUEST_TYPE.VERSION

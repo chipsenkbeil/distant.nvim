@@ -5,6 +5,8 @@ local Job              = require('distant-core.job')
 local log              = require('distant-core.log')
 local utils            = require('distant-core.utils')
 
+local callable         = utils.callable
+
 local DEFAULT_TIMEOUT  = 1000
 local DEFAULT_INTERVAL = 100
 
@@ -310,7 +312,7 @@ function M:select(opts, cb)
                     current = msg.current,
                     select = function(choice, new_cb)
                         -- Update our cb triggered when process exits to now be the selector's callback
-                        if type(new_cb) == 'function' then
+                        if new_cb and callable(new_cb) then
                             cb = new_cb
                         end
 
@@ -446,7 +448,7 @@ function M:listen(opts, cb)
     job:start({ cmd = cmd }, function(err, status)
         assert(not err, tostring(err))
 
-        if type(cb) == 'function' then
+        if cb and callable(cb) then
             -- If terminated with a signal, this is something odd with neovim
             if status.success or status.signal == Job.signal.SIGTERM then
                 return cb(nil)
