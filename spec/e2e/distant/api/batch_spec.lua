@@ -22,6 +22,7 @@ describe('distant.api.batch', function()
 
             -- Verify we did not get an error
             assert(not err, tostring(err))
+            assert(results)
 
             -- { type = 'system_info', family = 'unix', ... }
             local res = assert(results[1])
@@ -43,6 +44,7 @@ describe('distant.api.batch', function()
 
             -- Verify we did not get an error
             assert(not err, tostring(err))
+            assert(results)
 
             -- { type = 'exists', value = true }
             local res = assert(results[1])
@@ -70,14 +72,21 @@ describe('distant.api.batch', function()
     describe('asynchronous', function()
         it('should support sending a single payload', function()
             local capture = driver:new_capture()
-            plugin.api.batch({
-                { type = 'system_info' },
-            }, capture)
 
+            plugin.api.batch(
+                {
+                    { type = 'system_info' },
+                },
+                --- @diagnostic disable-next-line:param-type-mismatch
+                capture
+            )
+
+            --- @type distant.core.api.Error|nil, distant.core.batch.Response[]|nil
             local err, results = capture.wait()
 
             -- Verify we did not get an error
             assert(not err, tostring(err))
+            assert(results)
 
             -- { type = 'system_info', family = 'unix', ... }
             local res = assert(results[1])
@@ -91,17 +100,23 @@ describe('distant.api.batch', function()
             file:touch()
 
             local capture = driver:new_capture()
-            plugin.api.batch({
-                { type = 'exists',     path = file:path() },
-                { type = 'exists',     path = '/path/to/file.txt' },
-                { type = 'metadata',   path = '/path/to/file.txt' },
-                { type = 'system_info' },
-            }, capture)
+            plugin.api.batch(
+                {
+                    { type = 'exists',     path = file:path() },
+                    { type = 'exists',     path = '/path/to/file.txt' },
+                    { type = 'metadata',   path = '/path/to/file.txt' },
+                    { type = 'system_info' },
+                },
+                --- @diagnostic disable-next-line:param-type-mismatch
+                capture
+            )
 
+            --- @type distant.core.api.Error|nil, distant.core.batch.Response[]|nil
             local err, results = capture.wait()
 
             -- Verify we did not get an error
             assert(not err, tostring(err))
+            assert(results)
 
             -- { type = 'exists', value = true }
             local res = assert(results[1])

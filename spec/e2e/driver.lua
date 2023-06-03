@@ -292,14 +292,16 @@ end
 -- DRIVER CAPTURE FUNCTIONS
 -------------------------------------------------------------------------------
 
+--- @class spec.e2e.Capture
+--- @field wait fun():(...)
+--- @operator call(...):any
+
 --- Creates a new capture callback that can be passed to asynchronous functions
 --- that take a callback. The callback also exposes a wait method to wait
 --- for the result.
 ---
---- @generic T
---- @generic E
 --- @param opts? {timeout?:integer, interval?:integer}
---- @return {__call:fun(err:E, payload:T), wait:fun():(E, T)}
+--- @return spec.e2e.Capture
 function M:new_capture(opts)
     opts = opts or {}
     local tx, rx = utils.oneshot_channel(

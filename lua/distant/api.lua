@@ -125,8 +125,8 @@ local function make_api(client_id)
     --- ```
     ---
     --- @param opts {[number]: table, timeout?:number, interval?:number}
-    --- @param cb? fun(err?:distant.core.api.Error, payload?:{err?:distant.core.api.Error, payload?:table}[])
-    --- @return distant.core.api.Error|nil err, {err?:distant.core.api.Error, payload?:table}[]|nil payload
+    --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.batch.Response[])
+    --- @return distant.core.api.Error|nil err, distant.core.batch.Response[]|nil payload
     function M.batch(opts, cb)
         return api():batch(opts, cb)
     end

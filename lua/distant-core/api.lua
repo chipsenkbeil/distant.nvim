@@ -217,6 +217,10 @@ local RESPONSE_HANDLERS = {
 -- BATCH API
 -------------------------------------------------------------------------------
 
+--- @class distant.core.batch.Response
+--- @field type string
+--- @field [string] any
+
 --- Sends a series of API requests together as a single batch.
 ---
 --- * `opts` - list of requests to send as well as specific options that can be passed.
@@ -275,8 +279,8 @@ local RESPONSE_HANDLERS = {
 --- ```
 ---
 --- @param opts {[number]: table, timeout?:number, interval?:number}
---- @param cb? fun(err?:distant.core.api.Error, payload?:{err?:distant.core.api.Error, payload?:table}[])
---- @return distant.core.api.Error|nil err, {err?:distant.core.api.Error, payload?:table}[]|nil payload
+--- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.batch.Response[])
+--- @return distant.core.api.Error|nil err, distant.core.batch.Response[]|nil payload
 function M:batch(opts, cb)
     vim.validate({
         opts = { opts, 'table' },

@@ -13,26 +13,29 @@ describe('distant.api.system_info', function()
         driver:teardown()
     end)
 
-    it('should report back information about remote machine', function()
-        local err, res = plugin.api.system_info({})
-        assert(not err, tostring(err))
+    describe('synchronous', function()
+        it('should report back information about remote machine', function()
+            local err, res = plugin.api.system_info({})
+            assert(not err, tostring(err))
 
-        -- TODO: Can we verify this any further? We'd need
-        --       to make assumptions about the remote machine
-        assert.is.truthy(res)
+            -- TODO: Can we verify this any further? We'd need
+            --       to make assumptions about the remote machine
+            assert.is.truthy(res)
+        end)
     end)
 
-    it('should support being performed asynchronously', function()
-        local info
-        plugin.api.system_info({}, function(err, res)
-            assert(not err, tostring(err))
-            info = res
-        end)
+    describe('asynchronous', function()
+        it('should report back information about remote machine', function()
+            local capture = driver:new_capture()
+            --- @diagnostic disable-next-line:param-type-mismatch
+            plugin.api.system_info({}, capture)
 
-        local time = 1000 * 5
-        assert(
-            vim.wait(time, function() return info ~= nil end),
-            string.format('System information failed to be retrieved after %.2fs', time / 1000.0)
-        )
+            local err, res = capture.wait()
+            assert(not err, tostring(err))
+
+            -- TODO: Can we verify this any further? We'd need
+            --       to make assumptions about the remote machine
+            assert.is.truthy(res)
+        end)
     end)
 end)

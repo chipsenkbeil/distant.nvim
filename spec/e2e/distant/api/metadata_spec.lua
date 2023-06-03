@@ -14,77 +14,179 @@ describe('distant.api.metadata', function()
         driver:teardown()
     end)
 
-    it('should return metadata for files', function()
-        local file = root:file()
-        assert(file:touch(), 'Failed to create file: ' .. file:path())
+    describe('synchronous', function()
+        it('should return metadata for files', function()
+            local file = root:file()
+            assert(file:touch(), 'Failed to create file: ' .. file:path())
 
-        local err, res = plugin.api.metadata({ path = file:path() })
-        assert(not err, tostring(err))
-        assert(res)
+            local err, res = plugin.api.metadata({ path = file:path() })
+            assert(not err, tostring(err))
+            assert(res)
 
-        assert.are.equal(res.file_type, 'file')
-        assert.is.falsy(res.canonicalized_path)
+            assert.are.equal(res.file_type, 'file')
+            assert.is.falsy(res.canonicalized_path)
+        end)
+
+        it('should return metadata for directories', function()
+            local dir = root:dir()
+            assert(dir:make(), 'Failed to create directory: ' .. dir:path())
+
+            local err, res = plugin.api.metadata({ path = dir:path() })
+            assert(not err, tostring(err))
+            assert(res)
+
+            assert.are.equal(res.file_type, 'dir')
+            assert.is.falsy(res.canonicalized_path)
+        end)
+
+        it('should support metadata for symlinks', function()
+            local file = root:file()
+            assert(file:touch(), 'Failed to create file: ' .. file:path())
+
+            local symlink = root:symlink()
+            assert(symlink:make(file:path()), 'Failed to create symlink: ' .. symlink:path())
+
+            local err, res = plugin.api.metadata({ path = symlink:path() })
+            assert(not err, tostring(err))
+            assert(res)
+
+            assert.are.equal(res.file_type, 'symlink')
+        end)
+
+        it('should support resolving symlinks to underlying type', function()
+            local file = root:file()
+            assert(file:touch(), 'Failed to create file: ' .. file:path())
+
+            local symlink = root:symlink()
+            assert(symlink:make(file:path()), 'Failed to create symlink: ' .. symlink:path())
+
+            local err, res = plugin.api.metadata({ path = symlink:path(), resolve_file_type = true })
+            assert(not err, tostring(err))
+            assert(res)
+
+            assert.are.equal(res.file_type, 'file')
+        end)
+
+        it('should support returning a canonicalized path', function()
+            local file = root:file()
+            assert(file:touch(), 'Failed to create file: ' .. file:path())
+
+            local symlink = root:symlink()
+            assert(symlink:make(file:path()), 'Failed to create symlink: ' .. symlink:path())
+
+            local err, res = plugin.api.metadata({ path = symlink:path(), canonicalize = true })
+            assert(not err, tostring(err))
+            assert(res)
+
+            assert.are.equal(res.file_type, 'symlink')
+            assert.are.equal(res.canonicalized_path, file:canonicalized_path())
+        end)
+
+        it('should fail if the path does not exist', function()
+            local file = root:file()
+            local err, res = plugin.api.metadata({ path = file:path() })
+            assert.is.truthy(err)
+            assert.is_nil(res)
+        end)
     end)
 
-    it('should return metadata for directories', function()
-        local dir = root:dir()
-        assert(dir:make(), 'Failed to create directory: ' .. dir:path())
+    describe('asynchronous', function()
+        it('should return metadata for files', function()
+            local file = root:file()
+            assert(file:touch(), 'Failed to create file: ' .. file:path())
 
-        local err, res = plugin.api.metadata({ path = dir:path() })
-        assert(not err, tostring(err))
-        assert(res)
+            local capture = driver:new_capture()
+            --- @diagnostic disable-next-line:param-type-mismatch
+            plugin.api.metadata({ path = file:path() }, capture)
 
-        assert.are.equal(res.file_type, 'dir')
-        assert.is.falsy(res.canonicalized_path)
-    end)
+            local err, res = capture.wait()
+            assert(not err, tostring(err))
+            assert(res)
 
-    it('should support metadata for symlinks', function()
-        local file = root:file()
-        assert(file:touch(), 'Failed to create file: ' .. file:path())
+            assert.are.equal(res.file_type, 'file')
+            assert.is.falsy(res.canonicalized_path)
+        end)
 
-        local symlink = root:symlink()
-        assert(symlink:make(file:path()), 'Failed to create symlink: ' .. symlink:path())
+        it('should return metadata for directories', function()
+            local dir = root:dir()
+            assert(dir:make(), 'Failed to create directory: ' .. dir:path())
 
-        local err, res = plugin.api.metadata({ path = symlink:path() })
-        assert(not err, tostring(err))
-        assert(res)
+            local capture = driver:new_capture()
+            --- @diagnostic disable-next-line:param-type-mismatch
+            plugin.api.metadata({ path = dir:path() }, capture)
 
-        assert.are.equal(res.file_type, 'symlink')
-    end)
+            local err, res = capture.wait()
+            assert(not err, tostring(err))
+            assert(res)
 
-    it('should support resolving symlinks to underlying type', function()
-        local file = root:file()
-        assert(file:touch(), 'Failed to create file: ' .. file:path())
+            assert.are.equal(res.file_type, 'dir')
+            assert.is.falsy(res.canonicalized_path)
+        end)
 
-        local symlink = root:symlink()
-        assert(symlink:make(file:path()), 'Failed to create symlink: ' .. symlink:path())
+        it('should support metadata for symlinks', function()
+            local file = root:file()
+            assert(file:touch(), 'Failed to create file: ' .. file:path())
 
-        local err, res = plugin.api.metadata({ path = symlink:path(), resolve_file_type = true })
-        assert(not err, tostring(err))
-        assert(res)
+            local symlink = root:symlink()
+            assert(symlink:make(file:path()), 'Failed to create symlink: ' .. symlink:path())
 
-        assert.are.equal(res.file_type, 'file')
-    end)
+            local capture = driver:new_capture()
+            --- @diagnostic disable-next-line:param-type-mismatch
+            plugin.api.metadata({ path = symlink:path() }, capture)
 
-    it('should support returning a canonicalized path', function()
-        local file = root:file()
-        assert(file:touch(), 'Failed to create file: ' .. file:path())
+            local err, res = capture.wait()
+            assert(not err, tostring(err))
+            assert(res)
 
-        local symlink = root:symlink()
-        assert(symlink:make(file:path()), 'Failed to create symlink: ' .. symlink:path())
+            assert.are.equal(res.file_type, 'symlink')
+        end)
 
-        local err, res = plugin.api.metadata({ path = symlink:path(), canonicalize = true })
-        assert(not err, tostring(err))
-        assert(res)
+        it('should support resolving symlinks to underlying type', function()
+            local file = root:file()
+            assert(file:touch(), 'Failed to create file: ' .. file:path())
 
-        assert.are.equal(res.file_type, 'symlink')
-        assert.are.equal(res.canonicalized_path, file:canonicalized_path())
-    end)
+            local symlink = root:symlink()
+            assert(symlink:make(file:path()), 'Failed to create symlink: ' .. symlink:path())
 
-    it('should fail if the path does not exist', function()
-        local file = root:file()
-        local err, res = plugin.api.metadata({ path = file:path() })
-        assert.is.truthy(err)
-        assert.is_nil(res)
+            local capture = driver:new_capture()
+            --- @diagnostic disable-next-line:param-type-mismatch
+            plugin.api.metadata({ path = symlink:path(), resolve_file_type = true }, capture)
+
+            local err, res = capture.wait()
+            assert(not err, tostring(err))
+            assert(res)
+
+            assert.are.equal(res.file_type, 'file')
+        end)
+
+        it('should support returning a canonicalized path', function()
+            local file = root:file()
+            assert(file:touch(), 'Failed to create file: ' .. file:path())
+
+            local symlink = root:symlink()
+            assert(symlink:make(file:path()), 'Failed to create symlink: ' .. symlink:path())
+
+            local capture = driver:new_capture()
+            --- @diagnostic disable-next-line:param-type-mismatch
+            plugin.api.metadata({ path = symlink:path(), canonicalize = true }, capture)
+
+            local err, res = capture.wait()
+            assert(not err, tostring(err))
+            assert(res)
+
+            assert.are.equal(res.file_type, 'symlink')
+            assert.are.equal(res.canonicalized_path, file:canonicalized_path())
+        end)
+
+        it('should fail if the path does not exist', function()
+            local file = root:file()
+            local capture = driver:new_capture()
+            --- @diagnostic disable-next-line:param-type-mismatch
+            plugin.api.metadata({ path = file:path() }, capture)
+
+            local err, res = capture.wait()
+            assert.is.truthy(err)
+            assert.is_nil(res)
+        end)
     end)
 end)
