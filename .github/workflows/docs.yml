@@ -2,8 +2,8 @@ name: CI
 
 on:
   push:
-    branches:
-      - master
+    paths:
+      - 'doc/**.md'
 
 jobs:
   docs:
@@ -14,11 +14,12 @@ jobs:
         uses: kdheepak/panvimdoc@main
         with:
           vimdoc: distant
+          pandoc: doc/distant.md
           version: "Neovim >= 0.8.0"
           demojify: true
           treesitter: true
       - name: Push changes
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          commit_message: "Auto generate docs"
+          commit_message: "chore: autogen (vimdocs)"
           branch: ${{ github.head_ref }}
