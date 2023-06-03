@@ -18,7 +18,7 @@ local DEFAULT        = require('distant.default')
 local MIN_VERSION    = Version:parse('0.20.0-alpha.7')
 
 --- Represents the version of the plugin (not CLI).
-local PLUGIN_VERSION = Version:parse('0.2.0')
+local PLUGIN_VERSION = Version:parse('0.3.0')
 
 --- @class distant.plugin.Version
 --- @field cli {min:distant.core.Version}
@@ -170,6 +170,8 @@ end
 --- @param cb? fun(err?:string, manager?:distant.core.Manager)
 --- @return string|nil err, distant.core.Manager|nil manager
 function M:load_manager(opts, cb)
+    opts = opts or {}
+
     -- Update our opts with default setting values if not overwritten
     local timeout = opts.timeout or self.settings.network.timeout.max
     local interval = opts.interval or self.settings.network.timeout.interval
@@ -182,10 +184,7 @@ function M:load_manager(opts, cb)
     end
 
     if not self.__manager or opts.reload then
-        self:cli(opts):install({
-            min_version = self.version.cli.min,
-            allow_unstable_upgrade = self.settings.client.allow_unstable,
-        }, function(err, path)
+        self:cli({ path = opts.bin }):install({ min_version = self.version.cli.min }, function(err, path)
             if err then
                 return cb(err)
             end
@@ -681,7 +680,7 @@ function M:__setup_manager(opts)
     end
 
     local manager_opts = {
-        binary = opts.binary or self:cli_path(),
+        binary = opts.binary or self:cli().path,
         network = network,
     }
     return Manager:new(manager_opts)
@@ -809,46 +808,31 @@ function M:assert_manager()
 end
 
 --- Returns a CLI pointing to the appropriate binary.
---- @param opts? {bin?:string}
+---
+--- If no `path` is provided, the path defined in plugin settings will be used.
+---
+--- If that path is not executable and the path was not changed from the default
+--- value, the path managed by the installer will be used instead.
+---
+--- @param opts? {path?:string}
 --- @return distant.core.Cli
 function M:cli(opts)
     opts = opts or {}
-    local bin = opts.bin or self:cli_path()
-    return Cli:new({ bin = bin })
-end
 
---- Returns the path to the distant CLI binary, first trying the user-defined
---- settings and falling back to the installer path if the user-defined path
---- is not executable.
----
---- * If `no_install_fallback` is true, the installer path will not be tried when
----   the user-defined path is not executable.
---- * If `require_executable` is true, an error will be thrown if the selected
----   path is not executable.
----
---- @param opts? {no_install_fallback?:boolean, require_executable?:boolean}
---- @return string
-function M:cli_path(opts)
-    opts = opts or {}
-    log.fmt_trace('distant:cli_path(%s)', opts)
-
-    local no_install_fallback = opts.no_install_fallback or false
-
-    -- If we are not given a custom bin path, the settings bin path
-    -- hasn't changed (from distant/distant.exe), and the current
-    -- bin path isn't executable, then check if the install path
-    -- exists and is executable and use it
-    local bin = self.settings.client.bin
-    local is_bin_generic = bin == 'distant' or bin == 'distant.exe'
-    if not no_install_fallback and is_bin_generic and vim.fn.executable(bin) ~= 1 then
-        bin = installer.path()
+    -- Use the provided path, or default to the settings path
+    --
+    -- If the settings path is a default value, then we fall
+    -- back to the installer path if the default is not executable
+    local path = opts.path
+    if not path then
+        path = self.settings.client.bin
+        local is_default = path == 'distant' or path == 'distant.exe'
+        if not Cli:new({ path = path }):is_executable() and is_default then
+            path = installer.path()
+        end
     end
 
-    if opts.require_executable and vim.fn.executable(bin) ~= 1 then
-        error('distant is not available on path')
-    end
-
-    return bin
+    return Cli:new({ path = path })
 end
 
 -------------------------------------------------------------------------------

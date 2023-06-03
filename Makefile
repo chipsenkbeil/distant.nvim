@@ -55,7 +55,7 @@ define docker_exec
 	-e DISTANT_LOG_LEVEL=$(DISTANT_LOG_LEVEL) \
 	-e DISTANT_LOG_FILE=$(DISTANT_LOG_FILE) \
 	$(2) \
-	$(DOCKER_IMAGE) sh -c "cd app && ssh-keyscan -H $(DOCKER_SERVER) >> ~/.ssh/known_hosts && sudo rm /usr/bin/rls && $(1)"; \
+	$(DOCKER_IMAGE) sh -c "cd app && ssh-keyscan -H $(DOCKER_SERVER) >> ~/.ssh/known_hosts && sudo rm /usr/local/bin/lua-language-server && $(1)"; \
 	STATUS=$$?; \
 	docker rm -f $(DOCKER_SERVER) > /dev/null 2>&1; \
 	docker network rm $(DOCKER_NETWORK) > /dev/null 2>&1; \

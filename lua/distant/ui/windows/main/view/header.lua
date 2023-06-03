@@ -5,7 +5,7 @@ local ui     = require('distant-core.ui')
 
 --- @return distant.core.ui.Span
 local function version_span()
-    local is_prerelease = plugin.version.plugin:is_prerelease()
+    local is_prerelease = plugin.version.plugin:has_prerelease()
     local text = ' (' .. plugin.version.plugin:as_string() .. ')'
 
     if is_prerelease then

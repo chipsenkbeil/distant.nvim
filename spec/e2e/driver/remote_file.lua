@@ -74,7 +74,7 @@ function M:read(opts)
 
     -- Read the file into a string
     if success then
-        local contents = self.__driver:local_file(self.__path):read()
+        local contents = self.__driver:local_file(path):read()
         os.remove(path)
         return contents
     end

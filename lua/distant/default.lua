@@ -4,9 +4,6 @@ local DEFAULT_SETTINGS = {
     --- Client-specific settings that are applied when this plugin controls the client.
     --- @class distant.plugin.settings.ClientSettings
     client = {
-        --- If true, will allow unstable versions of the CLI to be installed.
-        --- @type boolean
-        allow_unstable = false,
         --- Binary to use locally with the client.
         ---
         --- Defaults to "distant" on Unix platforms and "distant.exe" on Windows.
@@ -75,7 +72,6 @@ local DEFAULT_SETTINGS = {
             --- Used to exit the window.
             --- @type distant.plugin.settings.Keymap
             exit = { 'q', '<Esc>' },
-
             --- Mappings that apply to the main window.
             main = {
                 --- Mappings for the connections tab.
@@ -83,26 +79,21 @@ local DEFAULT_SETTINGS = {
                     --- Kill the connection under cursor.
                     --- @type distant.plugin.settings.Keymap
                     kill = 'K',
-
                     --- Toggle information about the server/connection under cursor.
                     --- @type distant.plugin.settings.Keymap
                     toggle_info = 'I',
                 },
-
                 --- General mappings for tabs.
                 tabs = {
                     --- Used to bring up the connections tab.
                     --- @type distant.plugin.settings.Keymap
                     goto_connections = '1',
-
                     --- Used to bring up the system info tab.
                     --- @type distant.plugin.settings.Keymap
                     goto_system_info = '2',
-
                     --- Used to bring up the help menu.
                     --- @type distant.plugin.settings.Keymap
                     goto_help = '?',
-
                     --- Used to refresh data in a tab.
                     --- @type distant.plugin.settings.Keymap
                     refresh = 'R',

@@ -74,7 +74,7 @@ describe('distant.editor.lsp', function()
         driver = Driver:setup({
             label = 'distant.editor.lsp',
             lazy = true,
-            debug = true,
+            log = vim.log.levels.DEBUG,
         })
         root = driver:new_dir_fixture()
 

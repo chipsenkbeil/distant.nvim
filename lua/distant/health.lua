@@ -18,8 +18,7 @@ end
 --- Check that we have the distant CLI installed for our plugin.
 --- @private
 function M.__check_installed()
-    local path = plugin:cli_path()
-    if vim.fn.executable(path) == 1 then
+    if plugin:cli():is_executable() then
         ok('distant installed')
     else
         error('distant not installed')
@@ -29,20 +28,18 @@ end
 --- Check that our version of the distant CLI is compatible with the plugin.
 --- @private
 function M.__check_version()
+    local required_version = plugin.version.cli.min
+
     local version = plugin:cli():version()
-    local version_ok = version and version:can_upgrade_from(plugin.version.cli.min, {
-        allow_unstable_upgrade = plugin.settings.client.allow_unstable
-    })
+    local version_ok = version and version:compatible(required_version)
     if version and version_ok then
-        ok(
-            'distant version ' .. tostring(version) ..
-            ' meets minimum requirement of ' .. tostring(plugin.version.cli.min)
-        )
+        ok(('distant version %s meets minimum requirement of %s'):format(
+            tostring(version), tostring(required_version)
+        ))
     elseif version and not version_ok then
-        error(
-            'distant version ' .. tostring(version) ..
-            ' incompatible with requirement of ' .. tostring(plugin.version.cli.min)
-        )
+        error(('distant version %s incompatible with minimum requirement of %s'):format(
+            tostring(version), tostring(required_version)
+        ))
     else
         error('unable to retrieve distant CLI version')
     end
