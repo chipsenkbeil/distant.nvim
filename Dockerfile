@@ -4,9 +4,9 @@ FROM --platform=linux/amd64 anatolelucet/neovim:0.8.0-ubuntu
 #
 # 1. sudo for ability to run sshd as non-root user
 # 2. openssh to be able to run sshd (and ssh as client)
-# 3. build-base to be able to build the distant binary
+# 3. bsdmainutils & make to use our makefile inside the container
 # 4. git to be able to clone plenary for tests
-# 5. curl & gzip to pull down rust-analyzer
+# 5. curl & gzip to pull down lua-language-server
 RUN DEBIAN_FRONTEND=noninteractive \
     ln -fs /usr/share/zoneinfo/America/New_York /etc/localtime \
     && apt update \
@@ -15,7 +15,8 @@ RUN DEBIAN_FRONTEND=noninteractive \
         ca-certificates \
         openssh-client \
         openssh-server \
-        build-essential \
+        bsdmainutils \
+        make \
         git \
         curl \
         gzip
@@ -34,19 +35,33 @@ RUN addgroup --system $user \
     && test -n "$DISTANT_PASSWORD" \
         && echo "$user:$DISTANT_PASSWORD" | chpasswd \
         || echo "Password configured as empty"
-USER $user
-WORKDIR /home/$user
 
-ARG cargo_bin_dir=/home/$user/.cargo/bin
-RUN mkdir -p $cargo_bin_dir
+ARG opt_dir=/opt
+ARG opt_bin_dir=$opt_dir/bin
+RUN mkdir -p $opt_bin_dir
 
-# Install and configure rust & rls
+# Install and configure lua language server
 # NOTE: Must install to a path like /usr/bin as 
 #       /usr/local/bin is not on path for ssh
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
-    && . /home/$user/.cargo/env \
-    && rustup component add rls \
-    && sudo ln -s $cargo_bin_dir/rls /usr/bin/rls
+ARG lua_language_server_release=https://github.com/LuaLS/lua-language-server/releases/download/3.6.21/lua-language-server-3.6.21-linux-x64.tar.gz
+ARG opt_lsp_dir=$opt_dir/lua_language_server
+RUN mkdir -p $opt_lsp_dir \
+    && cd $opt_lsp_dir \
+    && curl -L $lua_language_server_release | tar zx \
+    && echo '#!/bin/bash' > $opt_bin_dir/lua-language-server \
+    && echo "exec \"$opt_lsp_dir/bin/lua-language-server\" \"\$@\"" >> $opt_bin_dir/lua-language-server \
+    && chmod +x $opt_bin_dir/lua-language-server \
+    && ln -s $opt_bin_dir/lua-language-server /usr/local/bin/lua-language-server
+
+# Install distant binary and make sure its in a path for everyone
+ARG DISTANT_VERSION=0.20.0-alpha.7
+ARG distant_release=https://github.com/chipsenkbeil/distant/releases/download/v$DISTANT_VERSION
+RUN curl -L $distant_release/distant-linux64-musl-x86 > $opt_bin_dir/distant \
+    && chmod +x $opt_bin_dir/distant \
+    && ln -s $opt_bin_dir/distant /usr/local/bin/distant
+
+USER $user
+WORKDIR /home/$user
 
 # Install and configure sshd with key using DISTANT_PASSWORD
 #
@@ -60,13 +75,11 @@ RUN sudo mkdir -p /var/run/sshd \
     && cp /home/$user/.ssh/id_rsa.pub /home/$user/.ssh/authorized_keys \
     && echo 'StrictHostKeyChecking no' > /home/$user/.ssh/config
 
-ARG DISTANT_VERSION=0.20.0-alpha.7
+# Force ownership of binaries and opt path (needed for lua-language-server as it creates directories)
+RUN sudo chown -R $user:$user $opt_dir
 
-# Install distant binary and make sure its in a path for everyone
-ARG distant_release=https://github.com/chipsenkbeil/distant/releases/download/v$DISTANT_VERSION
-RUN curl -L $distant_release/distant-linux64-gnu > $cargo_bin_dir/distant \
-    && chmod +x $cargo_bin_dir/distant \
-    && sudo ln -s $cargo_bin_dir/distant /usr/local/bin/distant
+# Create path to neovim cache since it may not be created during tests
+RUN mkdir -p /home/$user/.cache/nvim
 
 # Install our repository within a subdirectory of home
 COPY --chown=$user . app/

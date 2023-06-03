@@ -6,7 +6,7 @@
 -- This library is free software; you can redistribute it and/or modify it
 -- under the terms of the MIT license. See LICENSE for details.
 
---- @alias neovim.log.Level 'trace'|'debug'|'info'|'warn'|'error'|'fatal'
+--- @alias neovim.log.Level 'trace'|'debug'|'info'|'warn'|'error'|'off'
 
 --- @type neovim.log.Level
 local d_log_level = vim.fn.getenv('DISTANT_LOG_LEVEL')
@@ -40,7 +40,9 @@ local default_config = {
         { name = 'info',  hl = 'None' },
         { name = 'warn',  hl = 'WarningMsg' },
         { name = 'error', hl = 'ErrorMsg' },
-        { name = 'fatal', hl = 'ErrorMsg' },
+
+        -- This should always be last and is used to disable logging
+        { name = 'off',   hl = 'None' },
     },
     -- Can limit the number of decimals displayed for floats
     float_precision = 0.01,
@@ -181,43 +183,45 @@ M.new = function(config, standalone)
     end
 
     for i, x in ipairs(config.modes) do
-        -- log.info('these', 'are', 'separated')
-        --- @diagnostic disable-next-line:assign-type-mismatch
-        obj[x.name] = function(...)
-            return log_at_level(i, x, make_string, ...)
-        end
+        if x.name ~= 'off' then
+            -- log.info('these', 'are', 'separated')
+            --- @diagnostic disable-next-line:assign-type-mismatch
+            obj[x.name] = function(...)
+                return log_at_level(i, x, make_string, ...)
+            end
 
-        -- log.fmt_info('These are %s strings', 'formatted')
-        --- @diagnostic disable-next-line:assign-type-mismatch
-        obj[('fmt_%s'):format(x.name)] = function(...)
-            return log_at_level(i, x, function(...)
-                local passed = { ... }
-                local fmt = table.remove(passed, 1)
-                local inspected = {}
-                for _, v in ipairs(passed) do
-                    table.insert(inspected, vim.inspect(v))
-                end
-                return string.format(fmt, unpack(inspected))
-            end, ...)
-        end
+            -- log.fmt_info('These are %s strings', 'formatted')
+            --- @diagnostic disable-next-line:assign-type-mismatch
+            obj[('fmt_%s'):format(x.name)] = function(...)
+                return log_at_level(i, x, function(...)
+                    local passed = { ... }
+                    local fmt = table.remove(passed, 1)
+                    local inspected = {}
+                    for _, v in ipairs(passed) do
+                        table.insert(inspected, vim.inspect(v))
+                    end
+                    return string.format(fmt, unpack(inspected))
+                end, ...)
+            end
 
-        -- log.lazy_info(expensive_to_calculate)
-        --- @diagnostic disable-next-line:assign-type-mismatch
-        obj[('lazy_%s'):format(x.name)] = function()
-            return log_at_level(i, x, function(f)
-                return f()
-            end)
-        end
+            -- log.lazy_info(expensive_to_calculate)
+            --- @diagnostic disable-next-line:assign-type-mismatch
+            obj[('lazy_%s'):format(x.name)] = function()
+                return log_at_level(i, x, function(f)
+                    return f()
+                end)
+            end
 
-        -- log.file_info('do not print')
-        --- @diagnostic disable-next-line:assign-type-mismatch
-        obj[('file_%s'):format(x.name)] = function(vals, override)
-            local original_console = config.use_console
-            config.use_console = false
-            config.info_level = override.info_level
-            log_at_level(i, x, make_string, unpack(vals))
-            config.use_console = original_console
-            config.info_level = nil
+            -- log.file_info('do not print')
+            --- @diagnostic disable-next-line:assign-type-mismatch
+            obj[('file_%s'):format(x.name)] = function(vals, override)
+                local original_console = config.use_console
+                config.use_console = false
+                config.info_level = override.info_level
+                log_at_level(i, x, make_string, unpack(vals))
+                config.use_console = original_console
+                config.info_level = nil
+            end
         end
     end
 

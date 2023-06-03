@@ -19,7 +19,8 @@ local Window = require('spec.e2e.driver.window')
 
 --- @class spec.e2e.Driver
 --- @field label string
---- @field private __debug boolean
+--- @field tmp_dir string # path to tmp directory
+--- @field private __log_level number
 --- @field private __client? distant.core.Client #active client being used by this driver
 --- @field private __fixtures spec.e2e.Fixture[] #fixtures managed by this driver
 local M = {}
@@ -133,12 +134,13 @@ end
 --- ### Options
 ---
 --- * `label` - used to distinguish this driver from others.
+--- * `tmp_dir` - alternative temporary directory to use during tests.
 --- * `debug` - if true, will enable debug printing.
 --- * `lazy` - if true, will not initialize the driver (no client/manager).
 ---   Will need to invoke `Driver:initialize` in order to set up client & manager.
 --- * `settings` - if provided, will merge with global settings.
 ---
---- @param opts {label:string, debug?:boolean, lazy?:boolean, no_client?:boolean, no_manager?:boolean, settings?:distant.plugin.Settings}
+--- @param opts {label:string, tmp_dir?:string, log?:number, lazy?:boolean, no_client?:boolean, no_manager?:boolean, settings?:distant.plugin.Settings}
 --- @return spec.e2e.Driver
 function M:setup(opts)
     opts = opts or {}
@@ -148,7 +150,8 @@ function M:setup(opts)
     local instance = {}
     setmetatable(instance, M)
     instance.label = assert(opts.label, 'Missing label in setup')
-    instance.__debug = opts.debug or false
+    instance.tmp_dir = opts.tmp_dir or '/tmp'
+    instance.__log_level = opts.log or vim.log.levels.OFF
     instance.__client = nil
     instance.__fixtures = {}
 
@@ -182,7 +185,7 @@ function M:initialize(opts)
             network = {
                 private = true,
                 windows_pipe = 'nvim-test-' .. next_id(),
-                unix_socket = '/tmp/nvim-test-' .. next_id() .. '.sock',
+                unix_socket = self.tmp_dir .. '/nvim-test-' .. next_id() .. '.sock',
             }
         }), {
             wait = SETUP_TIMEOUT,
@@ -230,21 +233,52 @@ end
 -- DRIVER DEBUG FUNCTIONS
 -------------------------------------------------------------------------------
 
---- Prints using `print` when configured for debugging.
---- @param ... any
 function M:debug_print(...)
     local unpack = unpack or table.unpack
-    if self:is_debug_enabled() then
+    if self:is_log_debug_enabled() then
         local args = { ... }
         table.insert(args, 1, '[DEBUG]')
         print(unpack(args))
     end
 end
 
---- Returns whether or not debugging is enabled.
+function M:trace_print(...)
+    local unpack = unpack or table.unpack
+    if self:is_log_trace_enabled() then
+        local args = { ... }
+        table.insert(args, 1, '[TRACE]')
+        print(unpack(args))
+    end
+end
+
+--- Returns whether or not error logging is enabled.
 --- @return boolean
-function M:is_debug_enabled()
-    return self.__debug
+function M:is_log_error_enabled()
+    return self.__log_level <= vim.log.levels.ERROR
+end
+
+--- Returns whether or not warn logging is enabled.
+--- @return boolean
+function M:is_log_warn_enabled()
+    return self.__log_level <= vim.log.levels.WARN
+end
+
+--- Returns whether or not info logging is enabled.
+--- @return boolean
+function M:is_log_info_enabled()
+    return self.__log_level <= vim.log.levels.INFO
+end
+
+--- Returns whether or not debug logging is enabled.
+--- @return boolean
+function M:is_log_debug_enabled()
+    return self.__log_level <= vim.log.levels.DEBUG
+end
+
+--- Returns whether or not trace logging is enabled.
+--- @return boolean
+function M:is_log_trace_enabled()
+    return self.__log_level <= vim.log.levels.TRACE
 end
 
 -------------------------------------------------------------------------------
@@ -341,7 +375,10 @@ function M:exec(cmd, args, opts)
     args = args or {}
     opts = opts or {}
 
-    local out = vim.fn.system(ssh_cmd(cmd, args))
+    local net_cmd = ssh_cmd(cmd, args)
+    self:trace_print('exec: ' .. vim.inspect(net_cmd))
+
+    local out = vim.fn.system(net_cmd)
     local errno = tonumber(vim.v.shell_error)
 
     local success = errno == 0
@@ -375,6 +412,7 @@ function M:copy(src, dst, opts)
         error('opts.dst is invalid')
     end
 
+    self:trace_print('copy: ' .. vim.inspect(cmd))
     local out = vim.fn.system(cmd)
     local errno = tonumber(vim.v.shell_error)
 
@@ -425,7 +463,7 @@ function M:new_file_fixture(opts)
         'opts.lines invalid or missing'
     )
 
-    local base_path = opts.base_path or '/tmp'
+    local base_path = opts.base_path or self.tmp_dir
 
     -- Define our file path
     local path = base_path .. '/' .. self:random_file_name(opts.ext)
@@ -463,7 +501,7 @@ function M:new_local_file_fixture(opts)
         'opts.lines invalid or missing'
     )
 
-    local base_path = opts.base_path or '/tmp'
+    local base_path = opts.base_path or self.tmp_dir
 
     -- Define our file path
     local path = base_path .. '/' .. self:random_file_name(opts.ext)
@@ -495,7 +533,7 @@ end
 function M:new_dir_fixture(opts)
     opts = opts or {}
     assert(type(opts) == 'table', 'opts must be a table')
-    local base_path = opts.base_path or '/tmp'
+    local base_path = opts.base_path or self.tmp_dir
     local path = base_path .. '/' .. self:random_dir_name()
 
     -- Create the remote directory
@@ -538,7 +576,7 @@ function M:new_symlink_fixture(opts)
     opts = opts or {}
     assert(type(opts) == 'table', 'opts must be a table')
     assert(type(opts.source) == 'string', 'opts.source must be a string')
-    local base_path = opts.base_path or '/tmp'
+    local base_path = opts.base_path or self.tmp_dir
     local path = base_path .. '/' .. self:random_symlink_name()
 
     -- Create the remote symlink
