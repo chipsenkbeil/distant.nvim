@@ -216,7 +216,7 @@ end
 --- Returns the path to the CLI used by this driver.
 --- @return string
 function M:cli_path()
-    return plugin:cli_path()
+    return plugin:cli().path
 end
 
 --- @return integer|nil
