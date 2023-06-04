@@ -19,7 +19,7 @@ describe('distant.api.watch', function()
     end)
 
     describe('asynchronous', function()
-        pending('should be able to watch for single file changes', function()
+        it('should be able to watch for single file changes', function()
             local file = root:file()
             assert(file:touch(), 'Failed to create file: ' .. file:path())
 
@@ -41,7 +41,7 @@ describe('distant.api.watch', function()
             assert.are.equal(res.type, 'changed')
         end)
 
-        pending('should be able to watch recursively for changes in a directory', function()
+        it('should be able to watch recursively for changes in a directory', function()
             local file = root:file()
             assert(file:touch(), 'Failed to create file: ' .. file:path())
 
@@ -73,7 +73,7 @@ describe('distant.api.watch', function()
 
             -- NOTE: We get this path because unwatching needs to have matching
             --       paths and isn't handling non-canonicalized well.
-            local path = file:canonicalized_path()
+            local path = assert(file:canonicalized_path())
 
             local changes = {}
 
