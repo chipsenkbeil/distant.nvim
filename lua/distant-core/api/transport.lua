@@ -204,7 +204,7 @@ function M:send(opts, cb)
 
     -- Asynchronous if cb provided, otherwise synchronous
     if cb and utils.callable(cb) then
-        self:send_async({ payload = payload }, function(res)
+        self:send_async({ payload = payload, more = opts.more }, function(res)
             if type(res) == 'table' and res.type == 'error' then
                 if type(res.kind) ~= 'string' or type(res.description) ~= 'string' then
                     cb(Error:new({
@@ -241,6 +241,7 @@ function M:send(opts, cb)
     else
         local err, res = self:send_sync({
             payload = payload,
+            more = opts.more,
             timeout = opts.timeout,
             interval = opts.interval
         })
@@ -463,6 +464,7 @@ function M:__handle_response(msg)
             return
         else
             log.fmt_warn('[Transport %s] Discarding message with origin %s as no callback exists', self.id, origin_id)
+            log.fmt_trace('[Transport %s] Dropped message was %s', self.id, msg)
         end
     end
 end

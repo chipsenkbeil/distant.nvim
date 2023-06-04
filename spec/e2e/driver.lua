@@ -72,7 +72,7 @@ end
 local client = nil
 
 --- Initialize a client if one has not been initialized yet
---- @param opts? {args?:string[], timeout?:number, interval?:number}
+--- @param opts? {args?:string[], log_dir?:string, timeout?:number, interval?:number}
 --- @return distant.core.Client
 local function initialize_client(opts)
     opts = opts or {}
@@ -80,7 +80,12 @@ local function initialize_client(opts)
         return client
     end
 
-    local log_file = string.format('%s_log.txt', vim.fn.tempname())
+    local log_file = string.format(
+        '%s_log.txt',
+        opts.log_dir
+        and vim.fs.normalize(opts.log_dir) .. '/client'
+        or vim.fn.tempname()
+    )
 
     -- Print out our log location and flush to ensure that it shows up in case we get stuck
     print('Client logging initialized', log_file)
@@ -147,7 +152,7 @@ end
 ---   Will need to invoke `Driver:initialize` in order to set up client & manager.
 --- * `settings` - if provided, will merge with global settings.
 ---
---- @param opts {label:string, tmp_dir?:string, log?:number, lazy?:boolean, no_client?:boolean, no_manager?:boolean, settings?:distant.plugin.Settings}
+--- @param opts {label:string, log_dir?:string, tmp_dir?:string, log?:number, lazy?:boolean, no_client?:boolean, no_manager?:boolean, settings?:distant.plugin.Settings}
 --- @return spec.e2e.Driver
 function M:setup(opts)
     opts = opts or {}
@@ -165,6 +170,7 @@ function M:setup(opts)
     if not opts.lazy then
         instance:initialize({
             label = opts.label,
+            log_dir = opts.log_dir,
             no_client = opts.no_client,
             no_manager = opts.no_manager,
             settings = opts.settings,
@@ -177,7 +183,7 @@ end
 --- Initializes the driver by invoking `setup` on the plugin to start a manager
 --- and then creates a local client to use for testing.
 ---
---- @param opts {label:string, no_client?:boolean, no_manager?:boolean, settings?:distant.plugin.Settings, timeout?:number, interval?:number}
+--- @param opts {label:string, log_dir?:string, no_client?:boolean, no_manager?:boolean, settings?:distant.plugin.Settings, timeout?:number, interval?:number}
 --- @return spec.e2e.Driver
 function M:initialize(opts)
     opts = opts or {}
@@ -206,6 +212,7 @@ function M:initialize(opts)
         end
 
         self.__client = initialize_client({
+            log_dir = opts.log_dir,
             timeout = opts.timeout,
             interval = opts.interval,
         })
@@ -219,6 +226,7 @@ function M:teardown()
     self.__client = nil
 
     for _, fixture in ipairs(self.__fixtures) do
+        self:trace_print('Removing fixture ' .. fixture:path())
         fixture:remove({ ignore_errors = true })
     end
 end

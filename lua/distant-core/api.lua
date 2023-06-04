@@ -175,6 +175,14 @@ end
 
 --- @param payload table
 --- @return boolean
+local function verify_watch(payload)
+    return (
+        payload.type == 'ok' or payload.type == 'changed'
+    )
+end
+
+--- @param payload table
+--- @return boolean
 local function verify_version(payload)
     return (
         payload.type == 'version'
@@ -209,7 +217,7 @@ local RESPONSE_HANDLERS = {
     [REQUEST_TYPE.SEARCH]           = { map = identity, verify = verify_ok },
     [REQUEST_TYPE.SYSTEM_INFO]      = { map = identity, verify = verify_system_info },
     [REQUEST_TYPE.UNWATCH]          = { map = identity, verify = verify_ok },
-    [REQUEST_TYPE.WATCH]            = { map = identity, verify = verify_ok },
+    [REQUEST_TYPE.WATCH]            = { map = identity, verify = verify_watch },
     [REQUEST_TYPE.VERSION]          = { map = identity, verify = verify_version },
 }
 
