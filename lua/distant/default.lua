@@ -109,9 +109,9 @@ local DEFAULT_SETTINGS = {
         --- persist after neovim itself exits.
         --- @type boolean
         daemon = false,
-        --- If true, will avoid starting the manager until first needed.
+        --- If true, will avoid starting the manager until first needed. (default: true)
         --- @type boolean
-        lazy = false,
+        lazy = true,
         --- @type string|nil
         log_file = nil,
         --- @type distant.core.log.Level|nil

@@ -5,7 +5,6 @@ return {
     Cli          = require('distant-core.cli'),
     Destination  = require('distant-core.destination'),
     EventEmitter = require('distant-core.emitter'),
-    inspect      = require('distant-core.inspect'),
     installer    = require('distant-core.installer'),
     Job          = require('distant-core.job'),
     log          = require('distant-core.log'),
