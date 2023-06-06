@@ -34,11 +34,17 @@ describe('distant.api.watch', function()
             -- Update the file
             file:write('some text')
 
-            --- @type distant.core.api.Error|nil, distant.core.api.WatchPayload|nil
-            local err, res = capture.wait()
+            --- @type distant.core.api.Error|nil, distant.core.api.Watcher|nil
+            local err, watcher = capture.wait()
             assert(not err, tostring(err))
-            assert(res)
-            assert.are.equal(res.type, 'changed')
+
+            capture = driver:new_capture()
+            assert(watcher):on_change(capture)
+
+            local change
+            err, change = capture.wait()
+            assert(not err, tostring(err))
+            assert.is.truthy(change)
         end)
 
         it('should be able to watch recursively for changes in a directory', function()
@@ -56,11 +62,17 @@ describe('distant.api.watch', function()
             -- Update the file
             file:write('some text')
 
-            --- @type distant.core.api.Error|nil, distant.core.api.WatchPayload|nil
-            local err, res = capture.wait()
+            --- @type distant.core.api.Error|nil, distant.core.api.Watcher|nil
+            local err, watcher = capture.wait()
             assert(not err, tostring(err))
-            assert(res)
-            assert.are.equal(res.type, 'changed')
+
+            capture = driver:new_capture()
+            assert(watcher):on_change(capture)
+
+            local change
+            err, change = capture.wait()
+            assert(not err, tostring(err))
+            assert.is.truthy(change)
         end)
 
         it('should be able to stop watching by calling unwatch', function()
@@ -79,9 +91,11 @@ describe('distant.api.watch', function()
 
             driver:debug_print('Watching ' .. path)
             --- @diagnostic disable-next-line:param-type-mismatch
-            plugin.api.watch({ path = path, recursive = true }, function(err, change)
+            plugin.api.watch({ path = path, recursive = true }, function(err, watcher)
                 assert(not err, tostring(err))
-                table.insert(changes, change)
+                assert(watcher):on_change(function(change)
+                    table.insert(changes, change)
+                end)
             end)
 
             -- Wait a bit to be ready for conducting a change

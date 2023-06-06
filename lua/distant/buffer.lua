@@ -7,6 +7,7 @@ local VARNAME = 'distant'
 --- @field path? string
 --- @field alt_paths? string[]
 --- @field type? distant.plugin.buffer.Type
+--- @field watched? boolean
 
 --- @alias distant.plugin.buffer.Type 'dir'|'file'
 
@@ -235,6 +236,25 @@ local function make_buffer(buf)
     --- @return distant.plugin.buffer.Type
     function M.assert_type()
         return assert(M.type(), 'Buffer missing distant.type')
+    end
+
+    --- Sets the local buffer data representing the watched status.
+    --- @param watched boolean
+    --- @return boolean
+    function M.set_watched(watched)
+        local data = get_data() or {}
+        data.watched = watched
+        return set_data(data)
+    end
+
+    --- Returns whether or not the buffer is being watched.
+    --- Can be nil if not configured as a distant buffer.
+    --- @return boolean|nil
+    function M.watched()
+        local data = get_data()
+        if data then
+            return data.watched
+        end
     end
 
     --------------------------------------------------------------------------

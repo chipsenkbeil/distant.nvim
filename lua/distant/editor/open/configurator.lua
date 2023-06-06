@@ -58,6 +58,10 @@ function M.configure(opts)
         end
     end
 
+    --
+    -- Configure buffer options for directory & file
+    --
+
     -- If a directory, we want to mark as such and prevent modifying;
     -- otherwise, in all other cases we treat this as a remote file
     if opts.is_dir then
@@ -101,31 +105,37 @@ function M.configure(opts)
         end
     end
 
+    --
     -- Add stateful information to the buffer, helping keep track of it
-    do
-        log.fmt_debug('Storing variables for buffer %s', bufnr)
-        local buffer = plugin.buf(bufnr)
+    --
 
-        -- Ensure that we have a client configured
-        buffer.set_client_id(
-            opts.client_id or
-            assert(
-                plugin:active_client_id(),
-                ('Buffer %s opened without a distant client'):format(bufnr)
-            )
+    log.fmt_debug('Storing variables for buffer %s', bufnr)
+    local buffer = plugin.buf(bufnr)
+
+    -- Ensure that we have a client configured
+    buffer.set_client_id(
+        opts.client_id or
+        assert(
+            plugin:active_client_id(),
+            ('Buffer %s opened without a distant client'):format(bufnr)
         )
+    )
 
-        -- Set our path information
-        buffer.set_path(opts.canonicalized_path)
-        buffer.set_type(opts.is_dir and 'dir' or 'file')
+    -- Set our path information
+    buffer.set_path(opts.canonicalized_path)
+    buffer.set_type(opts.is_dir and 'dir' or 'file')
 
-        -- Add the raw path as an alternative path that can be used
-        -- to look up this buffer
-        buffer.add_alt_path(opts.raw_path, { dedup = true })
+    -- Add the raw path as an alternative path that can be used
+    -- to look up this buffer
+    buffer.add_alt_path(opts.raw_path, { dedup = true })
 
-        -- Ensure that the data has been stored
-        log.fmt_debug('Buffer %s stored variables: %s', bufnr, buffer.assert_data())
+    -- Set our watched status to false only if not set yet
+    if buffer.watched() == nil then
+        buffer.set_watched(false)
     end
+
+    -- Ensure that the data has been stored
+    log.fmt_debug('Buffer %s stored variables: %s', bufnr, buffer.assert_data())
 
     -- Update the buffer name to proper reflect
     -- NOTE: This MUST be done after we set our variables, otherwise
@@ -137,6 +147,10 @@ function M.configure(opts)
 
     -- Display the buffer in the specified window, defaulting to current
     vim.api.nvim_win_set_buf(winnr, bufnr)
+
+    --
+    -- Configure extra file details & LSP clients
+    --
 
     if opts.is_file or opts.missing then
         -- Set our filetype to whatever the contents actually are (or file extension is)
@@ -153,10 +167,62 @@ function M.configure(opts)
         )
         client:connect_lsp_clients({
             bufnr = bufnr,
-            path = plugin.buf(bufnr).assert_path(),
-            scheme = plugin.buf(bufnr).name.prefix(),
+            path = buffer.assert_path(),
+            scheme = buffer.name.prefix(),
             settings = plugin:server_settings_for_client().lsp,
         })
+    end
+
+    --
+    -- Configure file watching
+    --
+
+    -- If this file exists and is not being watched, we can notify distant to watch it
+    if opts.is_file and not buffer.watched() then
+        -- This should be set at this point from above configuration
+        local client_id = assert(buffer.client_id())
+
+        -- Update our status so we don't do this again
+        buffer.set_watched(true)
+
+        -- Attempt to watch the path
+        plugin.api(client_id).watch({ path = buffer.assert_path() }, function(err, watcher)
+            -- If failed to watch, reset our status and then error
+            if err then
+                buffer.set_watched(false)
+                vim.notify(tostring(err), vim.log.levels.ERROR)
+                return
+            end
+
+            -- Otherwise, should have a watcher we can use
+            assert(watcher):on_change(function(change)
+                -- Logic for file change via `checktime` (buf_check_timestamp) from neovim
+                --
+                -- 1. For file change via modification, timestamp, mode:
+                --     a. If `autoread` is set, buffer has no changes, and file exists, `reload` is NORMAL
+                --     b. If FileChangedShell autocommand exists, invoke it after setting v:fcs_reason and v:fcs_choice
+                --         i.   Check if buffer no longer exists, and print "E246: FileChangedShell autocommand deleted buffer"
+                --         ii.  If v:fcs_choice == reload and file not deleted, `reload` is NORMAL
+                --         iii. If v:fcs_choice == edit, `reload` is DETECT
+                --         iv.  If v:fcs_choice == ask, proceed to step c (as if FileChangedShell did not exist)
+                --         v.   If v:fcs_choice is nothing, do nothing (stop steps) and let autocmd do everything
+                --     c. If there was no FileChangedShell autocommand, enter manual warning (detect using nvim_get_autocmds())
+                --         i.   If deleted, just print out file deleted (reload is not possible)
+                --         ii.  If modified and buffer changed, print msg "W12: Warning: File \"%s\" has changed and the buffer was changed in Vim as well"
+                --         iii. If modified, print msg "W11: Warning: File \"%s\" has changed since editing started"
+                --         iv.  If mode changed, print "W16: Warning: Mode of file \"%s\" has changed since editing started"
+                --         v.   If only timestamp changed (e.g. CSV), don't report anything
+                -- 2. For file created that matches a buffer, show warning and mark reload possible
+                -- 3. If reload is possible (file not deleted), present a prompt, "&OK\n&Load File\nLoad File &and Options"
+                --     a. If OK selected, `reload` is NONE
+                --     b. If Load File selected, `reload` is NORMAL
+                --     c. If Load File and Options selected, `reload` is DETECT
+                -- 4. Trigger a buf_reload
+                --     a. If `reload` is NORMAL, just reload the text
+                --     b. If `reload` is DETECt, reset syntax highlighting/clear marks/diff status/etc; force fileformat and encoding
+                -- 5. Undo file is unusable and overwritten
+            end)
+        end)
     end
 end
 

@@ -56,6 +56,8 @@ local function _initialize()
                 path = path,
             }))
 
+            -- Accept arbitrary data to indicate reload status
+
             log.fmt_debug('Reading %s into buffer %s', path, bufnr)
             plugin.editor.open({
                 path = path,
