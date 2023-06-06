@@ -17,8 +17,14 @@ local callable = utils.callable
 --- | '"unknown"' # Catchall in case we have no insight as to the type of change
 
 --- @class distant.core.api.watch.Change
+--- @field ts integer
 --- @field kind distant.core.api.watch.ChangeKind
 --- @field paths string[]
+--- @field details? distant.core.api.watch.ChangeDetails
+
+--- @class distant.core.api.watch.ChangeDetails
+--- @field attributes? ('permissions'|'timestamp')[]
+--- @field info? string
 
 -------------------------------------------------------------------------------
 -- CLASS DEFINITION
@@ -127,11 +133,13 @@ function M:handle(payload)
         end
         return true
     elseif payload.type == 'changed' then
+        local ts = assert(payload.ts, 'Malformed changed event! Missing ts. ' .. vim.inspect(payload))
         local kind = assert(payload.kind, 'Malformed changed event! Missing kind. ' .. vim.inspect(payload))
         local paths = assert(payload.paths, 'Malformed changed event! Missing paths. ' .. vim.inspect(payload))
+        local details = payload.details
 
         --- @type distant.core.api.watch.Change
-        local change = { kind = kind, paths = paths }
+        local change = { ts = ts, kind = kind, paths = paths, details = details }
 
         -- If we have an on_change callback, pass directly to it;
         -- otherwise, queue up the change in our changes list
