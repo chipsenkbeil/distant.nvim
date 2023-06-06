@@ -201,6 +201,22 @@ function M:watch(opts, cb)
             return ty == 'ok' or ty == 'changed'
         end,
     }, function(payload)
+        -- Specially handle error type if we get it when trying to watch
+        if type(payload) == 'table' and payload.type == 'error' then
+            -- If not ready and the payload failed, then this is the response to our initial request
+            if not self.__ready then
+                self.__ready = true
+
+                vim.schedule(function()
+                    cb(Error:new({
+                        kind = payload.kind or Error.kinds.unknown,
+                        description = payload.description or '???',
+                    }), nil)
+                end)
+                return
+            end
+        end
+
         if not self:handle(payload) then
             -- If not ready and the payload failed, then this is the response to our initial request
             if not self.__ready then

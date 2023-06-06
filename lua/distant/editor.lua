@@ -6,6 +6,7 @@ local M         = {}
 M.launch        = require('distant.editor.launch')
 M.connect       = require('distant.editor.connect')
 M.open          = require('distant.editor.open')
+M.watch         = require('distant.editor.watch')
 M.write         = require('distant.editor.write')
 
 -- Search commands

@@ -1,6 +1,14 @@
 --- Settings tied to the distant plugin.
 --- @class distant.plugin.Settings
 local DEFAULT_SETTINGS = {
+    --- Buffer-specific settings that are applied to buffers this plugin controls.
+    --- @class distnat.plugin.settings.BufferSettings
+    buffer = {
+        --- Time in milliseconds between attempts to retry a watch request for a buffer
+        --- when the path represented by the buffer does not exist.
+        --- @type integer
+        watch_retry = 5000,
+    },
     --- Client-specific settings that are applied when this plugin controls the client.
     --- @class distant.plugin.settings.ClientSettings
     client = {
