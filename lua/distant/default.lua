@@ -5,9 +5,9 @@ local DEFAULT_SETTINGS = {
     --- @class distnat.plugin.settings.BufferSettings
     buffer = {
         --- Time in milliseconds between attempts to retry a watch request for a buffer
-        --- when the path represented by the buffer does not exist.
+        --- when the path represented by the buffer does not exist. Set to 0 to disable.
         --- @type integer
-        watch_retry = 5000,
+        watch_retry_timeout = 5000,
     },
     --- Client-specific settings that are applied when this plugin controls the client.
     --- @class distant.plugin.settings.ClientSettings

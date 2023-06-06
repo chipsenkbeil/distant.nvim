@@ -34,7 +34,7 @@ local function do_watch(bufnr, retry_interval)
             -- In that case, as long as the buffer is still valid, we will
             -- retry the watch attempt at some set interval.
             if err.kind == Error.kinds.not_found then
-                if vim.api.nvim_buf_is_valid(bufnr) then
+                if vim.api.nvim_buf_is_valid(bufnr) and retry_interval > 0 then
                     vim.defer_fn(function()
                         do_watch(bufnr, retry_interval)
                     end, retry_interval)

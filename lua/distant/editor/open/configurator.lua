@@ -173,14 +173,8 @@ function M.configure(opts)
         })
     end
 
-    --
-    -- Configure file watching
-    --
-
-    -- If this file exists and is not being watched, we can notify distant to watch it
-    if opts.is_file and not buffer.watched() then
-        plugin.editor.watch({ buf = bufnr })
-    end
+    -- Watch the buffer to detect changes (only applies to files)
+    plugin.editor.watch({ buf = bufnr })
 end
 
 return M
