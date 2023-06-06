@@ -1,6 +1,6 @@
-local plugin = require('distant')
-local log    = require('distant-core').log
-local utils  = require('distant-core').utils
+local plugin  = require('distant')
+local log     = require('distant-core').log
+local utils   = require('distant-core').utils
 
 --- @class neovim.AutocmdOpts
 --- @field id number #autocommand id
@@ -11,10 +11,12 @@ local utils  = require('distant-core').utils
 --- @field file string #expanded value of |<afile>|
 --- @field data any #arbitrary data passed from |nvim_exec_autocmds()|
 
+--- Patterns supported by distant autocommands.
+local PATTERN = { 'distant://*', 'distant+*://*' }
+
 local function _initialize()
     log.trace('Initializing autocmds')
     local autogroup_id = vim.api.nvim_create_augroup('distant', { clear = true })
-    local PATTERN = { 'distant://*', 'distant+*://*' }
 
     -- If we enter a buffer that is not initialized, we trigger a BufReadCmd
     vim.api.nvim_create_autocmd({ 'BufEnter' }, {
@@ -96,5 +98,9 @@ return {
             _initialize()
             is_initialized = true
         end
+    end,
+    --- @return string[]
+    pattern = function()
+        return vim.deepcopy(PATTERN)
     end
 }

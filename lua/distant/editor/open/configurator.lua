@@ -221,6 +221,88 @@ function M.configure(opts)
                 --     a. If `reload` is NORMAL, just reload the text
                 --     b. If `reload` is DETECt, reset syntax highlighting/clear marks/diff status/etc; force fileformat and encoding
                 -- 5. Undo file is unusable and overwritten
+                local buf_modified = vim.bo[bufnr].modified
+
+                --- @type 'conflict'|'changed'|'deleted'|''
+                local reason =
+                    ((change.kind == 'access' or change.kind == 'modify') and (buf_modified and 'conflict' or 'changed'))
+                    or (change.kind == 'delete' and 'deleted')
+                    or ''
+
+                --- @type 'none'|'normal'|'detect'
+                local reload = 'none'
+                local can_reload = false
+                if reason ~= '' then
+                    if vim.go.autoread and reason == 'changed' then
+                        reload = 'normal'
+                    else
+                        local skip_msg = false
+                        local autocmds = vim.api.nvim_get_autocmds({
+                            event = { 'FileChangedShell' },
+                            pattern = require('distant.autocmd').pattern(),
+                        })
+
+                        -- Invoke FileChangedShell autocommands if we have them
+                        if not vim.tbl_isempty(autocmds) then
+                            vim.v.fcs_reason = reason
+                            vim.api.nvim_exec_autocmds('FileChangedShell', {
+                                pattern = require('distant.autocmd').pattern()
+                            })
+
+                            if vim.v.fcs_choice == 'reload' and change.kind ~= 'delete' then
+                                reload = 'normal'
+                                skip_msg = true
+                            elseif vim.v.fcs_choice == 'edit' then
+                                reload = 'detect'
+                                skip_msg = true
+                            elseif vim.v.fcs_choice == 'ask' then
+                                can_reload = true
+                            else
+                                return
+                            end
+                        end
+
+                        if not skip_msg then
+                            --         i.   If deleted, just print out file deleted (reload is not possible)
+                            --         ii.  If modified and buffer changed, print msg "W12: Warning: File \"%s\" has changed and the buffer was changed in Vim as well"
+                            --         iii. If modified, print msg "W11: Warning: File \"%s\" has changed since editing started"
+                            --         iv.  If mode changed, print "W16: Warning: Mode of file \"%s\" has changed since editing started"
+                            --         v.   If only timestamp changed (e.g. CSV), don't report anything
+                            if reason == 'delete' then
+                                vim.notify(('E211: File "%s" no longer available'):format(bufname), vim.log.levels.ERROR)
+                            else
+                                can_reload = true
+
+                                if reason == 'conflict' then
+                                    vim.notify(
+                                        ('W12: Warning: File "%s" has changed and the buffer was changed in Vim as well')
+                                        :format(bufname),
+                                        vim.log.levels.WARN
+                                    )
+                                end
+                            end
+                        end
+                    end
+                end
+
+                if can_reload then
+                    local choice = vim.fn.input({ prompt = '&OK\n&Load File\nLoad File &and Options', default = '' })
+                    if choice == 2 then
+                        reload = 'normal'
+                    elseif choice == 3 then
+                        reload = 'detect'
+                    else
+                        reload = 'none'
+                    end
+                end
+
+                if reload ~= 'none' then
+                    -- TODO: Support detect mode
+                    vim.api.nvim_exec_autocmds('BufReadCmd', {
+                        group = 'distant',
+                        pattern = bufname,
+                    })
+                end
             end)
         end)
     end
