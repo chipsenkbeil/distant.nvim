@@ -28,28 +28,19 @@ return function(state)
             if metadata.created ~= nil then
                 table.insert(rows, {
                     key = 'Created',
-                    value = vim.fn.strftime(
-                        '%c',
-                        math.floor(metadata.created / 1000.0)
-                    ),
+                    value = vim.fn.strftime('%c', metadata.created),
                 })
             end
             if metadata.accessed ~= nil then
                 table.insert(rows, {
                     key = 'Last Accessed',
-                    value = vim.fn.strftime(
-                        '%c',
-                        math.floor(metadata.accessed / 1000.0)
-                    ),
+                    value = vim.fn.strftime('%c', metadata.accessed),
                 })
             end
             if metadata.modified ~= nil then
                 table.insert(rows, {
                     key = 'Last Modified',
-                    value = vim.fn.strftime(
-                        '%c',
-                        math.floor(metadata.modified / 1000.0)
-                    ),
+                    value = vim.fn.strftime('%c', metadata.modified),
                 })
             end
 

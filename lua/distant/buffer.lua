@@ -7,6 +7,7 @@ local VARNAME = 'distant'
 --- @field path? string
 --- @field alt_paths? string[]
 --- @field type? distant.plugin.buffer.Type
+--- @field mtime? number
 --- @field watched? boolean
 
 --- @alias distant.plugin.buffer.Type 'dir'|'file'
@@ -236,6 +237,26 @@ local function make_buffer(buf)
     --- @return distant.plugin.buffer.Type
     function M.assert_type()
         return assert(M.type(), 'Buffer missing distant.type')
+    end
+
+    --- Sets the local buffer data representing the last modification
+    --- time (in seconds) since Unix epoch.
+    --- @param mtime number
+    --- @return boolean
+    function M.set_mtime(mtime)
+        local data = get_data() or {}
+        data.mtime = mtime
+        return set_data(data)
+    end
+
+    --- Returns last modification time (in seconds) since Unix epoch.
+    --- Can be nil if not configured as a distant buffer.
+    --- @return number|nil
+    function M.mtime()
+        local data = get_data()
+        if data then
+            return data.mtime
+        end
     end
 
     --- Sets the local buffer data representing the watched status.

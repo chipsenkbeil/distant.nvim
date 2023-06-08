@@ -174,7 +174,9 @@ function M.configure(opts)
     end
 
     -- Watch the buffer to detect changes (only applies to files)
-    plugin.editor.watch({ buf = bufnr })
+    if plugin.settings.buffer.watch.enabled then
+        plugin.editor.watch({ buf = bufnr })
+    end
 end
 
 return M

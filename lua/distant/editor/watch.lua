@@ -33,10 +33,10 @@ local function make_on_change(bufnr, bufname)
         --         v.   If v:fcs_choice is nothing, do nothing (stop steps) and let autocmd do everything
         --     c. If there was no FileChangedShell autocommand, enter manual warning (detect using nvim_get_autocmds())
         --         i.   If deleted, just print out file deleted (reload is not possible)
-        --         ii.  If modified and buffer changed, print msg "W12: Warning: File \"%s\" has changed and the buffer was changed in Vim as well"
-        --         iii. If modified, print msg "W11: Warning: File \"%s\" has changed since editing started"
-        --         iv.  If mode changed, print "W16: Warning: Mode of file \"%s\" has changed since editing started"
-        --         v.   If only timestamp changed (e.g. CSV), don't report anything
+        --         ii.  If modified and buffer changed, mark reload possible
+        --         iii. If modified, mark reload possible
+        --         iv.  If mode changed, mark reload possible
+        --         v.   If only timestamp changed (e.g. CSV), don't report anything, but mark reload possible
         -- 2. For file created that matches a buffer, show warning and mark reload possible
         -- 3. If reload is possible (file not deleted), present a prompt
         --     a. If OK selected, `reload` is NONE
@@ -51,6 +51,34 @@ local function make_on_change(bufnr, bufname)
         local attr_mode = vim.tbl_contains(attributes, function(attr)
             return attr == 'ownership' or attr == 'permissions'
         end)
+
+
+        --
+        -- TODO: CHIP CHIP CHIP -- how do we understand if a change happened as a result of editing
+        --       in neovim versus outside? Right now, any change results in the change event  being
+        --       received and triggering the FileChangedShell and FileChangedShellPost events
+        --
+        -- IDEA:
+        --
+        -- When writing a file, we want to get the metadata at the same time to get the modification
+        -- time and add that to our buffer.
+        --
+        -- The changes need to include a modification time if they are modify/attribute and include
+        -- that in the change being sent.
+        --
+        -- While writing is happening, we need to lock the buffer. This should DISCARD all changes
+        -- received while the buffer is locked until we unlock it once writing is finished. This
+        -- won't avoid getting a change event sometime later, but lets us avoid invalid changes
+        -- that don't apply to the editor while we wait to get a new timestamp to use. Once we
+        -- have the new modification timestamp, then we unlock the buffer.
+        --
+        -- Timestamp received by change should be compared to the current buffer timestamp to
+        -- see if we actually need to do anything, or if we can ignore it.
+        --
+        -- So to summaryze:
+        -- * have change include modification timestamp
+        -- * have write get latest modiifcation timestamp and overwrite buffer
+        -- * have open set initial modification time since it retrieves metadata for file/dir
 
         --- @type 'conflict'|'changed'|'created'|'deleted'|'mode'|'time'|''
         local reason = ''
@@ -126,7 +154,7 @@ local function make_on_change(bufnr, bufname)
                                 ):format(bufname)
                         elseif reason == 'mode' then
                             warning_msg = (
-                                'W16: Warning: Mode of file \"%s\" has changed since editing started'
+                                'W16: Warning: Mode of file "%s" has changed since editing started'
                                 ):format(bufname)
                         end
                     end
@@ -278,7 +306,7 @@ return function(opts)
     local bufnr = assert(opts.buf)
     do_watch(
         bufnr,
-        opts.retry_interval or plugin.settings.buffer.watch_retry_timeout,
+        opts.retry_interval or plugin.settings.buffer.watch.retry_timeout,
         false -- simulate created
     )
 end
