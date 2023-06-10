@@ -248,6 +248,7 @@ return function(opts)
         is_dir = path_info.is_dir,
         is_file = path_info.is_file,
         missing = path_info.missing,
+        timestamp = path_info.timestamp,
         client_id = connection,
         winnr = opts.winnr,
     })

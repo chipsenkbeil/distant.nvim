@@ -13,6 +13,7 @@ local M      = {}
 --- @field is_dir boolean #true if buffer represents a directory
 --- @field is_file boolean #true if buffer represents a file
 --- @field missing boolean
+--- @field timestamp? integer
 --- @field client_id? distant.core.manager.ConnectionId # id of the client to use
 --- @field winnr? number #window number to use
 
@@ -128,6 +129,11 @@ function M.configure(opts)
     -- Add the raw path as an alternative path that can be used
     -- to look up this buffer
     buffer.add_alt_path(opts.raw_path, { dedup = true })
+
+    -- Set our modification time
+    if opts.timestamp then
+        buffer.set_mtime(opts.timestamp)
+    end
 
     -- Set our watched status to false only if not set yet
     if buffer.watched() == nil then

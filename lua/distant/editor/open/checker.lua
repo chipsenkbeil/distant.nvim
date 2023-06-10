@@ -9,7 +9,7 @@ M.__index    = M
 --- Will also canonicalize the `path` provided and return it as part of the result.
 ---
 --- @param opts {path:string, client_id?:distant.core.manager.ConnectionId, timeout?:number, interval?:number}
---- @return {path:string, is_dir:boolean, is_file:boolean, missing:boolean}
+--- @return {path:string, is_dir:boolean, is_file:boolean, missing:boolean, timestamp:number|nil}
 function M.check_path(opts)
     log.fmt_trace('checker.check_path(%s)', opts)
 
@@ -36,6 +36,7 @@ function M.check_path(opts)
     local is_dir = false
     local is_file = false
     local full_path = path
+    local timestamp = nil
 
     if not missing then
         assert(metadata, 'Metadata missing')
@@ -45,6 +46,9 @@ function M.check_path(opts)
 
         -- Use canonicalized path if available
         full_path = metadata.canonicalized_path or path
+
+        -- Use timestamp if available
+        timestamp = metadata.modified or metadata.created
     end
 
     return {
@@ -52,6 +56,7 @@ function M.check_path(opts)
         is_dir = is_dir,
         is_file = is_file,
         missing = missing,
+        timestamp = timestamp,
     }
 end
 

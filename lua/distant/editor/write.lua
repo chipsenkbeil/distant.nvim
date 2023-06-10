@@ -43,6 +43,14 @@ return function(opts)
     }, opts))
     assert(not err, tostring(err))
 
+    -- TODO: We want to batch the write and metadata requests, but they need
+    --       to run in sequence, so distant needs a way to run in order.
+    local _, metadata = plugin.api(client_id).metadata({ path = path })
+    local mtime = metadata and (metadata.modified or metadata.created)
+    if mtime then
+        plugin.buf(opts.buf).set_mtime(mtime)
+    end
+
     -- Update buffer as no longer modified
     vim.api.nvim_buf_set_option(buf, 'modified', false)
     return true

@@ -47,11 +47,7 @@ local function make_on_change(bufnr, bufname)
         --     b. If `reload` is DETECT, reset syntax highlighting/clear marks/diff status/etc; force fileformat and encoding
         -- 5. Undo file is unusable and overwritten
         local buf_modified = vim.bo[bufnr].modified
-        local attributes = (change.details and change.details.attributes) or {}
-        local attr_mode = vim.tbl_contains(attributes, function(attr)
-            return attr == 'ownership' or attr == 'permissions'
-        end)
-
+        local attribute = change.details and change.details.attribute
 
         --
         -- TODO: CHIP CHIP CHIP -- how do we understand if a change happened as a result of editing
@@ -90,9 +86,9 @@ local function make_on_change(bufnr, bufname)
             reason = 'conflict'
         elseif change.kind == 'modify' then
             reason = 'changed'
-        elseif change.kind == 'attribute' and attr_mode then
+        elseif change.kind == 'attribute' and (attribute == 'ownership' or attribute == 'permissions') then
             reason = 'mode'
-        elseif change.kind == 'attribute' and vim.tbl_contains(attributes, 'timestamp') then
+        elseif change.kind == 'attribute' and attribute == 'timestamp' then
             reason = 'time'
         end
 
@@ -281,10 +277,10 @@ local function do_watch(bufnr, retry_interval, simulate_created)
         local on_change = make_on_change(bufnr, bufname)
         if simulate_created then
             on_change({
-                ts = 0, -- Not needed for create event
-                kind = 'create',
-                paths = { path },
-                details = nil,
+                timestamp = 0, -- Not needed for create event
+                kind      = 'create',
+                path      = path,
+                details   = nil,
             })
         end
 
