@@ -27,7 +27,11 @@ M.__index              = M
 --- @alias distant.core.api.transport.Callback fun(payload:distant.core.api.msg.Payload)
 --- @alias distant.core.api.transport.More fun(payload:distant.core.api.msg.Payload):boolean
 
+--- @class distant.core.api.msg.Header
+--- @field sequence? boolean # if true, will run a batch request sequentially
+
 --- @class distant.core.api.Msg
+--- @field header? distant.core.api.msg.Header # optional table of additional information
 --- @field id string # unique id of the message
 --- @field origin_id? string # if a response, will be set to the id of the request
 --- @field payload distant.core.api.msg.Payload # a singular payload or multiple payloads
@@ -178,6 +182,7 @@ end
 
 --- @class distant.core.api.transport.SendOpts
 --- @field payload table
+--- @field header? distant.core.api.msg.Header
 --- @field verify? fun(payload:table):boolean #if provided, will be invoked to verify the response payload is valid
 --- @field map? fun(payload:table):any #if provided, will transform the response payload before returning it
 --- @field more? fun(payload:table):boolean
@@ -204,7 +209,7 @@ function M:send(opts, cb)
 
     -- Asynchronous if cb provided, otherwise synchronous
     if cb and utils.callable(cb) then
-        self:send_async({ payload = payload, more = opts.more }, function(res)
+        self:send_async({ payload = payload, header = opts.header, more = opts.more }, function(res)
             if type(res) == 'table' and res.type == 'error' then
                 if type(res.kind) ~= 'string' or type(res.description) ~= 'string' then
                     cb(Error:new({
@@ -241,6 +246,7 @@ function M:send(opts, cb)
     else
         local err, res = self:send_sync({
             payload = payload,
+            header = opts.header,
             more = opts.more,
             timeout = opts.timeout,
             interval = opts.interval
@@ -289,7 +295,7 @@ end
 --- Invokes the provided callback with the response payload once received. If
 --- `more` is used, this callback may be invoked more than once.
 ---
---- @param opts {payload:distant.core.api.msg.Payload, more?:distant.core.api.transport.More}
+--- @param opts {payload:distant.core.api.msg.Payload, header?:distant.core.api.msg.Header, more?:distant.core.api.transport.More}
 --- @param cb distant.core.api.transport.Callback
 function M:send_async(opts, cb)
     log.fmt_trace('[Transport %s]:send_async(%s, _)', self.id, opts)
@@ -314,10 +320,19 @@ function M:send_async(opts, cb)
         end
     end
 
+    -- NOTE: Lua will convert an empty table to be an array in JSON, but our
+    --       header must be an empty object instead! So we need to make sure
+    --       that we convert the type appropriately.
+    local header = opts.header or {}
+    if vim.tbl_isempty(header) then
+        header = vim.empty_dict()
+    end
+
     -- Build a full message that wraps the provided message as the payload and
     -- includes an id that our api uses when relaying a response for the
     -- callback to process
     local full_msg = {
+        header = header,
         id = tostring(utils.next_id()),
         payload = opts.payload,
     }
@@ -346,7 +361,7 @@ end
 --- up to `timeout` milliseconds, checking every `interval` milliseconds for
 --- a result (default timeout = 1000, interval = 200). Returns an error if timeout exceeded.
 --
---- @param opts {payload:distant.core.api.msg.Payload, more?:distant.core.api.transport.More, timeout?:number, interval?:number}
+--- @param opts {payload:distant.core.api.msg.Payload, header?:distant.core.api.msg.Header, more?:distant.core.api.transport.More, timeout?:number, interval?:number}
 --- @return distant.core.api.Error|nil, distant.core.api.msg.Payload|nil
 function M:send_sync(opts)
     log.fmt_trace('[Transport %s]:send_sync(%s)', self.id, opts)

@@ -171,7 +171,7 @@ local function verify_system_info(payload)
         and type(payload.main_separator) == 'string'
         and type(payload.username) == 'string'
         and type(payload.shell) == 'string'
-        )
+    )
 end
 
 --- @param payload table
@@ -179,7 +179,7 @@ end
 local function verify_watch(payload)
     return (
         payload.type == 'ok' or payload.type == 'changed'
-        )
+    )
 end
 
 --- @param payload table
@@ -190,7 +190,7 @@ local function verify_version(payload)
         and type(payload.server_version) == 'string'
         and type(payload.protocol_version) == 'table'
         and type(payload.capabilities) == 'table'
-        )
+    )
 end
 
 --- Mapping of request types to handlers to verify and map responses.
@@ -233,8 +233,9 @@ local RESPONSE_HANDLERS = {
 --- Sends a series of API requests together as a single batch.
 ---
 --- * `opts` - list of requests to send as well as specific options that can be passed.
+--- * `opts.sequence` - if true, will run requests in sequence, exiting if any fails.
 --- * `opts.timeout` - maximum time to wait for a synchronous response.
---- * `opts.interval` -
+--- * `opts.interval` - time between checks for a synchronous response.
 ---
 --- # Synchronous Example
 ---
@@ -287,7 +288,7 @@ local RESPONSE_HANDLERS = {
 --- end)
 --- ```
 ---
---- @param opts {[number]: table, timeout?:number, interval?:number}
+--- @param opts {[number]: table, sequence?:boolean, timeout?:number, interval?:number}
 --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.batch.Response[])
 --- @return distant.core.api.Error|nil err, distant.core.batch.Response[]|nil payload
 function M:batch(opts, cb)
@@ -295,6 +296,9 @@ function M:batch(opts, cb)
         opts = { opts, 'table' },
         cb = { cb, validate_callable({ optional = true }) },
     })
+
+    local sequence = opts.sequence
+    opts.sequence = nil
 
     local timeout = opts.timeout
     opts.timeout = nil
@@ -317,6 +321,7 @@ function M:batch(opts, cb)
 
     return self.transport:send({
         payload = opts,
+        header = { sequence = sequence },
         verify = function(payload)
             return type(payload) == 'table' and vim.tbl_islist(payload)
         end,

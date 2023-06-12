@@ -37,15 +37,30 @@ return function(opts)
     local client_id = plugin.buf(buf).client_id()
 
     -- Write the buffer contents
-    local err, _ = plugin.api(client_id).write_file_text(vim.tbl_extend('keep', {
-        path = path,
-        text = table.concat(lines, '\n')
-    }, opts))
+    local err, results = plugin.api(client_id).batch({
+        {
+            type = 'file_write_text',
+            path = path,
+            text = table.concat(lines, '\n')
+        },
+        {
+            type = 'metadata',
+            path = path,
+        },
+    })
     assert(not err, tostring(err))
+    assert(results)
 
-    -- TODO: We want to batch the write and metadata requests, but they need
-    --       to run in sequence, so distant needs a way to run in order.
-    local _, metadata = plugin.api(client_id).metadata({ path = path })
+    -- Verify we did not get any errors, otherwise throw them
+    for _, response in ipairs(results) do
+        if response.type == 'error' then
+            error(response.description)
+        end
+    end
+
+    --- @type distant.core.api.MetadataPayload
+    --- @diagnostic disable-next-line:assign-type-mismatch
+    local metadata = assert(results[2])
     local mtime = metadata and (metadata.modified or metadata.created)
     if mtime then
         plugin.buf(opts.buf).set_mtime(mtime)
