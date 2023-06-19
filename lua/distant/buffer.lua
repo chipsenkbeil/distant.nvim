@@ -8,8 +8,12 @@ local VARNAME = 'distant'
 --- @field alt_paths? string[]
 --- @field type? distant.plugin.buffer.Type
 --- @field mtime? number
---- @field watched? boolean
+--- @field watched? distant.plugin.buffer.Watched
 
+--- @alias distant.plugin.buffer.Watched
+--- | false
+--- | true
+--- | 'locked'
 --- @alias distant.plugin.buffer.Type 'dir'|'file'
 
 --- Creates a new instance of the buffer interface.
@@ -260,7 +264,7 @@ local function make_buffer(buf)
     end
 
     --- Sets the local buffer data representing the watched status.
-    --- @param watched boolean
+    --- @param watched distant.plugin.buffer.Watched|nil
     --- @return boolean
     function M.set_watched(watched)
         local data = get_data() or {}
@@ -270,7 +274,7 @@ local function make_buffer(buf)
 
     --- Returns whether or not the buffer is being watched.
     --- Can be nil if not configured as a distant buffer.
-    --- @return boolean|nil
+    --- @return distant.plugin.buffer.Watched|nil
     function M.watched()
         local data = get_data()
         if data then

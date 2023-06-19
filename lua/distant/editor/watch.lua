@@ -47,34 +47,8 @@ local function make_on_change(bufnr, bufname)
         --     b. If `reload` is DETECT, reset syntax highlighting/clear marks/diff status/etc; force fileformat and encoding
         -- 5. Undo file is unusable and overwritten
         local buf_modified = vim.bo[bufnr].modified
-        local attribute = change.details and change.details.attribute
-
-        --
-        -- TODO: CHIP CHIP CHIP -- how do we understand if a change happened as a result of editing
-        --       in neovim versus outside? Right now, any change results in the change event  being
-        --       received and triggering the FileChangedShell and FileChangedShellPost events
-        --
-        -- IDEA:
-        --
-        -- When writing a file, we want to get the metadata at the same time to get the modification
-        -- time and add that to our buffer.
-        --
-        -- The changes need to include a modification time if they are modify/attribute and include
-        -- that in the change being sent.
-        --
-        -- While writing is happening, we need to lock the buffer. This should DISCARD all changes
-        -- received while the buffer is locked until we unlock it once writing is finished. This
-        -- won't avoid getting a change event sometime later, but lets us avoid invalid changes
-        -- that don't apply to the editor while we wait to get a new timestamp to use. Once we
-        -- have the new modification timestamp, then we unlock the buffer.
-        --
-        -- Timestamp received by change should be compared to the current buffer timestamp to
-        -- see if we actually need to do anything, or if we can ignore it.
-        --
-        -- So to summaryze:
-        -- * have change include modification timestamp
-        -- * have write get latest modiifcation timestamp and overwrite buffer
-        -- * have open set initial modification time since it retrieves metadata for file/dir
+        local details = change.details or {}
+        local attribute = details.attribute
 
         --- @type 'conflict'|'changed'|'created'|'deleted'|'mode'|'time'|''
         local reason = ''
@@ -92,6 +66,23 @@ local function make_on_change(bufnr, bufname)
             reason = 'time'
         end
 
+        -- Ignore any change during buffer locked watch state (file being written)
+        -- or when the timestamp itself has not changed but our reason is related
+        -- to modification or timestamp changes
+        local watched = plugin.buf(bufnr).watched()
+        local timestamp = details.timestamp
+        if watched == 'locked' or (
+                timestamp ~= nil and timestamp == plugin.buf(bufnr).mtime() and
+                (reason == '' or reason == 'conflict' or reason == 'changed' or reason == 'time')
+            ) then
+            return
+        end
+
+        -- If we have a timestamp, update our buffer's copy
+        if timestamp then
+            plugin.buf(bufnr).set_mtime(timestamp)
+        end
+
         --- @type 'none'|'normal'|'detect'
         local reload = 'none'
         local prompt_reload = false
@@ -104,7 +95,7 @@ local function make_on_change(bufnr, bufname)
                 prompt_reload = true
                 warning_msg = (
                     'W13: Warning: File "%s" has been created after editing started'
-                    ):format(bufname)
+                ):format(bufname)
             else
                 local skip_msg = false
                 local autocmds = vim.api.nvim_get_autocmds({
@@ -147,11 +138,11 @@ local function make_on_change(bufnr, bufname)
                         if reason == 'conflict' then
                             warning_msg = (
                                 'W12: Warning: File "%s" has changed and the buffer was changed in Vim as well'
-                                ):format(bufname)
+                            ):format(bufname)
                         elseif reason == 'mode' then
                             warning_msg = (
                                 'W16: Warning: Mode of file "%s" has changed since editing started'
-                                ):format(bufname)
+                            ):format(bufname)
                         end
                     end
                 end

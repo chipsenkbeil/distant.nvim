@@ -15,7 +15,7 @@ local Version        = require('distant-core').Version
 local DEFAULT        = require('distant.default')
 
 --- Represents the minimum version of the CLI supported by this plugin.
-local MIN_VERSION    = Version:parse('0.20.0-alpha.8')
+local MIN_VERSION    = Version:parse('0.20.0-alpha.9')
 
 --- Represents the version of the plugin (not CLI).
 local PLUGIN_VERSION = Version:parse('0.3.0')
