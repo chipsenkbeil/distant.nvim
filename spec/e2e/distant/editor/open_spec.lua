@@ -7,7 +7,18 @@ describe('distant.editor.open', function()
     local driver, file, dir, sep
 
     before_each(function()
-        driver = Driver:setup({ label = 'distant.editor.open' })
+        driver = Driver:setup({
+            label = 'distant.editor.open',
+
+            -- Disable watching buffer content changes for our tests
+            settings = {
+                buffer = {
+                    watch = {
+                        enabled = false
+                    }
+                }
+            },
+        })
         file = driver:new_file_fixture({
             ext = 'txt',
             lines = {

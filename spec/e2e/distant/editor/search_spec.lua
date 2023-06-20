@@ -6,7 +6,18 @@ describe('distant.editor.search', function()
     local driver, root
 
     before_each(function()
-        driver = Driver:setup({ label = 'distant.editor.search' })
+        driver = Driver:setup({
+            label = 'distant.editor.search',
+
+            -- Disable watching buffer content changes for our tests
+            settings = {
+                buffer = {
+                    watch = {
+                        enabled = false
+                    }
+                }
+            },
+        })
         root = driver:new_dir_fixture()
     end)
 

@@ -15,6 +15,15 @@ describe('distant.editor.connect', function()
             label = 'distant.editor.connect',
             no_client = true,
             no_manager = true,
+
+            -- Disable watching buffer content changes for our tests
+            settings = {
+                buffer = {
+                    watch = {
+                        enabled = false
+                    }
+                }
+            },
         })
     end)
 
