@@ -124,7 +124,7 @@ local function make_api(client_id)
     --- end)
     --- ```
     ---
-    --- @param opts {[number]: table, timeout?:number, interval?:number}
+    --- @param opts {[number]: table, sequence?:boolean, timeout?:number, interval?:number}
     --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.batch.Response[])
     --- @return distant.core.api.Error|nil err, distant.core.batch.Response[]|nil payload
     function M.batch(opts, cb)
@@ -258,8 +258,9 @@ local function make_api(client_id)
         return api():write_file_text(opts, cb)
     end
 
-    --- @param opts distant.core.api.WatchOpts
-    --- @param cb fun(err?:distant.core.api.Error, payload?:distant.core.api.WatchPayload)
+    --- @param opts distant.core.api.watcher.WatchOpts
+    --- @param cb? fun(err?:distant.core.api.Error, watcher?:distant.core.api.Watcher)
+    --- @return distant.core.api.Error|nil err, distant.core.api.Watcher|nil watcher
     function M.watch(opts, cb)
         api():watch(opts, cb)
     end

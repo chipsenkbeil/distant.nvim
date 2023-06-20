@@ -88,6 +88,15 @@ function M:remote_type()
     end
 end
 
+--- Return the remote mtime associated with the buffer, if it has one.
+--- @return integer|nil
+function M:remote_mtime()
+    local tbl = self:try_get_var('distant')
+    if type(tbl) == 'table' then
+        return tbl.mtime
+    end
+end
+
 --- Reads lines from buffer as a single string separated by newlines.
 --- @return string
 function M:contents()

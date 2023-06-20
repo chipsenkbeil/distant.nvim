@@ -133,8 +133,8 @@ local ERROR_KIND_DETAILS = {
 -------------------------------------------------------------------------------
 
 --- @class distant.core.api.Error
---- @field kind string
---- @field description distant.core.api.error.Kind
+--- @field kind distant.core.api.error.Kind
+--- @field description string
 local M = { kinds = ERROR_KIND }
 M.__index = M
 

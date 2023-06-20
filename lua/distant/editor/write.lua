@@ -1,6 +1,50 @@
 local plugin = require('distant')
 local log    = require('distant-core').log
 
+--- @param opts {buf:integer, client_id:integer|nil, path:string, lines:string[]}
+local function do_write(opts)
+    local buf = opts.buf
+    local client_id = opts.client_id
+    local path = opts.path
+    local lines = opts.lines
+
+    -- Write the buffer contents
+    local err, results = plugin.api(client_id).batch({
+        sequence = true,
+        {
+            type = 'file_write_text',
+            path = path,
+            text = table.concat(lines, '\n')
+        },
+        {
+            type = 'metadata',
+            path = path,
+        },
+    })
+
+    -- Check the response of writing the file
+    assert(not err, tostring(err))
+    assert(results)
+
+    -- Verify we did not get any errors, otherwise throw them
+    for _, response in ipairs(results) do
+        if response.type == 'error' then
+            error(response.description)
+        end
+    end
+
+    --- @type distant.core.api.MetadataPayload
+    --- @diagnostic disable-next-line:assign-type-mismatch
+    local metadata = assert(results[2])
+    local mtime = metadata and (metadata.modified or metadata.created)
+    if mtime then
+        plugin.buf(buf).set_mtime(mtime)
+    end
+
+    -- Update buffer as no longer modified
+    vim.api.nvim_buf_set_option(buf, 'modified', false)
+end
+
 --- Writes a buffer to disk on the remote machine
 --- @param opts number|{buf:number, timeout?:number, interval?:number}
 --- @return boolean
@@ -36,14 +80,27 @@ return function(opts)
     -- Make sure we're using the right client
     local client_id = plugin.buf(buf).client_id()
 
-    -- Write the buffer contents
-    local err, _ = plugin.api(client_id).write_file_text(vim.tbl_extend('keep', {
-        path = path,
-        text = table.concat(lines, '\n')
-    }, opts))
-    assert(not err, tostring(err))
+    -- Lock our watched status if watching the file
+    local watched = plugin.buf(buf).watched()
+    if watched == true then
+        plugin.buf(buf).set_watched('locked')
+    end
 
-    -- Update buffer as no longer modified
-    vim.api.nvim_buf_set_option(buf, 'modified', false)
+    -- Perform the write, capturing the error
+    -- so we can reset our watch status before
+    -- throwing the error
+    local ok, err = pcall(do_write, {
+        buf = buf,
+        client_id = client_id,
+        lines = lines,
+        path = path,
+    })
+
+    -- Reset our locked status
+    plugin.buf(buf).set_watched(watched)
+
+    -- Throw our error if we got one earlier
+    assert(ok, err)
+
     return true
 end

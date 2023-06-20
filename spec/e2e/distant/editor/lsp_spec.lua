@@ -74,7 +74,15 @@ describe('distant.editor.lsp', function()
         driver = Driver:setup({
             label = 'distant.editor.lsp',
             lazy = true,
-            log = vim.log.levels.DEBUG,
+
+            -- Disable watching buffer content changes for our tests
+            settings = {
+                buffer = {
+                    watch = {
+                        enabled = false
+                    }
+                }
+            },
         })
         root = driver:new_dir_fixture()
 

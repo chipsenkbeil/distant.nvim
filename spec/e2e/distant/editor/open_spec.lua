@@ -7,7 +7,18 @@ describe('distant.editor.open', function()
     local driver, file, dir, sep
 
     before_each(function()
-        driver = Driver:setup({ label = 'distant.editor.open' })
+        driver = Driver:setup({
+            label = 'distant.editor.open',
+
+            -- Disable watching buffer content changes for our tests
+            settings = {
+                buffer = {
+                    watch = {
+                        enabled = false
+                    }
+                }
+            },
+        })
         file = driver:new_file_fixture({
             ext = 'txt',
             lines = {
@@ -109,6 +120,9 @@ describe('distant.editor.open', function()
         end
         assert.are.equal('text', buffer:filetype())
         assert.are.equal('acwrite', buffer:buftype())
+
+        -- Verify the mtime field was set to the file's mtime
+        assert.are.equal(metadata.modified, buffer:remote_mtime())
 
         -- Verify we switched our window to the current buffer
         assert.is.truthy(buffer:is_focused())

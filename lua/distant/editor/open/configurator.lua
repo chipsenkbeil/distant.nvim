@@ -13,6 +13,7 @@ local M      = {}
 --- @field is_dir boolean #true if buffer represents a directory
 --- @field is_file boolean #true if buffer represents a file
 --- @field missing boolean
+--- @field timestamp? integer
 --- @field client_id? distant.core.manager.ConnectionId # id of the client to use
 --- @field winnr? number #window number to use
 
@@ -58,6 +59,10 @@ function M.configure(opts)
         end
     end
 
+    --
+    -- Configure buffer options for directory & file
+    --
+
     -- If a directory, we want to mark as such and prevent modifying;
     -- otherwise, in all other cases we treat this as a remote file
     if opts.is_dir then
@@ -101,31 +106,42 @@ function M.configure(opts)
         end
     end
 
+    --
     -- Add stateful information to the buffer, helping keep track of it
-    do
-        log.fmt_debug('Storing variables for buffer %s', bufnr)
-        local buffer = plugin.buf(bufnr)
+    --
 
-        -- Ensure that we have a client configured
-        buffer.set_client_id(
-            opts.client_id or
-            assert(
-                plugin:active_client_id(),
-                ('Buffer %s opened without a distant client'):format(bufnr)
-            )
+    log.fmt_debug('Storing variables for buffer %s', bufnr)
+    local buffer = plugin.buf(bufnr)
+
+    -- Ensure that we have a client configured
+    buffer.set_client_id(
+        opts.client_id or
+        assert(
+            plugin:active_client_id(),
+            ('Buffer %s opened without a distant client'):format(bufnr)
         )
+    )
 
-        -- Set our path information
-        buffer.set_path(opts.canonicalized_path)
-        buffer.set_type(opts.is_dir and 'dir' or 'file')
+    -- Set our path information
+    buffer.set_path(opts.canonicalized_path)
+    buffer.set_type(opts.is_dir and 'dir' or 'file')
 
-        -- Add the raw path as an alternative path that can be used
-        -- to look up this buffer
-        buffer.add_alt_path(opts.raw_path, { dedup = true })
+    -- Add the raw path as an alternative path that can be used
+    -- to look up this buffer
+    buffer.add_alt_path(opts.raw_path, { dedup = true })
 
-        -- Ensure that the data has been stored
-        log.fmt_debug('Buffer %s stored variables: %s', bufnr, buffer.assert_data())
+    -- Set our modification time
+    if opts.timestamp then
+        buffer.set_mtime(opts.timestamp)
     end
+
+    -- Set our watched status to false only if not set yet
+    if buffer.watched() == nil then
+        buffer.set_watched(false)
+    end
+
+    -- Ensure that the data has been stored
+    log.fmt_debug('Buffer %s stored variables: %s', bufnr, buffer.assert_data())
 
     -- Update the buffer name to proper reflect
     -- NOTE: This MUST be done after we set our variables, otherwise
@@ -137,6 +153,10 @@ function M.configure(opts)
 
     -- Display the buffer in the specified window, defaulting to current
     vim.api.nvim_win_set_buf(winnr, bufnr)
+
+    --
+    -- Configure extra file details & LSP clients
+    --
 
     if opts.is_file or opts.missing then
         -- Set our filetype to whatever the contents actually are (or file extension is)
@@ -153,10 +173,15 @@ function M.configure(opts)
         )
         client:connect_lsp_clients({
             bufnr = bufnr,
-            path = plugin.buf(bufnr).assert_path(),
-            scheme = plugin.buf(bufnr).name.prefix(),
+            path = buffer.assert_path(),
+            scheme = buffer.name.prefix(),
             settings = plugin:server_settings_for_client().lsp,
         })
+    end
+
+    -- Watch the buffer to detect changes (only applies to files)
+    if plugin.settings.buffer.watch.enabled then
+        plugin.editor.watch({ buf = bufnr })
     end
 end
 

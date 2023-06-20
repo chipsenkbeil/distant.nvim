@@ -204,10 +204,9 @@ end
 --- @param cb? fun(err?:distant.core.api.Error, results?:distant.core.api.process.SpawnResults)
 --- @return distant.core.api.Error|nil,distant.core.api.process.SpawnResults|nil
 function M:spawn(opts, cb)
-    local tx, rx = utils.oneshot_channel(
-        opts.timeout or self.__internal.transport.config.timeout,
-        opts.interval or self.__internal.transport.config.interval
-    )
+    local timeout = opts.timeout or self.__internal.transport.config.timeout
+    local interval = opts.interval or self.__internal.transport.config.interval
+    local tx, rx = utils.oneshot_channel(timeout, interval)
 
     self.__internal.on_done = function(results)
         if cb and utils.callable(cb) then
@@ -218,8 +217,8 @@ function M:spawn(opts, cb)
     end
     self.__internal.on_stdout = opts.on_stdout
     self.__internal.on_stderr = opts.on_stderr
-    self.__internal.timeout = opts.timeout
-    self.__internal.interval = opts.timeout
+    self.__internal.timeout = timeout
+    self.__internal.interval = timeout
 
     -- Build our command
     local cmd = opts.cmd

@@ -2,6 +2,7 @@ local Error = require('distant-core.api.error')
 local Process = require('distant-core.api.process')
 local Searcher = require('distant-core.api.searcher')
 local Transport = require('distant-core.api.transport')
+local Watcher = require('distant-core.api.watcher')
 
 local log = require('distant-core.log')
 local utils = require('distant-core.utils')
@@ -232,8 +233,9 @@ local RESPONSE_HANDLERS = {
 --- Sends a series of API requests together as a single batch.
 ---
 --- * `opts` - list of requests to send as well as specific options that can be passed.
+--- * `opts.sequence` - if true, will run requests in sequence, exiting if any fails.
 --- * `opts.timeout` - maximum time to wait for a synchronous response.
---- * `opts.interval` -
+--- * `opts.interval` - time between checks for a synchronous response.
 ---
 --- # Synchronous Example
 ---
@@ -286,7 +288,7 @@ local RESPONSE_HANDLERS = {
 --- end)
 --- ```
 ---
---- @param opts {[number]: table, timeout?:number, interval?:number}
+--- @param opts {[number]: table, sequence?:boolean, timeout?:number, interval?:number}
 --- @param cb? fun(err?:distant.core.api.Error, payload?:distant.core.batch.Response[])
 --- @return distant.core.api.Error|nil err, distant.core.batch.Response[]|nil payload
 function M:batch(opts, cb)
@@ -294,6 +296,9 @@ function M:batch(opts, cb)
         opts = { opts, 'table' },
         cb = { cb, validate_callable({ optional = true }) },
     })
+
+    local sequence = opts.sequence
+    opts.sequence = nil
 
     local timeout = opts.timeout
     opts.timeout = nil
@@ -316,6 +321,7 @@ function M:batch(opts, cb)
 
     return self.transport:send({
         payload = opts,
+        header = { sequence = sequence },
         verify = function(payload)
             return type(payload) == 'table' and vim.tbl_islist(payload)
         end,
@@ -834,87 +840,32 @@ function M:write_file_text(opts, cb)
     }, cb)
 end
 
---- @alias distant.core.api.watch.ChangeKind
---- | '"access"' # Something about a file or directory was accessed, but no specific details were known
---- | '"access_close_execute"' # A file was closed for executing
---- | '"access_close_read"' # A file was closed for reading
---- | '"access_close_write"' # A file was closed for writing
---- | '"access_open_execute"' # A file was opened for executing
---- | '"access_open_read"' # A file was opened for reading
---- | '"access_open_write"' # A file was opened for writing
---- | '"access_open"' # A file or directory was read
---- | '"access_time"' # The access time of a file or directory was changed
---- | '"create"' # A file, directory, or something else was created
---- | '"content"' # The content of a file or directory changed
---- | '"data"' # The data of a file or directory was modified, but no specific details were known
---- | '"metadata"' # The metadata of a file or directory was modified, but no specific details were known
---- | '"modify"' # Something about a file or directory was modified, but no specific details were known
---- | '"remove"' # A file, directory, or something else was removed
---- | '"rename"' # A file or directory was renamed, but no specific details were known
---- | '"rename_both"' # A file or directory was renamed, and the provided paths are the source and target in that order (from, to)
---- | '"rename_from"' # A file or directory was renamed, and the provided path is the origin of the rename (before being renamed)
---- | '"rename_to"' # A file or directory was renamed, and the provided path is the result of the rename
---- | '"size"' # A file's size changed
---- | '"ownership"' # The ownership of a file or directory was changed
---- | '"permissions"' # The permissions of a file or directory was changed
---- | '"write_time"' # The write or modify time of a file or directory was changed
---- | '"unknown"' # Catchall in case we have no insight as to the type of change
-
---- @class distant.core.api.WatchOpts
---- @field path string
---- @field recursive? boolean
---- @field only? distant.core.api.watch.ChangeKind[]
---- @field except? distant.core.api.watch.ChangeKind[]
---- @field timeout? number
---- @field interval? number
-
---- @class distant.core.api.WatchPayload
---- @field type 'changed'
---- @field kind distant.core.api.watch.ChangeKind
---- @field paths string[]
-
 --- Begins watching a path for changes.
 ---
---- NOTE: This function does NOT have a synchronous equivalent!
+--- If callback is given, will be invoked when the watcher is ready; otherwise,
+--- the function will block until the watcher is ready. Use the watcher's callback
+--- assignment to receive changes.
 ---
---- @param opts distant.core.api.WatchOpts
---- @param cb fun(err?:distant.core.api.Error, payload?:distant.core.api.WatchPayload)
+--- @param opts distant.core.api.watcher.WatchOpts
+--- @param cb? fun(err?:distant.core.api.Error, watcher?:distant.core.api.Watcher)
+--- @return distant.core.api.Error|nil err, distant.core.api.Watcher|nil watcher
 function M:watch(opts, cb)
     vim.validate({
         opts = { opts, 'table' },
         cb = { cb, validate_callable() },
     })
 
-    local ty = REQUEST_TYPE.WATCH
-    local handlers = assert(RESPONSE_HANDLERS[ty], 'Missing handlers for ' .. ty)
+    local watcher = Watcher:new({
+        path = opts.path,
+        transport = self.transport
+    })
 
-    return self.transport:send({
-        payload = {
-            type = ty,
-            path = opts.path,
-            recursive = opts.recursive,
-            only = opts.only,
-            except = opts.except,
-        },
-        map = handlers.map,
-        verify = handlers.verify,
-        more = function(payload)
-            -- TODO: We need some way to cleanup the callback when
-            --       the path has been unwatched!
-            return payload.type == 'changed' or payload.type == 'ok'
-        end,
-        timeout = opts.timeout,
-        interval = opts.interval,
-    }, function(err, payload)
-        -- NOTE: It's possible to get a payload of "ok" when
-        --       as it is sent in response to the initial
-        --       watch request. We want to skip that payload!
-        if err then
-            cb(err, nil)
-        elseif payload.type == 'changed' then
-            cb(nil, payload)
-        end
-    end)
+    if cb and callable(cb) then
+        watcher:watch(opts, cb)
+        return nil, watcher
+    else
+        return watcher:watch(opts)
+    end
 end
 
 --- @alias distant.core.api.UnwatchOpts {path:string, timeout?:number, interval?:number}

@@ -7,7 +7,18 @@ describe('distant.nav.actions.up', function()
     local driver, root, sep
 
     before_each(function()
-        driver = Driver:setup({ label = 'distant.nav.actions.up' })
+        driver = Driver:setup({
+            label = 'distant.nav.actions.up',
+
+            -- Disable watching buffer content changes for our tests
+            settings = {
+                buffer = {
+                    watch = {
+                        enabled = false
+                    }
+                }
+            },
+        })
 
         -- TODO: This is really expensive, but plenary doesn't offer setup/teardown
         --       functions that we could use to limit this to the the entire
