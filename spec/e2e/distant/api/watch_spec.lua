@@ -6,11 +6,7 @@ describe('distant.api.watch', function()
     local driver, root
 
     before_each(function()
-        driver = Driver:setup({
-            label = 'distant.api.watch',
-            log_dir = '/tmp',
-            log = vim.log.levels.TRACE,
-        })
+        driver = Driver:setup({ label = 'distant.api.watch' })
         root = driver:new_dir_fixture()
     end)
 
@@ -36,14 +32,14 @@ describe('distant.api.watch', function()
 
             --- @type distant.core.api.Error|nil, distant.core.api.Watcher|nil
             local err, watcher = capture.wait()
-            assert(not err, tostring(err))
+            assert(not err, vim.inspect(err))
 
             capture = driver:new_capture()
+            --- @diagnostic disable-next-line:param-type-mismatch
             assert(watcher):on_change(capture)
 
-            local change
-            err, change = capture.wait()
-            assert(not err, tostring(err))
+            local change = capture.wait()
+            assert(not err, vim.inspect(err))
             assert.is.truthy(change)
         end)
 
@@ -64,14 +60,14 @@ describe('distant.api.watch', function()
 
             --- @type distant.core.api.Error|nil, distant.core.api.Watcher|nil
             local err, watcher = capture.wait()
-            assert(not err, tostring(err))
+            assert(not err, vim.inspect(err))
 
             capture = driver:new_capture()
+            --- @diagnostic disable-next-line:param-type-mismatch
             assert(watcher):on_change(capture)
 
-            local change
-            err, change = capture.wait()
-            assert(not err, tostring(err))
+            local change = capture.wait()
+            assert(not err, vim.inspect(err))
             assert.is.truthy(change)
         end)
 
@@ -92,7 +88,7 @@ describe('distant.api.watch', function()
             driver:debug_print('Watching ' .. path)
             --- @diagnostic disable-next-line:param-type-mismatch
             plugin.api.watch({ path = path, recursive = true }, function(err, watcher)
-                assert(not err, tostring(err))
+                assert(not err, vim.inspect(err))
                 assert(watcher):on_change(function(change)
                     table.insert(changes, change)
                 end)
@@ -116,7 +112,7 @@ describe('distant.api.watch', function()
             plugin.api.unwatch({ path = path }, capture)
 
             local err, res = capture.wait()
-            assert(not err, tostring(err))
+            assert(not err, vim.inspect(err))
             assert(res)
             assert.are.equal(res.type, 'ok')
 

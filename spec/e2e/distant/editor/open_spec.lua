@@ -110,6 +110,9 @@ describe('distant.editor.open', function()
         assert.are.equal('text', buffer:filetype())
         assert.are.equal('acwrite', buffer:buftype())
 
+        -- Verify the mtime field was set to the file's mtime
+        assert.are.equal(metadata.modified, buffer:remote_mtime())
+
         -- Verify we switched our window to the current buffer
         assert.is.truthy(buffer:is_focused())
     end)
