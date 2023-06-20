@@ -8,7 +8,18 @@ describe('distant.nav.actions.rename', function()
     local driver, root, sep
 
     before_each(function()
-        driver = Driver:setup({ label = 'distant.nav.actions.rename' })
+        driver = Driver:setup({
+            label = 'distant.nav.actions.rename',
+
+            -- Disable watching buffer content changes for our tests
+            settings = {
+                buffer = {
+                    watch = {
+                        enabled = false
+                    }
+                }
+            },
+        })
 
         -- TODO: This is really expensive, but plenary doesn't offer setup/teardown
         --       functions that we could use to limit this to the the entire
