@@ -283,7 +283,7 @@ function M.Table(rows, extra)
         end
     end
 
-    if type(extra) == 'table' and vim.tbl_islist(extra) then
+    if type(extra) == 'table' and vim.tbl_isarray(extra) then
         --- @type distant.core.ui.INode[]
         local rows_with_extra = {}
 
