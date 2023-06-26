@@ -174,6 +174,7 @@ function M:connect_lsp_clients(opts)
             --- Performs actual process of attaching a client to a buffer using the `root_dir`.
             --- @param root_dir string
             local function do_connect_client(root_dir)
+                assert(type(root_dir) == 'string', ('Invalid root dir: %s'):format(vim.inspect(root_dir)))
                 log.fmt_trace('File %s is within %s of %s', path, root_dir, label)
 
                 -- Check if this lsp is filtered by filetype, and if so make sure that
@@ -199,16 +200,18 @@ function M:connect_lsp_clients(opts)
                         end
 
                         local cmd = self:wrap({ lsp = config.cmd, scheme = opts.scheme })
-                        log.fmt_debug('Starting LSP %s: %s', label, cmd)
+
+                        config = vim.tbl_deep_extend('force', config, {
+                            cmd = cmd,
+                            on_exit = on_exit,
+                            root_dir = root_dir,
+                        })
 
                         -- Start LSP server using the provided configuration, replacing the
                         -- command with the distant-wrapped verison and shadowing the
                         -- on_exit command if provided
-                        local id = vim.lsp.start_client(vim.tbl_deep_extend('force', config, {
-                            cmd = cmd,
-                            on_exit = on_exit,
-                            root_dir = root_dir,
-                        }))
+                        log.fmt_debug('Starting LSP %s: %s', label, config)
+                        local id = vim.lsp.start_client(config)
                         self.__state.lsp.clients[label] = id
                     end
 
