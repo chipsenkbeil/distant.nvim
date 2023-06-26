@@ -54,7 +54,7 @@ RUN mkdir -p $opt_lsp_dir \
     && ln -s $opt_bin_dir/lua-language-server /usr/local/bin/lua-language-server
 
 # Install distant binary and make sure its in a path for everyone
-ARG DISTANT_VERSION=0.20.0-alpha.9
+ARG DISTANT_VERSION=0.20.0-alpha.10
 ARG distant_release=https://github.com/chipsenkbeil/distant/releases/download/v$DISTANT_VERSION
 RUN curl -L $distant_release/distant-linux64-musl-x86 -o "$opt_bin_dir/distant" \
     && chmod +x "$opt_bin_dir/distant" \
