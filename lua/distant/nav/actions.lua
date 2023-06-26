@@ -212,9 +212,27 @@ M.rename = function(opts)
                 return
             end
 
+            -- NOTE: We lock watching the buffer tied to this path to prevent notifications
+            local buffer = plugin.buf.find({ path = old_path })
+            local watched
+            if buffer then
+                watched = buffer.watched()
+                buffer.set_watched('locked')
+            end
+
             local err = plugin.api(client_id).rename({ src = old_path, dst = new_path })
 
             if not err then
+                -- If we succeeded, attempt to unwatch the old path and clear the watch state
+                if buffer then
+                    -- Perform unwatch asynchronously, but don't worry about success
+                    plugin.api.unwatch({ path = old_path }, function()
+                    end)
+
+                    buffer.set_watched(nil)
+                end
+
+                -- Reload the directory buffer
                 plugin.editor.open({
                     client_id = client_id,
                     path = base_path,
@@ -222,6 +240,11 @@ M.rename = function(opts)
                 })
             else
                 log.error(string.format('Failed to rename %s to %s: %s', old_path, new_path, err))
+
+                -- If we failed, restore the previous watch state
+                if buffer then
+                    buffer.set_watched(watched)
+                end
             end
         end
     end
@@ -259,6 +282,14 @@ M.remove = function(opts)
                 force = choice == 2
             end
 
+            -- NOTE: We lock watching the buffer tied to this path to prevent notifications
+            local buffer = plugin.buf.find({ path = path })
+            local watched
+            if buffer then
+                watched = buffer.watched()
+                buffer.set_watched('locked')
+            end
+
             local err = plugin.api(client_id).remove({
                 path = path,
                 force = force,
@@ -267,13 +298,28 @@ M.remove = function(opts)
             })
 
             if not err then
+                -- If we succeeded, attempt to unwatch the path and clear the watch state
+                if buffer then
+                    -- Perform unwatch asynchronously, but don't worry about success
+                    plugin.api.unwatch({ path = path }, function()
+                    end)
+
+                    buffer.set_watched(nil)
+                end
+
+                -- Reload the directory buffer
                 plugin.editor.open({
                     client_id = client_id,
                     path = base_path,
-                    reload = true
+                    reload = true,
                 })
             else
                 log.fmt_error('Failed to remove %s: %s', path, tostring(err))
+
+                -- If we failed, restore the previous watch state
+                if buffer then
+                    buffer.set_watched(watched)
+                end
             end
         end
     end
