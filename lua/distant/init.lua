@@ -710,9 +710,12 @@ function M:spawn_shell(opts)
         opts.bufnr = -1
     end
 
+    log.fmt_debug('Spawning shell %s', opts)
     local client = assert(self:client(), 'No client established')
     local _, bufnr = client:spawn_shell(opts)
     self.buf(bufnr).set_client_id(client.id)
+
+    log.fmt_debug('Shell spawned into buffer %s', bufnr)
     return bufnr
 end
 

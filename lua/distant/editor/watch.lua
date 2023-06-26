@@ -66,14 +66,19 @@ local function make_on_change(bufnr, bufname)
             reason = 'time'
         end
 
+        -- If our change kind is opening or closing a file, we ignore it in favor of other events
+        if change.kind == 'open' or change.kind == 'close_write' or change.kind == 'close_no_write' then
+            return
+        end
+
         -- Ignore any change during buffer locked watch state (file being written)
         -- or when the timestamp itself has not changed but our reason is related
         -- to modification or timestamp changes
         local watched = plugin.buf(bufnr).watched()
         local timestamp = details.timestamp
         if watched == 'locked' or (
-                timestamp ~= nil and timestamp == plugin.buf(bufnr).mtime() and
-                (reason == '' or reason == 'conflict' or reason == 'changed' or reason == 'time')
+            timestamp ~= nil and timestamp == plugin.buf(bufnr).mtime() and
+            (reason == '' or reason == 'conflict' or reason == 'changed' or reason == 'time')
             ) then
             return
         end
@@ -95,7 +100,7 @@ local function make_on_change(bufnr, bufname)
                 prompt_reload = true
                 warning_msg = (
                     'W13: Warning: File "%s" has been created after editing started'
-                ):format(bufname)
+                    ):format(bufname)
             else
                 local skip_msg = false
                 local autocmds = vim.api.nvim_get_autocmds({
@@ -106,6 +111,8 @@ local function make_on_change(bufnr, bufname)
                 -- Invoke FileChangedShell autocommands if we have them
                 if not vim.tbl_isempty(autocmds) then
                     vim.v.fcs_reason = reason
+
+                    -- Execute file changed shell for all groups
                     vim.api.nvim_exec_autocmds('FileChangedShell', {
                         pattern = require('distant.autocmd').pattern()
                     })
@@ -138,14 +145,35 @@ local function make_on_change(bufnr, bufname)
                         if reason == 'conflict' then
                             warning_msg = (
                                 'W12: Warning: File "%s" has changed and the buffer was changed in Vim as well'
-                            ):format(bufname)
+                                ):format(bufname)
                         elseif reason == 'mode' then
                             warning_msg = (
                                 'W16: Warning: Mode of file "%s" has changed since editing started'
-                            ):format(bufname)
+                                ):format(bufname)
                         end
                     end
                 end
+            end
+        end
+
+        --- @param reload 'none'|'normal'|'detect'
+        local function reload_buffer(reload)
+            local buffer = plugin.buf.find({ path = change.path })
+            if buffer then
+                -- NOTE: We do not trigger BufReadCmd and instead invoke
+                --       the editor open directly because invoking a BufReadCmd
+                --       will potentially set <abuf> to the wrong buffer in
+                --       situations where we do not have that buffer currently
+                --       selected (e.g. modifying from a shell).
+                plugin.editor.open({
+                    path = change.path,
+                    bufnr = buffer.bufnr(),
+                    client_id = buffer.client_id(),
+                    -- Prevent changing current window to buffer that is reloaded
+                    no_focus = true,
+                    -- TODO: Support detect mode
+                    reload = true,
+                })
             end
         end
 
@@ -173,24 +201,18 @@ local function make_on_change(bufnr, bufname)
                 end
 
                 if reload ~= 'none' then
-                    -- TODO: Support detect mode
-                    vim.api.nvim_exec_autocmds('BufReadCmd', {
-                        group = 'distant',
-                        pattern = bufname,
-                    })
+                    reload_buffer(reload)
                 end
 
-                -- Always trigger our post event
-                vim.api.nvim_exec_autocmds('FileChangedShellPost', { pattern = bufname })
+                -- Always trigger our post event for all groups
+                vim.api.nvim_exec_autocmds('FileChangedShellPost', {
+                    pattern = bufname,
+                })
             end)
 
             clear_warning_hl()
         elseif reload ~= 'none' then
-            -- TODO: Support detect mode
-            vim.api.nvim_exec_autocmds('BufReadCmd', {
-                group = 'distant',
-                pattern = bufname,
-            })
+            reload_buffer(reload)
         end
 
         if not prompt_reload then
@@ -198,8 +220,10 @@ local function make_on_change(bufnr, bufname)
                 print_warning(warning_msg)
             end
 
-            -- Always trigger our post event
-            vim.api.nvim_exec_autocmds('FileChangedShellPost', { pattern = bufname })
+            -- Always trigger our post event for all groups
+            vim.api.nvim_exec_autocmds('FileChangedShellPost', {
+                pattern = bufname,
+            })
         end
     end
 end

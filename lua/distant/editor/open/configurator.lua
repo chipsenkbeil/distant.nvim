@@ -14,6 +14,7 @@ local M      = {}
 --- @field is_file boolean #true if buffer represents a file
 --- @field missing boolean
 --- @field timestamp? integer
+--- @field no_focus? boolean #true if focus of the window should not be set to the buffer
 --- @field client_id? distant.core.manager.ConnectionId # id of the client to use
 --- @field winnr? number #window number to use
 
@@ -152,7 +153,9 @@ function M.configure(opts)
     set_bufname(bufnr, bufname)
 
     -- Display the buffer in the specified window, defaulting to current
-    vim.api.nvim_win_set_buf(winnr, bufnr)
+    if not opts.no_focus then
+        vim.api.nvim_win_set_buf(winnr, bufnr)
+    end
 
     --
     -- Configure extra file details & LSP clients

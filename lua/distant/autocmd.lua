@@ -14,9 +14,13 @@ local utils   = require('distant-core').utils
 --- Patterns supported by distant autocommands.
 local PATTERN = { 'distant://*', 'distant+*://*' }
 
+--- Id of the group created.
+--- @type number|nil
+local autogroup_id
+
 local function _initialize()
-    log.trace('Initializing autocmds')
-    local autogroup_id = vim.api.nvim_create_augroup('distant', { clear = true })
+    log.debug('Initializing autocmds')
+    autogroup_id = vim.api.nvim_create_augroup('distant', { clear = true })
 
     -- If we enter a buffer that is not initialized, we trigger a BufReadCmd
     vim.api.nvim_create_autocmd({ 'BufEnter' }, {
@@ -24,6 +28,7 @@ local function _initialize()
         pattern = PATTERN,
         --- @param opts neovim.AutocmdOpts
         callback = function(opts)
+            log.fmt_debug('BufEnter %s', opts)
             local bufnr = opts.buf
             local match = opts.match
 
@@ -43,6 +48,7 @@ local function _initialize()
         pattern = PATTERN,
         --- @param opts neovim.AutocmdOpts
         callback = function(opts)
+            log.fmt_debug('BufReadCmd/FileReadCmd %s', opts)
             local bufnr = opts.buf
             local fname = opts.match
 
@@ -78,6 +84,7 @@ local function _initialize()
         pattern = PATTERN,
         --- @param opts neovim.AutocmdOpts
         callback = function(opts)
+            log.fmt_debug('BufWriteCmd %s', opts)
             local bufnr = opts.buf
             if type(bufnr) == 'number' and bufnr ~= -1 then
                 log.fmt_debug('Writing buffer %s', bufnr)
@@ -102,5 +109,9 @@ return {
     --- @return string[]
     pattern = function()
         return vim.deepcopy(PATTERN)
+    end,
+    --- @return number|nil
+    group = function()
+        return autogroup_id
     end
 }

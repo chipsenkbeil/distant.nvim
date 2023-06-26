@@ -14,6 +14,7 @@ local qflist       = require('distant.editor.open.qflist')
 --- @field line? number #If provided, will jump to the specified line (1-based index)
 --- @field col? number #If provided, will jump to the specified column (1-based index)
 --- @field reload? boolean #If true, will reload the buffer even if already open
+--- @field no_focus? boolean #If true, will not set the focus of the window to the loaded buffer
 --- @field client_id? distant.core.manager.ConnectionId #Id of the client to use to load the buffer
 --- @field timeout? number #Maximum time to wait for a response
 --- @field interval? number #Time in milliseconds to wait between checks for a response
@@ -249,6 +250,7 @@ return function(opts)
         is_file = path_info.is_file,
         missing = path_info.missing,
         timestamp = path_info.timestamp,
+        no_focus = opts.no_focus,
         client_id = connection,
         winnr = opts.winnr,
     })
