@@ -168,11 +168,12 @@ function M:connect_lsp_clients(opts)
             elseif type(config_root_dir) == 'table' then
                 root_dir = find(config_root_dir, path_starts_with)
             elseif config_root_dir and callable(config_root_dir) then
-                root_dir = config_root_dir(path)
+                root_dir = config_root_dir(path, opts.bufnr)
             end
 
-            -- Only apply client with a root directory that contains this file
-            if root_dir then
+            --- Performs actual process of attaching a client to a buffer using the `root_dir`.
+            --- @param root_dir string
+            local function do_connect_client(root_dir)
                 log.fmt_trace('File %s is within %s of %s', path, root_dir, label)
 
                 -- Check if this lsp is filtered by filetype, and if so make sure that
@@ -221,6 +222,17 @@ function M:connect_lsp_clients(opts)
                         table.insert(client_ids, client_id)
                     end
                 end
+            end
+
+            -- Only apply client with a root directory that contains this file. If the root_dir
+            -- was set to a function, we assume that we are running async and instead provide
+            -- a callback function that will perform the connection.
+            if type(root_dir) == 'string' then
+                do_connect_client(root_dir)
+            elseif root_dir ~= nil and callable(root_dir) then
+                vim.schedule(function()
+                    root_dir(do_connect_client)
+                end)
             end
         end
     end

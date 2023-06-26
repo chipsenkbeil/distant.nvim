@@ -51,10 +51,16 @@ M.__index      = M
 --- @field include? distant.core.api.search.QueryCondition
 --- @field exclude? distant.core.api.search.QueryCondition
 --- @field follow_symbolic_links? boolean
+--- @field ignore_hidden? boolean
 --- @field limit? integer
 --- @field max_depth? integer
 --- @field pagination? integer
 --- @field upward? boolean
+--- @field use_git_exclude_files? boolean
+--- @field use_git_ignore_files? boolean
+--- @field use_global_git_ignore_files? boolean
+--- @field use_ignore_files? boolean
+--- @field use_parent_ignore_files? boolean
 
 --- @param opts {transport:distant.core.api.Transport}
 --- @return distant.core.api.Searcher

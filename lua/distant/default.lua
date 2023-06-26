@@ -205,7 +205,7 @@ local DEFAULT_SETTINGS = {
                 default = {},
             },
 
-            --- @alias distant.plugin.settings.server.lsp.RootDirFn fun(path:string):string|nil
+            --- @alias distant.plugin.settings.server.lsp.RootDirFn fun(path:string, bufnr:number):string|nil
             --- @class distant.plugin.settings.server.lsp.ServerSettings
             --- @field cmd string|string[]
             --- @field root_dir string|string[]|distant.plugin.settings.server.lsp.RootDirFn
