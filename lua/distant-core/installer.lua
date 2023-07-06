@@ -18,14 +18,28 @@ local MAX_DOWNLOAD_CHOICES = 10
 
 --- Mapping of {os}:{arch} to artifact under releases
 local PLATFORM_BIN         = {
-    ['windows:x86_64']    = 'distant-win64.exe',
-    ['macos:x86_64']      = 'distant-macos',
-    ['macos:arm']         = 'distant-macos',
-    ['linux:x86_64:gnu']  = 'distant-linux64-gnu-x86',
-    ['linux:x86_64:musl'] = 'distant-linux64-musl-x86',
-    ['linux:arm:gnu']     = 'distant-linux64-gnu-aarch64',
-    ['linux:arm:musl']    = 'distant-linux64-musl-aarch64',
-    ['linux:arm-v7:gnu']  = 'distant-linux64-gnu-arm-v7',
+    -- Windows binaries
+    ['windows:x86_64']    = 'distant-x86_64-pc-windows-mscv.exe',
+    ['windows:arm']       = 'distant-aarch64-pc-windows-mscv.exe',
+
+    -- MacOS binaries
+    ['macos:x86_64']      = 'distant-x86_64-apple-darwin',
+    ['macos:arm']         = 'distant-aarch64-apple-darwin',
+
+    -- Linux GNU/musl binaries
+    ['linux:x86_64:gnu']  = 'distant-x86_64-unknown-linux-gnu',
+    ['linux:x86_64:musl'] = 'distant-x86_64-unknown-linux-musl',
+    ['linux:arm:gnu']     = 'distant-aarch64-unknown-linux-gnu',
+    ['linux:arm:musl']    = 'distant-aarch64-unknown-linux-musl',
+
+    -- Embedded ARM (Raspberry PI)
+    ['linux:arm-v7:gnu']  = 'distant-armv7-unknown-linux-gnueabihf',
+
+    -- BSDs
+    ['dragonfly:x86_64']  = 'distant-x86_64-unknown-dragonfly',
+    ['freebsd:x86_64']    = 'distant-x86_64-unknown-freebsd',
+    ['netbsd:x86_64']     = 'distant-x86_64-unknown-netbsd',
+    ['openbsd:x86_64']    = 'distant-x86_64-unknown-openbsd',
 }
 
 --- Mapping of type to local binary name we expect

@@ -72,8 +72,25 @@ M.data_path = function(path)
     return full_path
 end
 
---- @alias distant.core.utils.OperatingSystem 'windows'|'linux'|'macos'|'bsd'|'solaris'|'unknown'
---- @alias distant.core.utils.Architecture 'x86'|'x86_64'|'powerpc'|'arm'|'mips'|'unknown'
+--- @alias distant.core.utils.OperatingSystem
+--- | 'windows'
+--- | 'linux'
+--- | 'macos'
+--- | 'dragonfly'
+--- | 'freebsd'
+--- | 'netbsd'
+--- | 'openbsd'
+--- | 'solaris'
+--- | 'unknown'
+---
+--- @alias distant.core.utils.Architecture
+--- | 'x86'
+--- | 'x86_64'
+--- | 'powerpc'
+--- | 'arm'
+--- | 'mips'
+--- | 'unknown'
+---
 --- Retrieves the operating system and architecture of the local machine.
 ---
 --- * Original from https://gist.github.com/soulik/82e9d02a818ce12498d1.
@@ -147,7 +164,34 @@ M.detect_os_arch = function()
             break
         end
     end
+
+    -- If our OS is "bsd", we need to further distinguish the types
+    if os_name == 'bsd' then
+        os_name = M.bsd_os() or 'unknown'
+    end
+
     return os_name, arch_name
+end
+
+--- @alias distant.core.utils.BSD 'netbsd'|'freebsd'|'openbsd'|'dragonfly'
+--- @return distant.core.utils.BSD|nil
+M.bsd_os = function()
+    local has_popen = pcall(io.popen, '')
+    if not has_popen then
+        return
+    end
+
+    local os = vim.trim(io.popen("uname -s"):read("*a"):lower())
+
+    if os == "netbsd" then
+        return "netbsd"
+    elseif os == "freebsd" then
+        return "freebsd"
+    elseif os == "openbsd" then
+        return "openbsd"
+    elseif os == "dragonfly" then
+        return "dragonfly"
+    end
 end
 
 --- Returns a string with the given prefix removed if it is found in the string.
