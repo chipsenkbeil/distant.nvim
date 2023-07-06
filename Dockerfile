@@ -55,7 +55,8 @@ RUN mkdir -p $opt_lsp_dir \
 
 # Install distant binary and make sure its in a path for everyone
 ARG distant_version=0.20.0-alpha.11
-RUN curl -L sh.distant.dev | sh -s -- --install-dir "$opt_bin_dir" --distant-version $distant_version --run-as-admin \
+ARG distant_host=x86_64-unknown-linux-musl
+RUN curl -L sh.distant.dev | sh -s -- --install-dir "$opt_bin_dir" --distant-version $distant_version --distant-host $distant_host --run-as-admin \
     && ln -s "$opt_bin_dir/distant" /usr/local/bin/distant \
     && distant --version
 
