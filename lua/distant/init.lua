@@ -520,18 +520,10 @@ end
 --- @param settings distant.plugin.Settings
 --- @param opts? {wait?:integer}
 function M:setup(settings, opts)
-    opts = opts or {}
-    log.fmt_trace('distant:setup(settings = %s, opts = %s)', settings, opts)
-    if self:is_initialized() then
-        log.warn(table.concat({
-            'distant:setup() called more than once!',
-            'Ignoring new call to setup.'
-        }, ' '))
-        return
-    end
-
     -- Ensure something is populated
+    opts = opts or {}
     settings = settings or {}
+    log.fmt_trace('distant:setup(settings = %s, opts = %s)', settings, opts)
 
     -- Check if using the old distant.setup versus distant:setup
     if getmetatable(self) ~= M then
@@ -541,6 +533,14 @@ function M:setup(settings, opts)
             '',
             'Change require(\'distant\').setup to require(\'distant\'):setup',
         }, '\n'))
+        return
+    end
+    
+    if self:is_initialized() then
+        log.warn(table.concat({
+            'distant:setup() called more than once!',
+            'Ignoring new call to setup.'
+        }, ' '))
         return
     end
 
