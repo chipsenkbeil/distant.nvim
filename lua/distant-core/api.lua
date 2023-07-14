@@ -188,7 +188,7 @@ local function verify_version(payload)
     return (
         payload.type == 'version'
         and type(payload.server_version) == 'string'
-        and type(payload.protocol_version) == 'table'
+        and type(payload.protocol_version) == 'string'
         and type(payload.capabilities) == 'table'
     )
 end
@@ -895,7 +895,7 @@ end
 
 --- @class distant.core.api.VersionPayload
 --- @field server_version string
---- @field protocol_version {[1]: integer, [2]: integer, [3]: integer}
+--- @field protocol_version string
 --- @field capabilities string[]
 
 --- @alias distant.core.api.VersionOpts {timeout?:number, interval?:number}
