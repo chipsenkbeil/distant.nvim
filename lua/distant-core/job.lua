@@ -15,6 +15,7 @@ local AuthHandler = require('distant-core.auth')
 --- @field private __stderr_lines string[]|nil # if indicated, will collect lines here
 --- @field private __on_stdout_line? distant.core.job.OnStdoutLine
 --- @field private __on_stderr_line? distant.core.job.OnStderrLine
+--- @field private __exit_status distant.core.job.ExitStatus|nil # populated once finished
 local M = {}
 M.__index = M
 
@@ -314,13 +315,18 @@ function M:start(opts, cb)
         on_exit = function(_, exit_code, _)
             local success = exit_code == 0
             local signal = self.to_signal(exit_code)
-            cb(nil, {
+            local exit_status = {
                 success = success,
                 exit_code = exit_code,
                 signal = signal,
                 stdout = self.__stdout_lines or {},
                 stderr = self.__stderr_lines or {},
-            })
+            }
+
+            -- Update our job to contain the status
+            -- and report the status in our callback
+            self.__exit_status = exit_status
+            cb(nil, exit_status)
         end,
     })
 
@@ -380,6 +386,12 @@ end
 --- @return string[]
 function M:stderr_lines()
     return self.__stderr_lines or {}
+end
+
+--- Returns the exit status and other information once the job has finished, otherwise nil.
+--- @return distant.core.job.ExitStatus|nil
+function M:exit_status()
+    return self.__exit_status
 end
 
 --- @param data any

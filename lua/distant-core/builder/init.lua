@@ -56,9 +56,10 @@ function M.shell(cmd)
 end
 
 --- @param cmd string|string[]
+--- @param use_cmd_arg? boolean
 --- @return distant.core.builder.SpawnCmdBuilder
-function M.spawn(cmd)
-    return DistantSpawnCmdBuilder:new(cmd)
+function M.spawn(cmd, use_cmd_arg)
+    return DistantSpawnCmdBuilder:new(cmd, use_cmd_arg)
 end
 
 return M

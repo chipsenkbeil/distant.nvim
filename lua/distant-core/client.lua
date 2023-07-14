@@ -1,5 +1,6 @@
 local Api               = require('distant-core.api')
 local builder           = require('distant-core.builder')
+local Job               = require('distant-core.job')
 local log               = require('distant-core.log')
 local utils             = require('distant-core.utils')
 
@@ -283,6 +284,44 @@ function M:spawn_shell(opts)
     return job_id, bufnr
 end
 
+--- @class distant.core.client.SpawnWrapOpts
+--- @field cmd string|string[]
+--- @field cwd? string
+--- @field env? table<string,string>
+--- @field shell? string|string[]|true
+
+--- Spawns a `cmd` created using the `wrap` method,
+--- buffering stdout and stderr as it is received.
+---
+--- @param opts distant.core.client.SpawnWrapOpts
+--- @param cb? fun(err?:string, exit_status:distant.core.job.ExitStatus)
+--- @return distant.core.Job
+function M:spawn_wrap(opts, cb)
+    vim.validate({
+        opts = { opts, 'table' },
+        cb = { cb, validate_callable({ optional = true }) },
+    })
+
+    local cmd = self:wrap({
+        cmd = opts.cmd,
+        cwd = opts.cwd,
+        env = opts.env,
+        shell = opts.shell,
+    })
+
+    local job = Job:new({ buffer_stdout = true, buffer_stderr = true })
+
+    -- Start the job, passing in our optional callback when it's done,
+    -- and only explicitly error if we do not have a callback to
+    -- report the error
+    local ok = job:start({ cmd = cmd }, cb)
+    if not ok and not cb then
+        error('Failed to spawn cmd: ' .. vim.inspect(cmd))
+    end
+
+    return job
+end
+
 --- @class distant.core.client.WrapOpts
 --- @field cmd? string|string[]
 --- @field lsp? string|string[]
@@ -291,9 +330,12 @@ end
 --- @field env? table<string,string>
 --- @field scheme? string
 
---- Wraps cmd, lsp, or shell to be invoked via distant. Returns
+--- Wraps cmd, lsp, or shell to be invoked via distant for this client. Returns
 --- a string if the input is a string, or a list if the input
 --- is a list.
+---
+--- If both `cmd` and `shell` are provided, then `spawn` is invoked with
+--- the command and `shell` is used as the `--shell <shell>` parameter.
 ---
 --- @param opts distant.core.client.WrapOpts
 --- @return string|string[]
@@ -305,9 +347,12 @@ function M:wrap(opts)
     local has_lsp = opts.lsp ~= nil
     local has_shell = opts.shell ~= nil
 
+    -- We require exactly one of "cmd", "lsp", or "shell" UNLESS
+    -- we are given "cmd" and "shell", in which case "shell" is used
+    -- as the `--shell <shell>` parameter for the spawn command
     if not has_cmd and not has_lsp and not has_shell then
         error('Missing one of ["cmd", "lsp", "shell"] argument')
-    elseif (has_cmd and has_lsp) or (has_cmd and has_shell) or (has_lsp and has_shell) then
+    elseif (has_cmd and has_lsp) or (has_lsp and has_shell) then
         error('Can only have exactly one of ["cmd", "lsp", "shell"] argument')
     end
 
@@ -315,7 +360,9 @@ function M:wrap(opts)
     local result = {}
 
     if has_cmd then
-        local cmd = builder.spawn(opts.cmd)
+        -- Prefer `--cmd '...'` over `-- ...`
+        local cmd = builder.spawn(opts.cmd, true)
+            :set_connection(tostring(self.id))
         if type(opts.cwd) == 'string' then
             cmd = cmd:set_current_dir(opts.cwd)
         end
@@ -323,10 +370,21 @@ function M:wrap(opts)
             cmd = cmd:set_environment(opts.env)
         end
 
+        -- If we were given a shell, then set it as a parameter here
+        local shell = opts.shell
+        if shell then
+            if type(shell) == 'table' then
+                shell = table.concat(shell, ' ')
+            end
+            cmd = cmd:set_shell(shell)
+        end
+
         result = cmd:set_from_tbl(self.config.network):as_list()
         table.insert(result, 1, self.config.binary)
     elseif has_lsp then
-        local cmd = builder.spawn(opts.lsp):set_lsp(opts.scheme or true)
+        local cmd = builder.spawn(opts.lsp)
+            :set_connection(tostring(self.id))
+            :set_lsp(opts.scheme or true)
         if opts.cwd then
             cmd = cmd:set_current_dir(opts.cwd)
         end
@@ -339,6 +397,7 @@ function M:wrap(opts)
     elseif has_shell then
         -- Build with no explicit cmd by default (use $SHELL)
         local cmd = builder.shell()
+            :set_connection(tostring(self.id))
 
         -- If provided a specific shell, use that instead of default
         if type(opts.shell) == 'string' or type(opts.shell) == 'table' then

@@ -535,7 +535,7 @@ function M:setup(settings, opts)
         }, '\n'))
         return
     end
-    
+
     if self:is_initialized() then
         log.warn(table.concat({
             'distant:setup() called more than once!',
@@ -842,16 +842,57 @@ end
 -- WRAP API
 -------------------------------------------------------------------------------
 
+
+--- @class distant.plugin.SpawnWrapOpts
+--- @field client_id? distant.core.manager.ConnectionId # if provided, will wrap using the specified client
+--- @field cmd? string|string[] # wraps a regular command
+--- @field cwd? string # specifies the current working directory
+--- @field env? table<string,string> # specifies environment variables for the spawned process
+--- @field shell? string|string[]|true # used to define that the process should be spawned in a shell
+
+--- Performs a client wrapping of the given `cmd`, `lsp`, or `shell` parameter.
+---
+--- If both `cmd` and `shell` are provided, then `spawn` is invoked with
+--- the command and `shell` is used as the `--shell <shell>` parameter.
+---
+--- If `client_id` is provided, will wrap using the given client; otherwise,
+--- will use the active client. Will fail if the client is not available.
+---
+--- Returns a job representing the spawned process.
+---
+--- @param opts distant.plugin.SpawnWrapOpts
+--- @param cb? fun(err?:string, exit_status:distant.core.job.ExitStatus)
+--- @return distant.core.Job
+function M:spawn_wrap(opts, cb)
+    log.fmt_trace('distant:spawn_wrap(%s)', opts)
+    self:__assert_initialized()
+
+    local client = assert(
+        self:client(opts.client_id),
+        'Client unavailable for spawning wrapped cmd'
+    )
+
+    return client:spawn_wrap({
+        cmd = opts.cmd,
+        cwd = opts.cwd,
+        env = opts.env,
+        shell = opts.shell,
+    }, cb)
+end
+
 --- @class distant.plugin.WrapOpts
 --- @field client_id? distant.core.manager.ConnectionId # if provided, will wrap using the specified client
 --- @field cmd? string|string[] # wraps a regular command
 --- @field lsp? string|string[] # wraps an LSP server command
---- @field shell? string|string[]|true # wraps a shell, taking an optional shell command
+--- @field shell? string|string[]|true # wraps a shell, taking an optional shell command (or --shell if using `cmd`)
 --- @field cwd? string # specifies the current working directory
 --- @field env? table<string,string> # specifies environment variables for the spawned process
 --- @field scheme? string # if provided, uses this scheme instead of the default (lsp only)
 
 --- Performs a client wrapping of the given `cmd`, `lsp`, or `shell` parameter.
+---
+--- If both `cmd` and `shell` are provided, then `spawn` is invoked with
+--- the command and `shell` is used as the `--shell <shell>` parameter.
 ---
 --- If `client_id` is provided, will wrap using the given client; otherwise,
 --- will use the active client. Will fail if the client is not available.

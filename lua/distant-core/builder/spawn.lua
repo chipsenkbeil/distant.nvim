@@ -7,8 +7,9 @@ M.__index = M
 
 --- Creates a new `spawn` cmd
 --- @param cmd string|string[] #command to execute on the remote machine
+--- @param use_cmd_arg? boolean # if true, will pass `cmd` as str via `--cmd <cmd>` instead of using `-- <cmd>`
 --- @return distant.core.builder.SpawnCmdBuilder
-function M:new(cmd)
+function M:new(cmd, use_cmd_arg)
     local instance = {}
     setmetatable(instance, M)
 
@@ -22,6 +23,7 @@ function M:new(cmd)
             allowed = {
                 'config',
                 'cache',
+                'cmd',
                 'connection',
                 'current-dir',
                 'environment',
@@ -29,11 +31,18 @@ function M:new(cmd)
                 'log-level',
                 'lsp',
                 'pty',
+                'shell',
                 'unix-socket',
                 'windows-pipe',
             }
         })
-        :set_tail(cmd)
+
+    if use_cmd_arg then
+        --- @cast instance distant.core.builder.SpawnCmdBuilder
+        instance = instance:set_cmd(cmd)
+    else
+        instance.cmd = instance.cmd:set_tail(cmd)
+    end
 
     return instance
 end
@@ -61,6 +70,39 @@ end
 function M:set_cache(path)
     vim.validate({ path = { path, 'string' } })
     self.cmd:set('cache', path)
+    return self
+end
+
+--- Sets `--cmd <cmd>`
+--- @param cmd string
+--- @return distant.core.builder.SpawnCmdBuilder
+function M:set_cmd(cmd)
+    vim.validate({ cmd = { cmd, 'string' } })
+
+    -- NOTE: Normally, when a string is set using the
+    --       builder, it is NOT quoted, which means that
+    --       cmd = "echo hello" would turn into
+    --       `--cmd echo hello`. So, we need to provide
+    --       quoting for the value.
+    --
+    --       To that affect, we are going to check if the
+    --       trimmed command begins and ends with matching
+    --       single or double quotes. If not, we wrap it in
+    --       single quotes for now, unless using cmd.exe,
+    --       in which case we wrap in double quotes.
+    cmd = vim.trim(cmd)
+    if (
+            not (vim.startswith(cmd, '"') and vim.endswith(cmd, '"'))
+            and not (vim.startswith(cmd, "'") and vim.endswith(cmd, "'"))
+        ) then
+        if vim.o.shell == 'cmd.exe' then
+            cmd = '"' .. cmd:gsub('"', '""') .. '"'
+        else
+            cmd = "'" .. cmd:gsub("'", "'\\''") .. "'"
+        end
+    end
+
+    self.cmd:set('cmd', cmd)
     return self
 end
 
@@ -131,6 +173,19 @@ end
 --- @return distant.core.builder.SpawnCmdBuilder
 function M:set_pty()
     self.cmd:set('pty')
+    return self
+end
+
+--- Sets `--shell` or `--shell <path>`
+--- @param value boolean|string
+--- @return distant.core.builder.SpawnCmdBuilder
+function M:set_shell(value)
+    vim.validate({ value = { value, { 'boolean', 'string' } } })
+    if value == true then
+        self.cmd:set('shell')
+    else
+        self.cmd:set('shell', value)
+    end
     return self
 end
 
