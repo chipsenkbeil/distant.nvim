@@ -183,6 +183,13 @@ function M.configure(opts)
     end
 
     -- Watch the buffer to detect changes (only applies to files)
+    --
+    -- TODO: We need to support getting the version of the server that includes
+    --       the capabilities and be able to look them up here. The reason for
+    --       that is some implementations such as ssh do not support file watching
+    --       and the act of trying to watch will return an error. So we want to know
+    --       if a server supports the watch capability and skip this (even if enabled)
+    --       when it does not.
     if plugin.settings.buffer.watch.enabled then
         plugin.editor.watch({ buf = bufnr })
     end
