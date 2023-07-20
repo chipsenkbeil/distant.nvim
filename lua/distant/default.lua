@@ -2,10 +2,10 @@
 --- @class distant.plugin.Settings
 local DEFAULT_SETTINGS = {
     --- Buffer-specific settings that are applied to buffers this plugin controls.
-    --- @class distnat.plugin.settings.BufferSettings
+    --- @class distant.plugin.settings.BufferSettings
     buffer = {
         --- Settings that apply to watching a buffer for remote changes.
-        --- @class distnat.plugin.settings.buffer.WatchSettings
+        --- @class distant.plugin.settings.buffer.WatchSettings
         watch = {
             --- If true, will watch buffers for changes.
             --- @type boolean

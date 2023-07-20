@@ -513,12 +513,16 @@ end
 
 --- Applies provided settings to overall settings available. By default, this runs asynchronously.
 ---
+--- When given a root-level key with dots, they will be expanded into a nested table. For instance,
+--- providing `"buffer.watch.enabled" = true` will get expanded into `{buffer = {watch = {enabled = true}}}`.
+---
 --- ### Options
 ---
+--- * `verbatim` - if true, will not modify the settings in any way.
 --- * `wait` - if provided, will wait up to the specified maximum milliseconds for the setup to complete.
 ---
 --- @param settings distant.plugin.Settings
---- @param opts? {wait?:integer}
+--- @param opts? {verbatim?:boolean, wait?:integer}
 function M:setup(settings, opts)
     -- Ensure something is populated
     opts = opts or {}
@@ -558,6 +562,55 @@ function M:setup(settings, opts)
         settings = {
             servers = settings,
         }
+    end
+
+    -- Transform root settings keys with dots into nested tables
+    if opts.verbatim ~= true then
+        for key, value in pairs(settings) do
+            if type(key) == 'string' then
+                local tokens = vim.split(key, '.', { plain = true })
+
+                -- If we have more than one token, this means there was a dot
+                if #tokens > 1 then
+                    -- Clear the setting so we can expand it
+                    settings[key] = nil
+
+                    --- @type table<string, any>
+                    local tbl = settings
+                    for idx, token in ipairs(tokens) do
+                        local is_last = idx == #tokens
+
+                        -- If we have reached the last part of the path,
+                        -- set it as a key=value in our table
+                        --
+                        -- Otherwise, continue iterating
+                        if is_last then
+                            tbl[token] = value
+                        else
+                            -- If we don't have anything at this point,
+                            -- provide an empty table to fill in
+                            if tbl[token] == nil then
+                                tbl[token] = {}
+                            end
+
+                            -- If we don't have a table as our value,
+                            -- this is an error and we should fail
+                            if type(tbl[token]) ~= 'table' then
+                                error(
+                                    'Cannot overwrite non-table value in path: ' ..
+                                    table.concat(tokens, '.', 1, idx)
+                                )
+                            end
+
+                            -- Otherwise, update our settings to point
+                            -- to the nested table so we can continue
+                            --- @type table<string, any>
+                            tbl = tbl[token]
+                        end
+                    end
+                end
+            end
+        end
     end
 
     -- Ensure that we are properly initialized with user-provided settings

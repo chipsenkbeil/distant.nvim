@@ -5,8 +5,8 @@
 A wrapper around [`distant`](https://github.com/chipsenkbeil/distant) that
 enables users to edit remote files from the comfort of their local environment.
 
-- **Requires neovim 0.7+**
-- **Requires distant 0.20.0-alpha.4**
+- **Requires neovim 0.8+**
+- **Requires distant 0.20.x**
 
 🚧 **(Alpha stage software) This plugin is in rapid development and may
 break or change frequently!** 🚧
@@ -26,10 +26,10 @@ Supports the following features against remote machines:
 ## Installation & Setup
 
 > It is **highly** recommended to not use the master branch of this plugin.
-> Instead, prefer either a branch (`v0.1` or `v0.2`) or a specific tag (`v0.1.1`)
-> to lock in the plugin. When using a branch, you will get rolling updates to
-> that branch. When using a tag, you are locked into the features and stability
-> of the plugin at that point!
+> Instead, prefer either a branch (`v0.3`) or a specific tag (`v0.3.0`) to lock
+> in the plugin. When using a branch, you will get rolling updates to that
+> branch. When using a tag, you are locked into the features and stability of
+> the plugin at that point!
 
 Using [packer.nvim](https://github.com/wbthomason/packer.nvim), the quickest
 way to get up and running is the following:
@@ -37,24 +37,13 @@ way to get up and running is the following:
 ```lua
 use {
   'chipsenkbeil/distant.nvim',
-  branch = 'v0.2',
+  branch = 'v0.3',
   config = function()
-    require('distant').setup {
-      -- Applies Chip's personal settings to every machine you connect to
-      --
-      -- 1. Ensures that distant servers terminate with no connections
-      -- 2. Provides navigation bindings for remote directories
-      -- 3. Provides keybinding to jump into a remote file's parent directory
-      ['*'] = require('distant.settings').chip_default()
-    }
+    local distant = require('distant')
+    distant:setup()
   end
 }
 ```
-
-The above will initialize the plugin with the following:
-
-1. Any spawned distant server will shutdown after 60 seconds of inactivity
-2. Standard keybindings are assigned for remote buffers (described below)
 
 #### Within a file
 
@@ -98,29 +87,7 @@ all of the contents of the specified directory.
 ## Documentation
 
 For more details on available functions, settings, commands, and more,
-please check out the vim help documentation via 
-[`:help distant.txt`](doc/distant.txt).
-
-## Demo
-
-### Intro Video
-
-Demonstrates using distant.nvim to edit files and use a language server on a
-remote machine.
-
-[![Intro Video](https://img.youtube.com/vi/BuW2b1Ii0RI/0.jpg)](https://www.youtube.com/watch?v=BuW2b1Ii0RI)
-
-### v0.1.0 Update
-
-Demonstrates the new release of distant.nvim (v0.1.0) leveraging distant's new
-lua module (v0.15.0). Main highlights include:
-
-- integrated ssh authentication
-- ssh mode
-- refactored and simplified vim & Lua APIs
-- complete help documentation
-
-[![v0.1.0 update](https://img.youtube.com/vi/wVAsbpByQ3o/0.jpg)](https://www.youtube.com/watch?v=wVAsbpByQ3o)
+please check out the [online help documentation](https://distant.dev/editors/neovim/).
 
 ## License
 
