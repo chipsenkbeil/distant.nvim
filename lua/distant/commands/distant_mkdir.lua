@@ -6,6 +6,7 @@ local utils  = require('distant.commands.utils')
 local function command(cmd)
     local input = utils.parse_args(cmd.args)
     utils.paths_to_number(input.opts, { 'timeout', 'interval' })
+    utils.paths_to_bool(input.opts, { 'all' })
 
     local path = input.args[1]
     input.opts.path = path

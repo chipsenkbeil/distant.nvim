@@ -5,8 +5,17 @@ local utils = require('distant.commands.utils')
 --- @param cmd NvimCommand
 local function command(cmd)
     local input = utils.parse_args(cmd.args)
-    utils.paths_to_number(input.opts, { 'pagination', 'limit', 'max_depth', 'timeout', 'interval' })
-    utils.paths_to_bool(input.opts, { 'follow_symbolic_links' })
+    utils.paths_to_number(input.opts, {
+        'pagination',
+        'limit',
+        'max_depth',
+        'timeout',
+        'interval',
+    })
+    utils.paths_to_bool(input.opts, {
+        'follow_symbolic_links',
+        'upward',
+    })
 
     local timeout = tonumber(input.opts.timeout)
     local interval = tonumber(input.opts.interval)

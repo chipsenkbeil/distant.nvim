@@ -1,4 +1,4 @@
---- DistantCancelSearch
+--- DistantCheckHealth
 --- @param cmd NvimCommand
 --- @diagnostic disable-next-line:unused-local
 local function command(cmd)

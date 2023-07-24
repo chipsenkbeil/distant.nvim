@@ -5,7 +5,19 @@ local utils = require('distant.commands.utils')
 --- @param cmd NvimCommand
 local function command(cmd)
     local input = utils.parse_args(cmd.args)
-    utils.paths_to_number(input.opts, { 'buf', 'win' })
+    utils.paths_to_number(input.opts, {
+        'bufnr',
+        'winnr',
+        'line',
+        'col',
+        'client_id',
+        'timeout',
+        'interval',
+    })
+    utils.paths_to_bool(input.opts, {
+        'reload',
+        'no_focus',
+    })
     local opts = input.opts
 
     local path = input.args[1]

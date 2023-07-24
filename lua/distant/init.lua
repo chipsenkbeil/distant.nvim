@@ -753,7 +753,7 @@ end
 ---
 --- Will fail with an error if the shell fails to spawn.
 ---
---- @param opts {bufnr:number, winnr?:number, cmd?:string|string[], cwd?:string, env?:table<string, string>}
+--- @param opts {bufnr?:number, winnr?:number, cmd?:string|string[], cwd?:string, env?:table<string, string>}
 --- @return number bufnr
 function M:spawn_shell(opts)
     opts = opts or {}

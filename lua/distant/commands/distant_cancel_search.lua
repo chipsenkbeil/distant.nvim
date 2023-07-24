@@ -1,12 +1,9 @@
 local plugin = require('distant')
-local utils = require('distant.commands.utils')
 
 --- DistantCancelSearch
 --- @param cmd NvimCommand
+--- @diagnostic disable-next-line:unused-local
 local function command(cmd)
-    local input = utils.parse_args(cmd.args)
-    utils.paths_to_number(input.opts, { 'timeout', 'interval' })
-
     plugin.editor.cancel_search()
 end
 

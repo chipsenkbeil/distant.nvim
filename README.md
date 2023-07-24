@@ -10,6 +10,9 @@ enables users to edit remote files from the comfort of their local environment.
 
 Visit https://distant.dev/editors/neovim/ for full documentation!
 
+🚧 **(Alpha stage software) This plugin is in rapid development and may
+break or change frequently!** 🚧
+
 ## Installation
 
 ### lazy.nvim
