@@ -85,6 +85,13 @@ help: ## Display help information
 	@egrep '^(.+)\:\ .*##\ (.+)' $(MAKEFILE_LIST) | sed 's/:.*##/#/' | column -t -c 2 -s '#'
 
 ###############################################################################
+# LOCAL RUN NVIM WITH JUST DISTANT
+###############################################################################
+
+nvim: ## Starts neovim with distant configured
+	@nvim -u spec/init.lua +'lua require("distant"):setup()'
+
+###############################################################################
 # LOCAL TEST TARGETS
 ###############################################################################
 
