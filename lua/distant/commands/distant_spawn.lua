@@ -1,6 +1,8 @@
 local plugin = require('distant')
 local utils  = require('distant.commands.utils')
 
+local unpack = unpack or table.unpack
+
 --- DistantSpawn cmd [arg1 arg2 ...]
 --- @param cmd NvimCommand
 local function command(cmd)
@@ -23,11 +25,11 @@ local function command(cmd)
     assert(res, 'Missing results of process execution')
 
     if #res.stdout > 0 then
-        print(string.char(table.unpack(res.stdout)))
+        print(string.char(unpack(res.stdout)))
     end
 
     if #res.stderr > 0 then
-        vim.api.nvim_err_writeln(string.char(table.unpack(res.stderr)))
+        vim.api.nvim_err_writeln(string.char(unpack(res.stderr)))
     end
 end
 

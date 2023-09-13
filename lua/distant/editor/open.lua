@@ -7,6 +7,8 @@ local configurator = require('distant.editor.open.configurator')
 local loader       = require('distant.editor.open.loader')
 local qflist       = require('distant.editor.open.qflist')
 
+local unpack       = unpack or table.unpack
+
 --- @class distant.editor.OpenOpts
 --- @field path string #Path to file or directory
 --- @field bufnr? number #If not -1 and number, will use this buffer number instead of looking for a buffer

@@ -1,6 +1,8 @@
 --- @class distant.core.Utils
 local M = {}
 
+local unpack = unpack or table.unpack
+
 local PLUGIN_NAME = 'distant.nvim'
 
 --- @return string
@@ -38,7 +40,7 @@ M.cache_path = function(path)
         vim.fn.stdpath('cache') ..
         M.seperator() ..
         M.plugin_name()
-    )
+        )
 
     if type(path) == 'table' and vim.tbl_islist(path) then
         for _, component in ipairs(path) do
@@ -59,7 +61,7 @@ M.data_path = function(path)
         vim.fn.stdpath('data') ..
         M.seperator() ..
         M.plugin_name()
-    )
+        )
 
     if type(path) == 'table' and vim.tbl_islist(path) then
         for _, component in ipairs(path) do
