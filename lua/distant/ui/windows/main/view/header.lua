@@ -3,6 +3,8 @@ local p      = require('distant.ui.palette')
 local plugin = require('distant')
 local ui     = require('distant-core.ui')
 
+local unpack = unpack or table.unpack
+
 --- @return distant.core.ui.Span
 local function version_span()
     local is_prerelease = plugin.version.plugin:has_prerelease()

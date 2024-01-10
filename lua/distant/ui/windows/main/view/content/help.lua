@@ -5,6 +5,8 @@ local p      = require('distant.ui.palette')
 local plugin = require('distant')
 local ui     = require('distant-core.ui')
 
+local unpack = unpack or table.unpack
+
 ---@param state distant.plugin.ui.windows.main.State
 return function(state)
     --- @type {[1]: string, [2]: distant.plugin.settings.Keymap}[]

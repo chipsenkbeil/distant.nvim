@@ -1,3 +1,5 @@
+local unpack = unpack or table.unpack
+
 --- Represents a structured version.
 --- @class distant.core.Version
 --- @field major integer
@@ -5,8 +7,8 @@
 --- @field patch? integer
 --- @field prerelease? string[]
 --- @field build? string[]
-local M   = {}
-M.__index = M
+local M      = {}
+M.__index    = M
 
 --- Creates a new version.
 --- @param opts {major:integer, minor?:integer, patch?:integer, prerelease?:string[], build?:string[]}
