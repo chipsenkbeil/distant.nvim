@@ -28,7 +28,7 @@ function M:version()
     end
 
     -- Retrieve a raw version string in the form of "distant x.y.z-aaa.bbb"
-    local raw_version = vim.fn.system(self.path .. ' --version')
+    local raw_version = vim.fn.system({self.path, '--version'})
     if not raw_version then
         return
     end
