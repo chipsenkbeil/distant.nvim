@@ -186,6 +186,10 @@ function M:connect_lsp_clients(opts)
                     log.fmt_trace('File %s of type %s applies to %s', path, buf_ft, label)
 
                     -- Start the client if it doesn't exist
+                    --
+                    -- Details: Start LSP server using the provided configuration,
+                    -- replacing the command with the distant-wrapped verison and
+                    -- shadowing the on_exit command if provided
                     if self.__state.lsp.clients[label] == nil then
                         -- Wrap the exit so we can clear our id tracker
                         local on_exit = function(code, signal, client_id)
@@ -201,18 +205,24 @@ function M:connect_lsp_clients(opts)
                         end
 
                         local cmd = self:wrap({ lsp = config.cmd, scheme = opts.scheme })
+                        local cmd_args = {}
+                        for arg in cmd:gmatch("%S+") do
+                            table.insert(cmd_args, arg)
+                        end
 
                         config = vim.tbl_deep_extend('force', config, {
-                            cmd = cmd,
+                            cmd = cmd_args,
                             on_exit = on_exit,
                             root_dir = root_dir,
                         })
 
-                        -- Start LSP server using the provided configuration, replacing the
-                        -- command with the distant-wrapped verison and shadowing the
-                        -- on_exit command if provided
+                        -- Attempt to start the client, failing immediately if
+                        -- we are unable to start the client or get an explicit
+                        -- error message to report
                         log.fmt_debug('Starting LSP %s: %s', label, config)
-                        local id = vim.lsp.start_client(config)
+                        local id, err = vim.lsp.start_client(config)
+                        assert(id, 'Unable to start LSP client' .. (err and (': ' .. err) or ''))
+
                         self.__state.lsp.clients[label] = id
                     end
 
