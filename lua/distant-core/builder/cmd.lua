@@ -27,7 +27,7 @@ function M:new(cmd, opts)
         instance.__cmd = cmd
     end
 
-    if vim.tbl_islist(opts.allowed) then
+    if vim.islist(opts.allowed) then
         instance.__allowed = {}
         for _, key in ipairs(opts.allowed) do
             instance.__allowed[key] = true

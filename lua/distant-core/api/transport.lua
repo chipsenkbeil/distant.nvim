@@ -441,7 +441,7 @@ function M:__handle_response(msg)
     --- @return T
     local function clean_payload(payload)
         if type(payload) == 'table' then
-            if vim.tbl_islist(payload) then
+            if vim.islist(payload) then
                 return vim.tbl_map(clean_payload, payload)
             else
                 for key, value in pairs(payload) do

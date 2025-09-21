@@ -42,7 +42,7 @@ M.cache_path = function(path)
         M.plugin_name()
         )
 
-    if type(path) == 'table' and vim.tbl_islist(path) then
+    if type(path) == 'table' and vim.islist(path) then
         for _, component in ipairs(path) do
             full_path = full_path .. M.seperator() .. component
         end
@@ -63,7 +63,7 @@ M.data_path = function(path)
         M.plugin_name()
         )
 
-    if type(path) == 'table' and vim.tbl_islist(path) then
+    if type(path) == 'table' and vim.islist(path) then
         for _, component in ipairs(path) do
             full_path = full_path .. M.seperator() .. component
         end
@@ -251,7 +251,7 @@ end
 --- @return string #The path as a string
 M.join_path = function(sep, paths)
     assert(type(sep) == 'string', 'sep must be a string')
-    assert(vim.tbl_islist(paths), 'paths must be a list')
+    assert(vim.islist(paths), 'paths must be a list')
     local path = ''
 
     for _, component in ipairs(paths) do

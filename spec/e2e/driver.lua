@@ -601,7 +601,7 @@ function M:new_dir_fixture(opts)
                 local file = rd:file(item)
                 assert(file:touch(), 'Failed to create file: ' .. file:path())
             end
-        elseif vim.tbl_islist(item) and #item == 2 then
+        elseif vim.islist(item) and #item == 2 then
             local symlink = rd:symlink(item[1])
             local target = rd:file(item[2]):path()
             assert(symlink:make(target), 'Failed to create symlink: ' .. symlink:path() .. ' to ' .. target)

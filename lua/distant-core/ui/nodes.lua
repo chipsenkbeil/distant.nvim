@@ -286,7 +286,7 @@ function M.Table(rows, extra)
     -- For neovim 0.10+, `tbl_isarray` is the new `tbl_islist` whereas on earlier versions
     -- there is no `tbl_isarray`; so, check if we have the new function and use it otherwise
     -- fall back to the old function.
-    local isarray = vim.tbl_isarray or vim.tbl_islist
+    local isarray = vim.isarray or vim.islist
 
     if type(extra) == 'table' and isarray(extra) then
         --- @type distant.core.ui.INode[]

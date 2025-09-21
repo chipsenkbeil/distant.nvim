@@ -110,7 +110,7 @@ end
 --- @param payload table
 --- @return boolean
 local function verify_dir_read(payload)
-    return payload.type == 'dir_entries' and vim.tbl_islist(payload.entries) and vim.tbl_islist(payload.errors)
+    return payload.type == 'dir_entries' and vim.islist(payload.entries) and vim.islist(payload.errors)
 end
 
 --- @param payload table
@@ -134,7 +134,7 @@ end
 --- @param payload table
 --- @return boolean
 local function verify_file_read(payload)
-    return payload.type == 'blob' and vim.tbl_islist(payload.data)
+    return payload.type == 'blob' and vim.islist(payload.data)
 end
 
 --- @param payload table
@@ -307,7 +307,7 @@ function M:batch(opts, cb)
     opts.interval = nil
 
     -- Validate the payload by checking it contains types
-    assert(vim.tbl_islist(opts), 'Batch not provided a list of payloads')
+    assert(vim.islist(opts), 'Batch not provided a list of payloads')
     --- @type distant.core.api.RequestHandlers[]
     local handlers = {}
     for idx, payload in ipairs(opts) do
@@ -323,7 +323,7 @@ function M:batch(opts, cb)
         payload = opts,
         header = { sequence = sequence },
         verify = function(payload)
-            return type(payload) == 'table' and vim.tbl_islist(payload)
+            return type(payload) == 'table' and vim.islist(payload)
         end,
         map = function(payload)
             -- Map errors versus regular responses
